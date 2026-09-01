@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, EditOutlined, MapOutlined, PictureAsPdfOutlined } from '@mui/icons-material';
+import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, EditOutlined, MapOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, MenuItem, Tab, Tabs, TextField } from '@mui/material';
 import { DOCUMENT_TYPE_LABELS, SOURCE_TYPE_LABELS, VERIFICATION_LABELS } from '../domain/propertyDataRoom/labels';
 import type { DataRoomBundle, DocumentType, PropertyDocument, VerificationStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { propertyDataRoomService } from '../services/propertyDataRoomService';
+import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
 
@@ -27,6 +28,7 @@ export default function PropertyDataRoomPage() {
   const [property, setProperty] = useState<Property>(); const [bundle, setBundle] = useState<DataRoomBundle>(emptyBundle);
   const [tab, setTab] = useState<TabKey>('overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('building_register');
+  const [creatingReport, setCreatingReport] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -54,6 +56,12 @@ export default function PropertyDataRoomPage() {
   const changeVerification = async (document: PropertyDocument, status: VerificationStatus) => {
     const now = new Date().toISOString();
     await propertyDataRoomRepository.updateDocument({ ...document, verificationStatus: status, verifiedAt: status === 'verified' ? now : undefined, updatedAt: now }); await load();
+  };
+  const createProfessionalReport = async () => {
+    setCreatingReport(true); setError('');
+    try { await reportSnapshotService.createDraft(id, property?.managerName || undefined); await load(); setTab('reports'); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Professional Report를 생성하지 못했습니다.'); }
+    finally { setCreatingReport(false); }
   };
 
   if (loading) return <div className="center"><CircularProgress /><p>Property Data Room을 불러오는 중입니다.</p></div>;
@@ -83,7 +91,7 @@ export default function PropertyDataRoomPage() {
       {tab === 'media' && (photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진이 없습니다." detail="물건 수정 화면에서 직접 촬영하거나 보유한 사진을 등록하세요." />)}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} />}
       {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} />}
-      {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} />}
+      {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
       {tab === 'digitalTwin' && (bundle.digitalTwinAssets.length ? <div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div> : <EmptyState title="Digital Twin 데이터가 연결되지 않았습니다." detail="도면·360 사진·3D 모델을 연결할 수 있는 저장 구조만 준비되어 있습니다." />)}
     </div></section>
   </main>;
@@ -102,6 +110,7 @@ function OfficialPanel({ documents, sources }: { documents: PropertyDocument[]; 
   return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => <article key={source.id}><b>{source.sourceName}</b><span>{SOURCE_TYPE_LABELS[source.sourceType]} · {source.sourceDate || source.collectedAt.slice(0, 10)}</span><VerificationBadge status={source.verificationStatus} /></article>)}</div> : <EmptyState title="등록된 공적자료가 없습니다." detail="문서 탭에서 공적자료를 등록하면 출처와 검증 상태가 함께 표시됩니다." />}</div>;
 }
 
-function ReportPanel({ property, snapshots, navigate }: { property: Property; snapshots: DataRoomBundle['reportSnapshots']; navigate: ReturnType<typeof useNavigate> }) {
-  return <div><div className="document-toolbar"><div><h2>보고서 및 스냅샷</h2><p>기존 문서는 유지되며, 향후 생성본은 당시 데이터를 고정한 스냅샷으로 관리합니다.</p></div><Button startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${property.id}`)}>투자분석보고서</Button><Button startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${property.id}`)}>고객 제안서</Button><Button startIcon={<MapOutlined />} onClick={() => navigate(`/properties/${property.id}/briefing`)}>입지 브리핑</Button></div>{snapshots.length ? <div className="document-list">{snapshots.map((snapshot) => <article key={snapshot.id}><div className="file-icon"><PictureAsPdfOutlined /></div><div><b>{snapshot.reportType}</b><span>보고서 v{snapshot.reportVersion} · 템플릿 {snapshot.templateVersion}</span><small>{new Date(snapshot.generatedAt).toLocaleString('ko-KR')}</small></div><Chip label={snapshot.status} size="small" /></article>)}</div> : <EmptyState title="생성된 보고서 스냅샷이 없습니다." detail="기존 보고서는 바로 열 수 있으며, Snapshot 생성 엔진은 다음 단계에서 연결됩니다." />}</div>;
+function ReportPanel({ property, snapshots, navigate, creating, onCreate }: { property: Property; snapshots: DataRoomBundle['reportSnapshots']; navigate: ReturnType<typeof useNavigate>; creating: boolean; onCreate: () => void }) {
+  const professionalSnapshots = snapshots.filter((snapshot) => snapshot.reportType === 'professional_report').sort((a, b) => b.reportVersion - a.reportVersion);
+  return <div><div className="document-toolbar report-toolbar"><div><h2>보고서 및 스냅샷</h2><p>생성 시점 데이터가 고정되며 이후 Property 수정의 영향을 받지 않습니다.</p></div><Button startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${property.id}`)}>투자분석보고서</Button><Button startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${property.id}`)}>고객 제안서</Button><Button startIcon={<MapOutlined />} onClick={() => navigate(`/properties/${property.id}/briefing`)}>입지 브리핑</Button><Button variant="contained" startIcon={<PostAddRounded />} disabled={creating} onClick={onCreate}>{creating ? '생성 중…' : 'Professional Report 생성'}</Button></div>{professionalSnapshots.length ? <div className="snapshot-list">{professionalSnapshots.map((snapshot) => <article key={snapshot.id}><div className="snapshot-version">v{snapshot.reportVersion}</div><div><b>Professional Report v{snapshot.reportVersion}</b><span>{new Date(snapshot.generatedAt).toLocaleString('ko-KR')}</span><small>{snapshot.templateVersion} · {snapshot.engineVersion || 'engine 미기록'}</small></div><Chip label={snapshot.status} size="small" /><Button startIcon={<VisibilityOutlined />} onClick={() => navigate(`/professional-report/snapshot/${snapshot.id}`)}>미리보기</Button></article>)}</div> : <EmptyState title="생성된 Professional Report가 없습니다." detail="현재 Property와 Data Room 데이터를 고정한 첫 Snapshot을 생성하세요." />}</div>;
 }

@@ -33,7 +33,18 @@ export const propertyDataRoomRepository = {
   getDataSources: (propertyId: string) => byProperty<PropertyDataSource>('propertyDataSources', propertyId),
   saveDataSource: (value: PropertyDataSource) => put('propertyDataSources', value),
   getReportSnapshots: (propertyId: string) => byProperty<ReportSnapshot>('reportSnapshots', propertyId),
-  saveReportSnapshot: (value: ReportSnapshot) => put('reportSnapshots', value),
+  async getReportSnapshot(id: string) { return (await database).get('reportSnapshots', id) as Promise<ReportSnapshot | undefined>; },
+  async saveReportSnapshot(value: ReportSnapshot) { await (await database).add('reportSnapshots', value); return value; },
+  async createNextReportSnapshot(input: Omit<ReportSnapshot, 'reportVersion'>): Promise<ReportSnapshot> {
+    const db = await database;
+    const tx = db.transaction('reportSnapshots', 'readwrite');
+    const existing = await tx.store.index('propertyId').getAll(input.propertyId) as ReportSnapshot[];
+    const reportVersion = Math.max(0, ...existing.filter((item) => item.reportType === input.reportType).map((item) => item.reportVersion)) + 1;
+    const snapshot = { ...input, reportVersion };
+    await tx.store.add(snapshot);
+    await tx.done;
+    return snapshot;
+  },
   getDigitalTwinAssets: (propertyId: string) => byProperty<DigitalTwinAsset>('digitalTwinAssets', propertyId),
   saveDigitalTwinAsset: (value: DigitalTwinAsset) => put('digitalTwinAssets', value),
   async archiveProperty(propertyId: string) {

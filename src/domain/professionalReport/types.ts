@@ -55,6 +55,7 @@ export interface ProfessionalReportViewModel {
     additionalImages: ReportValue<string[]>; items: ProfessionalReportMedia[];
   };
   documents: { items: ProfessionalReportDocument[]; count: number; verifiedCount: number };
+  digitalTwin: { connected: boolean; count: number; readyCount: number };
   verification: { items: Array<{ fieldKey: string; status: VerificationStatus; note: string; verifiedAt: string | null }>; counts: Record<VerificationStatus, number> };
   dataQuality: {
     counts: Record<ReportValueState, number>; missingFields: string[]; disconnectedFields: string[];

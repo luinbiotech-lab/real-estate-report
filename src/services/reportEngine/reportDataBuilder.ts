@@ -8,8 +8,8 @@ import { propertyRepository } from '../../repositories/propertyRepository';
 import type { Property } from '../../types';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 
-export const REPORT_ENGINE_VERSION = '1.0.0';
-export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = 'professional-report-v1';
+export const REPORT_ENGINE_VERSION = 'report-engine-1';
+export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = 'professional-v1';
 
 type BuilderOptions = { generatedAt?: string; templateVersion?: string };
 const emptyCounts = <T extends string>(keys: T[]) => Object.fromEntries(keys.map((key) => [key, 0])) as Record<T, number>;
@@ -91,6 +91,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     items: bundle.documents.map((document) => ({ id: document.id, documentType: document.documentType, title: document.title, originalFileName: document.originalFileName, sourceName: document.sourceName, issuedAt: document.issuedAt ?? null, uploadedAt: document.uploadedAt, verificationStatus: document.verificationStatus, version: document.version })),
     count: bundle.documents.length, verifiedCount: bundle.documents.filter((document) => document.verificationStatus === 'verified').length,
   };
+  const digitalTwin = { connected: bundle.digitalTwinAssets.length > 0, count: bundle.digitalTwinAssets.length, readyCount: bundle.digitalTwinAssets.filter((asset) => asset.processingStatus === 'ready').length };
   const verificationCounts = emptyCounts<VerificationStatus>(['verified', 'confirmed', 'imported', 'calculated', 'estimated', 'ai_analysis', 'unverified', 'missing']);
   bundle.verifications.forEach((item) => { verificationCounts[item.status] += 1; });
   bundle.documents.forEach((item) => { verificationCounts[item.verificationStatus] += 1; });
@@ -117,7 +118,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   };
 
   return {
-    ...partial, documents, verification, dataQuality, sources: { items: sourceItems, count: sourceItems.length },
+    ...partial, documents, digitalTwin, verification, dataQuality, sources: { items: sourceItems, count: sourceItems.length },
     generated: { generatedAt: options.generatedAt ?? new Date().toISOString(), propertyUpdatedAt: property.updatedAt, engineVersion: REPORT_ENGINE_VERSION, templateVersion: options.templateVersion ?? PROFESSIONAL_REPORT_TEMPLATE_VERSION, dataPolicy: 'property-and-data-room-only' },
   };
 }
