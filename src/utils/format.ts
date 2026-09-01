@@ -4,3 +4,7 @@ export const parseNumber=(raw:unknown)=>{if(typeof raw==='number')return raw;con
 export const formatArea=(v:number)=>v?`${v.toLocaleString(undefined,{maximumFractionDigits:2})}평`:'-';
 export const pricePerPyeong=(p:{salePrice:number;landAreaPyeong:number})=>p.salePrice&&p.landAreaPyeong?p.salePrice/p.landAreaPyeong:0;
 export const lines=(v:string)=>v.split(/\n|•|\*/).map(s=>s.trim()).filter(Boolean);
+
+export const formatNullableWon = (value: number | null | undefined, fallback = '데이터 없음') => value === null || value === undefined ? fallback : value === 0 ? '0원' : formatWon(value);
+export const formatNullableNumber = (value: number | null | undefined, unit = '', fallback = '데이터 없음') => value === null || value === undefined ? fallback : `${value.toLocaleString(undefined, { maximumFractionDigits: 2 })}${unit}`;
+export const formatNullableArea = (value: number | null | undefined, unit: '평' | '㎡', fallback = '데이터 없음') => formatNullableNumber(value, unit, fallback);

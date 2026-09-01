@@ -1,4 +1,5 @@
 import type { Property, TradeType } from '../types';
+import { SQM_PER_PYEONG } from '../domain/professionalReport/calculations';
 
 export const VALID_TRADE_TYPES: TradeType[] = ['매매', '전세', '월세'];
 
@@ -17,10 +18,10 @@ export function normalizeDate(value: unknown): string {
 
 export function normalizeProperty(property: Property): Property {
   const value = { ...property, completionDate: normalizeDate(property.completionDate) };
-  if (value.landAreaPyeong > 0 && !value.landAreaSqm) value.landAreaSqm = Math.round(value.landAreaPyeong * 3.3058 * 100) / 100;
-  else if (value.landAreaSqm > 0 && !value.landAreaPyeong) value.landAreaPyeong = Math.round(value.landAreaSqm / 3.3058 * 100) / 100;
-  if (value.totalFloorAreaPyeong > 0 && !value.totalFloorAreaSqm) value.totalFloorAreaSqm = Math.round(value.totalFloorAreaPyeong * 3.3058 * 100) / 100;
-  else if (value.totalFloorAreaSqm > 0 && !value.totalFloorAreaPyeong) value.totalFloorAreaPyeong = Math.round(value.totalFloorAreaSqm / 3.3058 * 100) / 100;
+  if (value.landAreaPyeong > 0 && !value.landAreaSqm) value.landAreaSqm = Math.round(value.landAreaPyeong * SQM_PER_PYEONG * 100) / 100;
+  else if (value.landAreaSqm > 0 && !value.landAreaPyeong) value.landAreaPyeong = Math.round(value.landAreaSqm / SQM_PER_PYEONG * 100) / 100;
+  if (value.totalFloorAreaPyeong > 0 && !value.totalFloorAreaSqm) value.totalFloorAreaSqm = Math.round(value.totalFloorAreaPyeong * SQM_PER_PYEONG * 100) / 100;
+  else if (value.totalFloorAreaSqm > 0 && !value.totalFloorAreaPyeong) value.totalFloorAreaPyeong = Math.round(value.totalFloorAreaSqm / SQM_PER_PYEONG * 100) / 100;
   return value;
 }
 
