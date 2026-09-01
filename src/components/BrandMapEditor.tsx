@@ -1,0 +1,16 @@
+import { Alert, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/material';
+import type { BriefingItem, BrandMapSettings, Property } from '../types';
+import { BRIEFING_CATEGORIES } from '../services/briefingService';
+import { createBrandMapModel, DEFAULT_BRAND_MAP_SETTINGS } from '../services/locationIntelligence/brandMapService';
+import BrandMapRenderer from './BrandMapRenderer';
+
+export default function BrandMapEditor({ property, onSettings, onItems }: { property: Property; onSettings: (value: BrandMapSettings) => void; onItems: (value: BriefingItem[]) => void }) {
+  const settings = property.brandMapSettings ?? DEFAULT_BRAND_MAP_SETTINGS; const model = createBrandMapModel(property, settings);
+  const patchItem = (index: number, patch: Partial<BriefingItem>) => onItems(property.briefingItems.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
+  return <section className="form-section brand-map-editor"><div className="section-heading-row"><div><h2>브랜드맵 편집</h2><p>선택하여 저장한 시설만 표시합니다. 좌표가 없는 수동 항목은 Directory에만 사용할 수 있습니다.</p></div><div className="brand-map-controls"><TextField select size="small" label="표시 반경" value={settings.radiusMeters} onChange={(event) => onSettings({ ...settings, radiusMeters: Number(event.target.value) as BrandMapSettings['radiusMeters'] })}>{[500, 1000, 2000].map((value) => <MenuItem key={value} value={value}>{value === 500 ? '500m' : `${value / 1000}km`}</MenuItem>)}</TextField><TextField select size="small" label="최대 POI" value={settings.maxMarkers} onChange={(event) => onSettings({ ...settings, maxMarkers: Number(event.target.value) as BrandMapSettings['maxMarkers'] })}>{[8, 12, 16, 20].map((value) => <MenuItem key={value} value={value}>{value}개</MenuItem>)}</TextField></div></div>
+    {!model && <Alert severity="info">주소 자동조회로 좌표를 적용하면 브랜드맵 편집이 활성화됩니다.</Alert>}
+    {model?.overflowCount ? <Alert severity="warning">선택된 POI가 {settings.maxMarkers}개를 초과했습니다. 현재 {model.overflowCount}개가 숨겨집니다. 표시 항목을 조정해 주세요.</Alert> : null}
+    <div className="brand-map-item-selector">{property.briefingItems.map((item, index) => { const hasCoordinates = item.latitude != null && item.longitude != null; return <div key={`${item.name}-${index}`}><FormControlLabel control={<Checkbox checked={item.brandMapVisible !== false && hasCoordinates} disabled={!hasCoordinates} onChange={(event) => patchItem(index, { brandMapVisible: event.target.checked })} />} label={item.name || `항목 ${index + 1}`} /><TextField select size="small" label="카테고리" value={item.category} onChange={(event) => patchItem(index, { category: event.target.value as BriefingItem['category'] })}>{BRIEFING_CATEGORIES.map((category) => <MenuItem key={category.key} value={category.key}>{category.label}</MenuItem>)}</TextField><small>{hasCoordinates ? `${item.source === 'kakao' ? 'Kakao 선택 POI' : '사용자 입력'} · 좌표 확인` : '좌표 정보 없음'}</small></div>; })}</div>
+    {model && <><div className="brand-map-editor-summary"><b>표시 {model.markers.length}개</b><span>500m 내 {model.summary.within500m}개</span><span>1km 내 {model.summary.within1km}개</span><span>최근접 {model.summary.nearest ? `${model.summary.nearest.name} ${model.summary.nearest.distanceMeters}m` : '-'}</span></div><BrandMapRenderer model={model} fallbackImage={property.mapImage} /></>}
+  </section>;
+}
