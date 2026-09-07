@@ -35,6 +35,16 @@ export const propertyDataRoomRepository = {
   getReportSnapshots: (propertyId: string) => byProperty<ReportSnapshot>('reportSnapshots', propertyId),
   async getReportSnapshot(id: string) { return (await database).get('reportSnapshots', id) as Promise<ReportSnapshot | undefined>; },
   async saveReportSnapshot(value: ReportSnapshot) { await (await database).add('reportSnapshots', value); return value; },
+  async updateReportSnapshotStatus(id: string, status: ReportSnapshot['status']): Promise<ReportSnapshot> {
+    const db = await database;
+    const tx = db.transaction('reportSnapshots', 'readwrite');
+    const current = await tx.store.get(id) as ReportSnapshot | undefined;
+    if (!current) { await tx.done; throw new Error('보고서 Snapshot을 찾을 수 없습니다.'); }
+    const updated = { ...current, status };
+    await tx.store.put(updated);
+    await tx.done;
+    return updated;
+  },
   async createNextReportSnapshot(input: Omit<ReportSnapshot, 'reportVersion'>): Promise<ReportSnapshot> {
     const db = await database;
     const tx = db.transaction('reportSnapshots', 'readwrite');

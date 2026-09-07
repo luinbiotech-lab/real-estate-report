@@ -18,4 +18,10 @@ export const reportSnapshotService = {
       generatedBy, status: 'draft', createdAt: now,
     });
   },
+  async markReady(snapshotId: string): Promise<ReportSnapshot> {
+    const current = await propertyDataRoomRepository.getReportSnapshot(snapshotId);
+    if (!current) throw new Error('보고서 Snapshot을 찾을 수 없습니다.');
+    if (current.status !== 'draft') throw new Error('초안 상태의 보고서만 확정할 수 있습니다.');
+    return propertyDataRoomRepository.updateReportSnapshotStatus(snapshotId, 'ready');
+  },
 };
