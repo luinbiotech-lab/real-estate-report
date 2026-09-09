@@ -7,23 +7,34 @@ import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomR
 import { propertyRepository } from '../../repositories/propertyRepository';
 import type { Property } from '../../types';
 import { internalPhotoAllowed } from '../../domain/professionalReport/reportAccessPolicy';
-import { DAON_DETAIL_MASTER_TEMPLATE_ID } from '../../domain/professionalReport/templateIds';
+import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
-export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = DAON_DETAIL_MASTER_TEMPLATE_ID;
+export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
+export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = DAON_DETAIL_MASTER_TEMPLATE_VERSION;
 
-type BuilderOptions = { generatedAt?: string; templateVersion?: string };
+type BuilderOptions = { generatedAt?: string; templateId?: string; templateVersion?: string };
 const emptyCounts = <T extends string>(keys: T[]) => Object.fromEntries(keys.map((key) => [key, 0])) as Record<T, number>;
 
 function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalReportMedia[] {
   const items: ProfessionalReportMedia[] = [];
   const allowInternal = internalPhotoAllowed(property);
-  if (allowInternal && property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
+
+  // Property.mainImage is the curated representative image used by the locked MASTER.
+  // Do not blank it merely because interior photos are forbidden; the current Bangbae MASTER uses an exterior hero image.
+  if (property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
+
+  // Legacy additionalImages have no category metadata, so exclude them for restricted properties rather than risk interior-photo leakage.
   if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
+
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
-  for (const media of bundle.media) if (allowInternal || media.category !== 'interior') items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
+
+  for (const media of bundle.media) {
+    if (!allowInternal && media.category === 'interior') continue;
+    items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
+  }
   return items;
 }
 
@@ -50,6 +61,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const landPyeongCalculated = !storedLandPyeong && landPyeong !== null;
   const landSqmCalculated = !storedLandSqm && landSqm !== null;
   const unitPrice = calculateUnitPrice(property.salePrice, landPyeong);
+  const allowInternal = internalPhotoAllowed(property);
   const media = mediaItems(property, bundle);
 
   const identity = {
@@ -84,11 +96,12 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     briefingItems: reportValue(property.briefingItems ?? [], context('briefingItems', { disconnected: !property.briefingItems })),
   };
   const mediaGroup = {
-    mainImage: reportValue(internalPhotoAllowed(property) ? property.mainImage : '', context('mainImage', { disconnected: false })),
+    mainImage: reportValue(property.mainImage, context('mainImage', { disconnected: false })),
     mapImage: reportValue(property.mapImage, context('mapImage', { disconnected: !property.latitude || !property.longitude })),
     locationAnalysisImage: reportValue(property.locationAnalysisImage, context('locationAnalysisImage')),
-    additionalImages: reportValue(internalPhotoAllowed(property) ? property.additionalImages ?? [] : [], context('additionalImages')),
-    items: media, internalPhotoAllowed: internalPhotoAllowed(property),
+    additionalImages: reportValue(allowInternal ? property.additionalImages ?? [] : [], context('additionalImages')),
+    items: media,
+    internalPhotoAllowed: allowInternal,
   };
   const documents = {
     items: bundle.documents.map((document) => ({ id: document.id, documentType: document.documentType, title: document.title, originalFileName: document.originalFileName, sourceName: document.sourceName, issuedAt: document.issuedAt ?? null, uploadedAt: document.uploadedAt, verificationStatus: document.verificationStatus, version: document.version })),
@@ -122,7 +135,14 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
 
   return {
     ...partial, documents, digitalTwin, verification, dataQuality, sources: { items: sourceItems, count: sourceItems.length },
-    generated: { generatedAt: options.generatedAt ?? new Date().toISOString(), propertyUpdatedAt: property.updatedAt, engineVersion: REPORT_ENGINE_VERSION, templateVersion: options.templateVersion ?? PROFESSIONAL_REPORT_TEMPLATE_VERSION, dataPolicy: 'property-and-data-room-only' },
+    generated: {
+      generatedAt: options.generatedAt ?? new Date().toISOString(),
+      propertyUpdatedAt: property.updatedAt,
+      engineVersion: REPORT_ENGINE_VERSION,
+      templateId: options.templateId ?? PROFESSIONAL_REPORT_TEMPLATE_ID,
+      templateVersion: options.templateVersion ?? PROFESSIONAL_REPORT_TEMPLATE_VERSION,
+      dataPolicy: 'property-and-data-room-only',
+    },
   };
 }
 
