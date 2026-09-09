@@ -68,7 +68,7 @@ export interface ProfessionalReportViewModel {
   risks: { risks: ReportValue<string> };
   sources: { items: ProfessionalReportSource[]; count: number };
   generated: {
-    generatedAt: string; propertyUpdatedAt: string; engineVersion: string; templateVersion: string;
+    generatedAt: string; propertyUpdatedAt: string; engineVersion: string; templateId: string; templateVersion: string;
     dataPolicy: 'property-and-data-room-only';
   };
 }
