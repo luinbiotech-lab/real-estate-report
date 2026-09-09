@@ -53,7 +53,7 @@ const bangbae81511: Property = {
   recommendedUse: '사옥, 주거·업무 복합공간, F&B 플래그십, 갤러리·문화공간',
   risks: '신축·용도변경은 별도 인허가 검토 필요\n등기·공적자료 최신본 재확인 필요\n주차 2대 가능 표시는 현장 이용 기준이며 공부상 주차와 구분 필요',
   overallOpinion: '즉시 활용 가능한 기존 건물과 코너 대지의 장기 선택지를 함께 검토할 수 있는 자산입니다.',
-  managerName: '김은미',
+  managerName: '김은미 대표 / 공인중개사',
   managerPhone: '010 9953 1270',
   managerEmail: 'daonasset.korea@gmail.com',
   companyName: 'DA:ON ASSET',
@@ -69,7 +69,11 @@ export default function App() {
   const [settings, setSettings] = useState(defaults);
   useEffect(() => { (async () => {
     if (!(await propertyRepository.getAll()).length) await propertyRepository.create(sample);
-    if (!(await propertyRepository.getById(bangbae81511.id))) await propertyRepository.create(bangbae81511);
+    const existingBangbae = await propertyRepository.getById(bangbae81511.id);
+    if (!existingBangbae) await propertyRepository.create(bangbae81511);
+    else if (existingBangbae.managerName !== bangbae81511.managerName || existingBangbae.companyName !== bangbae81511.companyName || existingBangbae.internalPhotoAllowed !== false) {
+      await propertyRepository.update({ ...existingBangbae, managerName: bangbae81511.managerName, managerPhone: bangbae81511.managerPhone, managerEmail: bangbae81511.managerEmail, companyName: bangbae81511.companyName, internalPhotoAllowed: false, parkingField: existingBangbae.parkingField ?? 2, parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준', updatedAt: new Date().toISOString() });
+    }
     const stored = await settingsRepository.get();
     if (stored) setSettings(stored); else await settingsRepository.save(defaults);
     setReady(true);
