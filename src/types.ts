@@ -21,6 +21,7 @@ export interface Property {
   risks: string; overallOpinion: string; nearbyTransactions: string;
   managerName: string; managerPhone: string; managerEmail: string; companyName: string;
   mainImage: string; additionalImages: string[]; mapImage: string; locationAnalysisImage: string;
+  internalPhotoAllowed?: boolean;
   streetViewVerification?: StreetViewVerification;
   briefingItems: BriefingItem[]; briefingUpdatedAt: string;
   brandMapSettings?: BrandMapSettings;

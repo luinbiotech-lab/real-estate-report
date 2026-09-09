@@ -6,21 +6,24 @@ import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
 import type { Property } from '../../types';
+import { internalPhotoAllowed } from '../../domain/professionalReport/reportAccessPolicy';
+import { DAON_DETAIL_MASTER_TEMPLATE_ID } from '../../domain/professionalReport/templateIds';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
-export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = 'professional-v1';
+export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = DAON_DETAIL_MASTER_TEMPLATE_ID;
 
 type BuilderOptions = { generatedAt?: string; templateVersion?: string };
 const emptyCounts = <T extends string>(keys: T[]) => Object.fromEntries(keys.map((key) => [key, 0])) as Record<T, number>;
 
 function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalReportMedia[] {
   const items: ProfessionalReportMedia[] = [];
-  if (property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
-  property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
+  const allowInternal = internalPhotoAllowed(property);
+  if (allowInternal && property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
+  if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
-  for (const media of bundle.media) items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
+  for (const media of bundle.media) if (allowInternal || media.category !== 'interior') items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
   return items;
 }
 
@@ -81,11 +84,11 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     briefingItems: reportValue(property.briefingItems ?? [], context('briefingItems', { disconnected: !property.briefingItems })),
   };
   const mediaGroup = {
-    mainImage: reportValue(property.mainImage, context('mainImage', { disconnected: false })),
+    mainImage: reportValue(internalPhotoAllowed(property) ? property.mainImage : '', context('mainImage', { disconnected: false })),
     mapImage: reportValue(property.mapImage, context('mapImage', { disconnected: !property.latitude || !property.longitude })),
     locationAnalysisImage: reportValue(property.locationAnalysisImage, context('locationAnalysisImage')),
-    additionalImages: reportValue(property.additionalImages ?? [], context('additionalImages')),
-    items: media,
+    additionalImages: reportValue(internalPhotoAllowed(property) ? property.additionalImages ?? [] : [], context('additionalImages')),
+    items: media, internalPhotoAllowed: internalPhotoAllowed(property),
   };
   const documents = {
     items: bundle.documents.map((document) => ({ id: document.id, documentType: document.documentType, title: document.title, originalFileName: document.originalFileName, sourceName: document.sourceName, issuedAt: document.issuedAt ?? null, uploadedAt: document.uploadedAt, verificationStatus: document.verificationStatus, version: document.version })),

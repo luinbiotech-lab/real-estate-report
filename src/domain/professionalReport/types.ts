@@ -52,7 +52,7 @@ export interface ProfessionalReportViewModel {
   };
   media: {
     mainImage: ReportValue<string>; mapImage: ReportValue<string>; locationAnalysisImage: ReportValue<string>;
-    additionalImages: ReportValue<string[]>; items: ProfessionalReportMedia[];
+    additionalImages: ReportValue<string[]>; items: ProfessionalReportMedia[]; internalPhotoAllowed: boolean;
   };
   documents: { items: ProfessionalReportDocument[]; count: number; verifiedCount: number };
   digitalTwin: { connected: boolean; count: number; readyCount: number };

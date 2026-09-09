@@ -2,3 +2,4 @@ export { ReportDataBuilder, buildProfessionalReportViewModel, reportDataBuilder,
 export { reportSnapshotService } from './reportSnapshotService';
 export { REPORT_VALUE_LABELS } from '../../domain/professionalReport/valuePolicy';
 export type { ProfessionalReportViewModel, ReportValue, ReportValueState } from '../../domain/professionalReport/types';
+export { DAON_ONE_PAGE_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_ID, LEGACY_PROFESSIONAL_TEMPLATE_ID } from '../../domain/professionalReport/templateIds';
