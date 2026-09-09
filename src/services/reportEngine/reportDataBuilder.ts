@@ -21,13 +21,8 @@ function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalRep
   const items: ProfessionalReportMedia[] = [];
   const allowInternal = internalPhotoAllowed(property);
 
-  // Property.mainImage is the curated representative image used by the locked MASTER.
-  // Do not blank it merely because interior photos are forbidden; the current Bangbae MASTER uses an exterior hero image.
   if (property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
-
-  // Legacy additionalImages have no category metadata, so exclude them for restricted properties rather than risk interior-photo leakage.
   if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
-
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
 
@@ -84,6 +79,9 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     buildingCoverageRate: number('buildingCoverageRate', (value) => formatNullableNumber(value, '%')),
     floorAreaRatio: number('floorAreaRatio', (value) => formatNullableNumber(value, '%')), elevator: text('elevator'),
     parkingSpaces: number('parkingSpaces', (value) => formatNullableNumber(value, '대')),
+    parkingOfficial: number('parkingOfficial', (value) => formatNullableNumber(value, '대')),
+    parkingField: number('parkingField', (value) => formatNullableNumber(value, '대')),
+    parkingFieldNote: text('parkingFieldNote'),
   };
   const land = {
     landAreaSqm: numericReportValue(landSqm, context('landAreaSqm', { calculated: landSqmCalculated, formatter: ((value: number) => formatNullableArea(value, '㎡')) as (value: never) => string })),
