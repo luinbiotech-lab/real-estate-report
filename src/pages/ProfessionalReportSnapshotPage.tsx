@@ -5,7 +5,7 @@ import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { ProfessionalReportV1 } from '../components/professionalReport/ProfessionalReportV1';
 import { DaonDetail7PageMaster } from '../components/professionalReport/DaonDetail7PageMaster';
-import { DAON_DETAIL_MASTER_TEMPLATE_ID, isSupportedProfessionalTemplate } from '../domain/professionalReport/templateIds';
+import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
@@ -43,9 +43,11 @@ export default function ProfessionalReportSnapshotPage() {
 
   if (loading) return <div className="center"><CircularProgress /><p>저장된 보고서를 불러오는 중입니다.</p></div>;
   if (!snapshot || !isViewModel(snapshot.snapshotData)) return <main className="snapshot-error"><Alert severity="error">{error || '저장된 Snapshot 형식이 올바르지 않습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
-  if (!isSupportedProfessionalTemplate(snapshot.templateVersion)) return <main className="snapshot-error"><Alert severity="warning">지원되지 않는 보고서 템플릿입니다: {snapshot.templateVersion}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
 
-  const report = snapshot.templateVersion === DAON_DETAIL_MASTER_TEMPLATE_ID
+  const templateId = resolveProfessionalTemplate(snapshot);
+  if (!templateId) return <main className="snapshot-error"><Alert severity="warning">지원되지 않는 보고서 템플릿입니다: {snapshot.templateId || snapshot.templateVersion}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
+
+  const report = templateId === DAON_DETAIL_MASTER_TEMPLATE_ID
     ? <DaonDetail7PageMaster snapshot={snapshot} model={snapshot.snapshotData} />
     : <ProfessionalReportV1 snapshot={snapshot} model={snapshot.snapshotData} />;
 
