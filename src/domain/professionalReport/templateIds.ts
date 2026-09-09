@@ -2,10 +2,28 @@ export const DAON_ONE_PAGE_MASTER_TEMPLATE_ID = 'DAON_1P_MASTER' as const;
 export const DAON_DETAIL_MASTER_TEMPLATE_ID = 'DAON_DETAIL_7P_MASTER' as const;
 export const LEGACY_PROFESSIONAL_TEMPLATE_ID = 'professional-v1' as const;
 
+export const DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION = 'daon-1p-v1' as const;
+export const DAON_DETAIL_MASTER_TEMPLATE_VERSION = 'daon-detail-7p-v1' as const;
+export const LEGACY_PROFESSIONAL_TEMPLATE_VERSION = 'professional-v1' as const;
+
 export type ProfessionalReportTemplateId =
   | typeof DAON_DETAIL_MASTER_TEMPLATE_ID
   | typeof LEGACY_PROFESSIONAL_TEMPLATE_ID;
 
-export function isSupportedProfessionalTemplate(value: string): value is ProfessionalReportTemplateId {
+export function isSupportedProfessionalTemplateId(value: string): value is ProfessionalReportTemplateId {
   return value === DAON_DETAIL_MASTER_TEMPLATE_ID || value === LEGACY_PROFESSIONAL_TEMPLATE_ID;
+}
+
+export function resolveProfessionalTemplate(input: { templateId?: string; templateVersion: string }): ProfessionalReportTemplateId | null {
+  if (input.templateId && isSupportedProfessionalTemplateId(input.templateId)) return input.templateId;
+
+  // Backward compatibility for immutable snapshots created before templateId existed.
+  if (input.templateVersion === LEGACY_PROFESSIONAL_TEMPLATE_VERSION) return LEGACY_PROFESSIONAL_TEMPLATE_ID;
+
+  // Compatibility for interim WIP snapshots that stored template ID in templateVersion.
+  if (input.templateVersion === DAON_DETAIL_MASTER_TEMPLATE_ID || input.templateVersion === DAON_DETAIL_MASTER_TEMPLATE_VERSION) {
+    return DAON_DETAIL_MASTER_TEMPLATE_ID;
+  }
+
+  return null;
 }
