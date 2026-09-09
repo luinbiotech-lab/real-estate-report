@@ -5,7 +5,6 @@ import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { ProfessionalReportV1 } from '../components/professionalReport/ProfessionalReportV1';
 import { DaonDetail7PageMaster } from '../components/professionalReport/DaonDetail7PageMaster';
-import { DaonBangbaeDetail7PageGolden, isBangbaeGoldenModel } from '../components/professionalReport/DaonBangbaeGoldenReference';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
@@ -13,7 +12,6 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { reportSnapshotService } from '../services/reportEngine';
 import '../professional-report.css';
 import '../daon-detail-master.css';
-import '../daon-golden-reference.css';
 
 function isViewModel(value: unknown): value is ProfessionalReportViewModel {
   if (!value || typeof value !== 'object') return false;
@@ -50,12 +48,10 @@ export default function ProfessionalReportSnapshotPage() {
   const templateId = resolveProfessionalTemplate(snapshot);
   if (!templateId) return <main className="snapshot-error"><Alert severity="warning">지원되지 않는 보고서 템플릿입니다: {snapshot.templateId || snapshot.templateVersion}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
 
-  const bangbaeGolden = isBangbaeGoldenModel(snapshot.snapshotData);
-  const report = bangbaeGolden
-    ? <DaonBangbaeDetail7PageGolden />
-    : templateId === DAON_DETAIL_MASTER_TEMPLATE_ID
-      ? <DaonDetail7PageMaster snapshot={snapshot} model={snapshot.snapshotData} />
-      : <ProfessionalReportV1 snapshot={snapshot} model={snapshot.snapshotData} />;
+  const isDaonMaster = templateId === DAON_DETAIL_MASTER_TEMPLATE_ID;
+  const report = isDaonMaster
+    ? <DaonDetail7PageMaster snapshot={snapshot} model={snapshot.snapshotData} />
+    : <ProfessionalReportV1 snapshot={snapshot} model={snapshot.snapshotData} />;
 
-  return <main className="professional-report-shell"><nav className="professional-report-toolbar" aria-label="Professional Report 작업"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> {bangbaeGolden ? 'DAON_DETAIL_7P_MASTER 고정 미리보기' : 'Snapshot 전용 미리보기'}</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : '초안'} color={snapshot.status === 'ready' ? 'success' : 'default'} /></div><div>{snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming} onClick={markReady}>보고서 확정</Button>}<Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button></div></nav>{error && <Alert severity="error" className="professional-report-alert">{error}</Alert>}<div ref={contentRef}>{report}</div></main>;
+  return <main className="professional-report-shell"><nav className="professional-report-toolbar" aria-label="Professional Report 작업"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> {isDaonMaster ? 'DAON_DETAIL_7P_MASTER · 동적 Snapshot' : 'Legacy Snapshot'}</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : '초안'} color={snapshot.status === 'ready' ? 'success' : 'default'} /></div><div>{snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming} onClick={markReady}>보고서 확정</Button>}<Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button></div></nav>{error && <Alert severity="error" className="professional-report-alert">{error}</Alert>}<div ref={contentRef}>{report}</div></main>;
 }
