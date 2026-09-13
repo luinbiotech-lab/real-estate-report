@@ -7,6 +7,7 @@ import { readOpeningDimensions } from './openingDimensionService';
 import { buildOpeningAdjacencyCandidates, readOpeningAdjacencyReviews } from './openingTopologyService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
 import { spatialGraphService } from './spatialGraphService';
+import { verticalCoreService } from './verticalCoreService';
 import { readVerticalDimensions } from './verticalDimensionService';
 import { wallModelService } from './wallModelService';
 
@@ -49,6 +50,7 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
 
   const walls = wallModelService.build(asset);
   const openingCuts = openingCutService.build(asset);
+  const verticalCoreNodes = verticalCoreService.buildNodes(asset);
   const graph = spatialGraphService.build(asset);
   const extrusion = extrusionGeometryService.build(asset);
   const readiness = {
@@ -61,6 +63,7 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
     openingTopologyReviewed: openings.length > 0,
     allReviewedOpeningsDimensioned: openings.length === 0 || openings.every((item) => Boolean(item.dimensions)),
     openingCutsPrepared: openings.length === 0 || openingCuts.length === openings.filter((item) => Boolean(item.dimensions)).length,
+    verticalCoreReviewed: verticalCoreNodes.length > 0,
     graphStatus: graph.status,
     extrusionStatus: extrusion.status,
     productionMeshReady: false,
@@ -76,6 +79,7 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
     walls,
     openings,
     openingCuts,
+    verticalCoreNodes,
     graph,
     extrusion,
     readiness,
@@ -86,8 +90,9 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
         '벽체는 승인된 DXF wall layer 중심선과 사람이 확인한 두께·높이를 결합한 후보이며 구조벽/비구조벽을 자동 확정하지 않습니다.',
         'openingCuts는 승인된 문·창 연결과 확인 치수를 벽체에 대응시킨 절삭 후보이며 실제 mesh boolean은 아직 실행하지 않습니다.',
         'floorPlacement는 사람이 확인한 층 기준고와 slab 두께를 기록하며 층간 구조체 정합성을 자동 확정하지 않습니다.',
+        'verticalCoreNodes는 승인된 stair/elevator layer와 사람이 확인한 Core ID를 결합한 층별 연결 노드이며 피난·승강기 법규 적합성을 확정하지 않습니다.',
         '공적 장부 면적, 구조 안전성, 피난 적합성, 인허가 적합성, 실시설계 치수를 확정하지 않습니다.',
-        'productionMeshReady는 벽체 접합·개구부 boolean·슬래브 형상·구조체·층간 정합성 검토 전까지 false입니다.',
+        'productionMeshReady는 벽체 접합·개구부 boolean·슬래브 형상·구조체·층간 core 정합성 검토 전까지 false입니다.',
       ],
     },
   };
