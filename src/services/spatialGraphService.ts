@@ -68,7 +68,7 @@ export function buildSpatialConnectivityGraph(asset: DigitalTwinAsset): SpatialC
     edges,
     warnings: [
       '그래프 노드는 승인된 공간 경계 후보만 사용합니다.',
-      '그래프 엣지는 승인된 door/window 근접관계 후보이며 실제 통행 가능성·개구부 치수·피난 적합성을 확정하지 않습니다.',
+      '그래프 엣지는 승인된 door/window 근접관계 후보이며 실제 통행 가능성·개구부 치수·피난·접근성 적합성을 확정하지 않습니다.',
       ...(unresolved ? [`${unresolved}개 개구부 연결은 한쪽 또는 양쪽 공간이 미해결 상태입니다.`] : []),
     ],
   };
