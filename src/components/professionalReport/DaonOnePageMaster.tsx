@@ -1,4 +1,17 @@
-import { AssignmentTurnedInOutlined, BusinessOutlined, LocalParkingOutlined, LocationOnOutlined } from '@mui/icons-material';
+import type { ReactNode } from 'react';
+import {
+  ApartmentOutlined,
+  AssignmentTurnedInOutlined,
+  BusinessOutlined,
+  CalendarMonthOutlined,
+  DescriptionOutlined,
+  GroupsOutlined,
+  LayersOutlined,
+  LightbulbOutlined,
+  LocalParkingOutlined,
+  LocationOnOutlined,
+  StraightenOutlined,
+} from '@mui/icons-material';
 import type { Property } from '../../types';
 import { formatWon, lines, pricePerPyeong } from '../../utils/format';
 import { DAON_ONE_PAGE_MASTER_TEMPLATE_ID, DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
@@ -20,14 +33,17 @@ function DaonLogo() {
   </div>;
 }
 
-function Fact({ label, value }: { label: string; value: string }) {
-  return <div className="d1-fact"><b>{label}</b><span title={value}>{value}</span></div>;
+function Fact({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+  return <div className="d1-fact">
+    <b><span className="d1-fact-icon">{icon}</span><span className="d1-fact-label">{label}</span></b>
+    <span className="d1-fact-value" title={value}>{value}</span>
+  </div>;
 }
 
 export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const landUnit = pricePerPyeong(p);
   const grossUnit = p.salePrice && p.totalFloorAreaPyeong ? Math.round(p.salePrice / p.totalFloorAreaPyeong) : 0;
-  const points = [...lines(p.features), ...lines(p.investmentPoints)].filter(Boolean).slice(0, 6);
+  const points = [...lines(p.features), ...lines(p.investmentPoints)].filter(Boolean).slice(0, 7);
   const officialParking = hasNumber(p.parkingOfficial)
     ? `${p.parkingOfficial}대`
     : hasNumber(p.parkingSpaces)
@@ -50,10 +66,10 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const roadSummary = first(p.roadCondition, '도로 조건 확인 필요');
   const roadAddress = p.address ? p.address.split(' ').slice(-2).join(' ') : '소재지 확인 필요';
   const highlightItems = [
-    roadSummary,
-    occupancySummary,
-    first(p.recommendedUse, '활용 방향 검토'),
-    first(p.developmentPlan, '개발·인허가 검토'),
+    { text: roadSummary, icon: <LocationOnOutlined /> },
+    { text: occupancySummary, icon: <GroupsOutlined /> },
+    { text: first(p.recommendedUse, '활용 방향 검토'), icon: <ApartmentOutlined /> },
+    { text: first(p.developmentPlan, '개발·인허가 검토'), icon: <DescriptionOutlined /> },
   ];
 
   return <div className="daon-one-page-master" data-template-id={DAON_ONE_PAGE_MASTER_TEMPLATE_ID} data-template-version={DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION}>
@@ -92,18 +108,18 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
             </div>
           </div>
           <div className="d1-facts-grid">
-            <Fact label="주소" value={p.address || '확인 필요'} />
-            <Fact label="주용도" value={p.mainUse || '확인 필요'} />
-            <Fact label="토지면적" value={areaPair(p.landAreaSqm, p.landAreaPyeong)} />
-            <Fact label="용도지역" value={p.zoning || '확인 필요'} />
-            <Fact label="지목" value="확인 필요" />
-            <Fact label="사용승인일" value={p.completionDate || '확인 필요'} />
-            <Fact label="연면적" value={areaPair(p.totalFloorAreaSqm, p.totalFloorAreaPyeong)} />
-            <Fact label="건축면적" value={p.buildingAreaPyeong ? `${p.buildingAreaPyeong.toFixed(2)}평` : '확인 필요'} />
-            <Fact label="규모" value={floorText(p)} />
-            <Fact label="공부상 주차" value={officialParking} />
-            <Fact label="현장 주차" value={fieldParking} />
-            <Fact label="현재 이용·명도" value={occupancySummary} />
+            <Fact icon={<LocationOnOutlined />} label="주소" value={p.address || '확인 필요'} />
+            <Fact icon={<BusinessOutlined />} label="주용도" value={p.mainUse || '확인 필요'} />
+            <Fact icon={<StraightenOutlined />} label="토지면적" value={areaPair(p.landAreaSqm, p.landAreaPyeong)} />
+            <Fact icon={<LayersOutlined />} label="용도지역" value={p.zoning || '확인 필요'} />
+            <Fact icon={<DescriptionOutlined />} label="지목" value="확인 필요" />
+            <Fact icon={<CalendarMonthOutlined />} label="사용승인일" value={p.completionDate || '확인 필요'} />
+            <Fact icon={<StraightenOutlined />} label="연면적" value={areaPair(p.totalFloorAreaSqm, p.totalFloorAreaPyeong)} />
+            <Fact icon={<ApartmentOutlined />} label="건축면적" value={p.buildingAreaPyeong ? `${p.buildingAreaPyeong.toFixed(2)}평` : '확인 필요'} />
+            <Fact icon={<ApartmentOutlined />} label="규모" value={floorText(p)} />
+            <Fact icon={<LocalParkingOutlined />} label="공부상 주차" value={officialParking} />
+            <Fact icon={<LocalParkingOutlined />} label="현장 주차" value={fieldParking} />
+            <Fact icon={<AssignmentTurnedInOutlined />} label="현재 이용·명도" value={occupancySummary} />
           </div>
         </div>
 
@@ -126,10 +142,10 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       </section>
 
       <section className="d1-highlight-strip">
-        {highlightItems.map((item, index) => <div key={`${item}-${index}`}><b>{item}</b></div>)}
+        {highlightItems.map((item, index) => <div key={`${item.text}-${index}`}><span className="d1-highlight-icon">{item.icon}</span><b>{item.text}</b></div>)}
       </section>
 
-      <section className="d1-use"><strong>활용 제안</strong><p>{p.recommendedUse || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
+      <section className="d1-use"><strong><LightbulbOutlined /><span>활용 제안</span></strong><p>{p.recommendedUse || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
 
       <footer className="d1-footer">
         <DaonLogo />
