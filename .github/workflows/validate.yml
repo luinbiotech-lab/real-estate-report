@@ -4,7 +4,11 @@ on:
   push:
     branches:
       - feat/daon-master-code-lock
-  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   validate:
