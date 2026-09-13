@@ -3,6 +3,7 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { readScaleCalibration } from './measurementCalibrationService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
+import { readVerticalDimensions } from './verticalDimensionService';
 
 type GeometrySummary = {
   parser?: string;
@@ -31,6 +32,7 @@ function modelFromAsset(asset: DigitalTwinAsset) {
   }
   const labels = Array.isArray(geometry.labelCandidates) ? geometry.labelCandidates : [];
   const calibration = readScaleCalibration(asset);
+  const vertical = readVerticalDimensions(asset);
   const roomCandidates = buildRoomBoundaryCandidates(asset);
   const roomReviews = readRoomTopologyReviews(asset);
   const approvedReviews = roomReviews.filter((review) => review.decision === 'approved');
@@ -49,7 +51,18 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     };
   });
   const topologyStatus = approvedRooms.length ? 'reviewed_boundary_candidates' : roomCandidates.length ? 'review_required' : 'boundary_candidates_missing';
-  const extrusionStatus = calibration && approvedRooms.length ? 'height_required' : 'blocked';
+  const extrusionHeightM = vertical?.ceilingHeightM ?? vertical?.floorHeightM;
+  const extrusionStatus = calibration && approvedRooms.length && extrusionHeightM ? 'candidate_ready' : calibration && approvedRooms.length ? 'height_required' : 'blocked';
+  const extrusionCandidates = extrusionStatus === 'candidate_ready' ? approvedRooms.map((room) => ({
+    roomId: room.id,
+    name: room.name,
+    floor: room.floor,
+    heightM: extrusionHeightM,
+    areaSqmCandidate: room.areaSqmCandidate,
+    volumeM3Candidate: room.areaSqmCandidate != null ? room.areaSqmCandidate * extrusionHeightM : undefined,
+    status: 'reviewed_inputs_candidate',
+    note: '검증 축척·승인 공간 경계·확인 높이로 만든 3D extrusion 입력 후보이며 구조체/법정면적 확정값이 아닙니다.',
+  })) : [];
 
   return {
     assetId: asset.id,
@@ -64,13 +77,16 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     roomTopology: { status: topologyStatus, candidateCount: roomCandidates.length, approvedCount: approvedRooms.length, approvedRooms },
     topologyStatus,
     extrusionStatus,
+    extrusionCandidates,
+    verticalDimensions: vertical ? { floorHeightM: vertical.floorHeightM, ceilingHeightM: vertical.ceilingHeightM, sourceLabel: vertical.sourceLabel, verifiedAt: vertical.verifiedAt } : undefined,
     measurementStatus: calibration ? 'scale_verified' : geometry.unitStatus === 'drawing_units_unverified' ? 'scale_unverified' : 'unknown',
     scaleCalibration: calibration ? { method: calibration.method, metersPerDrawingUnit: calibration.metersPerDrawingUnit, referenceLabel: calibration.referenceLabel, verifiedAt: calibration.verifiedAt } : undefined,
     meshStatus: 'not_generated',
     warnings: [
       ...(calibration ? ['사용자가 확인한 기준 치수로 도면 좌표를 m 단위로 환산합니다.'] : ['도면 좌표의 실제 길이 단위·축척은 검증 전까지 거리/면적으로 확정하지 않습니다.']),
       ...(approvedRooms.length ? ['승인된 폐합 폴리라인은 공간 경계 후보로 사용하지만 공적 장부 면적을 대체하지 않습니다.'] : ['공간 경계 Human Review가 완료되지 않아 3D extrusion을 진행하지 않습니다.']),
-      '3D 높이는 천장고·층고 검증 전까지 생성하지 않습니다.',
+      ...(vertical ? ['사용자가 확인한 층고·천장고를 3D 높이 입력 후보로 사용합니다.'] : ['3D 높이는 천장고·층고 검증 전까지 생성하지 않습니다.']),
+      '3D extrusion 후보는 구조체·슬래브·벽 두께·개구부·법정면적의 확정 모델이 아닙니다.',
       '벽·문·창·기둥·계단·엘리베이터 의미는 Human Review 결과를 기준으로 사용해야 합니다.',
     ],
   };
@@ -88,10 +104,11 @@ export const digitalTwinExecutionService = {
       const modelable = models.filter((model) => model.status === 'model_candidate').length;
       const scaleVerified = models.filter((model) => 'measurementStatus' in model && model.measurementStatus === 'scale_verified').length;
       const topologyReviewed = models.filter((model) => 'topologyStatus' in model && model.topologyStatus === 'reviewed_boundary_candidates').length;
+      const extrusionReady = models.filter((model) => 'extrusionStatus' in model && model.extrusionStatus === 'candidate_ready').length;
       return agentOrchestratorService.complete(job, {
         resultType: 'digital_twin_model_candidate',
-        payload: { models, adapterVersion: 'digital-twin-local-v3', mode: 'geometry_scale_topology', scaleVerified, topologyReviewed, safetyNote: '축척과 room topology는 Human Review 후에만 사용하며 층고 검증 전에는 3D extrusion을 생성하지 않습니다.' },
-        confidence: models.length ? Math.min(0.95, (modelable / models.length) * 0.65 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15) : 0,
+        payload: { models, adapterVersion: 'digital-twin-local-v4', mode: 'geometry_scale_topology_vertical', scaleVerified, topologyReviewed, extrusionReady, safetyNote: '축척·room topology·높이는 Human Review 후에만 사용하며 실제 mesh 생성 전에도 구조·개구부 검토가 필요합니다.' },
+        confidence: models.length ? Math.min(0.97, (modelable / models.length) * 0.55 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15 + (extrusionReady / models.length) * 0.1) : 0,
         requiresReview: models.length > 0,
       });
     } catch (error) { await agentOrchestratorService.fail(job, error); throw error; }
