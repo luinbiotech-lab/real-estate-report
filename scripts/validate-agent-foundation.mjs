@@ -8,6 +8,7 @@ const executor = readFileSync('src/services/agentExecutionService.ts', 'utf8');
 const runtime = readFileSync('src/services/agentRuntimeService.ts', 'utf8');
 const vision = readFileSync('src/services/visionProviderService.ts', 'utf8');
 const interiorVision = readFileSync('src/services/interiorVisionExecutionService.ts', 'utf8');
+const visionFacility = readFileSync('src/services/visionFacilityService.ts', 'utf8');
 const spatialIntake = readFileSync('src/services/spatialIntakeService.ts', 'utf8');
 const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
 const app = readFileSync('src/App.tsx', 'utf8');
@@ -33,6 +34,8 @@ if (!spatialIntake.includes('uploadPlanAsset') || !spatialIntake.includes("'dwg'
 if (!vision.includes("providerId: 'browser_pixel_v1'") || !vision.includes('createImageBitmap') || !vision.includes('OffscreenCanvas')) throw new Error('Browser pixel Vision provider is incomplete.');
 if (!vision.includes('brightness') || !vision.includes('contrast') || !vision.includes('edgeDensity')) throw new Error('Vision quality signals are incomplete.');
 if (!interiorVision.includes("method: 'browser_pixel_plus_metadata'") || !interiorVision.includes('visualSignals') || !interiorVision.includes("resultType: 'media_classification_candidate'")) throw new Error('Interior Vision provider adapter integration is incomplete.');
+if (!visionFacility.includes('applyApprovedVisionResult') || !visionFacility.includes('saveFacility') || !visionFacility.includes("condition: 'unknown'")) throw new Error('Approved Vision results must create conservative facility inventory without condition overclaiming.');
+if (!runtime.includes('visionFacilityService.applyApprovedVisionResult(result)')) throw new Error('Approved Interior Vision results are not persisted into facility inventory.');
 if (!runtime.includes("job.agentType === 'interior_vision'") || !runtime.includes('interiorVisionExecutionService.execute(job)')) throw new Error('Interior Vision jobs are not routed through the provider runtime.');
 if (!executor.includes("resultType: 'space_model_candidate'") || !executor.includes("resultType: 'floor_plan_intake_candidate'")) throw new Error('Floor Plan/Space execution adapters are incomplete.');
 if (!executor.includes("job.resourceType === 'digital_twin'") || !executor.includes('sourceDigitalTwinAssetId')) throw new Error('Raw Digital Twin plan assets are not handled by the Floor Plan Agent.');
@@ -56,4 +59,4 @@ if (!spatialPage.includes('리노베이션 검토') || !spatialPage.includes('re
 if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Agent automation + browser Vision integrity: PASS');
+console.log('DA:ON Agent automation + browser Vision + facility inventory integrity: PASS');
