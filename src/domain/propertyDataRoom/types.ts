@@ -3,8 +3,32 @@ export type VerificationDecisionStatus = 'pending' | 'approved' | 'held' | 'reje
 export type DocumentExtractionStatus = 'not_started' | 'text_extracted' | 'scan_ocr_required' | 'manual_review' | 'failed';
 export type DocumentExtractionMethod = 'pdf_text' | 'ocr' | 'manual';
 export type DocumentType = 'building_register' | 'land_register' | 'land_use_plan' | 'registry' | 'cadastral_map' | 'lease_status' | 'floor_plan' | 'appraisal' | 'contract' | 'financial' | 'development' | 'due_diligence' | 'other';
-export type MediaCategory = 'exterior' | 'interior' | 'road' | 'entrance' | 'parking' | 'roof' | 'mechanical' | 'surroundings' | 'floor_plan' | 'aerial' | '360' | 'other';
+export type MediaCategory = 'exterior' | 'interior' | 'lobby' | 'office' | 'corridor' | 'restroom' | 'basement' | 'rooftop' | 'parking' | 'mechanical_room' | 'road' | 'entrance' | 'surroundings' | 'floor_plan' | 'facade_detail' | 'aerial' | '360' | 'other';
 export type DataSourceType = 'manual' | 'excel_import' | 'public_api' | 'official_document' | 'map_provider' | 'market_data' | 'calculated' | 'ai' | 'external';
+
+export type AgentType = 'intake' | 'document' | 'interior_vision' | 'floor_plan' | 'space' | 'renovation' | 'risk_compliance' | 'report' | 'digital_twin';
+export type AgentJobStatus = 'queued' | 'running' | 'review_required' | 'completed' | 'failed' | 'cancelled';
+export type AgentTrigger = 'manual' | 'upload' | 'dependency' | 'refresh';
+export type AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected';
+
+export interface AgentJob {
+  id: string; propertyId: string; agentType: AgentType; trigger: AgentTrigger;
+  resourceType?: 'document' | 'media' | 'property' | 'digital_twin'; resourceId?: string;
+  status: AgentJobStatus; priority: number; attempt: number; maxAttempts: number;
+  input: Record<string, unknown>; error?: string;
+  createdAt: string; startedAt?: string; completedAt?: string; updatedAt: string;
+}
+
+export interface AgentResult {
+  id: string; jobId: string; propertyId: string; agentType: AgentType; resultType: string;
+  payload: Record<string, unknown>; confidence?: number; requiresReview: boolean;
+  createdAt: string;
+}
+
+export interface AgentReview {
+  id: string; jobId: string; resultId: string; propertyId: string;
+  decision: AgentReviewDecision; note: string; reviewedBy?: string; reviewedAt?: string; createdAt: string; updatedAt: string;
+}
 
 export interface PropertyDocument {
   id: string; propertyId: string; documentType: DocumentType; title: string; originalFileName: string;
@@ -66,9 +90,11 @@ export interface DataRoomBundle {
   documents: PropertyDocument[]; media: PropertyMedia[]; verifications: PropertyVerification[];
   verificationCandidates: PropertyVerificationCandidate[];
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
+  agentJobs: AgentJob[]; agentResults: AgentResult[]; agentReviews: AgentReview[];
 }
 
 export interface DataRoomSummary {
   documents: number; media: number; officiallyVerified: number; unverified: number; verificationPending: number;
-  reports: number; digitalTwin: number; missingDocumentTypes: DocumentType[]; reportReady: boolean;
+  reports: number; digitalTwin: number; agentQueued: number; agentReviewRequired: number;
+  missingDocumentTypes: DocumentType[]; reportReady: boolean;
 }
