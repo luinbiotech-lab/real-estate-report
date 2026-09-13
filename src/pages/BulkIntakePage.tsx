@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Checkbox, Chip, CircularProgress, MenuItem, TextField } from '@mui/material';
-import { ArrowBackRounded, CloudUploadRounded } from '@mui/icons-material';
+import { ArrowBackRounded, CloudUploadRounded, DocumentScannerRounded } from '@mui/icons-material';
 import { DOCUMENT_TYPE_LABELS } from '../domain/propertyDataRoom/labels';
+import { verificationFieldLabel } from '../domain/propertyDataRoom/verificationFieldRegistry';
 import type { PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
 import { propertyRepository } from '../repositories/propertyRepository';
+import { browserOcrService } from '../services/browserOcrService';
 import { documentExtractionService } from '../services/documentExtractionService';
 import { pdfTextExtractionService } from '../services/pdfTextExtractionService';
 import { propertyDataRoomService } from '../services/propertyDataRoomService';
@@ -33,6 +35,7 @@ export default function BulkIntakePage() {
   const [candidates, setCandidates] = useState<PropertyVerificationCandidate[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [ocrBusyId, setOcrBusyId] = useState('');
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -108,6 +111,18 @@ export default function BulkIntakePage() {
     setBusy(false);
   };
 
+  const runOcr = async (document: PropertyDocument) => {
+    setOcrBusyId(document.id); setError(''); setMessage('');
+    try {
+      const result = await browserOcrService.process(document);
+      await loadBundle();
+      setMessage(`${document.title}: OCR ${result.pageCount}페이지 처리 · 검증 후보 ${result.queued}건${typeof result.confidence === 'number' ? ` · 평균 신뢰도 ${Math.round(result.confidence * 100)}%` : ''}`);
+    } catch (reason) {
+      await loadBundle();
+      setError(reason instanceof Error ? reason.message : 'OCR 처리에 실패했습니다.');
+    } finally { setOcrBusyId(''); }
+  };
+
   const bulkDecision = async (status: VerificationDecisionStatus) => {
     const targets = pending.filter((item) => selected.has(item.id));
     if (!targets.length) { setError('처리할 검증 후보를 선택해 주세요.'); return; }
@@ -126,7 +141,7 @@ export default function BulkIntakePage() {
 
   return <main className="data-room-page">
     <header className="data-room-header">
-      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button><p className="eyebrow">BULK DATA INTAKE</p><h1>공적자료 일괄 등록 · 검증</h1><p>여러 문서를 한 번에 등록하고 자동 분류·추출한 후보값을 승인합니다.</p></div>
+      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button><p className="eyebrow">BULK DATA INTAKE</p><h1>공적자료 일괄 등록 · 검증</h1><p>여러 문서를 한 번에 등록하고 자동 분류·텍스트 추출·OCR 후 후보값을 승인합니다.</p></div>
     </header>
 
     {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
@@ -136,25 +151,31 @@ export default function BulkIntakePage() {
       <TextField select label="대상 물건" value={propertyId} onChange={(event) => setPropertyId(event.target.value)}>
         {properties.map((property) => <MenuItem key={property.id} value={property.id}>{property.name} · {property.address}</MenuItem>)}
       </TextField>
-      <Button component="label" variant="contained" startIcon={<CloudUploadRounded />} disabled={busy || !propertyId}>
+      <Button component="label" variant="contained" startIcon={<CloudUploadRounded />} disabled={busy || !!ocrBusyId || !propertyId}>
         {busy ? '처리 중…' : 'PDF / 이미지 여러 파일 등록'}
         <input hidden multiple type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={uploadFiles} />
       </Button>
+      <small>텍스트 PDF는 즉시 필드 후보를 생성합니다. 이미지·스캔 PDF는 문서 목록에서 OCR을 실행합니다.</small>
     </section>
 
     <section className="panel">
       <h2>등록 문서</h2>
-      {documents.length ? <div className="document-list">{documents.map((document) => <article key={document.id}>
-        <div><b>{document.title}</b><span>{DOCUMENT_TYPE_LABELS[document.documentType]} · {(document.fileSize / 1024 / 1024).toFixed(2)}MB</span><small>{EXTRACTION_LABELS[document.extractionStatus || 'not_started'] || document.extractionStatus}</small></div>
-        <Chip size="small" label={document.extractionStatus === 'scan_ocr_required' ? 'OCR 필요' : document.extractionStatus === 'failed' ? '확인 필요' : '처리됨'} color={document.extractionStatus === 'failed' ? 'error' : document.extractionStatus === 'scan_ocr_required' ? 'warning' : 'default'} />
-      </article>)}</div> : <p>등록된 문서가 없습니다.</p>}
+      {documents.length ? <div className="document-list">{documents.map((document) => {
+        const needsOcr = document.extractionStatus === 'scan_ocr_required';
+        const ocrBusy = ocrBusyId === document.id;
+        return <article key={document.id}>
+          <div><b>{document.title}</b><span>{DOCUMENT_TYPE_LABELS[document.documentType]} · {(document.fileSize / 1024 / 1024).toFixed(2)}MB</span><small>{EXTRACTION_LABELS[document.extractionStatus || 'not_started'] || document.extractionStatus}{document.extractionError ? ` · ${document.extractionError}` : ''}</small></div>
+          <Chip size="small" label={needsOcr ? 'OCR 필요' : document.extractionStatus === 'failed' ? '확인 필요' : '처리됨'} color={document.extractionStatus === 'failed' ? 'error' : needsOcr ? 'warning' : 'default'} />
+          {needsOcr && <Button size="small" variant="outlined" startIcon={<DocumentScannerRounded />} disabled={!!ocrBusyId || busy} onClick={() => runOcr(document)}>{ocrBusy ? 'OCR 처리 중…' : 'OCR 실행'}</Button>}
+        </article>;
+      })}</div> : <p>등록된 문서가 없습니다.</p>}
     </section>
 
     <section className="panel">
-      <div className="toolbar"><div><h2>검증 후보</h2><p>승인 전에는 Property 원본값이 변경되지 않습니다.</p></div><span className="spacer" /><Button disabled={busy} color="success" onClick={() => bulkDecision('approved')}>선택 승인</Button><Button disabled={busy} onClick={() => bulkDecision('held')}>선택 보류</Button><Button disabled={busy} color="error" onClick={() => bulkDecision('rejected')}>선택 거절</Button></div>
+      <div className="toolbar"><div><h2>검증 후보</h2><p>승인 전에는 Property 원본값이 변경되지 않습니다. 허용된 Property 필드만 승인할 수 있습니다.</p></div><span className="spacer" /><Button disabled={busy || !!ocrBusyId} color="success" onClick={() => bulkDecision('approved')}>선택 승인</Button><Button disabled={busy || !!ocrBusyId} onClick={() => bulkDecision('held')}>선택 보류</Button><Button disabled={busy || !!ocrBusyId} color="error" onClick={() => bulkDecision('rejected')}>선택 거절</Button></div>
       {pending.length ? <div className="table-wrap"><table className="bulk-table"><thead><tr><th>선택</th><th>항목</th><th>현재값</th><th>후보값</th><th>출처</th><th>상태</th></tr></thead><tbody>{pending.map((candidate) => <tr key={candidate.id}>
         <td><Checkbox checked={selected.has(candidate.id)} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(candidate.id); else next.delete(candidate.id); return next; })} /></td>
-        <td><b>{candidate.fieldKey}</b></td><td>{displayValue(candidate.currentValue)}</td><td>{displayValue(candidate.candidateValue)}</td><td>{candidate.sourceName}<small>{candidate.sourceReference || ''}</small></td><td><Chip size="small" label={candidate.decisionStatus === 'held' ? '보류' : '검토 대기'} /></td>
+        <td><b>{verificationFieldLabel(candidate.fieldKey)}</b><small>{candidate.fieldKey}</small></td><td>{displayValue(candidate.currentValue)}</td><td>{displayValue(candidate.candidateValue)}</td><td>{candidate.sourceName}<small>{candidate.sourceReference || ''}</small></td><td><Chip size="small" label={candidate.decisionStatus === 'held' ? '보류' : '검토 대기'} /></td>
       </tr>)}</tbody></table></div> : <Alert severity="info">현재 검증 대기 후보가 없습니다.</Alert>}
     </section>
   </main>;
