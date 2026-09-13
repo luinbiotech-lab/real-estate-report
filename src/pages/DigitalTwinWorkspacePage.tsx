@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { RefreshRounded } from '@mui/icons-material';
+import { AutoAwesomeRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import ExtrusionPreview from '../components/ExtrusionPreview';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
@@ -7,9 +7,12 @@ import FloorPlanSemanticReviewPanel from '../components/FloorPlanSemanticReviewP
 import OpeningTopologyPanel from '../components/OpeningTopologyPanel';
 import RoomTopologyPanel from '../components/RoomTopologyPanel';
 import ScaleCalibrationPanel from '../components/ScaleCalibrationPanel';
+import SpatialGraphPanel from '../components/SpatialGraphPanel';
 import VerticalDimensionPanel from '../components/VerticalDimensionPanel';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
+import { agentOrchestratorService } from '../services/agentOrchestratorService';
+import { agentRuntimeService } from '../services/agentRuntimeService';
 import type { Property } from '../types';
 
 export default function DigitalTwinWorkspacePage() {
@@ -17,7 +20,9 @@ export default function DigitalTwinWorkspacePage() {
   const [propertyId, setPropertyId] = useState('');
   const [bundle, setBundle] = useState<Awaited<ReturnType<typeof propertyDataRoomRepository.getBundle>>>({ documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] });
   const [loading, setLoading] = useState(true);
+  const [refreshingTwin, setRefreshingTwin] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const selected = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
   const load = async (id = propertyId) => { if (id) setBundle(await propertyDataRoomRepository.getBundle(id)); };
@@ -31,6 +36,24 @@ export default function DigitalTwinWorkspacePage() {
       finally { setLoading(false); }
     })();
   }, []);
+
+  const refreshTwinCandidate = async () => {
+    if (!propertyId) return;
+    setRefreshingTwin(true); setError(''); setNotice('');
+    try {
+      const job = await agentOrchestratorService.queuePropertyAgent(propertyId, 'digital_twin', 'refresh', { requestedFrom: 'digital-twin-workspace' });
+      if (job.status === 'queued') {
+        await agentRuntimeService.execute(job);
+        setNotice('Digital Twin 후보를 최신 승인 데이터 기준으로 다시 생성했습니다. Agent Operations의 Human Review에서 확인하세요.');
+      } else if (job.status === 'review_required') {
+        setNotice('이미 검토 대기 중인 Digital Twin 후보가 있습니다. 기존 Human Review를 먼저 처리하세요.');
+      } else {
+        setNotice(`Digital Twin Agent 상태: ${job.status}`);
+      }
+      await load();
+    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Digital Twin 후보를 갱신하지 못했습니다.'); }
+    finally { setRefreshingTwin(false); }
+  };
 
   if (loading) return <div className="center"><CircularProgress /><p>Digital Twin Workspace를 준비하는 중입니다.</p></div>;
 
@@ -48,13 +71,15 @@ export default function DigitalTwinWorkspacePage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">FLOOR PLAN · TOPOLOGY · OPENINGS · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 문·창 인접관계, 층고·천장고를 Human Review로 연결해 3D extrusion 후보를 구성합니다.</p>
+      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 문·창 인접관계, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D extrusion 후보를 구성합니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+    {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
-    <section style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-      <FormControl size="small" fullWidth><InputLabel id="twin-property-label">대상 물건</InputLabel><Select labelId="twin-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); await load(event.target.value); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
+    <section style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20, alignItems: 'center' }}>
+      <FormControl size="small" fullWidth><InputLabel id="twin-property-label">대상 물건</InputLabel><Select labelId="twin-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); setNotice(''); await load(event.target.value); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
       <Button startIcon={<RefreshRounded />} onClick={() => load()}>새로고침</Button>
+      <Button variant="contained" startIcon={<AutoAwesomeRounded />} disabled={!propertyId || refreshingTwin} onClick={() => void refreshTwinCandidate()}>{refreshingTwin ? '후보 생성 중' : 'Twin 후보 갱신'}</Button>
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
 
@@ -64,7 +89,7 @@ export default function DigitalTwinWorkspacePage() {
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 26, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
-    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, door/window 인접관계, 층고·천장고는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·인허가 판단을 대체하지 않습니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, door/window 인접관계, 층고·천장고는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
 
     <div style={{ display: 'grid', gap: 20 }}>
       {assets.map((asset) => {
@@ -89,8 +114,9 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningTopologyPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><SpatialGraphPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><ExtrusionPreview asset={asset} /></div>}
-          {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
+          {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · openings: {String(twinModel.openingTopologyStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
         </section>;
       })}
       {!assets.length && <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 36, textAlign: 'center', color: '#7b8794' }}>Spatial Workspace에서 PDF/DWG/DXF 도면 원본을 먼저 등록하세요.</section>}
