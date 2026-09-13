@@ -5,6 +5,7 @@ import DigitalTwinHandoffPanel from '../components/DigitalTwinHandoffPanel';
 import ExtrusionPreview from '../components/ExtrusionPreview';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
 import FloorPlanSemanticReviewPanel from '../components/FloorPlanSemanticReviewPanel';
+import OpeningCutPanel from '../components/OpeningCutPanel';
 import OpeningDimensionPanel from '../components/OpeningDimensionPanel';
 import OpeningTopologyPanel from '../components/OpeningTopologyPanel';
 import ReviewedMeshViewer from '../components/ReviewedMeshViewer';
@@ -122,6 +123,7 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningDimensionPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><OpeningCutPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><SpatialGraphPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><ExtrusionPreview asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><ReviewedMeshViewer asset={asset} /></div>}
