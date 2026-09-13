@@ -1,8 +1,10 @@
 import type { PropertyDocument } from '../domain/propertyDataRoom/types';
+import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import type { Property } from '../types';
 import { documentExtractionService } from './documentExtractionService';
+import { documentTypeDetectionService } from './documentTypeDetectionService';
 import { pdfTextExtractionService } from './pdfTextExtractionService';
 import { propertyDataRoomService } from './propertyDataRoomService';
-import type { Property } from '../types';
 
 const TESSERACT_MODULE_URL = 'https://esm.sh/tesseract.js@5.1.1';
 const PDFJS_VERSION = '4.10.38';
@@ -52,11 +54,18 @@ export const browserOcrService = {
         await propertyDataRoomService.updateDocumentExtraction(document, { status: 'manual_review', method: 'ocr', pageCount: inputs.length, error: 'OCR에서 읽을 수 있는 텍스트를 찾지 못했습니다.' });
         return { text: '', queued: 0, pageCount: inputs.length };
       }
-      const prefills = pdfTextExtractionService.prefill(document.documentType, text);
+
+      const detectedType = document.documentType === 'other'
+        ? documentTypeDetectionService.detect(text, document.documentType)
+        : document.documentType;
+      const extractionDocument = detectedType !== document.documentType
+        ? await propertyDataRoomRepository.updateDocument({ ...document, documentType: detectedType, updatedAt: new Date().toISOString() })
+        : document;
+      const prefills = pdfTextExtractionService.prefill(extractionDocument.documentType, text);
       const fields = Object.entries(prefills).map(([fieldKey, rawValue]) => ({ fieldKey: fieldKey as keyof Property, rawValue }));
-      const queued = fields.length ? await documentExtractionService.queueExtractedFields(document, fields) : 0;
+      const queued = fields.length ? await documentExtractionService.queueExtractedFields(extractionDocument, fields) : 0;
       const confidence = confidences.length ? confidences.reduce((sum, value) => sum + value, 0) / confidences.length / 100 : undefined;
-      await propertyDataRoomService.updateDocumentExtraction(document, {
+      await propertyDataRoomService.updateDocumentExtraction(extractionDocument, {
         status: queued ? 'text_extracted' : 'manual_review', method: 'ocr', pageCount: inputs.length,
         error: queued ? undefined : 'OCR 텍스트는 추출했지만 자동 식별된 필드가 없습니다.',
       });
