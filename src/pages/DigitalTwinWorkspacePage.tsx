@@ -12,6 +12,7 @@ import RoomTopologyPanel from '../components/RoomTopologyPanel';
 import ScaleCalibrationPanel from '../components/ScaleCalibrationPanel';
 import SpatialGraphPanel from '../components/SpatialGraphPanel';
 import VerticalDimensionPanel from '../components/VerticalDimensionPanel';
+import WallModelPanel from '../components/WallModelPanel';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { agentOrchestratorService } from '../services/agentOrchestratorService';
@@ -75,7 +76,7 @@ export default function DigitalTwinWorkspacePage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">FLOOR PLAN · TOPOLOGY · OPENINGS · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 문·창 연결과 확인 치수, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D extrusion 후보를 구성하고 브라우저 3D 검토 후 handoff package로 내보냅니다.</p>
+      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창 연결과 확인 치수, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D 후보를 구성하고 브라우저 3D 검토 후 handoff package로 내보냅니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
@@ -93,7 +94,7 @@ export default function DigitalTwinWorkspacePage() {
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 12 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
-    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, door/window 연결·치수, 층고·천장고는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
 
     <div style={{ display: 'grid', gap: 20 }}>
       {assets.map((asset) => {
@@ -117,6 +118,7 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><ScaleCalibrationPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><VerticalDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><WallModelPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningDimensionPanel asset={asset} onSaved={() => load()} /></div>}
