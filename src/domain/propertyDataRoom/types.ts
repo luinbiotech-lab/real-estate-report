@@ -48,6 +48,20 @@ export interface PropertyMedia {
   createdAt: string; updatedAt: string; deletedAt?: string;
 }
 
+export type SpaceType = 'retail' | 'office' | 'residential' | 'lobby' | 'corridor' | 'restroom' | 'parking' | 'basement' | 'rooftop' | 'mechanical' | 'storage' | 'other';
+export interface PropertySpace {
+  id: string; propertyId: string; name: string; spaceType: SpaceType; floor?: string; roomCode?: string;
+  areaSqm?: number; widthM?: number; depthM?: number; ceilingHeightM?: number;
+  currentCondition?: string; recommendedUse?: string;
+  sourceType: 'manual' | 'agent'; sourceAgentResultId?: string; verificationStatus: VerificationStatus;
+  createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
+export interface SpaceMediaLink {
+  id: string; propertyId: string; spaceId: string; mediaId: string; confidence?: number;
+  sourceAgentResultId?: string; createdAt: string; deletedAt?: string;
+}
+
 export interface PropertyVerification {
   id: string; propertyId: string; fieldKey: string; status: VerificationStatus; note: string;
   verifiedBy?: string; verifiedAt?: string; createdAt: string; updatedAt: string;
@@ -92,6 +106,8 @@ export interface DataRoomBundle {
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
   /** Added non-destructively for Agent Foundation. Legacy bundle literals remain valid. */
   agentJobs?: AgentJob[]; agentResults?: AgentResult[]; agentReviews?: AgentReview[];
+  /** Spatial model is optional for compatibility with legacy bundle literals. */
+  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[];
 }
 
 export interface DataRoomSummary {
