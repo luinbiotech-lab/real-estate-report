@@ -17,6 +17,8 @@ const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 
 const app = readFileSync('src/App.tsx', 'utf8');
 const layout = readFileSync('src/components/Layout.tsx', 'utf8');
 const interiorPage = readFileSync('src/pages/InteriorWorkspacePage.tsx', 'utf8');
+const twinPage = readFileSync('src/pages/DigitalTwinWorkspacePage.tsx', 'utf8');
+const twinPreview = readFileSync('src/components/FloorPlanGeometryPreview.tsx', 'utf8');
 const agentPage = readFileSync('src/pages/AgentOpsPage.tsx', 'utf8');
 const spatialPage = readFileSync('src/pages/SpatialWorkspacePage.tsx', 'utf8');
 const riskPage = readFileSync('src/pages/RiskWorkspacePage.tsx', 'utf8');
@@ -38,6 +40,8 @@ if (!vision.includes('brightness') || !vision.includes('contrast') || !vision.in
 if (!interiorVision.includes("method: 'browser_pixel_plus_metadata'") || !interiorVision.includes('visualSignals')) throw new Error('Interior Vision provider adapter integration is incomplete.');
 if (!visionFacility.includes('applyApprovedVisionResult') || !visionFacility.includes('saveFacility') || !visionFacility.includes("condition: 'unknown'")) throw new Error('Approved Vision results must create conservative facility inventory.');
 if (!floorGeometry.includes("parser: 'ascii_dxf_v1'") || !floorGeometry.includes('LWPOLYLINE') || !floorGeometry.includes("unitStatus: 'drawing_units_unverified'")) throw new Error('Local ASCII DXF geometry extraction is incomplete.');
+for (const semantic of ['wall', 'door', 'window', 'column', 'stair', 'elevator']) if (!floorGeometry.includes(`semantic: '${semantic}'`)) throw new Error(`DXF semantic layer candidate missing: ${semantic}`);
+if (!floorGeometry.includes('semanticLayerCandidates') || !floorGeometry.includes('previewSegments') || !floorGeometry.includes('requiresReview: true')) throw new Error('DXF semantic candidates must remain review-gated and previewable.');
 if (!floorExecution.includes("asset.assetType === 'dwg'") || !floorExecution.includes("'converter_required'") || !floorExecution.includes("geometryStatus: 'extracted_candidate'")) throw new Error('Floor Plan geometry flow is incomplete.');
 if (!digitalTwin.includes("resultType: 'digital_twin_model_candidate'") || !digitalTwin.includes('measurementStatus') || !digitalTwin.includes("meshStatus: 'not_generated'")) throw new Error('Local Digital Twin processing adapter is incomplete.');
 if (!runtime.includes('digitalTwinExecutionService.execute(job)') || !runtime.includes('digitalTwinExecutionService.applyApproved(result)')) throw new Error('Digital Twin runtime wiring is incomplete.');
@@ -47,10 +51,13 @@ if (!runtime.includes("queuePropertyAgent(result.propertyId, 'renovation', 'depe
 if (!runtime.includes('법률·건축·구조·소방·인허가 적합성에 대한 확정 판단이 아닙니다')) throw new Error('Risk / Compliance Agent must preserve expert-review disclaimer.');
 if (!agentPage.includes('Human Review Gate') || !agentPage.includes('승인·반영')) throw new Error('Unified Human Review flow is incomplete.');
 if (!app.includes('path="interior"') || !app.includes('InteriorWorkspacePage')) throw new Error('Interior Workspace route is missing.');
-if (!layout.includes('Interior Workspace') || !layout.includes('Agent Operations') || !layout.includes('Spatial Workspace') || !layout.includes('Risk / Compliance')) throw new Error('Interior/Agent/Spatial/Risk navigation is missing.');
+if (!app.includes('path="digital-twin"') || !app.includes('DigitalTwinWorkspacePage')) throw new Error('Digital Twin Workspace route is missing.');
+if (!layout.includes('Interior Workspace') || !layout.includes('Digital Twin') || !layout.includes('Agent Operations') || !layout.includes('Spatial Workspace') || !layout.includes('Risk / Compliance')) throw new Error('Interior/Digital Twin/Agent/Spatial/Risk navigation is missing.');
 if (!interiorPage.includes('Vision 분석 기록') || !interiorPage.includes('승인된 설비 인벤토리') || !interiorPage.includes('브라우저 로컬 픽셀 분석')) throw new Error('Interior Workspace core visibility is incomplete.');
+if (!twinPage.includes('Digital Twin Workspace') || !twinPage.includes('DWG는 별도 변환기') || !twinPage.includes('FloorPlanGeometryPreview')) throw new Error('Digital Twin Workspace core visibility is incomplete.');
+if (!twinPreview.includes('검토용 2D preview') || !twinPreview.includes('축척/단위 미검증')) throw new Error('Digital Twin 2D geometry preview safety labels are missing.');
 if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digital Twin 준비 자산') || !spatialPage.includes('.pdf,.dwg,.dxf')) throw new Error('Spatial Workspace core/CAD intake sections are missing.');
 if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Interior + Agent + Spatial + Risk + Digital Twin integrity: PASS');
+console.log('DA:ON Interior + Spatial + Digital Twin + Agent + Risk integrity: PASS');
