@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AutoAwesomeRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import BuildingStackPanel from '../components/BuildingStackPanel';
 import DigitalTwinHandoffPanel from '../components/DigitalTwinHandoffPanel';
 import ExtrusionPreview from '../components/ExtrusionPreview';
+import FloorPlacementPanel from '../components/FloorPlacementPanel';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
 import FloorPlanSemanticReviewPanel from '../components/FloorPlanSemanticReviewPanel';
 import OpeningCutPanel from '../components/OpeningCutPanel';
@@ -52,9 +54,7 @@ export default function DigitalTwinWorkspacePage() {
         setNotice('Digital Twin 후보를 최신 승인 데이터 기준으로 다시 생성했습니다. Agent Operations의 Human Review에서 확인하세요.');
       } else if (job.status === 'review_required') {
         setNotice('이미 검토 대기 중인 Digital Twin 후보가 있습니다. 기존 Human Review를 먼저 처리하세요.');
-      } else {
-        setNotice(`Digital Twin Agent 상태: ${job.status}`);
-      }
+      } else setNotice(`Digital Twin Agent 상태: ${job.status}`);
       await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Digital Twin 후보를 갱신하지 못했습니다.'); }
     finally { setRefreshingTwin(false); }
@@ -66,6 +66,7 @@ export default function DigitalTwinWorkspacePage() {
   const geometryAssets = assets.filter((asset) => asset.metadata.geometry && typeof asset.metadata.geometry === 'object');
   const scaleVerifiedAssets = assets.filter((asset) => asset.metadata.scaleCalibration && typeof asset.metadata.scaleCalibration === 'object');
   const heightVerifiedAssets = assets.filter((asset) => asset.metadata.verticalDimensions && typeof asset.metadata.verticalDimensions === 'object');
+  const floorPlacedAssets = assets.filter((asset) => asset.metadata.floorPlacement && typeof asset.metadata.floorPlacement === 'object');
   const topologyApproved = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.roomTopologyReviews) ? asset.metadata.roomTopologyReviews.filter((item) => item && typeof item === 'object' && (item as { decision?: string }).decision === 'approved').length : 0), 0);
   const openingApproved = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.openingAdjacencyReviews) ? asset.metadata.openingAdjacencyReviews.filter((item) => item && typeof item === 'object' && (item as { decision?: string }).decision === 'approved').length : 0), 0);
   const openingDimensions = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.openingDimensions) ? asset.metadata.openingDimensions.length : 0), 0);
@@ -75,9 +76,9 @@ export default function DigitalTwinWorkspacePage() {
 
   return <main style={{ padding: 28, maxWidth: 1360, margin: '0 auto' }}>
     <header style={{ marginBottom: 24 }}>
-      <p className="eyebrow">FLOOR PLAN · TOPOLOGY · OPENINGS · 3D PREPARATION</p>
+      <p className="eyebrow">FLOOR PLAN · WALLS · SLABS · MULTI-FLOOR · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창 연결과 확인 치수, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D 후보를 구성하고 브라우저 3D 검토 후 handoff package로 내보냅니다.</p>
+      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창, 층고·천장고, 층 기준고와 slab 두께를 Human Review로 연결해 다층 Building Model 후보를 구성합니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
@@ -89,13 +90,14 @@ export default function DigitalTwinWorkspacePage() {
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(10,minmax(86px,1fr))', gap: 10, marginBottom: 20 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(11,minmax(78px,1fr))', gap: 10, marginBottom: 20 }}>
       {[
-        ['원본', assets.length], ['Geometry', geometryAssets.length], ['축척', scaleVerifiedAssets.length], ['높이', heightVerifiedAssets.length], ['Layer', semanticReviewed], ['공간 경계', topologyApproved], ['문·창 연결', openingApproved], ['개구부 치수', openingDimensions], ['Review', reviewJobs.length], ['Twin Ready', readyAssets.length],
+        ['원본', assets.length], ['Geometry', geometryAssets.length], ['축척', scaleVerifiedAssets.length], ['높이', heightVerifiedAssets.length], ['층배치', floorPlacedAssets.length], ['Layer', semanticReviewed], ['공간 경계', topologyApproved], ['문·창 연결', openingApproved], ['개구부 치수', openingDimensions], ['Review', reviewJobs.length], ['Twin Ready', readyAssets.length],
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 12 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
-    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고, 층 기준고와 slab 두께는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
+    <BuildingStackPanel assets={assets} />
 
     <div style={{ display: 'grid', gap: 20 }}>
       {assets.map((asset) => {
@@ -103,6 +105,7 @@ export default function DigitalTwinWorkspacePage() {
         const hasGeometry = Boolean(asset.metadata.geometry && typeof asset.metadata.geometry === 'object');
         const hasScaleCalibration = Boolean(asset.metadata.scaleCalibration && typeof asset.metadata.scaleCalibration === 'object');
         const hasVerticalDimensions = Boolean(asset.metadata.verticalDimensions && typeof asset.metadata.verticalDimensions === 'object');
+        const hasFloorPlacement = Boolean(asset.metadata.floorPlacement && typeof asset.metadata.floorPlacement === 'object');
         const roomReviews = Array.isArray(asset.metadata.roomTopologyReviews) ? asset.metadata.roomTopologyReviews : [];
         const approvedRooms = roomReviews.filter((item) => item && typeof item === 'object' && (item as { decision?: string }).decision === 'approved').length;
         const openingReviews = Array.isArray(asset.metadata.openingAdjacencyReviews) ? asset.metadata.openingAdjacencyReviews : [];
@@ -113,11 +116,12 @@ export default function DigitalTwinWorkspacePage() {
         return <section key={asset.id} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
             <div><h2 style={{ margin: 0 }}>{asset.fileName || asset.assetType}</h2><p style={{ margin: '6px 0 0', color: '#667085' }}>{asset.assetType} · {asset.fileFormat} · {asset.floor || '층 미확인'}</p></div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{hasScaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{hasVerticalDimensions && <Chip size="small" color="success" variant="outlined" label="Height verified" />}{approvedRooms > 0 && <Chip size="small" color="success" variant="outlined" label={`Room ${approvedRooms}`} />}{approvedOpenings > 0 && <Chip size="small" color="success" variant="outlined" label={`Opening ${approvedOpenings}`} />}{dimensionCount > 0 && <Chip size="small" color="success" variant="outlined" label={`Dimension ${dimensionCount}`} />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin metadata" />}</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{hasScaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{hasVerticalDimensions && <Chip size="small" color="success" variant="outlined" label="Height verified" />}{hasFloorPlacement && <Chip size="small" color="success" variant="outlined" label="Floor placed" />}{approvedRooms > 0 && <Chip size="small" color="success" variant="outlined" label={`Room ${approvedRooms}`} />}{approvedOpenings > 0 && <Chip size="small" color="success" variant="outlined" label={`Opening ${approvedOpenings}`} />}{dimensionCount > 0 && <Chip size="small" color="success" variant="outlined" label={`Dimension ${dimensionCount}`} />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin metadata" />}</div>
           </div>
           <FloorPlanGeometryPreview asset={asset} />
           {hasGeometry && <div style={{ marginTop: 18 }}><ScaleCalibrationPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><VerticalDimensionPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><FloorPlacementPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><WallModelPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
