@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, EditOutlined, MapOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, MenuItem, Tab, Tabs, TextField } from '@mui/material';
 import { DOCUMENT_TYPE_LABELS, SOURCE_TYPE_LABELS, VERIFICATION_LABELS } from '../domain/propertyDataRoom/labels';
-import type { DataRoomBundle, DocumentType, PropertyDocument, VerificationStatus } from '../domain/propertyDataRoom/types';
+import type { DataRoomBundle, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus, VerificationStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { propertyDataRoomService } from '../services/propertyDataRoomService';
@@ -11,8 +11,8 @@ import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
 
-type TabKey = 'overview' | 'media' | 'documents' | 'official' | 'reports' | 'digitalTwin';
-const emptyBundle: DataRoomBundle = { documents: [], media: [], verifications: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
+type TabKey = 'overview' | 'media' | 'documents' | 'official' | 'verification' | 'reports' | 'digitalTwin';
+const emptyBundle: DataRoomBundle = { documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
 const officialTypes: DocumentType[] = ['building_register', 'land_register', 'land_use_plan', 'registry', 'cadastral_map'];
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
@@ -23,12 +23,26 @@ function VerificationBadge({ status }: { status: VerificationStatus }) {
   return <span className={`verification-badge status-${status}`}>{VERIFICATION_LABELS[status]}</span>;
 }
 
+function displayCandidateValue(value: unknown): string {
+  if (value === null || value === undefined || value === '') return '미입력';
+  if (typeof value === 'boolean') return value ? '예' : '아니오';
+  if (Array.isArray(value)) return value.length ? value.map((item) => String(item)).join(', ') : '없음';
+  if (typeof value === 'object') {
+    try { return JSON.stringify(value); } catch { return String(value); }
+  }
+  return String(value);
+}
+
+const DECISION_LABELS: Record<VerificationDecisionStatus, string> = {
+  pending: '검토 대기', approved: '승인', held: '보류', rejected: '거절',
+};
+
 export default function PropertyDataRoomPage() {
   const { id = '' } = useParams(); const navigate = useNavigate();
   const [property, setProperty] = useState<Property>(); const [bundle, setBundle] = useState<DataRoomBundle>(emptyBundle);
   const [tab, setTab] = useState<TabKey>('overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('building_register');
-  const [creatingReport, setCreatingReport] = useState(false);
+  const [creatingReport, setCreatingReport] = useState(false); const [reviewingCandidateId, setReviewingCandidateId] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true); setError('');
@@ -57,6 +71,12 @@ export default function PropertyDataRoomPage() {
     const now = new Date().toISOString();
     await propertyDataRoomRepository.updateDocument({ ...document, verificationStatus: status, verifiedAt: status === 'verified' ? now : undefined, updatedAt: now }); await load();
   };
+  const decideCandidate = async (candidate: PropertyVerificationCandidate, decisionStatus: VerificationDecisionStatus) => {
+    setReviewingCandidateId(candidate.id); setError('');
+    try { await propertyDataRoomService.decideVerificationCandidate(candidate, decisionStatus); await load(); setTab('verification'); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : '검증 후보를 처리하지 못했습니다.'); }
+    finally { setReviewingCandidateId(''); }
+  };
   const createProfessionalReport = async () => {
     setCreatingReport(true); setError('');
     try { await reportSnapshotService.createDraft(id, property?.managerName || undefined); await load(); setTab('reports'); }
@@ -80,17 +100,18 @@ export default function PropertyDataRoomPage() {
     <header className="data-room-header"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button><p className="eyebrow">PROPERTY DATA ROOM</p><h1>{property.name}</h1><p>{property.address} · {property.propertyNumber || '물건번호 미입력'}</p></div><div className="actions"><Button startIcon={<EditOutlined />} onClick={() => navigate(`/property/${property.id}/edit`)}>물건 수정</Button><Button variant="contained" startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${property.id}`)}>투자분석보고서</Button></div></header>
     {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
     <section className="data-room-summary">
-      {[['문서', summary?.documents ?? 0, '건'], ['사진', summary?.media ?? 0, '개'], ['공식확인', summary?.officiallyVerified ?? 0, '건'], ['확인 필요', summary?.unverified ?? 0, '건'], ['보고서', summary?.reports ?? 0, '건'], ['3D', summary?.digitalTwin ? `${summary.digitalTwin}건` : '미연결', '']].map(([label, value, unit]) => <div key={label}><small>{label}</small><strong>{value}</strong><span>{unit}</span></div>)}
+      {[['문서', summary?.documents ?? 0, '건'], ['사진', summary?.media ?? 0, '개'], ['공식확인', summary?.officiallyVerified ?? 0, '건'], ['확인 필요', summary?.unverified ?? 0, '건'], ['검증대기', summary?.verificationPending ?? 0, '건'], ['보고서', summary?.reports ?? 0, '건'], ['3D', summary?.digitalTwin ? `${summary.digitalTwin}건` : '미연결', '']].map(([label, value, unit]) => <div key={label}><small>{label}</small><strong>{value}</strong><span>{unit}</span></div>)}
       <div className={summary?.reportReady ? 'ready' : 'attention'}><small>보고서 준비도</small><strong>{summary?.reportReady ? '핵심자료 충족' : `${summary?.missingDocumentTypes.length ?? 0}개 자료 필요`}</strong></div>
     </section>
     <section className="data-room-workspace"><Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" aria-label="Property Data Room 메뉴">
-      <Tab value="overview" label="개요" /><Tab value="media" label="사진" /><Tab value="documents" label="문서" /><Tab value="official" label="공적자료" /><Tab value="reports" label="보고서" /><Tab value="digitalTwin" label="3D" />
+      <Tab value="overview" label="개요" /><Tab value="media" label="사진" /><Tab value="documents" label="문서" /><Tab value="official" label="공적자료" /><Tab value="verification" label={`자료 검증${summary?.verificationPending ? ` ${summary.verificationPending}` : ''}`} /><Tab value="reports" label="보고서" /><Tab value="digitalTwin" label="3D" />
     </Tabs>
     <div className="data-room-content">
       {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} onTab={setTab} />}
       {tab === 'media' && (photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진이 없습니다." detail="물건 수정 화면에서 직접 촬영하거나 보유한 사진을 등록하세요." />)}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} />}
       {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} />}
+      {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
       {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
       {tab === 'digitalTwin' && (bundle.digitalTwinAssets.length ? <div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div> : <EmptyState title="Digital Twin 데이터가 연결되지 않았습니다." detail="도면·360 사진·3D 모델을 연결할 수 있는 저장 구조만 준비되어 있습니다." />)}
     </div></section>
@@ -108,6 +129,26 @@ function DocumentPanel({ documents, documentType, setDocumentType, upload, uploa
 
 function OfficialPanel({ documents, sources }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources'] }) {
   return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => <article key={source.id}><b>{source.sourceName}</b><span>{SOURCE_TYPE_LABELS[source.sourceType]} · {source.sourceDate || source.collectedAt.slice(0, 10)}</span><VerificationBadge status={source.verificationStatus} /></article>)}</div> : <EmptyState title="등록된 공적자료가 없습니다." detail="문서 탭에서 공적자료를 등록하면 출처와 검증 상태가 함께 표시됩니다." />}</div>;
+}
+
+function VerificationPanel({ candidates, reviewingId, onDecision }: { candidates: PropertyVerificationCandidate[]; reviewingId: string; onDecision: (candidate: PropertyVerificationCandidate, status: VerificationDecisionStatus) => void }) {
+  const ordered = [...candidates].sort((a, b) => {
+    const aPending = a.decisionStatus === 'pending' || a.decisionStatus === 'held';
+    const bPending = b.decisionStatus === 'pending' || b.decisionStatus === 'held';
+    if (aPending !== bPending) return aPending ? -1 : 1;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+  if (!ordered.length) return <EmptyState title="검증 대기 데이터가 없습니다." detail="Excel·공적자료·외부 데이터에서 후보값이 생성되면 기존값과 비교해 승인할 수 있습니다." />;
+  return <div><div className="document-toolbar"><div><h2>자료 검증</h2><p>후보값은 승인하기 전까지 Property 원본을 변경하지 않습니다.</p></div></div><div className="document-list">{ordered.map((candidate) => {
+    const active = candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held';
+    const busy = reviewingId === candidate.id;
+    return <article key={candidate.id}>
+      <div className="file-icon"><DescriptionOutlined /></div>
+      <div><b>{candidate.fieldKey}</b><span>현재값: {displayCandidateValue(candidate.currentValue)}</span><span>후보값: {displayCandidateValue(candidate.candidateValue)}</span><small>{candidate.sourceName}{candidate.sourceDate ? ` · ${candidate.sourceDate}` : ''}{typeof candidate.confidence === 'number' ? ` · 신뢰도 ${Math.round(candidate.confidence * 100)}%` : ''}</small>{candidate.note && <small>{candidate.note}</small>}</div>
+      <Chip size="small" label={DECISION_LABELS[candidate.decisionStatus]} color={candidate.decisionStatus === 'approved' ? 'success' : candidate.decisionStatus === 'rejected' ? 'error' : 'default'} />
+      {active && <><Button disabled={busy} color="success" onClick={() => onDecision(candidate, 'approved')}>승인</Button><Button disabled={busy} onClick={() => onDecision(candidate, 'held')}>보류</Button><Button disabled={busy} color="error" onClick={() => onDecision(candidate, 'rejected')}>거절</Button></>}
+    </article>;
+  })}</div></div>;
 }
 
 function ReportPanel({ property, snapshots, navigate, creating, onCreate }: { property: Property; snapshots: DataRoomBundle['reportSnapshots']; navigate: ReturnType<typeof useNavigate>; creating: boolean; onCreate: () => void }) {
