@@ -2,6 +2,7 @@ import type { AgentJob, AgentResult, DigitalTwinAsset } from '../domain/property
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { readScaleCalibration } from './measurementCalibrationService';
+import { readOpeningDimensions } from './openingDimensionService';
 import { buildOpeningAdjacencyCandidates, readOpeningAdjacencyReviews } from './openingTopologyService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
 import { spatialGraphService } from './spatialGraphService';
@@ -46,14 +47,27 @@ function modelFromAsset(asset: DigitalTwinAsset) {
   const openingCandidates = buildOpeningAdjacencyCandidates(asset);
   const openingReviews = readOpeningAdjacencyReviews(asset).filter((review) => review.decision === 'approved');
   const approvedOpeningIds = new Set(openingReviews.map((review) => review.candidateId));
-  const approvedOpenings = openingCandidates.filter((candidate) => approvedOpeningIds.has(candidate.id)).map((candidate) => ({
-    id: candidate.id, semantic: candidate.semantic, layer: candidate.layer, nearbyRoomIds: candidate.nearbyRoomIds,
-    connectionStatus: candidate.nearbyRoomIds.length >= 1 ? 'reviewed_adjacency_candidate' : 'unresolved',
-  }));
+  const dimensions = readOpeningDimensions(asset);
+  const dimensionById = new Map(dimensions.map((item) => [item.candidateId, item]));
+  const approvedOpenings = openingCandidates.filter((candidate) => approvedOpeningIds.has(candidate.id)).map((candidate) => {
+    const dimension = dimensionById.get(candidate.id);
+    return {
+      id: candidate.id,
+      semantic: candidate.semantic,
+      layer: candidate.layer,
+      nearbyRoomIds: candidate.nearbyRoomIds,
+      connectionStatus: candidate.nearbyRoomIds.length >= 1 ? 'reviewed_adjacency_candidate' : 'unresolved',
+      dimensionStatus: dimension ? 'verified' : 'missing',
+      dimensions: dimension ? { widthM: dimension.widthM, heightM: dimension.heightM, sillHeightM: dimension.sillHeightM, sourceLabel: dimension.sourceLabel, verifiedAt: dimension.verifiedAt } : undefined,
+    };
+  });
   const spatialGraph = spatialGraphService.build(asset);
 
   const topologyStatus = approvedRooms.length ? 'reviewed_boundary_candidates' : roomCandidates.length ? 'review_required' : 'boundary_candidates_missing';
   const openingTopologyStatus = approvedOpenings.length ? 'reviewed_opening_candidates' : openingCandidates.length ? 'review_required' : 'opening_candidates_missing';
+  const dimensionedOpenings = approvedOpenings.filter((opening) => opening.dimensionStatus === 'verified').length;
+  const openingDimensionStatus = !approvedOpenings.length ? 'not_applicable' : dimensionedOpenings === approvedOpenings.length ? 'verified' : dimensionedOpenings ? 'partial' : 'review_required';
+  const openingCutStatus = openingDimensionStatus === 'verified' ? 'dimensions_ready' : 'blocked';
   const extrusionHeightM = vertical?.ceilingHeightM ?? vertical?.floorHeightM;
   const extrusionStatus = calibration && approvedRooms.length && extrusionHeightM ? 'candidate_ready' : calibration && approvedRooms.length ? 'height_required' : 'blocked';
   const verifiedExtrusionHeightM = extrusionStatus === 'candidate_ready' ? extrusionHeightM as number : undefined;
@@ -74,10 +88,12 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     geometryStats: { lines: geometry.lineCount ?? 0, polylines: geometry.polylineCount ?? 0, texts: geometry.textCount ?? 0 },
     roomLabelCandidates: labels,
     roomTopology: { status: topologyStatus, candidateCount: roomCandidates.length, approvedCount: approvedRooms.length, approvedRooms },
-    openingTopology: { status: openingTopologyStatus, candidateCount: openingCandidates.length, approvedCount: approvedOpenings.length, approvedOpenings },
+    openingTopology: { status: openingTopologyStatus, candidateCount: openingCandidates.length, approvedCount: approvedOpenings.length, dimensionedCount: dimensionedOpenings, approvedOpenings },
     spatialConnectivityGraph: spatialGraph,
     topologyStatus,
     openingTopologyStatus,
+    openingDimensionStatus,
+    openingCutStatus,
     graphStatus: spatialGraph.status,
     extrusionStatus,
     extrusionCandidates,
@@ -88,7 +104,8 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     warnings: [
       ...(calibration ? ['사용자가 확인한 기준 치수로 도면 좌표를 m 단위로 환산합니다.'] : ['도면 좌표의 실제 길이 단위·축척은 검증 전까지 거리/면적으로 확정하지 않습니다.']),
       ...(approvedRooms.length ? ['승인된 폐합 폴리라인은 공간 경계 후보로 사용하지만 공적 장부 면적을 대체하지 않습니다.'] : ['공간 경계 Human Review가 완료되지 않아 3D extrusion을 진행하지 않습니다.']),
-      ...(approvedOpenings.length ? ['승인된 문·창 인접관계는 연결 그래프 후보로만 사용하며 실제 개구부 폭·높이를 확정하지 않습니다.'] : ['문·창 개구부 연결은 Human Review 전까지 모델에 확정 반영하지 않습니다.']),
+      ...(approvedOpenings.length ? ['승인된 문·창 인접관계는 연결 그래프 후보로만 사용하며 실제 개구부 폭·높이는 별도 검증값만 사용합니다.'] : ['문·창 개구부 연결은 Human Review 전까지 모델에 확정 반영하지 않습니다.']),
+      ...(openingDimensionStatus === 'verified' ? ['승인된 개구부의 확인 치수가 연결됐지만 실제 mesh 절삭은 아직 생성하지 않습니다.'] : ['개구부 폭·높이는 확인 치수가 모두 준비되기 전까지 3D cut 후보로 사용하지 않습니다.']),
       ...(vertical ? ['사용자가 확인한 층고·천장고를 3D 높이 입력 후보로 사용합니다.'] : ['3D 높이는 천장고·층고 검증 전까지 생성하지 않습니다.']),
       '공간 연결 그래프는 통행·피난·접근성 적합성의 확정 판정이 아닙니다.',
       '3D extrusion 후보는 구조체·슬래브·벽 두께·개구부·법정면적의 확정 모델이 아닙니다.',
@@ -109,12 +126,13 @@ export const digitalTwinExecutionService = {
       const scaleVerified = models.filter((model) => 'measurementStatus' in model && model.measurementStatus === 'scale_verified').length;
       const topologyReviewed = models.filter((model) => 'topologyStatus' in model && model.topologyStatus === 'reviewed_boundary_candidates').length;
       const openingsReviewed = models.filter((model) => 'openingTopologyStatus' in model && model.openingTopologyStatus === 'reviewed_opening_candidates').length;
+      const openingDimensionsVerified = models.filter((model) => 'openingDimensionStatus' in model && (model.openingDimensionStatus === 'verified' || model.openingDimensionStatus === 'not_applicable')).length;
       const graphReady = models.filter((model) => 'graphStatus' in model && model.graphStatus === 'ready').length;
       const extrusionReady = models.filter((model) => 'extrusionStatus' in model && model.extrusionStatus === 'candidate_ready').length;
       return agentOrchestratorService.complete(job, {
         resultType: 'digital_twin_model_candidate',
-        payload: { models, adapterVersion: 'digital-twin-local-v6', mode: 'geometry_scale_topology_graph_vertical', scaleVerified, topologyReviewed, openingsReviewed, graphReady, extrusionReady, safetyNote: '축척·room topology·문창 연결·높이는 Human Review 후에만 사용하며 공간 그래프와 3D 후보는 피난·구조·법정면적 판단을 대체하지 않습니다.' },
-        confidence: models.length ? Math.min(0.98, (modelable / models.length) * 0.45 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15 + (openingsReviewed / models.length) * 0.05 + (graphReady / models.length) * 0.05 + (extrusionReady / models.length) * 0.1) : 0,
+        payload: { models, adapterVersion: 'digital-twin-local-v7', mode: 'geometry_scale_topology_graph_opening_dimensions_vertical', scaleVerified, topologyReviewed, openingsReviewed, openingDimensionsVerified, graphReady, extrusionReady, safetyNote: '축척·room topology·문창 연결·개구부 치수·높이는 Human Review 후에만 사용하며 공간 그래프와 3D 후보는 피난·구조·법정면적 판단을 대체하지 않습니다.' },
+        confidence: models.length ? Math.min(0.99, (modelable / models.length) * 0.42 + (scaleVerified / models.length) * 0.14 + (topologyReviewed / models.length) * 0.14 + (openingsReviewed / models.length) * 0.05 + (openingDimensionsVerified / models.length) * 0.05 + (graphReady / models.length) * 0.05 + (extrusionReady / models.length) * 0.1) : 0,
         requiresReview: models.length > 0,
       });
     } catch (error) { await agentOrchestratorService.fail(job, error); throw error; }
