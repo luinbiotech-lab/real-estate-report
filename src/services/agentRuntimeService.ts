@@ -3,6 +3,7 @@ import type { AgentJob, AgentResult, AgentReview, AgentReviewDecision, AgentType
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
+import { digitalTwinExecutionService } from './digitalTwinExecutionService';
 import { floorPlanExecutionService } from './floorPlanExecutionService';
 import { interiorVisionExecutionService } from './interiorVisionExecutionService';
 import { visionFacilityService } from './visionFacilityService';
@@ -83,6 +84,7 @@ async function runQueuedDependency(propertyId: string, agentType: AgentType) {
   if (!job) return;
   if (agentType === 'interior_vision') await interiorVisionExecutionService.execute(job);
   else if (agentType === 'floor_plan') await floorPlanExecutionService.execute(job);
+  else if (agentType === 'digital_twin') await digitalTwinExecutionService.execute(job);
   else if (agentType === 'renovation') await executeRenovation(job);
   else if (agentType === 'risk_compliance') await executeRiskCompliance(job);
   else await agentExecutionService.execute(job);
@@ -92,20 +94,24 @@ export const agentRuntimeService = {
   execute(job: AgentJob) {
     if (job.agentType === 'interior_vision') return interiorVisionExecutionService.execute(job);
     if (job.agentType === 'floor_plan') return floorPlanExecutionService.execute(job);
+    if (job.agentType === 'digital_twin') return digitalTwinExecutionService.execute(job);
     if (job.agentType === 'renovation') return executeRenovation(job);
     if (job.agentType === 'risk_compliance') return executeRiskCompliance(job);
     return agentExecutionService.execute(job);
   },
 
   async reviewAndApply(job: AgentJob, review: AgentReview, result: AgentResult, decision: Exclude<AgentReviewDecision, 'pending'>, note = '', reviewedBy?: string) {
-    if (result.resultType !== 'renovation_assessment_candidate' && result.resultType !== 'risk_compliance_assessment_candidate') {
+    if (result.resultType !== 'renovation_assessment_candidate' && result.resultType !== 'risk_compliance_assessment_candidate' && result.resultType !== 'digital_twin_model_candidate') {
       const reviewed = await agentExecutionService.reviewAndApply(job, review, result, decision, note, reviewedBy);
       if (decision === 'approved') {
         if (result.resultType === 'media_classification_candidate') {
           await visionFacilityService.applyApprovedVisionResult(result);
           await runQueuedDependency(result.propertyId, 'space');
         }
-        if (result.resultType === 'floor_plan_intake_candidate') await floorPlanExecutionService.applyApprovedGeometry(result);
+        if (result.resultType === 'floor_plan_intake_candidate') {
+          await floorPlanExecutionService.applyApprovedGeometry(result);
+          await runQueuedDependency(result.propertyId, 'digital_twin');
+        }
         if (result.resultType === 'space_model_candidate') {
           await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'renovation', 'dependency', { sourceAgentResultId: result.id });
           await runQueuedDependency(result.propertyId, 'renovation');
@@ -119,7 +125,8 @@ export const agentRuntimeService = {
         if (result.resultType === 'renovation_assessment_candidate') {
           const riskJob = await applyRenovation(result);
           if (riskJob.status === 'queued') await executeRiskCompliance(riskJob);
-        } else await applyRiskCompliance(result);
+        } else if (result.resultType === 'risk_compliance_assessment_candidate') await applyRiskCompliance(result);
+        else await digitalTwinExecutionService.applyApproved(result);
       } catch (error) { await agentOrchestratorService.fail(reviewed.job, error); throw error; }
     }
     return reviewed;
