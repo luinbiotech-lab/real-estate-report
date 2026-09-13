@@ -32,6 +32,7 @@ if (!orchestrator.includes("media.category === 'floor_plan' ? 'floor_plan' : 'in
 }
 if (!dataRoomService.includes("queueDocument(saved, 'upload')")) throw new Error('Uploaded documents are not automatically queued to the orchestrator.');
 if (!spatialIntake.includes("queueMedia(saved, 'upload')")) throw new Error('Uploaded spatial media is not automatically queued to the orchestrator.');
+if (!spatialIntake.includes('agentExecutionService.execute(job)')) throw new Error('Spatial uploads must auto-run the local Agent adapter.');
 if (!executor.includes("resultType: 'media_classification_candidate'") || !executor.includes("resultType: 'space_model_candidate'") || !executor.includes("resultType: 'floor_plan_intake_candidate'")) {
   throw new Error('Interior/Floor Plan/Space execution adapters are incomplete.');
 }
