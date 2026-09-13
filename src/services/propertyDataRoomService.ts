@@ -1,4 +1,5 @@
 import { REQUIRED_DOCUMENT_TYPES } from '../domain/propertyDataRoom/labels';
+import { isVerificationFieldKey } from '../domain/propertyDataRoom/verificationFieldRegistry';
 import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentExtractionMethod, DocumentExtractionStatus, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -84,11 +85,13 @@ export const propertyDataRoomService = {
     fieldKey: keyof Property; candidateValue: unknown; sourceType: DataSourceType; sourceName: string;
     sourceReference?: string; sourceDate?: string; confidence?: number; note?: string;
   }): Promise<PropertyVerificationCandidate> {
+    const fieldKey = String(input.fieldKey);
+    if (!isVerificationFieldKey(fieldKey)) throw new Error(`검증 후보로 허용되지 않은 필드입니다: ${fieldKey}`);
     const property = await propertyRepository.getById(propertyId);
     if (!property) throw new Error('검증 후보를 등록할 물건을 찾을 수 없습니다.');
     const now = new Date().toISOString();
     const candidate: PropertyVerificationCandidate = {
-      id: crypto.randomUUID(), propertyId, fieldKey: String(input.fieldKey), currentValue: property[input.fieldKey], candidateValue: input.candidateValue,
+      id: crypto.randomUUID(), propertyId, fieldKey, currentValue: property[fieldKey], candidateValue: input.candidateValue,
       sourceType: input.sourceType, sourceName: input.sourceName.trim() || '출처 미등록', sourceReference: input.sourceReference,
       sourceDate: input.sourceDate, confidence: input.confidence, decisionStatus: 'pending', note: input.note?.trim() || '', createdAt: now,
     };
@@ -100,10 +103,10 @@ export const propertyDataRoomService = {
     if (decisionStatus === 'pending') throw new Error('처리 결과는 승인, 보류 또는 거절이어야 합니다.');
 
     if (decisionStatus === 'approved') {
+      if (!isVerificationFieldKey(candidate.fieldKey)) throw new Error(`승인할 수 없는 필드입니다: ${candidate.fieldKey}`);
       const property = await propertyRepository.getById(candidate.propertyId);
       if (!property) throw new Error('검증 후보를 반영할 물건을 찾을 수 없습니다.');
-      const fieldKey = candidate.fieldKey as keyof Property;
-      const updated = { ...property, [fieldKey]: candidate.candidateValue, updatedAt: now } as Property;
+      const updated = { ...property, [candidate.fieldKey]: candidate.candidateValue, updatedAt: now } as Property;
       await propertyRepository.update(updated);
       await propertyDataRoomRepository.saveVerification({
         id: crypto.randomUUID(), propertyId: candidate.propertyId, fieldKey: candidate.fieldKey, status: 'verified',
