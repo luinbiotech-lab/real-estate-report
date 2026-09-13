@@ -1,4 +1,4 @@
-import type { DocumentType, PropertyDocument } from '../domain/propertyDataRoom/types';
+import type { PropertyDocument } from '../domain/propertyDataRoom/types';
 import { documentExtractionService } from './documentExtractionService';
 import { pdfTextExtractionService } from './pdfTextExtractionService';
 import { propertyDataRoomService } from './propertyDataRoomService';
