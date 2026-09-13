@@ -3,6 +3,7 @@ import type { AgentJob, AgentResult, AgentReview, AgentReviewDecision, AgentType
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
+import { interiorVisionExecutionService } from './interiorVisionExecutionService';
 
 const SPACE_RECOMMENDATIONS: Partial<Record<SpaceType, string[]>> = {
   retail: ['파사드·사인 계획 검토', '전기용량·조명 계획 검토', '냉난방 및 급배수 용량 확인'],
@@ -78,13 +79,15 @@ async function runQueuedDependency(propertyId: string, agentType: AgentType) {
   const jobs = await propertyDataRoomRepository.getAgentJobs(propertyId);
   const job = jobs.filter((item) => item.agentType === agentType && item.status === 'queued').sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   if (!job) return;
-  if (agentType === 'renovation') await executeRenovation(job);
+  if (agentType === 'interior_vision') await interiorVisionExecutionService.execute(job);
+  else if (agentType === 'renovation') await executeRenovation(job);
   else if (agentType === 'risk_compliance') await executeRiskCompliance(job);
   else await agentExecutionService.execute(job);
 }
 
 export const agentRuntimeService = {
   execute(job: AgentJob) {
+    if (job.agentType === 'interior_vision') return interiorVisionExecutionService.execute(job);
     if (job.agentType === 'renovation') return executeRenovation(job);
     if (job.agentType === 'risk_compliance') return executeRiskCompliance(job);
     return agentExecutionService.execute(job);
