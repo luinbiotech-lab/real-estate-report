@@ -28,6 +28,14 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const landUnit = pricePerPyeong(p);
   const grossUnit = p.salePrice && p.totalFloorAreaPyeong ? Math.round(p.salePrice / p.totalFloorAreaPyeong) : 0;
   const points = [...lines(p.features), ...lines(p.investmentPoints)].filter(Boolean).slice(0, 6);
+  const officialParking = hasNumber(p.parkingOfficial)
+    ? `${p.parkingOfficial}대`
+    : hasNumber(p.parkingSpaces)
+      ? `${p.parkingSpaces}대 · 기존값`
+      : '확인 필요';
+  const fieldParking = hasNumber(p.parkingField)
+    ? `${p.parkingField}대 가능${p.parkingFieldNote ? ` · ${p.parkingFieldNote}` : ' · 현장 이용 기준'}`
+    : '확인 필요';
   const parking = hasNumber(p.parkingField)
     ? `${p.parkingField}대 가능*`
     : hasNumber(p.parkingOfficial)
@@ -91,12 +99,11 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
             <Fact label="지목" value="확인 필요" />
             <Fact label="사용승인일" value={p.completionDate || '확인 필요'} />
             <Fact label="연면적" value={areaPair(p.totalFloorAreaSqm, p.totalFloorAreaPyeong)} />
-            <Fact label="현재 이용" value={first(p.occupancyStatus, '확인 필요')} />
             <Fact label="건축면적" value={p.buildingAreaPyeong ? `${p.buildingAreaPyeong.toFixed(2)}평` : '확인 필요'} />
-            <Fact label="지하층" value={p.basementFloors > 0 ? `지하 ${p.basementFloors}층` : '확인 필요'} />
-            <Fact label="용적률 참고 계산" value={p.floorAreaRatio && p.landAreaSqm ? `${(p.floorAreaRatio / 100 * p.landAreaSqm).toFixed(2)}㎡ · 계산값` : '확인 필요'} />
-            <Fact label="명도 조건" value={first(p.occupancyStatus, '협의 필요')} />
             <Fact label="규모" value={floorText(p)} />
+            <Fact label="공부상 주차" value={officialParking} />
+            <Fact label="현장 주차" value={fieldParking} />
+            <Fact label="현재 이용·명도" value={occupancySummary} />
           </div>
         </div>
 
