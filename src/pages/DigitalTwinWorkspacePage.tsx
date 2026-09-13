@@ -17,6 +17,7 @@ import SlabGeometryPanel from '../components/SlabGeometryPanel';
 import SpatialGraphPanel from '../components/SpatialGraphPanel';
 import VerticalCorePanel from '../components/VerticalCorePanel';
 import VerticalDimensionPanel from '../components/VerticalDimensionPanel';
+import WallJunctionPanel from '../components/WallJunctionPanel';
 import WallModelPanel from '../components/WallModelPanel';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -128,6 +129,7 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><SlabGeometryPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><WallModelPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><WallJunctionPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningDimensionPanel asset={asset} onSaved={() => load()} /></div>}
