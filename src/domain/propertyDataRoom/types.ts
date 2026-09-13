@@ -3,7 +3,7 @@ export type VerificationDecisionStatus = 'pending' | 'approved' | 'held' | 'reje
 export type DocumentExtractionStatus = 'not_started' | 'text_extracted' | 'scan_ocr_required' | 'manual_review' | 'failed';
 export type DocumentExtractionMethod = 'pdf_text' | 'ocr' | 'manual';
 export type DocumentType = 'building_register' | 'land_register' | 'land_use_plan' | 'registry' | 'cadastral_map' | 'lease_status' | 'floor_plan' | 'appraisal' | 'contract' | 'financial' | 'development' | 'due_diligence' | 'other';
-export type MediaCategory = 'exterior' | 'interior' | 'lobby' | 'office' | 'corridor' | 'restroom' | 'basement' | 'rooftop' | 'parking' | 'mechanical_room' | 'road' | 'entrance' | 'surroundings' | 'floor_plan' | 'facade_detail' | 'aerial' | '360' | 'other';
+export type MediaCategory = 'exterior' | 'interior' | 'lobby' | 'office' | 'corridor' | 'restroom' | 'basement' | 'rooftop' | 'roof' | 'parking' | 'mechanical_room' | 'mechanical' | 'road' | 'entrance' | 'surroundings' | 'floor_plan' | 'facade_detail' | 'aerial' | '360' | 'other';
 export type DataSourceType = 'manual' | 'excel_import' | 'public_api' | 'official_document' | 'map_provider' | 'market_data' | 'calculated' | 'ai' | 'external';
 
 export type AgentType = 'intake' | 'document' | 'interior_vision' | 'floor_plan' | 'space' | 'renovation' | 'risk_compliance' | 'report' | 'digital_twin';
