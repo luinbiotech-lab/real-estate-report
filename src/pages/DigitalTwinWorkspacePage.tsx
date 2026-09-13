@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
+import FloorPlanSemanticReviewPanel from '../components/FloorPlanSemanticReviewPanel';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
@@ -32,6 +33,7 @@ export default function DigitalTwinWorkspacePage() {
   const geometryAssets = assets.filter((asset) => asset.metadata.geometry && typeof asset.metadata.geometry === 'object');
   const readyAssets = assets.filter((asset) => asset.processingStatus === 'ready');
   const reviewJobs = (bundle.agentJobs ?? []).filter((job) => ['floor_plan', 'digital_twin'].includes(job.agentType) && job.status === 'review_required');
+  const semanticReviewed = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.semanticLayerReviews) ? asset.metadata.semanticLayerReviews.length : 0), 0);
 
   return <main style={{ padding: 28, maxWidth: 1360, margin: '0 auto' }}>
     <header style={{ marginBottom: 24 }}>
@@ -47,9 +49,9 @@ export default function DigitalTwinWorkspacePage() {
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(140px,1fr))', gap: 12, marginBottom: 20 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(130px,1fr))', gap: 12, marginBottom: 20 }}>
       {[
-        ['원본 자산', assets.length], ['Geometry 추출', geometryAssets.length], ['Human Review', reviewJobs.length], ['Twin Ready', readyAssets.length],
+        ['원본 자산', assets.length], ['Geometry 추출', geometryAssets.length], ['Layer 검토', semanticReviewed], ['Human Review', reviewJobs.length], ['Twin Ready', readyAssets.length],
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
@@ -65,6 +67,7 @@ export default function DigitalTwinWorkspacePage() {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin model metadata" />}</div>
           </div>
           <FloorPlanGeometryPreview asset={asset} />
+          {asset.metadata.geometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · mesh: {String(twinModel.meshStatus || 'unknown')}</p></div>}
         </section>;
       })}
