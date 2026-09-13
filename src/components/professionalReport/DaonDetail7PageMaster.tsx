@@ -67,17 +67,20 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const risks = splitLines(model.risks.risks, 6);
   const isCorner = String(model.land.roadCondition.value || '').includes('코너');
   const heroStatement = points[0] || (isCorner ? '코너 입지와 활용가치를 함께 검토하는 자산' : '입지와 활용가치를 함께 검토하는 자산');
+  const parkingOfficial = display(model.building.parkingOfficial);
+  const parkingField = display(model.building.parkingField);
+  const parkingFieldNote = model.building.parkingFieldNote.value ? ` · ${model.building.parkingFieldNote.display}` : '';
 
   const facts: Array<[string, string]> = [
     ['소재지', `${display(model.identity.address)}${model.identity.detailAddress.value ? ` ${model.identity.detailAddress.display}` : ''}`],
     ['토지면적', `${display(model.land.landAreaSqm)} / ${display(model.land.landAreaPyeong)}`],
     ['연면적', `${display(model.building.totalFloorAreaSqm)} / ${display(model.building.totalFloorAreaPyeong)}`],
     ['건축면적', display(model.building.buildingAreaPyeong)],
-    ['구조', display(model.building.structure)],
-    ['규모', `지하 ${display(model.building.basementFloors)} / 지상 ${display(model.building.groundFloors)}`],
+    ['구조 / 규모', `${display(model.building.structure)} · 지하 ${display(model.building.basementFloors)} / 지상 ${display(model.building.groundFloors)}`],
     ['주용도', display(model.building.mainUse)],
     ['용도지역', display(model.land.zoning)],
     ['사용승인', display(model.building.completionDate)],
+    ['공부상 주차', parkingOfficial],
   ];
 
   return <div className="daon-detail-master" data-template-id={DAON_DETAIL_MASTER_TEMPLATE_ID} data-template-version={DAON_DETAIL_MASTER_TEMPLATE_VERSION}>
@@ -139,12 +142,12 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <div className="dd-metrics"><div><span>●</span><small>건폐율</small><strong>{display(model.building.buildingCoverageRate)}</strong></div><div><span>●</span><small>용적률</small><strong>{display(model.building.floorAreaRatio)}</strong></div><div><span>●</span><small>사용승인</small><strong>{display(model.building.completionDate)}</strong></div></div>
       <SectionBar>매입 후 의사결정 포인트</SectionBar>
       <div className="dd-reason-three"><GoldCard title="기존 건물 유지" copy="초기 투자비를 통제하면서 사옥·업무·콘텐츠 공간으로 활용하는 전략을 검토합니다." /><GoldCard title="리노베이션" copy="외관과 동선, 설비, 층별 기능 재배치를 검토합니다." /><GoldCard title="신축 검토" copy={display(model.investment.developmentPlan, '용도지역·도로·주차·일조·높이·건축선 등을 사전 검토합니다.')} /></div>
-      <div className="dd-insight compact"><b>기존 건물의 연식은 약점이 아니라 “의사결정의 출발점”으로 설명해야 합니다.</b><p>현재 사용 가능한 공간을 확보하면서 향후 리노베이션 또는 신축 여부를 선택할 수 있는 구조인지 확인합니다.</p></div>
+      <div className="dd-insight compact"><b>기존 건물의 연식과 상태는 의사결정의 출발점입니다.</b><p>현재 사용 가능한 공간을 확보하면서 향후 리노베이션 또는 신축 여부를 선택할 수 있는 구조인지 확인합니다.</p></div>
     </Page>
 
     <Page page={7} eyebrow="TRANSACTION READINESS" title="TRANSACTION READINESS" subtitle="권리·공적자료·인허가 체크와 매입 결론" snapshot={snapshot} model={model}>
       <SectionBar>거래 전 확인해야 할 핵심</SectionBar>
-      <div className="dd-dd-grid"><GoldCard title="토지이용" copy={`${display(model.land.zoning)} · ${display(model.land.roadCondition)}`} /><GoldCard title="건축물대장" copy={`연면적 ${display(model.building.totalFloorAreaSqm)}, 건축면적 ${display(model.building.buildingAreaPyeong)}, ${display(model.building.mainUse)}`} /><GoldCard title="권리관계" copy={risks[0] || '등기·권리관계 최신 자료 재확인 필요'} /><GoldCard title="명도·인도" copy={display(model.pricing.occupancyStatus)} /></div>
+      <div className="dd-dd-grid"><GoldCard title="토지이용" copy={`${display(model.land.zoning)} · ${display(model.land.roadCondition)}`} /><GoldCard title="건축물대장" copy={`연면적 ${display(model.building.totalFloorAreaSqm)} · 건축면적 ${display(model.building.buildingAreaPyeong)} · 공부상 주차 ${parkingOfficial}`} /><GoldCard title="권리관계" copy={risks[0] || '등기·권리관계 최신 자료 재확인 필요'} /><GoldCard title="명도·현장주차" copy={`${display(model.pricing.occupancyStatus)} · 현장주차 ${parkingField}${parkingFieldNote}`} /></div>
       <SectionBar>매수자 체크리스트</SectionBar>
       <ol className="dd-checklist"><li>최신 토지·건물 등기사항전부증명서 재발급</li><li>토지거래허가구역 적용 여부 및 매수인 요건 확인</li><li>대지 경계·접도 폭·현황도로·건축선 확인</li><li>주차·일조·높이·피난·내진 등 신축/대수선 사전검토</li><li>누수·균열·설비·전기용량·배수 등 현장실사</li><li>잔금일 기준 명도 및 인도 범위 계약서 명문화</li></ol>
       <div className="dd-acquisition"><b>ACQUISITION CASE</b><p>{display(model.investment.overallOpinion, '확인된 토지·건물·입지·명도·권리 정보를 종합해 매입 판단 근거를 확정합니다.')}</p></div>
