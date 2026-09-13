@@ -80,9 +80,13 @@ export default function ProfessionalReportSnapshotPage() {
   return <main className="professional-report-shell">
     <nav className="professional-report-toolbar" aria-label="Professional Report 작업">
       <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON_DETAIL_7P_MASTER · 동적 Snapshot</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : reportReady ? '확정 가능' : '검증 필요'} color={snapshot.status === 'ready' ? 'success' : reportReady ? 'primary' : 'warning'} /></div>
-      <div>{snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !reportReady} onClick={markReady}>보고서 확정</Button>}<Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button></div>
+      <div>
+        {snapshot.status === 'draft' && <Button startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? '재생성 중…' : '최신 데이터로 다시 생성'}</Button>}
+        {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !reportReady} onClick={markReady}>보고서 확정</Button>}
+        <Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button>
+      </div>
     </nav>
-    {!reportReady && snapshot.status === 'draft' && <Alert severity="warning" className="professional-report-alert">필수 공적자료 검증 또는 검증 대기 후보 처리가 남아 있습니다. 초안 미리보기·인쇄는 가능하지만, 모든 검증이 끝나기 전에는 보고서를 확정할 수 없습니다.</Alert>}
+    {!reportReady && snapshot.status === 'draft' && <Alert severity="warning" className="professional-report-alert">필수 공적자료 검증 또는 검증 대기 후보 처리가 남아 있습니다. 초안 미리보기·인쇄는 가능하지만, 모든 검증이 끝나기 전에는 보고서를 확정할 수 없습니다. Data Room 검증 후 ‘최신 데이터로 다시 생성’을 사용하세요.</Alert>}
     {error && <Alert severity="error" className="professional-report-alert">{error}</Alert>}
     <div ref={contentRef}>{report}</div>
   </main>;
