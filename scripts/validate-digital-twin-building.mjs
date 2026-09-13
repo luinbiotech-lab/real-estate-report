@@ -11,7 +11,7 @@ const openingCutPanel = readFileSync('src/components/OpeningCutPanel.tsx', 'utf8
 const floorPanel = readFileSync('src/components/FloorPlacementPanel.tsx', 'utf8');
 const stackPanel = readFileSync('src/components/BuildingStackPanel.tsx', 'utf8');
 
-if (!wall.includes('approved') || !wall.includes('wallThicknessReviews') || !wall.includes('자동')) throw new Error('Reviewed wall thickness flow is incomplete.');
+if (!wall.includes("review.decision === 'approved' && review.semantic === 'wall'") || !wall.includes('wallThicknessReviews') || !wall.includes('saveWallThicknessReview')) throw new Error('Reviewed wall thickness flow is incomplete.');
 if (!openingCut.includes("status: 'reviewed_cut_candidate'") || !openingCut.includes('booleanApplied: false')) throw new Error('Opening cut candidate safety gate is incomplete.');
 if (!floorPlacement.includes("status: 'verified'") || !floorPlacement.includes('slabThicknessM') || !floorPlacement.includes("resourceType: 'digital_twin_floor_placement'")) throw new Error('Floor placement/slab provenance is incomplete.');
 if (!buildingStack.includes("BUILDING_STACK_VERSION = 'daon-building-stack-v1'") || !buildingStack.includes('productionModelReady: false') || !buildingStack.includes('buildingStackToObj')) throw new Error('Multi-floor building stack export is incomplete.');
