@@ -31,13 +31,17 @@ export const propertyDataRoomService = {
     const present = new Set(bundle.documents.map((item) => item.documentType));
     const missingDocumentTypes = REQUIRED_DOCUMENT_TYPES.filter((type) => !present.has(type));
     const verificationCandidates = bundle.verificationCandidates ?? [];
+    const activeCandidates = verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held');
+    const requiredDocumentsVerified = REQUIRED_DOCUMENT_TYPES.every((type) => bundle.documents.some((document) =>
+      document.documentType === type && (document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed')));
     return {
       documents: bundle.documents.length, media: existingMedia + bundle.media.length,
       officiallyVerified: statuses.filter((status) => status === 'verified').length,
       unverified: statuses.filter((status) => status === 'unverified' || status === 'missing' || status === 'estimated' || status === 'ai_analysis').length,
-      verificationPending: verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held').length,
+      verificationPending: activeCandidates.length,
       reports: bundle.reportSnapshots.length, digitalTwin: bundle.digitalTwinAssets.length,
-      missingDocumentTypes, reportReady: missingDocumentTypes.length === 0,
+      missingDocumentTypes,
+      reportReady: missingDocumentTypes.length === 0 && requiredDocumentsVerified && activeCandidates.length === 0,
     };
   },
   classifyDocument(fileName: string): DocumentType {
