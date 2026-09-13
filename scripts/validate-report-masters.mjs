@@ -56,5 +56,14 @@ if (!detail.includes("item.category !== 'interior'")) {
 if (onePage.includes("<Fact label=\"지목\" value={'대'}")) {
   throw new Error('지목 하드코딩 금지: 검증 데이터만 사용해야 합니다.');
 }
+if (!onePage.includes('parkingOfficial') || !onePage.includes('parkingField')) {
+  throw new Error('1P MASTER에서 공부상 주차와 현장 주차를 분리해야 합니다.');
+}
+if (!detail.includes('parkingOfficial') || !detail.includes('parkingField')) {
+  throw new Error('7P MASTER에서 공부상 주차와 현장 주차를 분리해야 합니다.');
+}
+if (detail.includes('현장주차') && !detail.includes('공부상 주차')) {
+  throw new Error('7P MASTER 현장 주차 표기에는 공부상 주차 구분도 함께 유지해야 합니다.');
+}
 
 console.log('DA:ON report master integrity: PASS');
