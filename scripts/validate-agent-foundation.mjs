@@ -23,7 +23,7 @@ for (const store of ['agentJobs', 'agentResults', 'agentReviews', 'propertySpace
 }
 
 if (!database.includes('DATABASE_VERSION = 6')) throw new Error('Spatial Agent Foundation requires IndexedDB version 6.');
-if (!orchestrator.includes('queueDocument') || !orchestrator.includes('queueMedia') || !orchestrator.includes('queuePropertyAgent')) {
+if (!orchestrator.includes('queueDocument') || !orchestrator.includes('queueMedia') || !orchestrator.includes('queuePropertyAgent') || !orchestrator.includes('queueDigitalTwin')) {
   throw new Error('Agent routing entry points are incomplete.');
 }
 if (!orchestrator.includes("floor_plan: 'floor_plan'")) throw new Error('Floor-plan document routing is missing.');
@@ -33,8 +33,14 @@ if (!orchestrator.includes("media.category === 'floor_plan' ? 'floor_plan' : 'in
 if (!dataRoomService.includes("queueDocument(saved, 'upload')")) throw new Error('Uploaded documents are not automatically queued to the orchestrator.');
 if (!spatialIntake.includes("queueMedia(saved, 'upload')")) throw new Error('Uploaded spatial media is not automatically queued to the orchestrator.');
 if (!spatialIntake.includes('agentExecutionService.execute(job)')) throw new Error('Spatial uploads must auto-run the local Agent adapter.');
+if (!spatialIntake.includes('uploadPlanAsset') || !spatialIntake.includes("'dwg'") || !spatialIntake.includes("'dxf'")) {
+  throw new Error('PDF/DWG/DXF floor-plan intake support is missing.');
+}
 if (!executor.includes("resultType: 'media_classification_candidate'") || !executor.includes("resultType: 'space_model_candidate'") || !executor.includes("resultType: 'floor_plan_intake_candidate'")) {
   throw new Error('Interior/Floor Plan/Space execution adapters are incomplete.');
+}
+if (!executor.includes("job.resourceType === 'digital_twin'") || !executor.includes('sourceDigitalTwinAssetId')) {
+  throw new Error('Raw Digital Twin plan assets are not handled by the Floor Plan Agent.');
 }
 if (!executor.includes('reviewAndApply') || !agentPage.includes('Human Review Gate') || !agentPage.includes('승인·반영')) {
   throw new Error('Human review and application flow is incomplete.');
@@ -42,10 +48,11 @@ if (!executor.includes('reviewAndApply') || !agentPage.includes('Human Review Ga
 if (!types.includes('export interface PropertySpace') || !types.includes('export interface SpaceMediaLink')) {
   throw new Error('Spatial data model is missing.');
 }
+if (!types.includes('fileData?: Blob') || !types.includes("'dwg' | 'dxf'")) throw new Error('Digital Twin raw source persistence is missing.');
 if (!app.includes('path="agents"') || !app.includes('AgentOpsPage')) throw new Error('Agent Operations route is missing.');
 if (!app.includes('path="spatial"') || !app.includes('SpatialWorkspacePage')) throw new Error('Spatial Workspace route is missing.');
 if (!layout.includes('Agent Operations') || !layout.includes('Spatial Workspace')) throw new Error('Agent/Spatial navigation is missing.');
-if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digital Twin 준비 자산')) throw new Error('Spatial Workspace core sections are missing.');
+if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digital Twin 준비 자산') || !spatialPage.includes('.pdf,.dwg,.dxf')) throw new Error('Spatial Workspace core/CAD intake sections are missing.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) {
   throw new Error('Human review gate must remain part of Agent Foundation.');
 }
