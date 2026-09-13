@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AutoAwesomeRounded, PlayArrowRounded, RefreshRounded } from '@mui/icons-material';
+import { AutoAwesomeRounded, CheckRounded, PauseRounded, PlayArrowRounded, RefreshRounded, RestartAltRounded, CloseRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, Stack } from '@mui/material';
-import type { AgentJob, AgentType } from '../domain/propertyDataRoom/types';
+import type { AgentJob, AgentResult, AgentReview, AgentType } from '../domain/propertyDataRoom/types';
 import { propertyRepository } from '../repositories/propertyRepository';
+import { agentExecutionService } from '../services/agentExecutionService';
 import { agentOrchestratorService } from '../services/agentOrchestratorService';
 import type { Property } from '../types';
 
@@ -23,19 +24,41 @@ const STATUS_COLOR: Record<AgentJob['status'], 'default' | 'primary' | 'warning'
   queued: 'default', running: 'primary', review_required: 'warning', completed: 'success', failed: 'error', cancelled: 'default',
 };
 
+function resultSummary(result: AgentResult) {
+  if (result.resultType === 'media_classification_candidate') {
+    const count = Array.isArray(result.payload.candidates) ? result.payload.candidates.length : 0;
+    return `사진/미디어 분류 후보 ${count}건`;
+  }
+  if (result.resultType === 'space_model_candidate') {
+    const count = Array.isArray(result.payload.spaces) ? result.payload.spaces.length : 0;
+    return `공간 모델 후보 ${count}건`;
+  }
+  if (result.resultType === 'floor_plan_intake_candidate') {
+    const floor = typeof result.payload.floor === 'string' ? result.payload.floor : '층 미확인';
+    return `도면 Intake · ${floor}`;
+  }
+  return typeof result.payload.message === 'string' ? result.payload.message : result.resultType;
+}
+
 export default function AgentOpsPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
   const [jobs, setJobs] = useState<AgentJob[]>([]);
+  const [results, setResults] = useState<AgentResult[]>([]);
+  const [reviews, setReviews] = useState<AgentReview[]>([]);
   const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState('');
   const [error, setError] = useState('');
 
   const selected = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
+  const resultById = useMemo(() => new Map(results.map((item) => [item.id, item])), [results]);
+  const jobById = useMemo(() => new Map(jobs.map((item) => [item.id, item])), [jobs]);
+  const pendingReviews = useMemo(() => reviews.filter((item) => item.decision === 'pending' || item.decision === 'held'), [reviews]);
 
   const loadJobs = async (id = propertyId) => {
-    if (!id) { setJobs([]); return; }
+    if (!id) { setJobs([]); setResults([]); setReviews([]); return; }
     const data = await agentOrchestratorService.list(id);
-    setJobs(data.jobs);
+    setJobs(data.jobs); setResults(data.results); setReviews(data.reviews);
   };
 
   useEffect(() => {
@@ -60,10 +83,20 @@ export default function AgentOpsPage() {
     } catch (reason) { setError(reason instanceof Error ? reason.message : 'Agent Job을 생성하지 못했습니다.'); }
   };
 
-  const start = async (job: AgentJob) => {
-    setError('');
-    try { await agentOrchestratorService.start(job); await loadJobs(); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : 'Agent Job을 시작하지 못했습니다.'); }
+  const execute = async (job: AgentJob) => {
+    setBusyId(job.id); setError('');
+    try { await agentExecutionService.execute(job); await loadJobs(); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Agent Job을 실행하지 못했습니다.'); }
+    finally { setBusyId(''); }
+  };
+
+  const reviewResult = async (review: AgentReview, decision: 'approved' | 'held' | 'rejected') => {
+    const job = jobById.get(review.jobId); const result = resultById.get(review.resultId);
+    if (!job || !result) { setError('Agent 검토에 필요한 Job/Result를 찾을 수 없습니다.'); return; }
+    setBusyId(review.id); setError('');
+    try { await agentExecutionService.reviewAndApply(job, review, result, decision); await loadJobs(); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : 'Agent 결과를 검토하지 못했습니다.'); }
+    finally { setBusyId(''); }
   };
 
   if (loading) return <div className="center"><CircularProgress /><p>Agent Operations를 준비하는 중입니다.</p></div>;
@@ -72,7 +105,7 @@ export default function AgentOpsPage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">PROPERTY INTELLIGENCE ORCHESTRATOR</p>
       <h1 style={{ margin: '6px 0' }}>Agent Operations</h1>
-      <p style={{ color: '#667085' }}>업로드 자료를 Agent Job으로 라우팅하고, 실행·검토 상태를 한 화면에서 관리합니다.</p>
+      <p style={{ color: '#667085' }}>Interior Vision → Floor Plan → Space Model → Digital Twin 흐름을 Job·Result·Human Review로 관리합니다.</p>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -88,11 +121,33 @@ export default function AgentOpsPage() {
     </section>
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-      <h2 style={{ marginTop: 0 }}>수동 Agent Job 생성</h2>
-      <p style={{ color: '#667085' }}>현재는 안전한 수동 큐잉 단계입니다. 자동 실행 어댑터가 연결되기 전까지 결과값은 Property 확정값을 직접 덮어쓰지 않습니다.</p>
+      <h2 style={{ marginTop: 0 }}>Agent Job 생성</h2>
+      <p style={{ color: '#667085' }}>분석 결과는 바로 확정값을 덮어쓰지 않습니다. 실행 결과는 검토 대기 상태로 생성되고 승인된 결과만 공간/미디어 데이터에 반영됩니다.</p>
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
         {MANUAL_AGENTS.map((agentType) => <Button key={agentType} variant="outlined" startIcon={<AutoAwesomeRounded />} disabled={!propertyId} onClick={() => queue(agentType)}>{AGENT_LABELS[agentType]}</Button>)}
       </Stack>
+    </section>
+
+    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+        <div><h2 style={{ margin: 0 }}>Human Review Gate</h2><p style={{ margin: '5px 0 0', color: '#667085' }}>Interior/Floor Plan/Space Agent의 후보 결과를 승인해야 실제 데이터에 반영됩니다.</p></div>
+        <Chip color={pendingReviews.length ? 'warning' : 'success'} label={`검토 ${pendingReviews.length}건`} />
+      </div>
+      <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
+        {!pendingReviews.length && <div style={{ padding: 24, textAlign: 'center', color: '#7b8794', background: '#f7f9fb', borderRadius: 8 }}>검토 대기 결과가 없습니다.</div>}
+        {pendingReviews.map((review) => {
+          const result = resultById.get(review.resultId); const job = jobById.get(review.jobId);
+          if (!result || !job) return null;
+          return <article key={review.id} style={{ border: '1px solid #ead8b7', background: '#fffdf8', borderRadius: 10, padding: 14, display: 'grid', gridTemplateColumns: '1fr auto', gap: 14, alignItems: 'center' }}>
+            <div><strong>{AGENT_LABELS[job.agentType]}</strong><p style={{ margin: '5px 0', color: '#475467' }}>{resultSummary(result)}</p><small style={{ color: '#7b8794' }}>confidence {typeof result.confidence === 'number' ? `${Math.round(result.confidence * 100)}%` : '미산정'} · {result.resultType}</small></div>
+            <Stack direction="row" spacing={1}>
+              <Button size="small" startIcon={<PauseRounded />} disabled={busyId === review.id} onClick={() => reviewResult(review, 'held')}>보류</Button>
+              <Button size="small" color="error" startIcon={<CloseRounded />} disabled={busyId === review.id} onClick={() => reviewResult(review, 'rejected')}>거절</Button>
+              <Button size="small" variant="contained" color="success" startIcon={<CheckRounded />} disabled={busyId === review.id} onClick={() => reviewResult(review, 'approved')}>승인·반영</Button>
+            </Stack>
+          </article>;
+        })}
+      </div>
     </section>
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
@@ -108,7 +163,7 @@ export default function AgentOpsPage() {
             <small style={{ color: '#7b8794' }}>{job.resourceType || 'property'} · {job.resourceId || job.propertyId} · attempt {job.attempt}/{job.maxAttempts}</small>
             {job.error && <p style={{ color: '#b42318', margin: '6px 0 0' }}>{job.error}</p>}
           </div>
-          <Button size="small" variant="contained" startIcon={<PlayArrowRounded />} disabled={job.status !== 'queued' && job.status !== 'failed'} onClick={() => start(job)}>실행 시작</Button>
+          <Button size="small" variant="contained" startIcon={job.status === 'failed' ? <RestartAltRounded /> : <PlayArrowRounded />} disabled={!['queued', 'failed'].includes(job.status) || busyId === job.id} onClick={() => execute(job)}>{busyId === job.id ? '실행 중' : job.status === 'failed' ? '재실행' : '실행'}</Button>
         </article>)}
       </div>
     </section>
