@@ -102,24 +102,28 @@ export const propertyDataRoomService = {
     if (candidate.decisionStatus !== 'pending' && candidate.decisionStatus !== 'held') throw new Error('이미 처리된 검증 후보입니다.');
     if (decisionStatus === 'pending') throw new Error('처리 결과는 승인, 보류 또는 거절이어야 합니다.');
 
+    const updatedCandidate = { ...candidate, decisionStatus, reviewedAt: now, reviewedBy };
+
     if (decisionStatus === 'approved') {
       if (!isVerificationFieldKey(candidate.fieldKey)) throw new Error(`승인할 수 없는 필드입니다: ${candidate.fieldKey}`);
       const property = await propertyRepository.getById(candidate.propertyId);
       if (!property) throw new Error('검증 후보를 반영할 물건을 찾을 수 없습니다.');
-      const updated = { ...property, [candidate.fieldKey]: candidate.candidateValue, updatedAt: now } as Property;
-      await propertyRepository.update(updated);
-      await propertyDataRoomRepository.saveVerification({
-        id: crypto.randomUUID(), propertyId: candidate.propertyId, fieldKey: candidate.fieldKey, status: 'verified',
-        note: candidate.note || `${candidate.sourceName} 후보값 승인`, verifiedBy: reviewedBy, verifiedAt: now, createdAt: now, updatedAt: now,
-      });
-      await propertyDataRoomRepository.saveDataSource({
-        id: crypto.randomUUID(), propertyId: candidate.propertyId, fieldKey: candidate.fieldKey, sourceType: candidate.sourceType,
-        sourceName: candidate.sourceName, sourceReference: candidate.sourceReference, collectedAt: now, sourceDate: candidate.sourceDate,
-        confidence: candidate.confidence, verificationStatus: 'verified', metadata: { verificationCandidateId: candidate.id }, createdAt: now,
+      const updatedProperty = { ...property, [candidate.fieldKey]: candidate.candidateValue, updatedAt: now } as Property;
+      return propertyDataRoomRepository.approveVerificationCandidate({
+        property: updatedProperty,
+        candidate: updatedCandidate,
+        verification: {
+          id: crypto.randomUUID(), propertyId: candidate.propertyId, fieldKey: candidate.fieldKey, status: 'verified',
+          note: candidate.note || `${candidate.sourceName} 후보값 승인`, verifiedBy: reviewedBy, verifiedAt: now, createdAt: now, updatedAt: now,
+        },
+        dataSource: {
+          id: crypto.randomUUID(), propertyId: candidate.propertyId, fieldKey: candidate.fieldKey, sourceType: candidate.sourceType,
+          sourceName: candidate.sourceName, sourceReference: candidate.sourceReference, collectedAt: now, sourceDate: candidate.sourceDate,
+          confidence: candidate.confidence, verificationStatus: 'verified', metadata: { verificationCandidateId: candidate.id }, createdAt: now,
+        },
       });
     }
 
-    const updatedCandidate = { ...candidate, decisionStatus, reviewedAt: now, reviewedBy };
     return propertyDataRoomRepository.saveVerificationCandidate(updatedCandidate);
   },
   downloadDocument(document: PropertyDocument) {
