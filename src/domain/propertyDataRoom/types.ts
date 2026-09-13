@@ -90,7 +90,8 @@ export interface DataRoomBundle {
   documents: PropertyDocument[]; media: PropertyMedia[]; verifications: PropertyVerification[];
   verificationCandidates: PropertyVerificationCandidate[];
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
-  agentJobs: AgentJob[]; agentResults: AgentResult[]; agentReviews: AgentReview[];
+  /** Added non-destructively for Agent Foundation. Legacy bundle literals remain valid. */
+  agentJobs?: AgentJob[]; agentResults?: AgentResult[]; agentReviews?: AgentReview[];
 }
 
 export interface DataRoomSummary {
