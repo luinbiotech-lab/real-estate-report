@@ -1,4 +1,5 @@
 export type VerificationStatus = 'verified' | 'confirmed' | 'imported' | 'calculated' | 'estimated' | 'ai_analysis' | 'unverified' | 'missing';
+export type VerificationDecisionStatus = 'pending' | 'approved' | 'held' | 'rejected';
 export type DocumentType = 'building_register' | 'land_register' | 'land_use_plan' | 'registry' | 'cadastral_map' | 'lease_status' | 'floor_plan' | 'appraisal' | 'contract' | 'financial' | 'development' | 'due_diligence' | 'other';
 export type MediaCategory = 'exterior' | 'interior' | 'road' | 'entrance' | 'parking' | 'roof' | 'mechanical' | 'surroundings' | 'floor_plan' | 'aerial' | '360' | 'other';
 export type DataSourceType = 'manual' | 'excel_import' | 'public_api' | 'official_document' | 'map_provider' | 'market_data' | 'calculated' | 'ai' | 'external';
@@ -22,6 +23,14 @@ export interface PropertyMedia {
 export interface PropertyVerification {
   id: string; propertyId: string; fieldKey: string; status: VerificationStatus; note: string;
   verifiedBy?: string; verifiedAt?: string; createdAt: string; updatedAt: string;
+}
+
+export interface PropertyVerificationCandidate {
+  id: string; propertyId: string; fieldKey: string;
+  currentValue: unknown; candidateValue: unknown;
+  sourceType: DataSourceType; sourceName: string; sourceReference?: string; sourceDate?: string;
+  confidence?: number; decisionStatus: VerificationDecisionStatus; note: string;
+  createdAt: string; reviewedAt?: string; reviewedBy?: string;
 }
 
 export interface PropertyDataSource {
@@ -51,10 +60,11 @@ export interface DigitalTwinAsset {
 
 export interface DataRoomBundle {
   documents: PropertyDocument[]; media: PropertyMedia[]; verifications: PropertyVerification[];
+  verificationCandidates: PropertyVerificationCandidate[];
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
 }
 
 export interface DataRoomSummary {
-  documents: number; media: number; officiallyVerified: number; unverified: number;
+  documents: number; media: number; officiallyVerified: number; unverified: number; verificationPending: number;
   reports: number; digitalTwin: number; missingDocumentTypes: DocumentType[]; reportReady: boolean;
 }
