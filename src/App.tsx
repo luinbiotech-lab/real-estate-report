@@ -10,6 +10,7 @@ import ExcelImport from './pages/ExcelImport';
 import BulkIntakePage from './pages/BulkIntakePage';
 import AgentOpsPage from './pages/AgentOpsPage';
 import SpatialWorkspacePage from './pages/SpatialWorkspacePage';
+import RiskWorkspacePage from './pages/RiskWorkspacePage';
 import SettingsPage from './pages/SettingsPage';
 import DocumentPreview from './pages/DocumentPreview';
 import PropertyBriefingPage from './pages/PropertyBriefingPage';
@@ -25,83 +26,39 @@ const sample: Property = { ...emptyProperty, id: 'sample-seongsu', propertyNumbe
 
 const bangbae81511: Property = {
   ...emptyProperty,
-  id: 'daon-bangbae-815-11',
-  propertyNumber: '방배동 815-11',
-  name: '방배동 815-11 코너빌딩',
-  tradeType: '매매',
-  salePrice: 4150000000,
-  negotiable: false,
-  occupancyStatus: '소유자 직접 사용 / 잔금일 기준 전체 명도 가능',
-  address: '서울 서초구 동광로18길 7',
-  nearbyStation: '7호선 내방역',
-  roadCondition: '양면 도로 코너',
-  landAreaSqm: 168.1,
-  landAreaPyeong: 50.85,
-  totalFloorAreaSqm: 349.08,
-  totalFloorAreaPyeong: 105.6,
-  buildingAreaPyeong: 24.8,
-  zoning: '제2종일반주거지역(7층 이하)',
-  mainUse: '주택 및 근린생활시설',
-  structure: '세멘벽돌조',
-  basementFloors: 1,
-  groundFloors: 3,
-  completionDate: '1978-07-31',
-  buildingCoverageRate: 48.8,
-  floorAreaRatio: 146.3,
-  parkingSpaces: 0,
-  parkingOfficial: undefined,
-  parkingField: 2,
-  parkingFieldNote: '현장 이용 기준',
-  internalPhotoAllowed: false,
-  mainImage: '/daon-master/bangbae-815-11-main.jpg',
-  mapImage: '/daon-master/bangbae-815-11-map.jpg',
+  id: 'daon-bangbae-815-11', propertyNumber: '방배동 815-11', name: '방배동 815-11 코너빌딩', tradeType: '매매', salePrice: 4150000000, negotiable: false,
+  occupancyStatus: '소유자 직접 사용 / 잔금일 기준 전체 명도 가능', address: '서울 서초구 동광로18길 7', nearbyStation: '7호선 내방역', roadCondition: '양면 도로 코너',
+  landAreaSqm: 168.1, landAreaPyeong: 50.85, totalFloorAreaSqm: 349.08, totalFloorAreaPyeong: 105.6, buildingAreaPyeong: 24.8,
+  zoning: '제2종일반주거지역(7층 이하)', mainUse: '주택 및 근린생활시설', structure: '세멘벽돌조', basementFloors: 1, groundFloors: 3,
+  completionDate: '1978-07-31', buildingCoverageRate: 48.8, floorAreaRatio: 146.3, parkingSpaces: 0, parkingOfficial: undefined, parkingField: 2, parkingFieldNote: '현장 이용 기준', internalPhotoAllowed: false,
+  mainImage: '/daon-master/bangbae-815-11-main.jpg', mapImage: '/daon-master/bangbae-815-11-map.jpg',
   features: '래미안 원페를라 인접\n서래마을·함지박사거리 생활권\n복합 코너 대지, 양면 도로 접면\n주거 배후수요 + 생활편의 수요',
   investmentPoints: '소유자 직접 사용과 잔금일 기준 전체 명도 협의 가능\n사옥·주거업무 복합공간 검토 가능\nF&B 플래그십·갤러리·문화공간 검토 가능\n기존 건물 활용과 장기 신축 가능성을 함께 검토할 수 있는 자산',
   locationAnalysis: '래미안 원페를라와 서래마을·함지박사거리 생활권에 인접한 방배동 코너 입지입니다. 양면 도로 접면으로 파사드 노출과 출입 동선 계획 측면에서 활용 여지가 있습니다.',
   developmentPlan: '기존 건물 활용, 리노베이션 또는 신축 여부를 비교 검토할 수 있으며 신축·용도변경은 별도 인허가 검토가 필요합니다.',
   recommendedUse: '사옥, 주거·업무 복합공간, F&B 플래그십, 갤러리·문화공간',
   risks: '신축·용도변경은 별도 인허가 검토 필요\n등기·공적자료 최신본 재확인 필요\n주차 2대 가능 표시는 현장 이용 기준이며 공부상 주차와 구분 필요',
-  overallOpinion: '즉시 활용 가능한 기존 건물과 코너 대지의 장기 선택지를 함께 검토할 수 있는 자산입니다.',
-  managerName: DAON_MANAGER,
-  managerPhone: DAON_PHONE,
-  managerEmail: DAON_EMAIL,
-  companyName: DAON_COMPANY,
-  createdAt: '2026-09-09T00:00:00.000Z',
-  updatedAt: '2026-09-09T00:00:00.000Z',
+  overallOpinion: '즉시 활용 가능한 기존 건물과 코너 대지의 장기 선택지를 함께 검토할 수 있는 자산입니다.', managerName: DAON_MANAGER, managerPhone: DAON_PHONE, managerEmail: DAON_EMAIL, companyName: DAON_COMPANY,
+  createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
 };
 
 const defaults: Settings = { companyName: DAON_COMPANY, logo: '', defaultManager: DAON_MANAGER, phone: DAON_PHONE, email: DAON_EMAIL, footerText: '본 자료는 매각 검토용 요약자료이며 계약 전 권리관계 및 현장 재확인이 필요합니다.' };
 const theme = createTheme({ palette: { primary: { main: '#073a69' }, secondary: { main: '#b47a25' }, background: { default: '#f3f5f8' } }, typography: { fontFamily: 'Pretendard, "Noto Sans KR", Arial, sans-serif' }, shape: { borderRadius: 10 } });
 
 export default function App() {
-  const [ready, setReady] = useState(false);
-  const [settings, setSettings] = useState(defaults);
+  const [ready, setReady] = useState(false); const [settings, setSettings] = useState(defaults);
   useEffect(() => { (async () => {
     if (!(await propertyRepository.getAll()).length) await propertyRepository.create(sample);
     const existingBangbae = await propertyRepository.getById(bangbae81511.id);
     if (!existingBangbae) await propertyRepository.create(bangbae81511);
     else {
-      const normalizedBangbae: Property = {
-        ...existingBangbae,
-        managerName: DAON_MANAGER,
-        managerPhone: DAON_PHONE,
-        managerEmail: DAON_EMAIL,
-        companyName: DAON_COMPANY,
-        internalPhotoAllowed: false,
-        parkingField: existingBangbae.parkingField ?? 2,
-        parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준',
-        mainImage: existingBangbae.mainImage || bangbae81511.mainImage,
-        mapImage: existingBangbae.mapImage || bangbae81511.mapImage,
-      };
+      const normalizedBangbae: Property = { ...existingBangbae, managerName: DAON_MANAGER, managerPhone: DAON_PHONE, managerEmail: DAON_EMAIL, companyName: DAON_COMPANY, internalPhotoAllowed: false, parkingField: existingBangbae.parkingField ?? 2, parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준', mainImage: existingBangbae.mainImage || bangbae81511.mainImage, mapImage: existingBangbae.mapImage || bangbae81511.mapImage };
       if (JSON.stringify(normalizedBangbae) !== JSON.stringify(existingBangbae)) await propertyRepository.update({ ...normalizedBangbae, updatedAt: new Date().toISOString() });
     }
     const stored = await settingsRepository.get();
-    if (stored?.companyName === '에셋브리프 부동산중개' || !stored) {
-      await settingsRepository.save(defaults);
-      setSettings(defaults);
-    } else setSettings(stored);
+    if (stored?.companyName === '에셋브리프 부동산중개' || !stored) { await settingsRepository.save(defaults); setSettings(defaults); } else setSettings(stored);
     setReady(true);
   })(); }, []);
   if (!ready) return <div className="center"><CircularProgress /></div>;
-  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="bulk-intake" element={<BulkIntakePage />} /><Route path="agents" element={<AgentOpsPage />} /><Route path="spatial" element={<SpatialWorkspacePage />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
+  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="bulk-intake" element={<BulkIntakePage />} /><Route path="spatial" element={<SpatialWorkspacePage />} /><Route path="risk" element={<RiskWorkspacePage />} /><Route path="agents" element={<AgentOpsPage />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
 }
