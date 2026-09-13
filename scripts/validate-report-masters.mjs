@@ -9,6 +9,7 @@ const requiredFiles = [
   'src/pages/DocumentPreview.tsx',
   'src/pages/ProfessionalReportSnapshotPage.tsx',
   'src/domain/professionalReport/templateIds.ts',
+  'src/services/reportEngine/reportSnapshotService.ts',
 ];
 
 const forbiddenFiles = [
@@ -39,6 +40,7 @@ const refinementCss = readFileSync(requiredFiles[4], 'utf8');
 const documentPreview = readFileSync(requiredFiles[5], 'utf8');
 const snapshotPage = readFileSync(requiredFiles[6], 'utf8');
 const templateIds = readFileSync(requiredFiles[7], 'utf8');
+const snapshotService = readFileSync(requiredFiles[8], 'utf8');
 
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
@@ -90,6 +92,12 @@ if (!snapshotPage.includes('DaonDetail7PageMaster') || snapshotPage.includes("im
 }
 if (!snapshotPage.includes('현재 DA:ON MASTER로 다시 생성')) {
   throw new Error('구형 Snapshot은 현재 MASTER 재생성 경로를 제공해야 합니다.');
+}
+if (!snapshotPage.includes('reportReady') || !snapshotPage.includes('검증 필요')) {
+  throw new Error('7P 미리보기에서 검증 준비도를 표시해야 합니다.');
+}
+if (!snapshotService.includes('viewModel.dataQuality.reportReady')) {
+  throw new Error('검증 미완료 Snapshot은 ready 확정을 차단해야 합니다.');
 }
 if (!documentPreview.includes("../daon-master-refinement.css") || !snapshotPage.includes("../daon-master-refinement.css")) {
   throw new Error('현재 1P/7P 미리보기는 공통 MASTER refinement layer를 적용해야 합니다.');
