@@ -9,6 +9,8 @@ const runtime = readFileSync('src/services/agentRuntimeService.ts', 'utf8');
 const vision = readFileSync('src/services/visionProviderService.ts', 'utf8');
 const interiorVision = readFileSync('src/services/interiorVisionExecutionService.ts', 'utf8');
 const visionFacility = readFileSync('src/services/visionFacilityService.ts', 'utf8');
+const floorGeometry = readFileSync('src/services/floorPlanGeometryService.ts', 'utf8');
+const floorExecution = readFileSync('src/services/floorPlanExecutionService.ts', 'utf8');
 const spatialIntake = readFileSync('src/services/spatialIntakeService.ts', 'utf8');
 const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
 const app = readFileSync('src/App.tsx', 'utf8');
@@ -36,9 +38,13 @@ if (!vision.includes('brightness') || !vision.includes('contrast') || !vision.in
 if (!interiorVision.includes("method: 'browser_pixel_plus_metadata'") || !interiorVision.includes('visualSignals') || !interiorVision.includes("resultType: 'media_classification_candidate'")) throw new Error('Interior Vision provider adapter integration is incomplete.');
 if (!visionFacility.includes('applyApprovedVisionResult') || !visionFacility.includes('saveFacility') || !visionFacility.includes("condition: 'unknown'")) throw new Error('Approved Vision results must create conservative facility inventory without condition overclaiming.');
 if (!runtime.includes('visionFacilityService.applyApprovedVisionResult(result)')) throw new Error('Approved Interior Vision results are not persisted into facility inventory.');
+if (!floorGeometry.includes("parser: 'ascii_dxf_v1'") || !floorGeometry.includes('LWPOLYLINE') || !floorGeometry.includes("unitStatus: 'drawing_units_unverified'")) throw new Error('Local ASCII DXF geometry extraction is incomplete.');
+if (!floorGeometry.includes('벽·문·창·구조체 의미는') || !floorExecution.includes("geometryStatus: 'converter_required'")) throw new Error('Floor Plan geometry safety/unsupported-DWG handling is incomplete.');
+if (!floorExecution.includes("geometryStatus: 'extracted_candidate'") || !floorExecution.includes('applyApprovedGeometry')) throw new Error('Floor Plan geometry candidate/application flow is incomplete.');
+if (!runtime.includes("job.agentType === 'floor_plan'") || !runtime.includes('floorPlanExecutionService.execute(job)') || !runtime.includes('floorPlanExecutionService.applyApprovedGeometry(result)')) throw new Error('Floor Plan jobs are not routed through the geometry-aware runtime.');
 if (!runtime.includes("job.agentType === 'interior_vision'") || !runtime.includes('interiorVisionExecutionService.execute(job)')) throw new Error('Interior Vision jobs are not routed through the provider runtime.');
 if (!executor.includes("resultType: 'space_model_candidate'") || !executor.includes("resultType: 'floor_plan_intake_candidate'")) throw new Error('Floor Plan/Space execution adapters are incomplete.');
-if (!executor.includes("job.resourceType === 'digital_twin'") || !executor.includes('sourceDigitalTwinAssetId')) throw new Error('Raw Digital Twin plan assets are not handled by the Floor Plan Agent.');
+if (!executor.includes("job.resourceType === 'digital_twin'") || !executor.includes('sourceDigitalTwinAssetId')) throw new Error('Raw Digital Twin plan assets are not handled by the Floor Plan Agent fallback.');
 if (!runtime.includes("resultType: 'renovation_assessment_candidate'") || !runtime.includes('saveRenovationAssessment')) throw new Error('Renovation Agent execution/application flow is incomplete.');
 if (!runtime.includes("resultType: 'risk_compliance_assessment_candidate'") || !runtime.includes('saveRiskAssessment')) throw new Error('Risk / Compliance Agent execution/application flow is incomplete.');
 if (!runtime.includes('runQueuedDependency') || !runtime.includes("result.resultType === 'media_classification_candidate'") || !runtime.includes("result.resultType === 'space_model_candidate'")) throw new Error('Reviewed Agent results must automatically advance the dependency chain.');
@@ -59,4 +65,4 @@ if (!spatialPage.includes('리노베이션 검토') || !spatialPage.includes('re
 if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Agent automation + browser Vision + facility inventory integrity: PASS');
+console.log('DA:ON Agent automation + browser Vision + DXF geometry integrity: PASS');
