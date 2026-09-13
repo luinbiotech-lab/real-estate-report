@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import PropertyList from './pages/PropertyList';
 import PropertyForm from './pages/PropertyForm';
 import ExcelImport from './pages/ExcelImport';
+import BulkIntakePage from './pages/BulkIntakePage';
 import SettingsPage from './pages/SettingsPage';
 import DocumentPreview from './pages/DocumentPreview';
 import PropertyBriefingPage from './pages/PropertyBriefingPage';
@@ -100,5 +101,5 @@ export default function App() {
     setReady(true);
   })(); }, []);
   if (!ready) return <div className="center"><CircularProgress /></div>;
-  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
+  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="bulk-intake" element={<BulkIntakePage />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
 }
