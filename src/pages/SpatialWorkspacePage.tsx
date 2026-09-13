@@ -68,6 +68,8 @@ export default function SpatialWorkspacePage() {
 
   const spaces = bundle.spaces ?? [];
   const links = bundle.spaceMediaLinks ?? [];
+  const facilities = bundle.facilities ?? [];
+  const renovations = bundle.renovationAssessments ?? [];
   const agentJobs = bundle.agentJobs ?? [];
   const isPlan = category === 'floor_plan';
 
@@ -75,7 +77,7 @@ export default function SpatialWorkspacePage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">INTERIOR · FLOOR PLAN · DIGITAL TWIN</p>
       <h1 style={{ margin: '6px 0' }}>Spatial Workspace</h1>
-      <p style={{ color: '#667085' }}>사진과 PDF/DWG/DXF 도면을 공간 단위 데이터로 정리하고 Agent Queue 및 Digital Twin 자산으로 연결합니다.</p>
+      <p style={{ color: '#667085' }}>사진과 PDF/DWG/DXF 도면을 공간 단위 데이터로 정리하고 Agent Queue, 리노베이션 검토 및 Digital Twin 자산으로 연결합니다.</p>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -129,6 +131,8 @@ export default function SpatialWorkspacePage() {
           <div><small>Agent Jobs</small><strong style={{ display: 'block', fontSize: 24 }}>{agentJobs.length}</strong></div>
           <div><small>검토 필요</small><strong style={{ display: 'block', fontSize: 24 }}>{agentJobs.filter((job) => job.status === 'review_required').length}</strong></div>
           <div><small>Space Model</small><strong style={{ display: 'block', fontSize: 24 }}>{spaces.length}</strong></div>
+          <div><small>시설 데이터</small><strong style={{ display: 'block', fontSize: 24 }}>{facilities.length}</strong></div>
+          <div><small>리노베이션 검토</small><strong style={{ display: 'block', fontSize: 24 }}>{renovations.length}</strong></div>
           <div><small>Digital Twin Assets</small><strong style={{ display: 'block', fontSize: 24 }}>{bundle.digitalTwinAssets.length}</strong></div>
         </div>
       </div>
@@ -139,6 +143,23 @@ export default function SpatialWorkspacePage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
         {spaces.map((space) => <article key={space.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 14 }}><strong>{space.name}</strong><p style={{ margin: '6px 0', color: '#667085' }}>{space.spaceType} · {space.floor || '층 미지정'}</p><small>연결 미디어 {links.filter((link) => link.spaceId === space.id).length}개 · {space.verificationStatus}</small></article>)}
         {!spaces.length && <p style={{ color: '#7b8794' }}>승인된 Space Agent 결과가 아직 없습니다.</p>}
+      </div>
+    </section>
+
+    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+      <h2 style={{ marginTop: 0 }}>리노베이션 검토</h2>
+      <p style={{ color: '#667085' }}>공사비·인허가 가능성을 확정하지 않고, 승인된 공간 데이터를 기준으로 점검 범위와 리스크만 구조화합니다.</p>
+      <div style={{ display: 'grid', gap: 12 }}>
+        {renovations.map((item) => <article key={item.id} style={{ border: '1px solid #ead8b7', background: '#fffdf8', borderRadius: 10, padding: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}><strong>{item.title}</strong><Chip size="small" label={item.scope} /></div>
+          <p style={{ color: '#475467' }}>{item.summary}</p>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div><small>권고 점검</small><ul>{item.recommendedItems.slice(0, 6).map((value) => <li key={value}>{value}</li>)}</ul></div>
+            <div><small>주의 / 전문가 확인</small><ul>{item.riskItems.slice(0, 6).map((value) => <li key={value}>{value}</li>)}</ul></div>
+          </div>
+          <small>비용 상태: {item.costStatus === 'not_estimated' ? '미산정' : '범위 후보'} · {item.verificationStatus}</small>
+        </article>)}
+        {!renovations.length && <p style={{ color: '#7b8794' }}>승인된 Renovation Agent 결과가 없습니다. Agent Operations에서 공간 모델 이후 Renovation Agent를 실행할 수 있습니다.</p>}
       </div>
     </section>
 
