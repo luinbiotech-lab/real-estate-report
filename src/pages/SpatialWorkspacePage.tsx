@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { CloudUploadRounded, RefreshRounded } from '@mui/icons-material';
-import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import type { MediaCategory, PropertyMedia } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -8,7 +8,7 @@ import { spatialIntakeService } from '../services/spatialIntakeService';
 import type { Property } from '../types';
 
 const CATEGORY_LABELS: Partial<Record<MediaCategory, string>> = {
-  interior: '인테리어', floor_plan: '도면', exterior: '외관', parking: '주차', rooftop: '옥상', mechanical_room: '기계·설비실', '360': '360 사진',
+  interior: '인테리어', floor_plan: '도면/CAD', exterior: '외관', parking: '주차', rooftop: '옥상', mechanical_room: '기계·설비실', '360': '360 사진',
 };
 
 function MediaPreview({ media }: { media: PropertyMedia }) {
@@ -26,6 +26,7 @@ export default function SpatialWorkspacePage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
   const [category, setCategory] = useState<MediaCategory>('interior');
+  const [planFloor, setPlanFloor] = useState('');
   const [bundle, setBundle] = useState<Awaited<ReturnType<typeof propertyDataRoomRepository.getBundle>>>({ documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] });
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -54,7 +55,10 @@ export default function SpatialWorkspacePage() {
     if (!propertyId || !files?.length) return;
     setUploading(true); setError('');
     try {
-      for (const file of Array.from(files)) await spatialIntakeService.upload(propertyId, file, category);
+      for (const file of Array.from(files)) {
+        if (category === 'floor_plan') await spatialIntakeService.uploadPlanAsset(propertyId, file, planFloor);
+        else await spatialIntakeService.upload(propertyId, file, category);
+      }
       await load();
     } catch (reason) { setError(reason instanceof Error ? reason.message : '공간 자료를 등록하지 못했습니다.'); }
     finally { setUploading(false); }
@@ -65,12 +69,13 @@ export default function SpatialWorkspacePage() {
   const spaces = bundle.spaces ?? [];
   const links = bundle.spaceMediaLinks ?? [];
   const agentJobs = bundle.agentJobs ?? [];
+  const isPlan = category === 'floor_plan';
 
   return <main style={{ padding: 28, maxWidth: 1360, margin: '0 auto' }}>
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">INTERIOR · FLOOR PLAN · DIGITAL TWIN</p>
       <h1 style={{ margin: '6px 0' }}>Spatial Workspace</h1>
-      <p style={{ color: '#667085' }}>사진과 도면을 공간 단위 데이터로 정리하고 Agent Queue 및 Digital Twin 자산으로 연결합니다.</p>
+      <p style={{ color: '#667085' }}>사진과 PDF/DWG/DXF 도면을 공간 단위 데이터로 정리하고 Agent Queue 및 Digital Twin 자산으로 연결합니다.</p>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -88,7 +93,7 @@ export default function SpatialWorkspacePage() {
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>공간 자료 Intake</h2>
-      <p style={{ color: '#667085' }}>사진은 Interior Vision Agent, 도면은 Floor Plan Agent로 자동 라우팅됩니다. 업로드만으로 확정 데이터가 되지 않습니다.</p>
+      <p style={{ color: '#667085' }}>사진은 Interior Vision Agent, PDF/DWG/DXF 및 도면 이미지는 Floor Plan Agent로 자동 라우팅·실행됩니다. 결과는 Human Review 승인 전까지 확정 데이터가 아닙니다.</p>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <FormControl size="small" sx={{ minWidth: 180 }}>
           <InputLabel id="spatial-category-label">자료 유형</InputLabel>
@@ -96,11 +101,13 @@ export default function SpatialWorkspacePage() {
             {(['interior', 'floor_plan', 'exterior', 'parking', 'rooftop', 'mechanical_room', '360'] as MediaCategory[]).map((item) => <MenuItem key={item} value={item}>{CATEGORY_LABELS[item] || item}</MenuItem>)}
           </Select>
         </FormControl>
+        {isPlan && <TextField size="small" label="층(선택)" placeholder="예: B1, 1F, 2F" value={planFloor} onChange={(event) => setPlanFloor(event.target.value)} sx={{ width: 180 }} />}
         <Button component="label" variant="contained" startIcon={<CloudUploadRounded />} disabled={!propertyId || uploading}>
-          {uploading ? '등록 중' : '여러 이미지 등록'}
-          <input hidden multiple type="file" accept="image/jpeg,image/png,image/webp" onChange={(event) => { void upload(event.target.files); event.target.value = ''; }} />
+          {uploading ? '등록·분석 중' : isPlan ? '도면 원본 등록' : '여러 이미지 등록'}
+          <input hidden multiple type="file" accept={isPlan ? '.pdf,.dwg,.dxf,image/jpeg,image/png,image/webp' : 'image/jpeg,image/png,image/webp'} onChange={(event) => { void upload(event.target.files); event.target.value = ''; }} />
         </Button>
       </div>
+      {isPlan && <p style={{ margin: '10px 0 0', color: '#7b8794', fontSize: 13 }}>도면 원본은 최대 50MB. DWG/DXF/PDF는 원본 Blob을 보존하고 Digital Twin 처리대기 자산으로 승격할 수 있습니다.</p>}
     </section>
 
     <section style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 20, marginBottom: 20 }}>
@@ -138,8 +145,8 @@ export default function SpatialWorkspacePage() {
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
       <h2 style={{ marginTop: 0 }}>Digital Twin 준비 자산</h2>
       <div style={{ display: 'grid', gap: 10 }}>
-        {bundle.digitalTwinAssets.map((asset) => <article key={asset.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}><div><strong>{asset.assetType}</strong><p style={{ margin: '4px 0 0', color: '#667085' }}>{asset.floor || '층 미지정'} · {asset.fileFormat}</p></div><Chip label={asset.processingStatus} /></article>)}
-        {!bundle.digitalTwinAssets.length && <p style={{ color: '#7b8794' }}>승인된 도면 Intake 결과가 없습니다.</p>}
+        {bundle.digitalTwinAssets.map((asset) => <article key={asset.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}><div><strong>{asset.fileName || asset.assetType}</strong><p style={{ margin: '4px 0 0', color: '#667085' }}>{asset.assetType} · {asset.floor || '층 미지정'} · {asset.fileFormat}</p></div><Chip label={asset.processingStatus} /></article>)}
+        {!bundle.digitalTwinAssets.length && <p style={{ color: '#7b8794' }}>등록된 도면/CAD 원본이 없습니다.</p>}
       </div>
     </section>
   </main>;
