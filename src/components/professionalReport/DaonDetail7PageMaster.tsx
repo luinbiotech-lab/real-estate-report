@@ -147,7 +147,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
 
     <Page page={7} eyebrow="TRANSACTION READINESS" title="TRANSACTION READINESS" subtitle="권리·공적자료·인허가 체크와 매입 결론" snapshot={snapshot} model={model}>
       <SectionBar>거래 전 확인해야 할 핵심</SectionBar>
-      <div className="dd-dd-grid"><GoldCard title="토지이용" copy={`${display(model.land.zoning)} · ${display(model.land.roadCondition)}`} /><GoldCard title="건축물대장" copy={`연면적 ${display(model.building.totalFloorAreaSqm)} · 건축면적 ${display(model.building.buildingAreaPyeong)} · 공부상 주차 ${parkingOfficial}`} /><GoldCard title="권리관계" copy={risks[0] || '등기·권리관계 최신 자료 재확인 필요'} /><GoldCard title="명도·현장주차" copy={`${display(model.pricing.occupancyStatus)} · 현장주차 ${parkingField}${parkingFieldNote}`} /></div>
+      <div className="dd-dd-grid"><GoldCard title="토지이용" copy={`${display(model.land.zoning)} · ${display(model.land.roadCondition)}`} /><GoldCard title="건축물대장" copy={`연면적 ${display(model.building.totalFloorAreaSqm)} · 건축면적 ${display(model.building.buildingAreaPyeong)} · 공부상 주차 ${parkingOfficial}`} /><GoldCard title="권리관계" copy={risks[0] || '등기·권리관계 최신 자료 재확인 필요'} /><GoldCard title="명도·현장 주차" copy={`${display(model.pricing.occupancyStatus)} · 현장 주차 ${parkingField}${parkingFieldNote}`} /></div>
       <SectionBar>매수자 체크리스트</SectionBar>
       <ol className="dd-checklist"><li>최신 토지·건물 등기사항전부증명서 재발급</li><li>토지거래허가구역 적용 여부 및 매수인 요건 확인</li><li>대지 경계·접도 폭·현황도로·건축선 확인</li><li>주차·일조·높이·피난·내진 등 신축/대수선 사전검토</li><li>누수·균열·설비·전기용량·배수 등 현장실사</li><li>잔금일 기준 명도 및 인도 범위 계약서 명문화</li></ol>
       <div className="dd-acquisition"><b>ACQUISITION CASE</b><p>{display(model.investment.overallOpinion, '확인된 토지·건물·입지·명도·권리 정보를 종합해 매입 판단 근거를 확정합니다.')}</p></div>
