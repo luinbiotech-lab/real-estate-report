@@ -42,10 +42,7 @@ export interface PropertyDataSource {
 export type ReportType = 'proposal' | 'investment_report' | 'briefing' | 'professional_report';
 export interface ReportSnapshot {
   id: string; propertyId: string; reportType: ReportType; reportVersion: number;
-  /** Added non-destructively. Legacy snapshots may not have this field. */
-  templateId?: string;
-  templateVersion: string;
-  engineVersion?: string;
+  templateId?: string; templateVersion: string; engineVersion?: string;
   snapshotData: Record<string, unknown>; generatedAt: string; generatedBy?: string;
   status: 'draft' | 'ready' | 'archived' | 'failed'; createdAt: string;
 }
@@ -60,7 +57,7 @@ export interface DigitalTwinAsset {
 
 export interface DataRoomBundle {
   documents: PropertyDocument[]; media: PropertyMedia[]; verifications: PropertyVerification[];
-  verificationCandidates: PropertyVerificationCandidate[];
+  verificationCandidates?: PropertyVerificationCandidate[];
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
 }
 
