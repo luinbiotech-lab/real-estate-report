@@ -63,12 +63,13 @@ export default function DigitalTwinWorkspacePage() {
       {assets.map((asset) => {
         const geometryStatus = typeof asset.metadata.geometryStatus === 'string' ? asset.metadata.geometryStatus : '미추출';
         const hasGeometry = Boolean(asset.metadata.geometry && typeof asset.metadata.geometry === 'object');
+        const hasScaleCalibration = Boolean(asset.metadata.scaleCalibration && typeof asset.metadata.scaleCalibration === 'object');
         const twinModel = asset.metadata.digitalTwinModel && typeof asset.metadata.digitalTwinModel === 'object' ? asset.metadata.digitalTwinModel as Record<string, unknown> : undefined;
         const calibratedBounds = twinModel?.calibratedBounds && typeof twinModel.calibratedBounds === 'object' ? twinModel.calibratedBounds as Record<string, unknown> : undefined;
         return <section key={asset.id} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
             <div><h2 style={{ margin: 0 }}>{asset.fileName || asset.assetType}</h2><p style={{ margin: '6px 0 0', color: '#667085' }}>{asset.assetType} · {asset.fileFormat} · {asset.floor || '층 미확인'}</p></div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{asset.metadata.scaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin model metadata" />}</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{hasScaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin model metadata" />}</div>
           </div>
           <FloorPlanGeometryPreview asset={asset} />
           {hasGeometry && <div style={{ marginTop: 18 }}><ScaleCalibrationPanel asset={asset} onSaved={() => load()} /></div>}
