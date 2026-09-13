@@ -1,8 +1,8 @@
-import type { DataRoomBundle, DigitalTwinAsset, PropertyDataSource, PropertyDocument, PropertyMedia, PropertyVerification, PropertyVerificationCandidate, ReportSnapshot } from '../domain/propertyDataRoom/types';
+import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDataSource, PropertyDocument, PropertyMedia, PropertyVerification, PropertyVerificationCandidate, ReportSnapshot } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 import { database } from './database';
 
-type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets';
+type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets' | 'agentJobs' | 'agentResults' | 'agentReviews';
 
 async function byProperty<T>(storeName: StoreName, propertyId: string): Promise<T[]> {
   const values = await (await database).getAllFromIndex(storeName, 'propertyId', propertyId) as T[];
@@ -77,9 +77,18 @@ export const propertyDataRoomRepository = {
   },
   getDigitalTwinAssets: (propertyId: string) => byProperty<DigitalTwinAsset>('digitalTwinAssets', propertyId),
   saveDigitalTwinAsset: (value: DigitalTwinAsset) => put('digitalTwinAssets', value),
+  getAgentJobs: (propertyId: string) => byProperty<AgentJob>('agentJobs', propertyId),
+  saveAgentJob: (value: AgentJob) => put('agentJobs', value),
+  getAgentResults: (propertyId: string) => byProperty<AgentResult>('agentResults', propertyId),
+  saveAgentResult: (value: AgentResult) => put('agentResults', value),
+  getAgentReviews: (propertyId: string) => byProperty<AgentReview>('agentReviews', propertyId),
+  saveAgentReview: (value: AgentReview) => put('agentReviews', value),
+  async getAgentResultsByJob(jobId: string): Promise<AgentResult[]> {
+    return (await database).getAllFromIndex('agentResults', 'jobId', jobId) as Promise<AgentResult[]>;
+  },
   async archiveProperty(propertyId: string) {
     const db = await database; const now = new Date().toISOString();
-    const stores: StoreName[] = ['propertyDocuments', 'propertyMedia', 'propertyVerifications', 'propertyVerificationCandidates', 'propertyDataSources', 'reportSnapshots', 'digitalTwinAssets'];
+    const stores: StoreName[] = ['propertyDocuments', 'propertyMedia', 'propertyVerifications', 'propertyVerificationCandidates', 'propertyDataSources', 'reportSnapshots', 'digitalTwinAssets', 'agentJobs', 'agentResults', 'agentReviews'];
     for (const storeName of stores) {
       const values = await db.getAllFromIndex(storeName, 'propertyId', propertyId) as Array<Record<string, unknown> & { id: string }>;
       const tx = db.transaction(storeName, 'readwrite');
@@ -88,10 +97,10 @@ export const propertyDataRoomRepository = {
     }
   },
   async getBundle(propertyId: string): Promise<DataRoomBundle> {
-    const [documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets] = await Promise.all([
+    const [documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets, agentJobs, agentResults, agentReviews] = await Promise.all([
       this.getDocuments(propertyId), this.getMedia(propertyId), this.getVerifications(propertyId), this.getVerificationCandidates(propertyId),
-      this.getDataSources(propertyId), this.getReportSnapshots(propertyId), this.getDigitalTwinAssets(propertyId),
+      this.getDataSources(propertyId), this.getReportSnapshots(propertyId), this.getDigitalTwinAssets(propertyId), this.getAgentJobs(propertyId), this.getAgentResults(propertyId), this.getAgentReviews(propertyId),
     ]);
-    return { documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets };
+    return { documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets, agentJobs, agentResults, agentReviews };
   },
 };
