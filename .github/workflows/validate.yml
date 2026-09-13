@@ -9,7 +9,7 @@ on:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -37,3 +37,29 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      - name: Install Playwright for rendered QA
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start Vite QA server
+        run: |
+          npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-vite.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4174/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/daon-vite.log
+          exit 1
+
+      - name: Rendered report smoke QA
+        run: node scripts/visual-report-smoke.mjs
+
+      - name: Upload report QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daon-report-qa-${{ github.run_number }}
+          path: artifacts/report-qa
+          if-no-files-found: ignore
