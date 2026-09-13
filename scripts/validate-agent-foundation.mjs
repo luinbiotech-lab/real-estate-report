@@ -12,17 +12,16 @@ const app = readFileSync('src/App.tsx', 'utf8');
 const layout = readFileSync('src/components/Layout.tsx', 'utf8');
 const agentPage = readFileSync('src/pages/AgentOpsPage.tsx', 'utf8');
 const spatialPage = readFileSync('src/pages/SpatialWorkspacePage.tsx', 'utf8');
+const riskPage = readFileSync('src/pages/RiskWorkspacePage.tsx', 'utf8');
 
 const requiredAgentTypes = ['intake', 'document', 'interior_vision', 'floor_plan', 'space', 'renovation', 'risk_compliance', 'report', 'digital_twin'];
 for (const agentType of requiredAgentTypes) {
   if (!types.includes(`'${agentType}'`)) throw new Error(`Agent type missing: ${agentType}`);
 }
-
 for (const store of ['agentJobs', 'agentResults', 'agentReviews', 'propertySpaces', 'spaceMediaLinks', 'propertyFacilities', 'renovationAssessments', 'riskAssessments']) {
   if (!database.includes(`'${store}'`)) throw new Error(`IndexedDB Agent/Spatial store missing: ${store}`);
   if (!repository.includes(store)) throw new Error(`Agent/Spatial repository binding missing: ${store}`);
 }
-
 if (!database.includes('DATABASE_VERSION = 8')) throw new Error('Risk/Compliance Agent Foundation requires IndexedDB version 8.');
 if (!orchestrator.includes('queueDocument') || !orchestrator.includes('queueMedia') || !orchestrator.includes('queuePropertyAgent') || !orchestrator.includes('queueDigitalTwin')) throw new Error('Agent routing entry points are incomplete.');
 if (!orchestrator.includes("floor_plan: 'floor_plan'")) throw new Error('Floor-plan document routing is missing.');
@@ -43,9 +42,11 @@ if (!types.includes('export interface PropertyRiskAssessment') || !types.include
 if (!types.includes('fileData?: Blob') || !types.includes("'dwg' | 'dxf'")) throw new Error('Digital Twin raw source persistence is missing.');
 if (!app.includes('path="agents"') || !app.includes('AgentOpsPage')) throw new Error('Agent Operations route is missing.');
 if (!app.includes('path="spatial"') || !app.includes('SpatialWorkspacePage')) throw new Error('Spatial Workspace route is missing.');
-if (!layout.includes('Agent Operations') || !layout.includes('Spatial Workspace')) throw new Error('Agent/Spatial navigation is missing.');
+if (!app.includes('path="risk"') || !app.includes('RiskWorkspacePage')) throw new Error('Risk / Compliance Workspace route is missing.');
+if (!layout.includes('Agent Operations') || !layout.includes('Spatial Workspace') || !layout.includes('Risk / Compliance')) throw new Error('Agent/Spatial/Risk navigation is missing.');
 if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digital Twin 준비 자산') || !spatialPage.includes('.pdf,.dwg,.dxf')) throw new Error('Spatial Workspace core/CAD intake sections are missing.');
 if (!spatialPage.includes('리노베이션 검토') || !spatialPage.includes('renovationAssessments')) throw new Error('Renovation assessment visibility is missing from Spatial Workspace.');
+if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
 console.log('DA:ON Agent + Spatial + Renovation + Risk Foundation integrity: PASS');
