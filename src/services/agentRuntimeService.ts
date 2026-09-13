@@ -3,6 +3,7 @@ import type { AgentJob, AgentResult, AgentReview, AgentReviewDecision, AgentType
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
+import { floorPlanExecutionService } from './floorPlanExecutionService';
 import { interiorVisionExecutionService } from './interiorVisionExecutionService';
 import { visionFacilityService } from './visionFacilityService';
 
@@ -81,6 +82,7 @@ async function runQueuedDependency(propertyId: string, agentType: AgentType) {
   const job = jobs.filter((item) => item.agentType === agentType && item.status === 'queued').sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   if (!job) return;
   if (agentType === 'interior_vision') await interiorVisionExecutionService.execute(job);
+  else if (agentType === 'floor_plan') await floorPlanExecutionService.execute(job);
   else if (agentType === 'renovation') await executeRenovation(job);
   else if (agentType === 'risk_compliance') await executeRiskCompliance(job);
   else await agentExecutionService.execute(job);
@@ -89,6 +91,7 @@ async function runQueuedDependency(propertyId: string, agentType: AgentType) {
 export const agentRuntimeService = {
   execute(job: AgentJob) {
     if (job.agentType === 'interior_vision') return interiorVisionExecutionService.execute(job);
+    if (job.agentType === 'floor_plan') return floorPlanExecutionService.execute(job);
     if (job.agentType === 'renovation') return executeRenovation(job);
     if (job.agentType === 'risk_compliance') return executeRiskCompliance(job);
     return agentExecutionService.execute(job);
@@ -102,6 +105,7 @@ export const agentRuntimeService = {
           await visionFacilityService.applyApprovedVisionResult(result);
           await runQueuedDependency(result.propertyId, 'space');
         }
+        if (result.resultType === 'floor_plan_intake_candidate') await floorPlanExecutionService.applyApprovedGeometry(result);
         if (result.resultType === 'space_model_candidate') {
           await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'renovation', 'dependency', { sourceAgentResultId: result.id });
           await runQueuedDependency(result.propertyId, 'renovation');
