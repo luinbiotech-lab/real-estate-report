@@ -124,11 +124,15 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   values.forEach(({ value }) => { qualityCounts[value.state] += 1; });
   const presentDocuments = new Set(bundle.documents.map((document) => document.documentType));
   const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !presentDocuments.has(type));
+  const requiredDocumentsVerified = REQUIRED_DOCUMENT_TYPES.every((type) => bundle.documents.some((document) =>
+    document.documentType === type && (document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed')));
+  const unresolvedCandidates = bundle.verificationCandidates.some((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held');
   const dataQuality = {
     counts: qualityCounts,
     missingFields: values.filter(({ value }) => value.state === 'missing').map(({ path }) => path),
     disconnectedFields: values.filter(({ value }) => value.state === 'disconnected').map(({ path }) => path),
-    requiredDocumentsMissing, reportReady: requiredDocumentsMissing.length === 0,
+    requiredDocumentsMissing,
+    reportReady: requiredDocumentsMissing.length === 0 && requiredDocumentsVerified && !unresolvedCandidates,
   };
 
   return {
