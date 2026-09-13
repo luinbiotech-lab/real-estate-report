@@ -53,13 +53,14 @@ function modelFromAsset(asset: DigitalTwinAsset) {
   const topologyStatus = approvedRooms.length ? 'reviewed_boundary_candidates' : roomCandidates.length ? 'review_required' : 'boundary_candidates_missing';
   const extrusionHeightM = vertical?.ceilingHeightM ?? vertical?.floorHeightM;
   const extrusionStatus = calibration && approvedRooms.length && extrusionHeightM ? 'candidate_ready' : calibration && approvedRooms.length ? 'height_required' : 'blocked';
-  const extrusionCandidates = extrusionStatus === 'candidate_ready' ? approvedRooms.map((room) => ({
+  const verifiedExtrusionHeightM = extrusionStatus === 'candidate_ready' ? extrusionHeightM as number : undefined;
+  const extrusionCandidates = verifiedExtrusionHeightM ? approvedRooms.map((room) => ({
     roomId: room.id,
     name: room.name,
     floor: room.floor,
-    heightM: extrusionHeightM,
+    heightM: verifiedExtrusionHeightM,
     areaSqmCandidate: room.areaSqmCandidate,
-    volumeM3Candidate: room.areaSqmCandidate != null ? room.areaSqmCandidate * extrusionHeightM : undefined,
+    volumeM3Candidate: room.areaSqmCandidate != null ? room.areaSqmCandidate * verifiedExtrusionHeightM : undefined,
     status: 'reviewed_inputs_candidate',
     note: '검증 축척·승인 공간 경계·확인 높이로 만든 3D extrusion 입력 후보이며 구조체/법정면적 확정값이 아닙니다.',
   })) : [];
