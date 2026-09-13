@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import ExtrusionPreview from '../components/ExtrusionPreview';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
 import FloorPlanSemanticReviewPanel from '../components/FloorPlanSemanticReviewPanel';
 import RoomTopologyPanel from '../components/RoomTopologyPanel';
@@ -83,6 +84,7 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><VerticalDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><ExtrusionPreview asset={asset} /></div>}
           {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
         </section>;
       })}
