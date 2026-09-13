@@ -41,7 +41,7 @@ export default function PropertyDataRoomPage() {
   const { id = '' } = useParams(); const navigate = useNavigate();
   const [property, setProperty] = useState<Property>(); const [bundle, setBundle] = useState<DataRoomBundle>(emptyBundle);
   const [tab, setTab] = useState<TabKey>('overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
-  const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('building_register');
+  const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('other');
   const [creatingReport, setCreatingReport] = useState(false); const [reviewingCandidateId, setReviewingCandidateId] = useState('');
 
   const load = useCallback(async () => {
@@ -58,8 +58,11 @@ export default function PropertyDataRoomPage() {
   const summary = useMemo(() => property ? propertyDataRoomService.summarize(property, bundle) : undefined, [property, bundle]);
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; if (!file) return;
+    const classified = propertyDataRoomService.classifyDocument(file.name);
+    const resolvedType = classified === 'other' ? documentType : classified;
+    setDocumentType(resolvedType);
     setUploading(true); setError('');
-    try { await propertyDataRoomService.uploadDocument(id, file, { documentType, title: file.name.replace(/\.[^.]+$/, ''), sourceName: '사용자 업로드' }); await load(); setTab('documents'); }
+    try { await propertyDataRoomService.uploadDocument(id, file, { documentType: resolvedType, title: file.name.replace(/\.[^.]+$/, ''), sourceName: '사용자 업로드' }); await load(); setTab('documents'); }
     catch (reason) { setError(reason instanceof Error ? reason.message : '문서를 등록하지 못했습니다.'); }
     finally { setUploading(false); event.target.value = ''; }
   };
@@ -124,7 +127,7 @@ function Overview({ property, bundle, missing, onTab }: { property: Property; bu
 }
 
 function DocumentPanel({ documents, documentType, setDocumentType, upload, uploading, remove, changeVerification }: { documents: PropertyDocument[]; documentType: DocumentType; setDocumentType: (value: DocumentType) => void; upload: (event: ChangeEvent<HTMLInputElement>) => void; uploading: boolean; remove: (item: PropertyDocument) => void; changeVerification: (item: PropertyDocument, status: VerificationStatus) => void }) {
-  return <><div className="document-toolbar"><div><h2>문서 자료</h2><p>파일 본문과 출처·검증 메타데이터를 분리해 관리합니다.</p></div><TextField select size="small" label="문서 분류" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>{Object.entries(DOCUMENT_TYPE_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button component="label" variant="contained" startIcon={<CloudUploadOutlined />} disabled={uploading}>{uploading ? '등록 중…' : '문서 등록'}<input hidden type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={upload} /></Button></div>{documents.length ? <div className="document-list">{documents.map((document) => <article key={document.id}><div className="file-icon"><DescriptionOutlined /></div><div><b>{document.title}</b><span>{DOCUMENT_TYPE_LABELS[document.documentType]} · {(document.fileSize / 1024 / 1024).toFixed(2)}MB · v{document.version}</span><small>{document.sourceName} · {new Date(document.uploadedAt).toLocaleDateString('ko-KR')}</small></div><TextField select size="small" value={document.verificationStatus} onChange={(event) => changeVerification(document, event.target.value as VerificationStatus)} aria-label={`${document.title} 검증 상태`}>{Object.entries(VERIFICATION_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button startIcon={<DownloadRounded />} onClick={() => propertyDataRoomService.downloadDocument(document)}>다운로드</Button><Button color="error" startIcon={<DeleteOutlineRounded />} onClick={() => remove(document)}>삭제</Button></article>)}</div> : <EmptyState title="등록된 문서가 없습니다." detail="건축물대장, 토지대장, 등기부등본 등 확인된 원본 자료를 등록하세요." />}</>;
+  return <><div className="document-toolbar"><div><h2>문서 자료</h2><p>파일명으로 문서 유형을 1차 자동 분류하고, 출처·검증 메타데이터를 별도 보존합니다.</p></div><TextField select size="small" label="문서 분류" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>{Object.entries(DOCUMENT_TYPE_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button component="label" variant="contained" startIcon={<CloudUploadOutlined />} disabled={uploading}>{uploading ? '등록 중…' : '문서 등록'}<input hidden type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={upload} /></Button></div>{documents.length ? <div className="document-list">{documents.map((document) => <article key={document.id}><div className="file-icon"><DescriptionOutlined /></div><div><b>{document.title}</b><span>{DOCUMENT_TYPE_LABELS[document.documentType]} · {(document.fileSize / 1024 / 1024).toFixed(2)}MB · v{document.version}</span><small>{document.sourceName} · {new Date(document.uploadedAt).toLocaleDateString('ko-KR')}</small></div><TextField select size="small" value={document.verificationStatus} onChange={(event) => changeVerification(document, event.target.value as VerificationStatus)} aria-label={`${document.title} 검증 상태`}>{Object.entries(VERIFICATION_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button startIcon={<DownloadRounded />} onClick={() => propertyDataRoomService.downloadDocument(document)}>다운로드</Button><Button color="error" startIcon={<DeleteOutlineRounded />} onClick={() => remove(document)}>삭제</Button></article>)}</div> : <EmptyState title="등록된 문서가 없습니다." detail="건축물대장, 토지대장, 등기부등본 등 확인된 원본 자료를 등록하세요." />}</>;
 }
 
 function OfficialPanel({ documents, sources }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources'] }) {
