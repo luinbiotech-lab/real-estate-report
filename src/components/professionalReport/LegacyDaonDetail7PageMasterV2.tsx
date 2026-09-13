@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { MasterPresentation } from '../../services/reportEngine/masterPresentation';
-import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
+import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_V2_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 
 function Page({ page, eyebrow, title, subtitle, snapshot, view, children }: {
   page: number;
@@ -19,7 +19,7 @@ function Page({ page, eyebrow, title, subtitle, snapshot, view, children }: {
     </header>
     <main className="dd-body">{children}</main>
     <footer className="dd-foot">
-      <span>DA:ON ASSET · 전속매각 문의</span>
+      <span>DA:ON ASSET · {view.brand.managerName} · {view.brand.phone} · {view.brand.email}</span>
       <span>Snapshot v{snapshot.reportVersion} · {snapshot.generatedAt.slice(0, 10)} · † 확인 필요{view.isSample ? ' · 샘플' : ''}</span>
     </footer>
   </article>;
@@ -48,7 +48,7 @@ function GoldCard({ title, copy }: { title: string; copy: string }) {
   return <article className="dd-gold-card"><span>●</span><div><b>{title}</b><p>{copy}</p></div></article>;
 }
 
-export function DaonDetail7PageMaster({ snapshot, view: v }: { snapshot: ReportSnapshot; view: MasterPresentation }) {
+export function LegacyDaonDetail7PageMasterV2({ snapshot, view: v }: { snapshot: ReportSnapshot; view: MasterPresentation }) {
   const hero = v.hero.src;
   const map = v.map.src;
   const imageAt = (i: number) => v.photos[i]?.src;
@@ -56,7 +56,7 @@ export function DaonDetail7PageMaster({ snapshot, view: v }: { snapshot: ReportS
   const scenarios = v.scenarios;
   const risks = v.risks;
   const facts = v.profileFacts;
-  return <div className="daon-detail-master daon-detail-v2" data-template-id={DAON_DETAIL_MASTER_TEMPLATE_ID} data-template-version={DAON_DETAIL_MASTER_TEMPLATE_VERSION}>
+  return <div className="daon-detail-master daon-detail-v2" data-template-id={DAON_DETAIL_MASTER_TEMPLATE_ID} data-template-version={DAON_DETAIL_V2_TEMPLATE_VERSION}>
     <Page page={1} eyebrow="WHY THIS ASSET" title={v.name} subtitle="매입 관점에서 보는 핵심 제안" snapshot={snapshot} view={v}>
       <div className="dd-p1-top">
         <div className="dd-p1-hero"><ImageSlot src={hero} caption="대표 외관" /><div className="dd-hero-copy"><b title={v.heroHeadline}>{v.heroHeadline}</b><span>{v.heroSubline}</span></div></div>
@@ -125,7 +125,7 @@ export function DaonDetail7PageMaster({ snapshot, view: v }: { snapshot: ReportS
       <SectionBar>매수자 체크리스트</SectionBar>
       <ol className="dd-checklist"><li>최신 토지·건물 등기사항전부증명서 재발급</li><li>토지거래허가구역 적용 여부 및 매수인 요건 확인</li><li>대지 경계·접도 폭·현황도로·건축선 확인</li><li>주차·일조·높이·피난·내진 등 신축/대수선 사전검토</li><li>누수·균열·설비·전기용량·배수 등 현장실사</li><li>잔금일 기준 명도 및 인도 범위 계약서 명문화</li></ol>
       <div className="dd-acquisition"><b>ACQUISITION CASE</b><p>{v.opinion}</p></div>
-      <div className="dd-contact-bar"><strong>DA:ON ASSET</strong><div><b>전속매각 문의</b><span>M {v.brand.phone}</span><span>E {v.brand.email}</span></div></div>
+      <div className="dd-contact-bar"><strong>DA:ON ASSET</strong><div><b>{v.brand.managerName}</b><span>{v.brand.phone} · {v.brand.email}</span><span>{v.brand.address}</span></div></div>
     </Page>
   </div>;
 }
