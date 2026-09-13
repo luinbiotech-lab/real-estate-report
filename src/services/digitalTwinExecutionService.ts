@@ -4,6 +4,7 @@ import { agentOrchestratorService } from './agentOrchestratorService';
 import { readScaleCalibration } from './measurementCalibrationService';
 import { buildOpeningAdjacencyCandidates, readOpeningAdjacencyReviews } from './openingTopologyService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
+import { spatialGraphService } from './spatialGraphService';
 import { readVerticalDimensions } from './verticalDimensionService';
 
 type GeometrySummary = {
@@ -46,12 +47,10 @@ function modelFromAsset(asset: DigitalTwinAsset) {
   const openingReviews = readOpeningAdjacencyReviews(asset).filter((review) => review.decision === 'approved');
   const approvedOpeningIds = new Set(openingReviews.map((review) => review.candidateId));
   const approvedOpenings = openingCandidates.filter((candidate) => approvedOpeningIds.has(candidate.id)).map((candidate) => ({
-    id: candidate.id,
-    semantic: candidate.semantic,
-    layer: candidate.layer,
-    nearbyRoomIds: candidate.nearbyRoomIds,
+    id: candidate.id, semantic: candidate.semantic, layer: candidate.layer, nearbyRoomIds: candidate.nearbyRoomIds,
     connectionStatus: candidate.nearbyRoomIds.length >= 1 ? 'reviewed_adjacency_candidate' : 'unresolved',
   }));
+  const spatialGraph = spatialGraphService.build(asset);
 
   const topologyStatus = approvedRooms.length ? 'reviewed_boundary_candidates' : roomCandidates.length ? 'review_required' : 'boundary_candidates_missing';
   const openingTopologyStatus = approvedOpenings.length ? 'reviewed_opening_candidates' : openingCandidates.length ? 'review_required' : 'opening_candidates_missing';
@@ -76,8 +75,10 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     roomLabelCandidates: labels,
     roomTopology: { status: topologyStatus, candidateCount: roomCandidates.length, approvedCount: approvedRooms.length, approvedRooms },
     openingTopology: { status: openingTopologyStatus, candidateCount: openingCandidates.length, approvedCount: approvedOpenings.length, approvedOpenings },
+    spatialConnectivityGraph: spatialGraph,
     topologyStatus,
     openingTopologyStatus,
+    graphStatus: spatialGraph.status,
     extrusionStatus,
     extrusionCandidates,
     verticalDimensions: vertical ? { floorHeightM: vertical.floorHeightM, ceilingHeightM: vertical.ceilingHeightM, sourceLabel: vertical.sourceLabel, verifiedAt: vertical.verifiedAt } : undefined,
@@ -89,6 +90,7 @@ function modelFromAsset(asset: DigitalTwinAsset) {
       ...(approvedRooms.length ? ['승인된 폐합 폴리라인은 공간 경계 후보로 사용하지만 공적 장부 면적을 대체하지 않습니다.'] : ['공간 경계 Human Review가 완료되지 않아 3D extrusion을 진행하지 않습니다.']),
       ...(approvedOpenings.length ? ['승인된 문·창 인접관계는 연결 그래프 후보로만 사용하며 실제 개구부 폭·높이를 확정하지 않습니다.'] : ['문·창 개구부 연결은 Human Review 전까지 모델에 확정 반영하지 않습니다.']),
       ...(vertical ? ['사용자가 확인한 층고·천장고를 3D 높이 입력 후보로 사용합니다.'] : ['3D 높이는 천장고·층고 검증 전까지 생성하지 않습니다.']),
+      '공간 연결 그래프는 통행·피난·접근성 적합성의 확정 판정이 아닙니다.',
       '3D extrusion 후보는 구조체·슬래브·벽 두께·개구부·법정면적의 확정 모델이 아닙니다.',
     ],
   };
@@ -107,11 +109,12 @@ export const digitalTwinExecutionService = {
       const scaleVerified = models.filter((model) => 'measurementStatus' in model && model.measurementStatus === 'scale_verified').length;
       const topologyReviewed = models.filter((model) => 'topologyStatus' in model && model.topologyStatus === 'reviewed_boundary_candidates').length;
       const openingsReviewed = models.filter((model) => 'openingTopologyStatus' in model && model.openingTopologyStatus === 'reviewed_opening_candidates').length;
+      const graphReady = models.filter((model) => 'graphStatus' in model && model.graphStatus === 'ready').length;
       const extrusionReady = models.filter((model) => 'extrusionStatus' in model && model.extrusionStatus === 'candidate_ready').length;
       return agentOrchestratorService.complete(job, {
         resultType: 'digital_twin_model_candidate',
-        payload: { models, adapterVersion: 'digital-twin-local-v5', mode: 'geometry_scale_topology_openings_vertical', scaleVerified, topologyReviewed, openingsReviewed, extrusionReady, safetyNote: '축척·room topology·문창 인접관계·높이는 Human Review 후에만 사용하며 실제 mesh 생성 전에도 구조·개구부 검토가 필요합니다.' },
-        confidence: models.length ? Math.min(0.98, (modelable / models.length) * 0.5 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15 + (openingsReviewed / models.length) * 0.05 + (extrusionReady / models.length) * 0.1) : 0,
+        payload: { models, adapterVersion: 'digital-twin-local-v6', mode: 'geometry_scale_topology_graph_vertical', scaleVerified, topologyReviewed, openingsReviewed, graphReady, extrusionReady, safetyNote: '축척·room topology·문창 연결·높이는 Human Review 후에만 사용하며 공간 그래프와 3D 후보는 피난·구조·법정면적 판단을 대체하지 않습니다.' },
+        confidence: models.length ? Math.min(0.98, (modelable / models.length) * 0.45 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15 + (openingsReviewed / models.length) * 0.05 + (graphReady / models.length) * 0.05 + (extrusionReady / models.length) * 0.1) : 0,
         requiresReview: models.length > 0,
       });
     } catch (error) { await agentOrchestratorService.fail(job, error); throw error; }
