@@ -35,6 +35,13 @@ try {
     'Digital Twin 준비 자산',
   ], 'spatial-workspace');
 
+  await verifyPage(page, '/digital-twin', [
+    'Digital Twin Workspace',
+    'Geometry 추출',
+    '축척',
+    'DWG는 별도 변환기',
+  ], 'digital-twin-workspace');
+
   await verifyPage(page, '/agents', [
     'Agent Operations',
     'Human Review Gate',
@@ -51,10 +58,10 @@ try {
     '확정 판단',
   ], 'risk-workspace');
 
-  console.log('Rendered Interior + Agent + Spatial + Risk smoke QA: PASS');
+  console.log('Rendered Interior + Spatial + Digital Twin + Agent + Risk smoke QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true });
-  console.error('Rendered Interior + Agent + Spatial + Risk smoke QA: FAIL');
+  console.error('Rendered Interior + Spatial + Digital Twin + Agent + Risk smoke QA: FAIL');
   console.error(error);
   throw error;
 } finally {
