@@ -5,6 +5,8 @@ const requiredFiles = [
   'src/components/professionalReport/DaonDetail7PageMaster.tsx',
   'src/daon-one-page-master.css',
   'src/daon-detail-master.css',
+  'src/pages/DocumentPreview.tsx',
+  'src/pages/ProfessionalReportSnapshotPage.tsx',
 ];
 
 const forbiddenFiles = [
@@ -31,6 +33,8 @@ const onePage = readFileSync(requiredFiles[0], 'utf8');
 const detail = readFileSync(requiredFiles[1], 'utf8');
 const onePageCss = readFileSync(requiredFiles[2], 'utf8');
 const detailCss = readFileSync(requiredFiles[3], 'utf8');
+const documentPreview = readFileSync(requiredFiles[4], 'utf8');
+const snapshotPage = readFileSync(requiredFiles[5], 'utf8');
 
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
@@ -64,6 +68,15 @@ if (!detail.includes('parkingOfficial') || !detail.includes('parkingField')) {
 }
 if (detail.includes('현장주차') && !detail.includes('공부상 주차')) {
   throw new Error('7P MASTER 현장 주차 표기에는 공부상 주차 구분도 함께 유지해야 합니다.');
+}
+if (!documentPreview.includes('DaonOnePageMaster') || documentPreview.includes('ProfessionalReportV1')) {
+  throw new Error('현재 1P 미리보기는 DAON_1P_MASTER만 사용해야 합니다.');
+}
+if (!snapshotPage.includes('DaonDetail7PageMaster') || snapshotPage.includes("import { ProfessionalReportV1")) {
+  throw new Error('현재 7P 미리보기는 DAON_DETAIL_7P_MASTER만 사용해야 합니다.');
+}
+if (!snapshotPage.includes('현재 DA:ON MASTER로 다시 생성')) {
+  throw new Error('구형 Snapshot은 현재 MASTER 재생성 경로를 제공해야 합니다.');
 }
 
 console.log('DA:ON report master integrity: PASS');
