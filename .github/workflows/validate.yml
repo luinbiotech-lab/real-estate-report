@@ -26,6 +26,9 @@ jobs:
       - name: Validate DAON report masters
         run: npm run validate:masters
 
+      - name: Validate report pipeline
+        run: npm run validate:pipeline
+
       - name: Typecheck
         run: npm run typecheck
 
