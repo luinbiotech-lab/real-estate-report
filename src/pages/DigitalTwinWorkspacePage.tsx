@@ -4,6 +4,7 @@ import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuIte
 import ExtrusionPreview from '../components/ExtrusionPreview';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
 import FloorPlanSemanticReviewPanel from '../components/FloorPlanSemanticReviewPanel';
+import OpeningDimensionPanel from '../components/OpeningDimensionPanel';
 import OpeningTopologyPanel from '../components/OpeningTopologyPanel';
 import RoomTopologyPanel from '../components/RoomTopologyPanel';
 import ScaleCalibrationPanel from '../components/ScaleCalibrationPanel';
@@ -63,6 +64,7 @@ export default function DigitalTwinWorkspacePage() {
   const heightVerifiedAssets = assets.filter((asset) => asset.metadata.verticalDimensions && typeof asset.metadata.verticalDimensions === 'object');
   const topologyApproved = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.roomTopologyReviews) ? asset.metadata.roomTopologyReviews.filter((item) => item && typeof item === 'object' && (item as { decision?: string }).decision === 'approved').length : 0), 0);
   const openingApproved = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.openingAdjacencyReviews) ? asset.metadata.openingAdjacencyReviews.filter((item) => item && typeof item === 'object' && (item as { decision?: string }).decision === 'approved').length : 0), 0);
+  const openingDimensions = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.openingDimensions) ? asset.metadata.openingDimensions.length : 0), 0);
   const readyAssets = assets.filter((asset) => asset.processingStatus === 'ready');
   const reviewJobs = (bundle.agentJobs ?? []).filter((job) => ['floor_plan', 'digital_twin'].includes(job.agentType) && job.status === 'review_required');
   const semanticReviewed = assets.reduce((sum, asset) => sum + (Array.isArray(asset.metadata.semanticLayerReviews) ? asset.metadata.semanticLayerReviews.length : 0), 0);
@@ -71,7 +73,7 @@ export default function DigitalTwinWorkspacePage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">FLOOR PLAN · TOPOLOGY · OPENINGS · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 문·창 인접관계, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D extrusion 후보를 구성합니다.</p>
+      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 문·창 연결과 확인 치수, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D extrusion 후보를 구성합니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
@@ -83,13 +85,13 @@ export default function DigitalTwinWorkspacePage() {
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(9,minmax(92px,1fr))', gap: 12, marginBottom: 20 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(10,minmax(86px,1fr))', gap: 10, marginBottom: 20 }}>
       {[
-        ['원본 자산', assets.length], ['Geometry', geometryAssets.length], ['축척 검증', scaleVerifiedAssets.length], ['높이 검증', heightVerifiedAssets.length], ['Layer 검토', semanticReviewed], ['공간 경계', topologyApproved], ['문·창 연결', openingApproved], ['Human Review', reviewJobs.length], ['Twin Ready', readyAssets.length],
-      ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 26, marginTop: 6 }}>{value}</strong></div>)}
+        ['원본', assets.length], ['Geometry', geometryAssets.length], ['축척', scaleVerifiedAssets.length], ['높이', heightVerifiedAssets.length], ['Layer', semanticReviewed], ['공간 경계', topologyApproved], ['문·창 연결', openingApproved], ['개구부 치수', openingDimensions], ['Review', reviewJobs.length], ['Twin Ready', readyAssets.length],
+      ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 12 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
-    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, door/window 인접관계, 층고·천장고는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, door/window 연결·치수, 층고·천장고는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
 
     <div style={{ display: 'grid', gap: 20 }}>
       {assets.map((asset) => {
@@ -101,12 +103,13 @@ export default function DigitalTwinWorkspacePage() {
         const approvedRooms = roomReviews.filter((item) => item && typeof item === 'object' && (item as { decision?: string }).decision === 'approved').length;
         const openingReviews = Array.isArray(asset.metadata.openingAdjacencyReviews) ? asset.metadata.openingAdjacencyReviews : [];
         const approvedOpenings = openingReviews.filter((item) => item && typeof item === 'object' && (item as { decision?: string }).decision === 'approved').length;
+        const dimensionCount = Array.isArray(asset.metadata.openingDimensions) ? asset.metadata.openingDimensions.length : 0;
         const twinModel = asset.metadata.digitalTwinModel && typeof asset.metadata.digitalTwinModel === 'object' ? asset.metadata.digitalTwinModel as Record<string, unknown> : undefined;
         const calibratedBounds = twinModel?.calibratedBounds && typeof twinModel.calibratedBounds === 'object' ? twinModel.calibratedBounds as Record<string, unknown> : undefined;
         return <section key={asset.id} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
             <div><h2 style={{ margin: 0 }}>{asset.fileName || asset.assetType}</h2><p style={{ margin: '6px 0 0', color: '#667085' }}>{asset.assetType} · {asset.fileFormat} · {asset.floor || '층 미확인'}</p></div>
-            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{hasScaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{hasVerticalDimensions && <Chip size="small" color="success" variant="outlined" label="Height verified" />}{approvedRooms > 0 && <Chip size="small" color="success" variant="outlined" label={`Room ${approvedRooms}`} />}{approvedOpenings > 0 && <Chip size="small" color="success" variant="outlined" label={`Opening ${approvedOpenings}`} />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin metadata" />}</div>
+            <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{hasScaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{hasVerticalDimensions && <Chip size="small" color="success" variant="outlined" label="Height verified" />}{approvedRooms > 0 && <Chip size="small" color="success" variant="outlined" label={`Room ${approvedRooms}`} />}{approvedOpenings > 0 && <Chip size="small" color="success" variant="outlined" label={`Opening ${approvedOpenings}`} />}{dimensionCount > 0 && <Chip size="small" color="success" variant="outlined" label={`Dimension ${dimensionCount}`} />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin metadata" />}</div>
           </div>
           <FloorPlanGeometryPreview asset={asset} />
           {hasGeometry && <div style={{ marginTop: 18 }}><ScaleCalibrationPanel asset={asset} onSaved={() => load()} /></div>}
@@ -114,9 +117,10 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningTopologyPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><OpeningDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><SpatialGraphPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><ExtrusionPreview asset={asset} /></div>}
-          {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · openings: {String(twinModel.openingTopologyStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
+          {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · openings: {String(twinModel.openingTopologyStatus || 'review_required')} · opening dimensions: {String(twinModel.openingDimensionStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
         </section>;
       })}
       {!assets.length && <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 36, textAlign: 'center', color: '#7b8794' }}>Spatial Workspace에서 PDF/DWG/DXF 도면 원본을 먼저 등록하세요.</section>}
