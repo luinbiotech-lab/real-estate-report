@@ -96,10 +96,10 @@ if (!detail.includes("item.category !== 'interior'")) {
 if (!accessPolicy.includes('BANGBAE_815_11') || !accessPolicy.includes('internalPhotoAllowed')) {
   throw new Error('방배동 815-11 내부사진 제외 정책을 유지해야 합니다.');
 }
-if (onePage.includes("<Fact label=\"지목\" value={'대'}")) {
+if (/label="지목"[^>]*value=\{'대'\}/.test(onePage)) {
   throw new Error('지목 하드코딩 금지: 검증 데이터만 사용해야 합니다.');
 }
-const onePageFactCount = (onePage.match(/<Fact label=/g) || []).length;
+const onePageFactCount = (onePage.match(/<Fact\b/g) || []).length;
 if (onePageFactCount !== 12) {
   throw new Error(`1P MASTER property facts는 12개를 유지해야 합니다. 현재 ${onePageFactCount}개입니다.`);
 }
