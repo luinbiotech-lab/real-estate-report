@@ -95,6 +95,7 @@ export interface ReportSnapshot {
 export type DigitalTwinAssetType = 'floor_plan' | 'dwg' | 'dxf' | 'scanned_plan' | '360_photo' | 'lidar' | 'point_cloud' | 'mesh' | 'glb' | 'gltf' | 'room_model' | 'measurement_data';
 export interface DigitalTwinAsset {
   id: string; propertyId: string; assetType: DigitalTwinAssetType; fileFormat: string; storagePath: string;
+  fileName?: string; mimeType?: string; fileData?: Blob; fileUrl?: string;
   sourceDocumentId?: string; floor?: string; version: number;
   processingStatus: 'uploaded' | 'pending' | 'processing' | 'ready' | 'failed' | 'unsupported';
   metadata: Record<string, unknown>; createdAt: string; updatedAt: string; deletedAt?: string;
