@@ -63,6 +63,8 @@ const numericKeys = new Set<keyof Property>([
   'parkingOfficial', 'parkingField',
 ]);
 
+const fingerprint = (fieldKey: keyof Property, value: unknown) => `${String(fieldKey)}:${JSON.stringify(value)}`;
+
 export const documentExtractionService = {
   fieldsFor(documentType: DocumentType): DocumentFieldDefinition[] {
     return DOCUMENT_FIELD_MAP[documentType] ?? [];
@@ -84,12 +86,18 @@ export const documentExtractionService = {
 
   async queueExtractedFields(document: PropertyDocument, fields: ExtractedDocumentField[]): Promise<number> {
     const allowed = new Set(this.fieldsFor(document.documentType).map((field) => field.fieldKey));
+    const bundle = await propertyDataRoomService.getBundle(document.propertyId);
+    const active = new Set(bundle.verificationCandidates
+      .filter((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held')
+      .map((candidate) => fingerprint(candidate.fieldKey as keyof Property, candidate.candidateValue)));
     let queued = 0;
     for (const field of fields) {
       if (!allowed.has(field.fieldKey)) continue;
       const rawValue = field.rawValue.trim();
       if (!rawValue) continue;
       const candidateValue = field.candidateValue ?? this.parseValue(field.fieldKey, rawValue);
+      const keyFingerprint = fingerprint(field.fieldKey, candidateValue);
+      if (active.has(keyFingerprint)) continue;
       await propertyDataRoomService.createVerificationCandidate(document.propertyId, {
         fieldKey: field.fieldKey,
         candidateValue,
@@ -100,6 +108,7 @@ export const documentExtractionService = {
         confidence: field.confidence,
         note: `${document.documentType} 추출 후보 — 사용자 승인 전 Property 미변경`,
       });
+      active.add(keyFingerprint);
       queued += 1;
     }
     return queued;
