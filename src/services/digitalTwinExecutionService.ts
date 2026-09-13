@@ -120,7 +120,11 @@ export const digitalTwinExecutionService = {
       if (job.status !== 'running') job = await agentOrchestratorService.start(job);
       const assets = await propertyDataRoomRepository.getDigitalTwinAssets(job.propertyId);
       const targetIds = [job.input.sourceDigitalTwinAssetId, job.resourceId].filter((value): value is string => typeof value === 'string' && Boolean(value));
-      const target = targetIds.length ? assets.filter((asset) => targetIds.includes(asset.id)) : assets.filter((asset) => asset.processingStatus !== 'ready');
+      const target = targetIds.length
+        ? assets.filter((asset) => targetIds.includes(asset.id))
+        : sourceJob.trigger === 'refresh'
+          ? assets
+          : assets.filter((asset) => asset.processingStatus !== 'ready');
       const models = target.map(modelFromAsset);
       const modelable = models.filter((model) => model.status === 'model_candidate').length;
       const scaleVerified = models.filter((model) => 'measurementStatus' in model && model.measurementStatus === 'scale_verified').length;
