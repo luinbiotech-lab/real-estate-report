@@ -1,4 +1,5 @@
 import type { DocumentType, PropertyDocument } from '../domain/propertyDataRoom/types';
+import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
 import { propertyDataRoomService } from './propertyDataRoomService';
 
@@ -64,6 +65,16 @@ const numericKeys = new Set<keyof Property>([
 ]);
 
 const fingerprint = (fieldKey: keyof Property, value: unknown) => `${String(fieldKey)}:${JSON.stringify(value)}`;
+const normalizedComparable = (value: unknown) => typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value;
+const sameValue = (left: unknown, right: unknown) => JSON.stringify(normalizedComparable(left)) === JSON.stringify(normalizedComparable(right));
+const sqmToPyeong = (value: number) => Math.round((value / 3.305785) * 100) / 100;
+
+function derivedAreaField(fieldKey: keyof Property, value: unknown): { fieldKey: keyof Property; value: number } | undefined {
+  if (typeof value !== 'number' || !Number.isFinite(value)) return undefined;
+  if (fieldKey === 'landAreaSqm') return { fieldKey: 'landAreaPyeong', value: sqmToPyeong(value) };
+  if (fieldKey === 'totalFloorAreaSqm') return { fieldKey: 'totalFloorAreaPyeong', value: sqmToPyeong(value) };
+  return undefined;
+}
 
 export const documentExtractionService = {
   fieldsFor(documentType: DocumentType): DocumentFieldDefinition[] {
@@ -86,30 +97,46 @@ export const documentExtractionService = {
 
   async queueExtractedFields(document: PropertyDocument, fields: ExtractedDocumentField[]): Promise<number> {
     const allowed = new Set(this.fieldsFor(document.documentType).map((field) => field.fieldKey));
-    const bundle = await propertyDataRoomService.getBundle(document.propertyId);
+    const [bundle, property] = await Promise.all([
+      propertyDataRoomService.getBundle(document.propertyId),
+      propertyRepository.getById(document.propertyId),
+    ]);
+    if (!property) throw new Error('검증 후보를 생성할 물건을 찾을 수 없습니다.');
+
     const active = new Set(bundle.verificationCandidates
       .filter((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held')
       .map((candidate) => fingerprint(candidate.fieldKey as keyof Property, candidate.candidateValue)));
+
     let queued = 0;
+    const queueCandidate = async (fieldKey: keyof Property, candidateValue: unknown, confidence?: number, calculated = false) => {
+      if (sameValue(property[fieldKey], candidateValue)) return;
+      const keyFingerprint = fingerprint(fieldKey, candidateValue);
+      if (active.has(keyFingerprint)) return;
+      await propertyDataRoomService.createVerificationCandidate(document.propertyId, {
+        fieldKey,
+        candidateValue,
+        sourceType: calculated ? 'calculated' : officialDocumentType(document.documentType) ? 'official_document' : 'external',
+        sourceName: calculated ? `${document.title} 면적 환산` : document.title,
+        sourceReference: document.id,
+        sourceDate: document.issuedAt,
+        confidence,
+        note: calculated
+          ? `${String(fieldKey)} 자동 환산 후보 — 원문 면적 승인 전 Property 미변경`
+          : `${document.documentType} 추출 후보 — 사용자 승인 전 Property 미변경`,
+      });
+      active.add(keyFingerprint);
+      queued += 1;
+    };
+
     for (const field of fields) {
       if (!allowed.has(field.fieldKey)) continue;
       const rawValue = field.rawValue.trim();
       if (!rawValue) continue;
       const candidateValue = field.candidateValue ?? this.parseValue(field.fieldKey, rawValue);
-      const keyFingerprint = fingerprint(field.fieldKey, candidateValue);
-      if (active.has(keyFingerprint)) continue;
-      await propertyDataRoomService.createVerificationCandidate(document.propertyId, {
-        fieldKey: field.fieldKey,
-        candidateValue,
-        sourceType: officialDocumentType(document.documentType) ? 'official_document' : 'external',
-        sourceName: document.title,
-        sourceReference: document.id,
-        sourceDate: document.issuedAt,
-        confidence: field.confidence,
-        note: `${document.documentType} 추출 후보 — 사용자 승인 전 Property 미변경`,
-      });
-      active.add(keyFingerprint);
-      queued += 1;
+      await queueCandidate(field.fieldKey, candidateValue, field.confidence);
+
+      const derived = derivedAreaField(field.fieldKey, candidateValue);
+      if (derived) await queueCandidate(derived.fieldKey, derived.value, field.confidence, true);
     }
     return queued;
   },
