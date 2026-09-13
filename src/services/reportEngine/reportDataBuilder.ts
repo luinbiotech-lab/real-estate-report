@@ -6,21 +6,30 @@ import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
 import type { Property } from '../../types';
+import { internalPhotoAllowed } from '../../domain/professionalReport/reportAccessPolicy';
+import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
-export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = 'professional-v1';
+export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
+export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = DAON_DETAIL_MASTER_TEMPLATE_VERSION;
 
-type BuilderOptions = { generatedAt?: string; templateVersion?: string };
+type BuilderOptions = { generatedAt?: string; templateId?: string; templateVersion?: string };
 const emptyCounts = <T extends string>(keys: T[]) => Object.fromEntries(keys.map((key) => [key, 0])) as Record<T, number>;
 
 function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalReportMedia[] {
   const items: ProfessionalReportMedia[] = [];
+  const allowInternal = internalPhotoAllowed(property);
+
   if (property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
-  property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
+  if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
-  for (const media of bundle.media) items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
+
+  for (const media of bundle.media) {
+    if (!allowInternal && media.category === 'interior') continue;
+    items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
+  }
   return items;
 }
 
@@ -47,6 +56,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const landPyeongCalculated = !storedLandPyeong && landPyeong !== null;
   const landSqmCalculated = !storedLandSqm && landSqm !== null;
   const unitPrice = calculateUnitPrice(property.salePrice, landPyeong);
+  const allowInternal = internalPhotoAllowed(property);
   const media = mediaItems(property, bundle);
 
   const identity = {
@@ -69,6 +79,9 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     buildingCoverageRate: number('buildingCoverageRate', (value) => formatNullableNumber(value, '%')),
     floorAreaRatio: number('floorAreaRatio', (value) => formatNullableNumber(value, '%')), elevator: text('elevator'),
     parkingSpaces: number('parkingSpaces', (value) => formatNullableNumber(value, '대')),
+    parkingOfficial: number('parkingOfficial', (value) => formatNullableNumber(value, '대')),
+    parkingField: number('parkingField', (value) => formatNullableNumber(value, '대')),
+    parkingFieldNote: text('parkingFieldNote'),
   };
   const land = {
     landAreaSqm: numericReportValue(landSqm, context('landAreaSqm', { calculated: landSqmCalculated, formatter: ((value: number) => formatNullableArea(value, '㎡')) as (value: never) => string })),
@@ -84,8 +97,9 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     mainImage: reportValue(property.mainImage, context('mainImage', { disconnected: false })),
     mapImage: reportValue(property.mapImage, context('mapImage', { disconnected: !property.latitude || !property.longitude })),
     locationAnalysisImage: reportValue(property.locationAnalysisImage, context('locationAnalysisImage')),
-    additionalImages: reportValue(property.additionalImages ?? [], context('additionalImages')),
+    additionalImages: reportValue(allowInternal ? property.additionalImages ?? [] : [], context('additionalImages')),
     items: media,
+    internalPhotoAllowed: allowInternal,
   };
   const documents = {
     items: bundle.documents.map((document) => ({ id: document.id, documentType: document.documentType, title: document.title, originalFileName: document.originalFileName, sourceName: document.sourceName, issuedAt: document.issuedAt ?? null, uploadedAt: document.uploadedAt, verificationStatus: document.verificationStatus, version: document.version })),
@@ -110,16 +124,27 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   values.forEach(({ value }) => { qualityCounts[value.state] += 1; });
   const presentDocuments = new Set(bundle.documents.map((document) => document.documentType));
   const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !presentDocuments.has(type));
+  const requiredDocumentsVerified = REQUIRED_DOCUMENT_TYPES.every((type) => bundle.documents.some((document) =>
+    document.documentType === type && (document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed')));
+  const unresolvedCandidates = bundle.verificationCandidates.some((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held');
   const dataQuality = {
     counts: qualityCounts,
     missingFields: values.filter(({ value }) => value.state === 'missing').map(({ path }) => path),
     disconnectedFields: values.filter(({ value }) => value.state === 'disconnected').map(({ path }) => path),
-    requiredDocumentsMissing, reportReady: requiredDocumentsMissing.length === 0,
+    requiredDocumentsMissing,
+    reportReady: requiredDocumentsMissing.length === 0 && requiredDocumentsVerified && !unresolvedCandidates,
   };
 
   return {
     ...partial, documents, digitalTwin, verification, dataQuality, sources: { items: sourceItems, count: sourceItems.length },
-    generated: { generatedAt: options.generatedAt ?? new Date().toISOString(), propertyUpdatedAt: property.updatedAt, engineVersion: REPORT_ENGINE_VERSION, templateVersion: options.templateVersion ?? PROFESSIONAL_REPORT_TEMPLATE_VERSION, dataPolicy: 'property-and-data-room-only' },
+    generated: {
+      generatedAt: options.generatedAt ?? new Date().toISOString(),
+      propertyUpdatedAt: property.updatedAt,
+      engineVersion: REPORT_ENGINE_VERSION,
+      templateId: options.templateId ?? PROFESSIONAL_REPORT_TEMPLATE_ID,
+      templateVersion: options.templateVersion ?? PROFESSIONAL_REPORT_TEMPLATE_VERSION,
+      dataPolicy: 'property-and-data-room-only',
+    },
   };
 }
 

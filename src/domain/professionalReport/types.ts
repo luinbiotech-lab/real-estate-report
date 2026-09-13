@@ -41,7 +41,12 @@ export interface ProfessionalReportViewModel {
     totalFloorAreaSqm: ReportValue<number>; totalFloorAreaPyeong: ReportValue<number>; buildingAreaPyeong: ReportValue<number>;
     mainUse: ReportValue<string>; structure: ReportValue<string>; basementFloors: ReportValue<number>;
     groundFloors: ReportValue<number>; completionDate: ReportValue<string>; buildingCoverageRate: ReportValue<number>;
-    floorAreaRatio: ReportValue<number>; elevator: ReportValue<string>; parkingSpaces: ReportValue<number>;
+    floorAreaRatio: ReportValue<number>; elevator: ReportValue<string>;
+    /** Legacy value retained for old snapshots/UI. */
+    parkingSpaces: ReportValue<number>;
+    parkingOfficial: ReportValue<number>;
+    parkingField: ReportValue<number>;
+    parkingFieldNote: ReportValue<string>;
   };
   land: {
     landAreaSqm: ReportValue<number>; landAreaPyeong: ReportValue<number>; zoning: ReportValue<string>; roadCondition: ReportValue<string>;
@@ -52,7 +57,7 @@ export interface ProfessionalReportViewModel {
   };
   media: {
     mainImage: ReportValue<string>; mapImage: ReportValue<string>; locationAnalysisImage: ReportValue<string>;
-    additionalImages: ReportValue<string[]>; items: ProfessionalReportMedia[];
+    additionalImages: ReportValue<string[]>; items: ProfessionalReportMedia[]; internalPhotoAllowed: boolean;
   };
   documents: { items: ProfessionalReportDocument[]; count: number; verifiedCount: number };
   digitalTwin: { connected: boolean; count: number; readyCount: number };
@@ -68,7 +73,7 @@ export interface ProfessionalReportViewModel {
   risks: { risks: ReportValue<string> };
   sources: { items: ProfessionalReportSource[]; count: number };
   generated: {
-    generatedAt: string; propertyUpdatedAt: string; engineVersion: string; templateVersion: string;
+    generatedAt: string; propertyUpdatedAt: string; engineVersion: string; templateId: string; templateVersion: string;
     dataPolicy: 'property-and-data-room-only';
   };
 }
