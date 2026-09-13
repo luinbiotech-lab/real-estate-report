@@ -29,6 +29,9 @@ jobs:
       - name: Validate report pipeline
         run: npm run validate:pipeline
 
+      - name: Validate Agent Foundation
+        run: npm run validate:agents
+
       - name: Typecheck
         run: npm run typecheck
 
