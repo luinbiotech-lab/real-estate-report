@@ -6,6 +6,8 @@ const repository = readFileSync('src/repositories/propertyDataRoomRepository.ts'
 const orchestrator = readFileSync('src/services/agentOrchestratorService.ts', 'utf8');
 const executor = readFileSync('src/services/agentExecutionService.ts', 'utf8');
 const runtime = readFileSync('src/services/agentRuntimeService.ts', 'utf8');
+const vision = readFileSync('src/services/visionProviderService.ts', 'utf8');
+const interiorVision = readFileSync('src/services/interiorVisionExecutionService.ts', 'utf8');
 const spatialIntake = readFileSync('src/services/spatialIntakeService.ts', 'utf8');
 const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
 const app = readFileSync('src/App.tsx', 'utf8');
@@ -26,15 +28,19 @@ if (!orchestrator.includes('const duplicate = existing.find') || !orchestrator.i
 if (!orchestrator.includes("floor_plan: 'floor_plan'")) throw new Error('Floor-plan document routing is missing.');
 if (!orchestrator.includes("media.category === 'floor_plan' ? 'floor_plan' : 'interior_vision'")) throw new Error('Media routing between Floor Plan and Interior Vision agents is missing.');
 if (!dataRoomService.includes("queueDocument(saved, 'upload')")) throw new Error('Uploaded documents are not automatically queued to the orchestrator.');
-if (!spatialIntake.includes("queueMedia(saved, 'upload')") || !spatialIntake.includes('agentExecutionService.execute(job)')) throw new Error('Spatial upload auto-routing/execution is incomplete.');
+if (!spatialIntake.includes("queueMedia(saved, 'upload')") || !spatialIntake.includes('agentRuntimeService.execute(job)')) throw new Error('Spatial upload auto-routing/execution must use the unified Agent runtime.');
 if (!spatialIntake.includes('uploadPlanAsset') || !spatialIntake.includes("'dwg'") || !spatialIntake.includes("'dxf'")) throw new Error('PDF/DWG/DXF floor-plan intake support is missing.');
-if (!executor.includes("resultType: 'media_classification_candidate'") || !executor.includes("resultType: 'space_model_candidate'") || !executor.includes("resultType: 'floor_plan_intake_candidate'")) throw new Error('Interior/Floor Plan/Space execution adapters are incomplete.');
+if (!vision.includes("providerId: 'browser_pixel_v1'") || !vision.includes('createImageBitmap') || !vision.includes('OffscreenCanvas')) throw new Error('Browser pixel Vision provider is incomplete.');
+if (!vision.includes('brightness') || !vision.includes('contrast') || !vision.includes('edgeDensity')) throw new Error('Vision quality signals are incomplete.');
+if (!interiorVision.includes("method: 'browser_pixel_plus_metadata'") || !interiorVision.includes('visualSignals') || !interiorVision.includes("resultType: 'media_classification_candidate'")) throw new Error('Interior Vision provider adapter integration is incomplete.');
+if (!runtime.includes("job.agentType === 'interior_vision'") || !runtime.includes('interiorVisionExecutionService.execute(job)')) throw new Error('Interior Vision jobs are not routed through the provider runtime.');
+if (!executor.includes("resultType: 'space_model_candidate'") || !executor.includes("resultType: 'floor_plan_intake_candidate'")) throw new Error('Floor Plan/Space execution adapters are incomplete.');
 if (!executor.includes("job.resourceType === 'digital_twin'") || !executor.includes('sourceDigitalTwinAssetId')) throw new Error('Raw Digital Twin plan assets are not handled by the Floor Plan Agent.');
 if (!runtime.includes("resultType: 'renovation_assessment_candidate'") || !runtime.includes('saveRenovationAssessment')) throw new Error('Renovation Agent execution/application flow is incomplete.');
 if (!runtime.includes("resultType: 'risk_compliance_assessment_candidate'") || !runtime.includes('saveRiskAssessment')) throw new Error('Risk / Compliance Agent execution/application flow is incomplete.');
 if (!runtime.includes('runQueuedDependency') || !runtime.includes("result.resultType === 'media_classification_candidate'") || !runtime.includes("result.resultType === 'space_model_candidate'")) throw new Error('Reviewed Agent results must automatically advance the dependency chain.');
 if (!runtime.includes("queuePropertyAgent(result.propertyId, 'renovation', 'dependency'")) throw new Error('Space approval must queue Renovation Agent.');
-if (!runtime.includes('if (riskJob.status === \'queued\') await executeRiskCompliance(riskJob)')) throw new Error('Renovation approval must auto-run Risk / Compliance Agent.');
+if (!runtime.includes("if (riskJob.status === 'queued') await executeRiskCompliance(riskJob)")) throw new Error('Renovation approval must auto-run Risk / Compliance Agent.');
 if (!runtime.includes('법률·건축·구조·소방·인허가 적합성에 대한 확정 판단이 아닙니다')) throw new Error('Risk / Compliance Agent must preserve expert-review disclaimer.');
 if (!agentPage.includes('agentRuntimeService') || !agentPage.includes('Human Review Gate') || !agentPage.includes('승인·반영')) throw new Error('Unified runtime Human Review flow is incomplete.');
 if (!types.includes('export interface PropertySpace') || !types.includes('export interface SpaceMediaLink')) throw new Error('Spatial data model is missing.');
@@ -50,4 +56,4 @@ if (!spatialPage.includes('리노베이션 검토') || !spatialPage.includes('re
 if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Agent automation chain integrity: PASS');
+console.log('DA:ON Agent automation + browser Vision integrity: PASS');
