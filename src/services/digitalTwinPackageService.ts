@@ -2,14 +2,17 @@ import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { extrusionGeometryService } from './extrusionGeometryService';
 import { readFloorPlacement } from './floorPlacementService';
 import { readScaleCalibration } from './measurementCalibrationService';
+import { openingBooleanEligibilityService } from './openingBooleanEligibilityService';
 import { openingCutService } from './openingCutService';
 import { readOpeningDimensions } from './openingDimensionService';
 import { buildOpeningAdjacencyCandidates, readOpeningAdjacencyReviews } from './openingTopologyService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
+import { slabCoreAlignmentService } from './slabCoreAlignmentService';
 import { slabGeometryService } from './slabGeometryService';
 import { spatialGraphService } from './spatialGraphService';
 import { verticalCoreService } from './verticalCoreService';
 import { readVerticalDimensions } from './verticalDimensionService';
+import { wallGeometryMergeService } from './wallGeometryMergeService';
 import { wallJunctionService } from './wallJunctionService';
 import { wallModelService } from './wallModelService';
 
@@ -52,8 +55,11 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
 
   const walls = wallModelService.build(asset);
   const wallJunctions = wallJunctionService.build(asset);
+  const wallMergeEligibility = wallGeometryMergeService.build(asset);
   const openingCuts = openingCutService.build(asset);
+  const openingBooleanEligibility = openingBooleanEligibilityService.build(asset);
   const slabGeometry = slabGeometryService.build(asset);
+  const slabCoreAlignment = slabCoreAlignmentService.build(asset);
   const verticalCoreNodes = verticalCoreService.buildNodes(asset);
   const graph = spatialGraphService.build(asset);
   const extrusion = extrusionGeometryService.build(asset);
@@ -65,10 +71,13 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
     roomTopologyReviewed: rooms.length > 0,
     wallThicknessReviewed: walls.length > 0,
     wallJunctionsPrepared: walls.length === 0 || wallJunctions.length > 0,
+    wallGeometryMergeEligible: wallMergeEligibility.length === 0 || wallMergeEligibility.every((item) => item.eligible),
     slabGeometryPrepared: slabGeometry.status === 'ready',
+    slabCoreAligned: slabCoreAlignment.length === 0 || slabCoreAlignment.every((item) => item.alignmentStatus === 'aligned'),
     openingTopologyReviewed: openings.length > 0,
     allReviewedOpeningsDimensioned: openings.length === 0 || openings.every((item) => Boolean(item.dimensions)),
     openingCutsPrepared: openings.length === 0 || openingCuts.length === openings.filter((item) => Boolean(item.dimensions)).length,
+    openingBooleanEligible: openingBooleanEligibility.length === 0 || openingBooleanEligibility.every((item) => item.eligible),
     verticalCoreReviewed: verticalCoreNodes.length > 0,
     graphStatus: graph.status,
     extrusionStatus: extrusion.status,
@@ -84,9 +93,12 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
     rooms,
     walls,
     wallJunctions,
+    wallMergeEligibility,
     slabGeometry,
+    slabCoreAlignment,
     openings,
     openingCuts,
+    openingBooleanEligibility,
     verticalCoreNodes,
     graph,
     extrusion,
@@ -95,14 +107,11 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
       status: 'reviewed_candidate_package',
       statements: [
         '이 패키지는 Human Review를 통과한 후보 데이터만 묶어 후속 3D/원격검토 모듈에 전달하기 위한 자료입니다.',
-        '벽체는 승인된 DXF wall layer 중심선과 사람이 확인한 두께·높이를 결합한 후보이며 구조벽/비구조벽을 자동 확정하지 않습니다.',
-        'wallJunctions는 검증된 벽체 중심선 endpoint의 근접도를 이용한 접합 후보이며 실제 벽체 union/miter를 수행하지 않습니다.',
-        'slabGeometry는 승인된 room boundary를 이용한 room-footprint 후보이며 전체 floor slab union이나 구조 슬래브를 확정하지 않습니다.',
-        'openingCuts는 승인된 문·창 연결과 확인 치수를 벽체에 대응시킨 절삭 후보이며 실제 mesh boolean은 아직 실행하지 않습니다.',
-        'floorPlacement는 사람이 확인한 층 기준고와 slab 두께를 기록하며 층간 구조체 정합성을 자동 확정하지 않습니다.',
-        'verticalCoreNodes는 승인된 stair/elevator layer와 사람이 확인한 Core ID를 결합한 층별 연결 노드이며 피난·승강기 법규 적합성을 확정하지 않습니다.',
+        'wallMergeEligibility는 endpoint drift와 벽 두께 편차를 이용한 geometry merge 준비 판정이며 실제 union/miter는 적용하지 않습니다.',
+        'openingBooleanEligibility는 검증 벽체·개구부 치수·junction 상태를 이용한 절삭 가능성 gate이며 실제 boolean은 적용하지 않습니다.',
+        'slabCoreAlignment는 검증된 stair/elevator layer footprint와 reviewed slab footprint의 정합 후보이며 실제 slab opening boolean은 적용하지 않습니다.',
         '공적 장부 면적, 구조 안전성, 피난 적합성, 인허가 적합성, 실시설계 치수를 확정하지 않습니다.',
-        'productionMeshReady는 벽체 접합 geometry merge·개구부 boolean·전체 슬래브 형상·구조체·층간 core 정합성 검토 전까지 false입니다.',
+        'productionMeshReady는 실제 wall merge·opening boolean·slab/core opening·구조체 정합성 검증 전까지 false입니다.',
       ],
     },
   };
