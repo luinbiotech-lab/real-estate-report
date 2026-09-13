@@ -1,7 +1,7 @@
 import type { DigitalTwinAsset, MediaCategory, PropertyMedia } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
-import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
+import { agentRuntimeService } from './agentRuntimeService';
 
 const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
 const MAX_PLAN_BYTES = 50 * 1024 * 1024;
@@ -35,22 +35,10 @@ export const spatialIntakeService = {
     if (error) throw new Error(error);
     const now = new Date().toISOString();
     const media: PropertyMedia = {
-      id: crypto.randomUUID(),
-      propertyId,
-      mediaType: 'image',
-      category,
+      id: crypto.randomUUID(), propertyId, mediaType: 'image', category,
       storagePath: `properties/${propertyId}/media/${crypto.randomUUID()}-${file.name}`,
-      fileData: file,
-      fileName: file.name,
-      mimeType: file.type,
-      fileSize: file.size,
-      caption: file.name.replace(/\.[^.]+$/, ''),
-      aiTags: [],
-      verificationStatus: 'unverified',
-      sortOrder: Date.now(),
-      isPrimary: false,
-      createdAt: now,
-      updatedAt: now,
+      fileData: file, fileName: file.name, mimeType: file.type, fileSize: file.size,
+      caption: file.name.replace(/\.[^.]+$/, ''), aiTags: [], verificationStatus: 'unverified', sortOrder: Date.now(), isPrimary: false, createdAt: now, updatedAt: now,
     };
     const saved = await propertyDataRoomRepository.createMedia(media);
     await propertyDataRoomRepository.saveDataSource({
@@ -59,7 +47,7 @@ export const spatialIntakeService = {
     });
     const job = await agentOrchestratorService.queueMedia(saved, 'upload');
     if (job.status === 'queued') {
-      try { await agentExecutionService.execute(job); }
+      try { await agentRuntimeService.execute(job); }
       catch { /* Failed jobs remain visible and retryable in Agent Operations. */ }
     }
     return saved;
@@ -83,7 +71,7 @@ export const spatialIntakeService = {
     });
     const job = await agentOrchestratorService.queueDigitalTwin(saved, 'upload');
     if (job.status === 'queued') {
-      try { await agentExecutionService.execute(job); }
+      try { await agentRuntimeService.execute(job); }
       catch { /* Failed jobs remain visible and retryable in Agent Operations. */ }
     }
     return saved;
