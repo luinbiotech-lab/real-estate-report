@@ -13,6 +13,7 @@ const floorGeometry = readFileSync('src/services/floorPlanGeometryService.ts', '
 const floorExecution = readFileSync('src/services/floorPlanExecutionService.ts', 'utf8');
 const semanticReview = readFileSync('src/services/floorPlanSemanticReviewService.ts', 'utf8');
 const calibration = readFileSync('src/services/measurementCalibrationService.ts', 'utf8');
+const topology = readFileSync('src/services/roomTopologyService.ts', 'utf8');
 const digitalTwin = readFileSync('src/services/digitalTwinExecutionService.ts', 'utf8');
 const spatialIntake = readFileSync('src/services/spatialIntakeService.ts', 'utf8');
 const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
@@ -23,6 +24,7 @@ const twinPage = readFileSync('src/pages/DigitalTwinWorkspacePage.tsx', 'utf8');
 const twinPreview = readFileSync('src/components/FloorPlanGeometryPreview.tsx', 'utf8');
 const semanticPanel = readFileSync('src/components/FloorPlanSemanticReviewPanel.tsx', 'utf8');
 const calibrationPanel = readFileSync('src/components/ScaleCalibrationPanel.tsx', 'utf8');
+const topologyPanel = readFileSync('src/components/RoomTopologyPanel.tsx', 'utf8');
 const agentPage = readFileSync('src/pages/AgentOpsPage.tsx', 'utf8');
 const spatialPage = readFileSync('src/pages/SpatialWorkspacePage.tsx', 'utf8');
 const riskPage = readFileSync('src/pages/RiskWorkspacePage.tsx', 'utf8');
@@ -50,9 +52,13 @@ if (!semanticReview.includes('semanticLayerReviews') || !semanticReview.includes
 if (!semanticPanel.includes('DXF layer 이름에서 추정한 의미를 검토합니다') || !semanticPanel.includes('승인') || !semanticPanel.includes('보류') || !semanticPanel.includes('거절')) throw new Error('DXF semantic Human Review controls are incomplete.');
 if (!calibration.includes("status: 'verified'") || !calibration.includes("method: 'known_distance'") || !calibration.includes('metersPerDrawingUnit') || !calibration.includes("verificationStatus: 'verified'")) throw new Error('Human-verified drawing scale calibration persistence is incomplete.');
 if (!calibrationPanel.includes('Scale Calibration / 치수 기준 확인') || !calibrationPanel.includes('자동 추정값만으로 축척을 확정하지 않습니다') || !calibrationPanel.includes('확인한 축척 저장')) throw new Error('Scale Calibration Human Review UI is incomplete.');
+if (!topology.includes('buildRoomBoundaryCandidates') || !topology.includes("status: 'candidate'") || !topology.includes("decision: 'approved' | 'held' | 'rejected'")) throw new Error('Room topology candidate/review service is incomplete.');
+if (!topology.includes("resourceType: 'digital_twin_topology'") || !topology.includes('areaSqmCandidate')) throw new Error('Room topology provenance or scale-aware candidate area is missing.');
+if (!topologyPanel.includes('Room Topology / 공간 경계 후보') || !topologyPanel.includes('자동으로 방·실 면적을 확정하지 않습니다') || !topologyPanel.includes('경계 승인')) throw new Error('Room topology Human Review UI is incomplete.');
 if (!floorExecution.includes("asset.assetType === 'dwg'") || !floorExecution.includes("'converter_required'") || !floorExecution.includes("geometryStatus: 'extracted_candidate'")) throw new Error('Floor Plan geometry flow is incomplete.');
-if (!digitalTwin.includes("resultType: 'digital_twin_model_candidate'") || !digitalTwin.includes("measurementStatus: calibration ? 'scale_verified'") || !digitalTwin.includes("adapterVersion: 'digital-twin-local-v2'") || !digitalTwin.includes('calibratedBounds')) throw new Error('Scale-aware local Digital Twin processing adapter is incomplete.');
-if (!digitalTwin.includes("meshStatus: 'not_generated'") || !digitalTwin.includes('room topology 검증 전에는 면적을 확정하지 않습니다')) throw new Error('Digital Twin measurement/mesh safety guard is incomplete.');
+if (!digitalTwin.includes("resultType: 'digital_twin_model_candidate'") || !digitalTwin.includes("adapterVersion: 'digital-twin-local-v3'") || !digitalTwin.includes('calibratedBounds')) throw new Error('Topology-aware local Digital Twin processing adapter is incomplete.');
+if (!digitalTwin.includes("topologyStatus = approvedRooms.length ? 'reviewed_boundary_candidates'") || !digitalTwin.includes("extrusionStatus = calibration && approvedRooms.length ? 'height_required' : 'blocked'")) throw new Error('Digital Twin topology/extrusion readiness guard is incomplete.');
+if (!digitalTwin.includes("meshStatus: 'not_generated'") || !digitalTwin.includes('3D 높이는 천장고·층고 검증 전까지 생성하지 않습니다')) throw new Error('Digital Twin 3D safety guard is incomplete.');
 if (!runtime.includes('digitalTwinExecutionService.execute(job)') || !runtime.includes('digitalTwinExecutionService.applyApproved(result)')) throw new Error('Digital Twin runtime wiring is incomplete.');
 if (!runtime.includes("runQueuedDependency(result.propertyId, 'digital_twin')")) throw new Error('Approved Floor Plan geometry must advance to Digital Twin processing.');
 if (!runtime.includes('visionFacilityService.applyApprovedVisionResult(result)')) throw new Error('Approved Interior Vision results are not persisted into facility inventory.');
@@ -63,10 +69,11 @@ if (!app.includes('path="interior"') || !app.includes('InteriorWorkspacePage')) 
 if (!app.includes('path="digital-twin"') || !app.includes('DigitalTwinWorkspacePage')) throw new Error('Digital Twin Workspace route is missing.');
 if (!layout.includes('Interior Workspace') || !layout.includes('Digital Twin') || !layout.includes('Agent Operations') || !layout.includes('Spatial Workspace') || !layout.includes('Risk / Compliance')) throw new Error('Interior/Digital Twin/Agent/Spatial/Risk navigation is missing.');
 if (!interiorPage.includes('Vision 분석 기록') || !interiorPage.includes('승인된 설비 인벤토리') || !interiorPage.includes('브라우저 로컬 픽셀 분석')) throw new Error('Interior Workspace core visibility is incomplete.');
-if (!twinPage.includes('Digital Twin Workspace') || !twinPage.includes('DWG는 별도 변환기') || !twinPage.includes('FloorPlanGeometryPreview') || !twinPage.includes('FloorPlanSemanticReviewPanel') || !twinPage.includes('ScaleCalibrationPanel')) throw new Error('Digital Twin Workspace core visibility/review/calibration is incomplete.');
+if (!twinPage.includes('Digital Twin Workspace') || !twinPage.includes('DWG는 별도 변환기') || !twinPage.includes('FloorPlanGeometryPreview') || !twinPage.includes('FloorPlanSemanticReviewPanel') || !twinPage.includes('ScaleCalibrationPanel') || !twinPage.includes('RoomTopologyPanel')) throw new Error('Digital Twin Workspace core review/calibration/topology flow is incomplete.');
+if (!twinPage.includes('공간 경계 승인') || !twinPage.includes('extrusion')) throw new Error('Digital Twin Workspace topology/extrusion status visibility is incomplete.');
 if (!twinPreview.includes('검토용 2D preview') || !twinPreview.includes('축척/단위 미검증')) throw new Error('Digital Twin 2D geometry preview safety labels are missing.');
 if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digital Twin 준비 자산') || !spatialPage.includes('.pdf,.dwg,.dxf')) throw new Error('Spatial Workspace core/CAD intake sections are missing.');
 if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Interior + Spatial + DXF Review + Scale Calibration + Digital Twin + Agent + Risk integrity: PASS');
+console.log('DA:ON Interior + Spatial + DXF Review + Scale + Room Topology + Digital Twin + Agent + Risk integrity: PASS');
