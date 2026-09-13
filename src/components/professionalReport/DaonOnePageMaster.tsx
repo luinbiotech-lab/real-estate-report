@@ -6,6 +6,7 @@ const moneyPerPyeong = (value: number) => value ? `약 ${formatWon(value)}` : '�
 const areaPair = (sqm: number, py: number) => sqm || py ? `${sqm ? `${sqm.toFixed(2).replace(/\.00$/, '')}㎡` : '-'} (${py ? `${py.toFixed(2).replace(/\.00$/, '')}평` : '-'})` : '확인 필요';
 const floorText = (p: Property) => `지하 ${p.basementFloors || 0}층 / 지상 ${p.groundFloors || 0}층`;
 const first = (value: string, fallback: string) => lines(value)[0] || fallback;
+const hasNumber = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value);
 
 function DaonLogo() {
   return <div className="d1-logo" aria-label="DA:ON ASSET">
@@ -22,14 +23,22 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const landUnit = pricePerPyeong(p);
   const grossUnit = p.salePrice && p.totalFloorAreaPyeong ? Math.round(p.salePrice / p.totalFloorAreaPyeong) : 0;
   const points = [...lines(p.features), ...lines(p.investmentPoints)].filter(Boolean).slice(0, 7);
-  const parking = p.parkingField
+  const parking = hasNumber(p.parkingField)
     ? `${p.parkingField}대 가능*`
-    : p.parkingOfficial
+    : hasNumber(p.parkingOfficial)
       ? `${p.parkingOfficial}대`
       : p.parkingSpaces
         ? `${p.parkingSpaces}대`
         : '확인 필요';
-  const parkingNote = p.parkingField ? `* ${p.parkingFieldNote || '현장 이용 기준'}` : '';
+  const parkingNote = hasNumber(p.parkingField) ? `* ${p.parkingFieldNote || '현장 이용 기준'}` : '';
+  const heroHeadline = first(p.investmentPoints, first(p.features, '입지와 활용가치를 함께 검토하는 자산'));
+  const locationCaption = [p.nearbyStation || '', p.roadCondition || ''].filter(Boolean).join(' · ') || '입지 특성 확인 필요';
+  const highlightItems = [
+    first(p.roadCondition, '도로 조건 확인'),
+    first(p.occupancyStatus, '현재 이용 확인'),
+    first(p.recommendedUse, '활용 방향 검토'),
+    first(p.developmentPlan, '개발·인허가 검토'),
+  ];
 
   return <div className="daon-one-page-master" data-template-id={DAON_ONE_PAGE_MASTER_TEMPLATE_ID} data-template-version={DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION}>
     <article className="d1-sheet">
@@ -50,7 +59,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       </section>
 
       <section className="d1-status-strip">
-        <div>▣ <b>{p.occupancyStatus.includes('명도') ? '전체 명도 가능' : first(p.occupancyStatus, '명도 조건 확인')}</b></div>
+        <div>▣ <b>{p.occupancyStatus.includes('명도') ? '명도 조건 확인' : first(p.occupancyStatus, '명도 조건 확인')}</b></div>
         <div>♙ <b>{p.occupancyStatus.includes('소유자') ? '소유자 직접 사용' : '현재 이용 확인'}</b></div>
         <div>⌖ <b>{p.roadCondition.includes('코너') ? '코너 입지' : first(p.roadCondition, '도로 조건 확인')}</b></div>
         <div>▰ <b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div>
@@ -62,8 +71,8 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
           <div className="d1-hero">
             {p.mainImage ? <img src={p.mainImage} alt={`${p.name} 대표 외관`} /> : <div className="d1-empty">대표 외관사진<br/><small>데이터 미연결</small></div>}
             <div className="d1-hero-copy">
-              <h2>서초의 가치가 만나는<br/>특별한 코너,<br/>더 큰 가능성을 만나다.</h2>
-              <p>BANGBAE-DONG<br/>PREMIUM ASSET</p>
+              <h2>{heroHeadline}</h2>
+              <p>DA:ON ASSET<br/>EXCLUSIVE SALE</p>
             </div>
           </div>
           <div className="d1-facts-grid">
@@ -71,13 +80,13 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
             <Fact label="주용도" value={p.mainUse || '확인 필요'} />
             <Fact label="토지면적" value={areaPair(p.landAreaSqm, p.landAreaPyeong)} />
             <Fact label="용도지역" value={p.zoning || '확인 필요'} />
-            <Fact label="지목" value={'대'} />
+            <Fact label="지목" value="확인 필요" />
             <Fact label="사용승인일" value={p.completionDate || '확인 필요'} />
             <Fact label="연면적" value={areaPair(p.totalFloorAreaSqm, p.totalFloorAreaPyeong)} />
             <Fact label="현재 이용" value={first(p.occupancyStatus, '확인 필요')} />
             <Fact label="건축면적" value={p.buildingAreaPyeong ? `${p.buildingAreaPyeong.toFixed(2)}평` : '확인 필요'} />
-            <Fact label="지하 특화" value={p.basementFloors ? '방음시설·복합 활용 검토' : '해당 없음'} />
-            <Fact label="용적률 산정면적" value={p.floorAreaRatio && p.landAreaSqm ? `${(p.floorAreaRatio / 100 * p.landAreaSqm).toFixed(2)}㎡` : '확인 필요'} />
+            <Fact label="지하층" value={p.basementFloors ? `지하 ${p.basementFloors}층` : '해당 없음'} />
+            <Fact label="용적률 기준 계산면적" value={p.floorAreaRatio && p.landAreaSqm ? `${(p.floorAreaRatio / 100 * p.landAreaSqm).toFixed(2)}㎡ · 계산값` : '확인 필요'} />
             <Fact label="명도 조건" value={first(p.occupancyStatus, '협의 필요')} />
             <Fact label="규모" value={floorText(p)} />
           </div>
@@ -90,7 +99,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
           </section>
           <section className="d1-map">
             {p.mapImage ? <img src={p.mapImage} alt={`${p.name} 위치 지도`} /> : <div className="d1-empty">위치지도<br/><small>데이터 미연결</small></div>}
-            <div className="d1-map-caption">프리미엄이 모이는<br/>서초의 중심, 방배동</div>
+            <div className="d1-map-caption">{locationCaption}</div>
           </section>
         </div>
       </section>
@@ -102,14 +111,14 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       </section>
 
       <section className="d1-highlight-strip">
-        <div>⌖ <b>코너 입지</b></div><div>♟ <b>주거 배후수요</b></div><div>▥ <b>복합 활용 가능</b></div><div>▤ <b>신축·용도변경 별도 검토 필요</b></div>
+        {highlightItems.map((item, index) => <div key={`${item}-${index}`}><b>{item}</b></div>)}
       </section>
 
       <section className="d1-use"><strong>활용 제안</strong><p>{p.recommendedUse || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
 
       <footer className="d1-footer">
         <DaonLogo />
-        <div className="d1-contact"><strong>{p.managerName || '김은미 대표 / 공인중개사'}</strong><span>M&nbsp; {p.managerPhone || '010 9953 1270'} &nbsp;&nbsp; E&nbsp; {p.managerEmail || 'daonasset.korea@gmail.com'}</span><span>DA:ON ASSET · 서울특별시 서초구 신반포로 339, 5층</span></div>
+        <div className="d1-contact"><strong>{p.managerName || '김은미 대표 / 공인중개사'}</strong><span>M&nbsp; {p.managerPhone || '010 9953 1270'} &nbsp;&nbsp; E&nbsp; {p.managerEmail || 'daonasset.korea@gmail.com'}</span></div>
         <div className="d1-footer-note">REAL ESTATE<br/>CREATES<br/>A BETTER TOMORROW<small>본 자료는 매각 검토용 요약자료이며 계약 전 권리관계 및 현장 재확인이 필요합니다.</small></div>
       </footer>
     </article>
