@@ -18,15 +18,13 @@ for (const agentType of requiredAgentTypes) {
   if (!types.includes(`'${agentType}'`)) throw new Error(`Agent type missing: ${agentType}`);
 }
 
-for (const store of ['agentJobs', 'agentResults', 'agentReviews', 'propertySpaces', 'spaceMediaLinks', 'propertyFacilities', 'renovationAssessments']) {
+for (const store of ['agentJobs', 'agentResults', 'agentReviews', 'propertySpaces', 'spaceMediaLinks', 'propertyFacilities', 'renovationAssessments', 'riskAssessments']) {
   if (!database.includes(`'${store}'`)) throw new Error(`IndexedDB Agent/Spatial store missing: ${store}`);
   if (!repository.includes(store)) throw new Error(`Agent/Spatial repository binding missing: ${store}`);
 }
 
-if (!database.includes('DATABASE_VERSION = 7')) throw new Error('Interior Agent Foundation requires IndexedDB version 7.');
-if (!orchestrator.includes('queueDocument') || !orchestrator.includes('queueMedia') || !orchestrator.includes('queuePropertyAgent') || !orchestrator.includes('queueDigitalTwin')) {
-  throw new Error('Agent routing entry points are incomplete.');
-}
+if (!database.includes('DATABASE_VERSION = 8')) throw new Error('Risk/Compliance Agent Foundation requires IndexedDB version 8.');
+if (!orchestrator.includes('queueDocument') || !orchestrator.includes('queueMedia') || !orchestrator.includes('queuePropertyAgent') || !orchestrator.includes('queueDigitalTwin')) throw new Error('Agent routing entry points are incomplete.');
 if (!orchestrator.includes("floor_plan: 'floor_plan'")) throw new Error('Floor-plan document routing is missing.');
 if (!orchestrator.includes("media.category === 'floor_plan' ? 'floor_plan' : 'interior_vision'")) throw new Error('Media routing between Floor Plan and Interior Vision agents is missing.');
 if (!dataRoomService.includes("queueDocument(saved, 'upload')")) throw new Error('Uploaded documents are not automatically queued to the orchestrator.');
@@ -35,10 +33,13 @@ if (!spatialIntake.includes('uploadPlanAsset') || !spatialIntake.includes("'dwg'
 if (!executor.includes("resultType: 'media_classification_candidate'") || !executor.includes("resultType: 'space_model_candidate'") || !executor.includes("resultType: 'floor_plan_intake_candidate'")) throw new Error('Interior/Floor Plan/Space execution adapters are incomplete.');
 if (!executor.includes("job.resourceType === 'digital_twin'") || !executor.includes('sourceDigitalTwinAssetId')) throw new Error('Raw Digital Twin plan assets are not handled by the Floor Plan Agent.');
 if (!runtime.includes("resultType: 'renovation_assessment_candidate'") || !runtime.includes('saveRenovationAssessment')) throw new Error('Renovation Agent execution/application flow is incomplete.');
+if (!runtime.includes("resultType: 'risk_compliance_assessment_candidate'") || !runtime.includes('saveRiskAssessment')) throw new Error('Risk / Compliance Agent execution/application flow is incomplete.');
+if (!runtime.includes('법률·건축·구조·소방·인허가 적합성에 대한 확정 판단이 아닙니다')) throw new Error('Risk / Compliance Agent must preserve expert-review disclaimer.');
 if (!runtime.includes("queuePropertyAgent(result.propertyId, 'risk_compliance', 'dependency'")) throw new Error('Renovation approval must queue Risk / Compliance review.');
 if (!agentPage.includes('agentRuntimeService') || !agentPage.includes('Human Review Gate') || !agentPage.includes('승인·반영')) throw new Error('Unified runtime Human Review flow is incomplete.');
 if (!types.includes('export interface PropertySpace') || !types.includes('export interface SpaceMediaLink')) throw new Error('Spatial data model is missing.');
 if (!types.includes('export interface PropertyFacility') || !types.includes('export interface RenovationAssessment')) throw new Error('Facility/Renovation data model is missing.');
+if (!types.includes('export interface PropertyRiskAssessment') || !types.includes('export interface RiskCheckItem')) throw new Error('Risk assessment data model is missing.');
 if (!types.includes('fileData?: Blob') || !types.includes("'dwg' | 'dxf'")) throw new Error('Digital Twin raw source persistence is missing.');
 if (!app.includes('path="agents"') || !app.includes('AgentOpsPage')) throw new Error('Agent Operations route is missing.');
 if (!app.includes('path="spatial"') || !app.includes('SpatialWorkspacePage')) throw new Error('Spatial Workspace route is missing.');
@@ -47,4 +48,4 @@ if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digi
 if (!spatialPage.includes('리노베이션 검토') || !spatialPage.includes('renovationAssessments')) throw new Error('Renovation assessment visibility is missing from Spatial Workspace.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Agent + Spatial + Renovation Foundation integrity: PASS');
+console.log('DA:ON Agent + Spatial + Renovation + Risk Foundation integrity: PASS');
