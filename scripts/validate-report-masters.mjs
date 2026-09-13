@@ -8,6 +8,7 @@ const requiredFiles = [
   'src/daon-master-refinement.css',
   'src/pages/DocumentPreview.tsx',
   'src/pages/ProfessionalReportSnapshotPage.tsx',
+  'src/domain/professionalReport/templateIds.ts',
 ];
 
 const forbiddenFiles = [
@@ -37,6 +38,7 @@ const detailCss = readFileSync(requiredFiles[3], 'utf8');
 const refinementCss = readFileSync(requiredFiles[4], 'utf8');
 const documentPreview = readFileSync(requiredFiles[5], 'utf8');
 const snapshotPage = readFileSync(requiredFiles[6], 'utf8');
+const templateIds = readFileSync(requiredFiles[7], 'utf8');
 
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
@@ -49,6 +51,15 @@ if (!onePage.includes('DAON_ONE_PAGE_MASTER_TEMPLATE_ID')) {
 }
 if (!detail.includes('DAON_DETAIL_MASTER_TEMPLATE_ID')) {
   throw new Error('7P MASTER template id 연결이 없습니다.');
+}
+if (!templateIds.includes("DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION = 'daon-1p-v2'")) {
+  throw new Error('복원된 1P MASTER 버전은 daon-1p-v2를 유지해야 합니다.');
+}
+if (!templateIds.includes("DAON_DETAIL_MASTER_TEMPLATE_VERSION = 'daon-detail-7p-v2'")) {
+  throw new Error('복원된 7P MASTER 버전은 daon-detail-7p-v2를 유지해야 합니다.');
+}
+if (!templateIds.includes("'daon-detail-7p-v1'")) {
+  throw new Error('기존 7P immutable Snapshot 호환성을 유지해야 합니다.');
 }
 if (!onePageCss.includes('width:210mm') || !onePageCss.includes('height:297mm')) {
   throw new Error('1P MASTER는 A4 세로 고정 크기를 유지해야 합니다.');
