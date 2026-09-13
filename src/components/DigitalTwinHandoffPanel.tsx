@@ -25,7 +25,7 @@ function downloadText(content: string, mime: string, fileName: string) {
 export default function DigitalTwinHandoffPanel({ asset }: { asset: DigitalTwinAsset }) {
   const pkg = useMemo(() => buildDigitalTwinPackage(asset), [asset]);
   const mesh = useMemo(() => buildReviewedMeshCandidate(asset), [asset]);
-  const readySignals = [pkg.readiness.geometry, pkg.readiness.scaleVerified, pkg.readiness.verticalVerified, pkg.readiness.roomTopologyReviewed, pkg.readiness.allReviewedOpeningsDimensioned].filter(Boolean).length;
+  const readySignals = [pkg.readiness.geometry, pkg.readiness.scaleVerified, pkg.readiness.verticalVerified, pkg.readiness.floorPlacementVerified, pkg.readiness.roomTopologyReviewed, pkg.readiness.wallThicknessReviewed, pkg.readiness.allReviewedOpeningsDimensioned, pkg.readiness.openingCutsPrepared].filter(Boolean).length;
   const baseName = safeFileName(asset.fileName || asset.id);
 
   const downloadJson = () => downloadText(JSON.stringify(pkg, null, 2), 'application/json;charset=utf-8', `${baseName}-${DIGITAL_TWIN_PACKAGE_VERSION}.json`);
@@ -36,7 +36,7 @@ export default function DigitalTwinHandoffPanel({ asset }: { asset: DigitalTwinA
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 520px' }}>
         <strong>Digital Twin Handoff Package</strong>
-        <p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>Human Review를 통과한 축척·공간 경계·문/창 연결·치수·높이·공간 그래프·extrusion 후보를 후속 3D/원격검토 모듈로 전달합니다.</p>
+        <p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>Human Review를 통과한 축척·공간 경계·벽체 두께·문/창 연결·치수·층 기준고·slab 정보를 후속 3D/원격검토 모듈로 전달합니다.</p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button size="small" variant="outlined" startIcon={<DownloadRounded />} onClick={downloadJson}>JSON 내보내기</Button>
@@ -47,7 +47,10 @@ export default function DigitalTwinHandoffPanel({ asset }: { asset: DigitalTwinA
 
     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 12 }}>
       <Chip size="small" label={pkg.schemaVersion} />
-      <Chip size="small" variant="outlined" label={`Readiness ${readySignals}/5`} />
+      <Chip size="small" variant="outlined" label={`Readiness ${readySignals}/8`} />
+      <Chip size="small" color={pkg.readiness.wallThicknessReviewed ? 'success' : 'default'} variant="outlined" label={`Walls ${pkg.walls.length}`} />
+      <Chip size="small" color={pkg.readiness.floorPlacementVerified ? 'success' : 'default'} variant="outlined" label={pkg.readiness.floorPlacementVerified ? 'Floor placed' : 'Floor placement required'} />
+      <Chip size="small" color={pkg.readiness.openingCutsPrepared ? 'success' : 'default'} variant="outlined" label={`Opening cuts ${pkg.openingCuts.length}`} />
       <Chip size="small" color={pkg.readiness.graphStatus === 'ready' ? 'success' : 'default'} variant="outlined" label={`Graph ${pkg.readiness.graphStatus}`} />
       <Chip size="small" color={pkg.readiness.extrusionStatus === 'ready' ? 'success' : 'default'} variant="outlined" label={`Extrusion ${pkg.readiness.extrusionStatus}`} />
       <Chip size="small" color={mesh.status === 'ready' ? 'success' : 'default'} variant="outlined" label={`Reviewed mesh ${mesh.status}`} />
@@ -55,7 +58,7 @@ export default function DigitalTwinHandoffPanel({ asset }: { asset: DigitalTwinA
     </div>
 
     <Alert severity="info" sx={{ mt: 1.5 }}>
-      JSON은 데이터 handoff, OBJ는 단순 prism mesh 후보, HTML은 서버 없이 열 수 있는 원격 검토용 뷰어입니다. 문·창 절삭, 벽 두께, 슬래브, 구조체가 아직 적용되지 않으며 공적 장부 면적·구조 안전성·피난 적합성·인허가 적합성·실시설계 치수를 확정하지 않습니다. productionMeshReady는 계속 false입니다.
+      JSON은 reviewed data handoff, OBJ는 아직 room prism 기반 검토용 mesh, HTML은 서버 없이 열 수 있는 원격 검토 뷰어입니다. 벽 두께·개구부 절삭·slab 배치 데이터는 handoff에 포함되지만 실제 boolean/구조체 mesh는 아직 생성하지 않습니다. productionMeshReady는 계속 false입니다.
     </Alert>
   </section>;
 }
