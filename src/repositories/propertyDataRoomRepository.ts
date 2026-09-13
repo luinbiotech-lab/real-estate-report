@@ -1,4 +1,5 @@
 import type { DataRoomBundle, DigitalTwinAsset, PropertyDataSource, PropertyDocument, PropertyMedia, PropertyVerification, PropertyVerificationCandidate, ReportSnapshot } from '../domain/propertyDataRoom/types';
+import type { Property } from '../types';
 import { database } from './database';
 
 type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets';
@@ -34,6 +35,23 @@ export const propertyDataRoomRepository = {
   saveVerificationCandidate: (value: PropertyVerificationCandidate) => put('propertyVerificationCandidates', value),
   getDataSources: (propertyId: string) => byProperty<PropertyDataSource>('propertyDataSources', propertyId),
   saveDataSource: (value: PropertyDataSource) => put('propertyDataSources', value),
+  async approveVerificationCandidate(input: {
+    property: Property;
+    candidate: PropertyVerificationCandidate;
+    verification: PropertyVerification;
+    dataSource: PropertyDataSource;
+  }): Promise<PropertyVerificationCandidate> {
+    const db = await database;
+    const tx = db.transaction(['properties', 'propertyVerificationCandidates', 'propertyVerifications', 'propertyDataSources'], 'readwrite');
+    await Promise.all([
+      tx.objectStore('properties').put(input.property),
+      tx.objectStore('propertyVerificationCandidates').put(input.candidate),
+      tx.objectStore('propertyVerifications').put(input.verification),
+      tx.objectStore('propertyDataSources').put(input.dataSource),
+    ]);
+    await tx.done;
+    return input.candidate;
+  },
   getReportSnapshots: (propertyId: string) => byProperty<ReportSnapshot>('reportSnapshots', propertyId),
   async getReportSnapshot(id: string) { return (await database).get('reportSnapshots', id) as Promise<ReportSnapshot | undefined>; },
   async saveReportSnapshot(value: ReportSnapshot) { await (await database).add('reportSnapshots', value); return value; },
