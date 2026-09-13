@@ -5,6 +5,7 @@ const database = readFileSync('src/repositories/database.ts', 'utf8');
 const repository = readFileSync('src/repositories/propertyDataRoomRepository.ts', 'utf8');
 const orchestrator = readFileSync('src/services/agentOrchestratorService.ts', 'utf8');
 const executor = readFileSync('src/services/agentExecutionService.ts', 'utf8');
+const runtime = readFileSync('src/services/agentRuntimeService.ts', 'utf8');
 const spatialIntake = readFileSync('src/services/spatialIntakeService.ts', 'utf8');
 const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
 const app = readFileSync('src/App.tsx', 'utf8');
@@ -17,12 +18,12 @@ for (const agentType of requiredAgentTypes) {
   if (!types.includes(`'${agentType}'`)) throw new Error(`Agent type missing: ${agentType}`);
 }
 
-for (const store of ['agentJobs', 'agentResults', 'agentReviews', 'propertySpaces', 'spaceMediaLinks']) {
+for (const store of ['agentJobs', 'agentResults', 'agentReviews', 'propertySpaces', 'spaceMediaLinks', 'propertyFacilities', 'renovationAssessments']) {
   if (!database.includes(`'${store}'`)) throw new Error(`IndexedDB Agent/Spatial store missing: ${store}`);
   if (!repository.includes(store)) throw new Error(`Agent/Spatial repository binding missing: ${store}`);
 }
 
-if (!database.includes('DATABASE_VERSION = 6')) throw new Error('Spatial Agent Foundation requires IndexedDB version 6.');
+if (!database.includes('DATABASE_VERSION = 7')) throw new Error('Interior Agent Foundation requires IndexedDB version 7.');
 if (!orchestrator.includes('queueDocument') || !orchestrator.includes('queueMedia') || !orchestrator.includes('queuePropertyAgent') || !orchestrator.includes('queueDigitalTwin')) {
   throw new Error('Agent routing entry points are incomplete.');
 }
@@ -42,11 +43,20 @@ if (!executor.includes("resultType: 'media_classification_candidate'") || !execu
 if (!executor.includes("job.resourceType === 'digital_twin'") || !executor.includes('sourceDigitalTwinAssetId')) {
   throw new Error('Raw Digital Twin plan assets are not handled by the Floor Plan Agent.');
 }
-if (!executor.includes('reviewAndApply') || !agentPage.includes('Human Review Gate') || !agentPage.includes('승인·반영')) {
-  throw new Error('Human review and application flow is incomplete.');
+if (!runtime.includes("resultType: 'renovation_assessment_candidate'") || !runtime.includes('saveRenovationAssessment')) {
+  throw new Error('Renovation Agent execution/application flow is incomplete.');
+}
+if (!runtime.includes("queuePropertyAgent(result.propertyId, 'risk_compliance', 'dependency'")) {
+  throw new Error('Renovation approval must queue Risk / Compliance review.');
+}
+if (!agentPage.includes('agentRuntimeService') || !agentPage.includes('Human Review Gate') || !agentPage.includes('승인·반영')) {
+  throw new Error('Unified runtime Human Review flow is incomplete.');
 }
 if (!types.includes('export interface PropertySpace') || !types.includes('export interface SpaceMediaLink')) {
   throw new Error('Spatial data model is missing.');
+}
+if (!types.includes('export interface PropertyFacility') || !types.includes('export interface RenovationAssessment')) {
+  throw new Error('Facility/Renovation data model is missing.');
 }
 if (!types.includes('fileData?: Blob') || !types.includes("'dwg' | 'dxf'")) throw new Error('Digital Twin raw source persistence is missing.');
 if (!app.includes('path="agents"') || !app.includes('AgentOpsPage')) throw new Error('Agent Operations route is missing.');
@@ -57,4 +67,4 @@ if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 're
   throw new Error('Human review gate must remain part of Agent Foundation.');
 }
 
-console.log('DA:ON Agent + Spatial Foundation integrity: PASS');
+console.log('DA:ON Agent + Spatial + Renovation Foundation integrity: PASS');
