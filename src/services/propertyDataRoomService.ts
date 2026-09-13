@@ -7,6 +7,21 @@ import type { Property } from '../types';
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
 
+const DOCUMENT_NAME_RULES: Array<{ type: DocumentType; patterns: RegExp[] }> = [
+  { type: 'building_register', patterns: [/건축물대장/i, /건축물.?대장/i, /building.?register/i] },
+  { type: 'land_register', patterns: [/토지대장/i, /land.?register/i] },
+  { type: 'land_use_plan', patterns: [/토지이용/i, /이용계획/i, /land.?use/i] },
+  { type: 'registry', patterns: [/등기부/i, /등기사항/i, /registry/i] },
+  { type: 'cadastral_map', patterns: [/지적도/i, /임야도/i, /cadastral/i] },
+  { type: 'lease_status', patterns: [/임대차/i, /임대.?현황/i, /lease/i] },
+  { type: 'floor_plan', patterns: [/도면/i, /평면도/i, /floor.?plan/i, /dwg/i, /dxf/i] },
+  { type: 'appraisal', patterns: [/감정평가/i, /appraisal/i] },
+  { type: 'contract', patterns: [/계약서/i, /매매계약/i, /contract/i] },
+  { type: 'financial', patterns: [/재무/i, /손익/i, /financial/i] },
+  { type: 'development', patterns: [/개발계획/i, /정비계획/i, /development/i] },
+  { type: 'due_diligence', patterns: [/실사/i, /due.?diligence/i] },
+];
+
 export const propertyDataRoomService = {
   getBundle: (propertyId: string) => propertyDataRoomRepository.getBundle(propertyId),
   summarize(property: Property, bundle: DataRoomBundle): DataRoomSummary {
@@ -24,6 +39,10 @@ export const propertyDataRoomService = {
       missingDocumentTypes, reportReady: missingDocumentTypes.length === 0,
     };
   },
+  classifyDocument(fileName: string): DocumentType {
+    const normalized = fileName.replace(/\.[^.]+$/, '').trim();
+    return DOCUMENT_NAME_RULES.find((rule) => rule.patterns.some((pattern) => pattern.test(normalized)))?.type ?? 'other';
+  },
   validateDocument(file: File) {
     if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) return 'PDF, JPG, PNG, WEBP 파일만 등록할 수 있습니다.';
     if (file.size > MAX_DOCUMENT_BYTES) return '파일은 20MB 이하만 등록할 수 있습니다.';
@@ -38,7 +57,13 @@ export const propertyDataRoomService = {
       fileData: file, mimeType: file.type, fileSize: file.size, sourceType: 'manual', sourceName: input.sourceName.trim() || '사용자 업로드',
       uploadedAt: now, verificationStatus: 'unverified', version: 1, notes: '', createdAt: now, updatedAt: now,
     };
-    return propertyDataRoomRepository.createDocument(document);
+    const saved = await propertyDataRoomRepository.createDocument(document);
+    await propertyDataRoomRepository.saveDataSource({
+      id: crypto.randomUUID(), propertyId, resourceType: 'document', sourceType: officialDocumentType(input.documentType) ? 'official_document' : 'external',
+      sourceName: saved.title, sourceReference: saved.id, collectedAt: now, verificationStatus: 'unverified',
+      metadata: { documentId: saved.id, documentType: saved.documentType, originalFileName: saved.originalFileName, mimeType: saved.mimeType, fileSize: saved.fileSize }, createdAt: now,
+    });
+    return saved;
   },
   async createVerificationCandidate(propertyId: string, input: {
     fieldKey: keyof Property; candidateValue: unknown; sourceType: DataSourceType; sourceName: string;
@@ -86,3 +111,7 @@ export const propertyDataRoomService = {
     if (document.fileData) window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   },
 };
+
+function officialDocumentType(type: DocumentType) {
+  return ['building_register', 'land_register', 'land_use_plan', 'registry', 'cadastral_map'].includes(type);
+}
