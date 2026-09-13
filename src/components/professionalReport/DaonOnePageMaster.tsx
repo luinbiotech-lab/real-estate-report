@@ -1,3 +1,4 @@
+import { AssignmentTurnedInOutlined, BusinessOutlined, LocalParkingOutlined, LocationOnOutlined } from '@mui/icons-material';
 import type { Property } from '../../types';
 import { formatWon, lines, pricePerPyeong } from '../../utils/format';
 import { DAON_ONE_PAGE_MASTER_TEMPLATE_ID, DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
@@ -66,10 +67,10 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       </section>
 
       <section className="d1-status-strip">
-        <div>▣ <b>{occupancySummary}</b></div>
-        <div>♙ <b>{p.occupancyStatus.includes('소유자') ? '소유자 직접 사용' : '현재 이용 확인'}</b></div>
-        <div>⌖ <b>{p.roadCondition.includes('코너') ? '코너 입지' : roadSummary}</b></div>
-        <div>▰ <b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div>
+        <div><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>
+        <div><BusinessOutlined className="d1-status-icon" /><b>{p.occupancyStatus.includes('소유자') ? '소유자 직접 사용' : '현재 이용 확인'}</b></div>
+        <div><LocationOnOutlined className="d1-status-icon" /><b>{p.roadCondition.includes('코너') ? '코너 입지' : roadSummary}</b></div>
+        <div><LocalParkingOutlined className="d1-status-icon" /><b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div>
         <span>PRIME LOCATION<br/>VALUABLE ASSET</span>
       </section>
 
