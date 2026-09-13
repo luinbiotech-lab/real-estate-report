@@ -2,6 +2,7 @@ import type { AgentJob, AgentResult, DigitalTwinAsset } from '../domain/property
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { readScaleCalibration } from './measurementCalibrationService';
+import { buildOpeningAdjacencyCandidates, readOpeningAdjacencyReviews } from './openingTopologyService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
 import { readVerticalDimensions } from './verticalDimensionService';
 
@@ -27,9 +28,8 @@ function calibratedBounds(geometry: GeometrySummary, metersPerDrawingUnit: numbe
 
 function modelFromAsset(asset: DigitalTwinAsset) {
   const geometry = asset.metadata.geometry && typeof asset.metadata.geometry === 'object' ? asset.metadata.geometry as GeometrySummary : undefined;
-  if (!geometry) {
-    return { assetId: asset.id, status: 'geometry_required', floor: asset.floor, sourceFormat: asset.fileFormat, warnings: ['승인된 geometry가 없어 Digital Twin 모델 후보를 생성할 수 없습니다.'] };
-  }
+  if (!geometry) return { assetId: asset.id, status: 'geometry_required', floor: asset.floor, sourceFormat: asset.fileFormat, warnings: ['승인된 geometry가 없어 Digital Twin 모델 후보를 생성할 수 없습니다.'] };
+
   const labels = Array.isArray(geometry.labelCandidates) ? geometry.labelCandidates : [];
   const calibration = readScaleCalibration(asset);
   const vertical = readVerticalDimensions(asset);
@@ -39,30 +39,29 @@ function modelFromAsset(asset: DigitalTwinAsset) {
   const approvedIds = new Set(approvedReviews.map((review) => review.candidateId));
   const approvedRooms = roomCandidates.filter((candidate) => approvedIds.has(candidate.id)).map((candidate) => {
     const review = approvedReviews.find((item) => item.candidateId === candidate.id);
-    return {
-      id: candidate.id,
-      name: review?.name || '공간명 미지정',
-      floor: candidate.floor,
-      layer: candidate.layer,
-      areaSqmCandidate: candidate.areaSqmCandidate,
-      perimeterMCandidate: candidate.perimeterMCandidate,
-      boundaryPointCount: candidate.points.length,
-      reviewNote: review?.note,
-    };
+    return { id: candidate.id, name: review?.name || '공간명 미지정', floor: candidate.floor, layer: candidate.layer, areaSqmCandidate: candidate.areaSqmCandidate, perimeterMCandidate: candidate.perimeterMCandidate, boundaryPointCount: candidate.points.length, reviewNote: review?.note };
   });
+
+  const openingCandidates = buildOpeningAdjacencyCandidates(asset);
+  const openingReviews = readOpeningAdjacencyReviews(asset).filter((review) => review.decision === 'approved');
+  const approvedOpeningIds = new Set(openingReviews.map((review) => review.candidateId));
+  const approvedOpenings = openingCandidates.filter((candidate) => approvedOpeningIds.has(candidate.id)).map((candidate) => ({
+    id: candidate.id,
+    semantic: candidate.semantic,
+    layer: candidate.layer,
+    nearbyRoomIds: candidate.nearbyRoomIds,
+    connectionStatus: candidate.nearbyRoomIds.length >= 1 ? 'reviewed_adjacency_candidate' : 'unresolved',
+  }));
+
   const topologyStatus = approvedRooms.length ? 'reviewed_boundary_candidates' : roomCandidates.length ? 'review_required' : 'boundary_candidates_missing';
+  const openingTopologyStatus = approvedOpenings.length ? 'reviewed_opening_candidates' : openingCandidates.length ? 'review_required' : 'opening_candidates_missing';
   const extrusionHeightM = vertical?.ceilingHeightM ?? vertical?.floorHeightM;
   const extrusionStatus = calibration && approvedRooms.length && extrusionHeightM ? 'candidate_ready' : calibration && approvedRooms.length ? 'height_required' : 'blocked';
   const verifiedExtrusionHeightM = extrusionStatus === 'candidate_ready' ? extrusionHeightM as number : undefined;
   const extrusionCandidates = verifiedExtrusionHeightM ? approvedRooms.map((room) => ({
-    roomId: room.id,
-    name: room.name,
-    floor: room.floor,
-    heightM: verifiedExtrusionHeightM,
-    areaSqmCandidate: room.areaSqmCandidate,
+    roomId: room.id, name: room.name, floor: room.floor, heightM: verifiedExtrusionHeightM, areaSqmCandidate: room.areaSqmCandidate,
     volumeM3Candidate: room.areaSqmCandidate != null ? room.areaSqmCandidate * verifiedExtrusionHeightM : undefined,
-    status: 'reviewed_inputs_candidate',
-    note: '검증 축척·승인 공간 경계·확인 높이로 만든 3D extrusion 입력 후보이며 구조체/법정면적 확정값이 아닙니다.',
+    status: 'reviewed_inputs_candidate', note: '검증 축척·승인 공간 경계·확인 높이로 만든 3D extrusion 입력 후보이며 구조체/법정면적 확정값이 아닙니다.',
   })) : [];
 
   return {
@@ -76,7 +75,9 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     geometryStats: { lines: geometry.lineCount ?? 0, polylines: geometry.polylineCount ?? 0, texts: geometry.textCount ?? 0 },
     roomLabelCandidates: labels,
     roomTopology: { status: topologyStatus, candidateCount: roomCandidates.length, approvedCount: approvedRooms.length, approvedRooms },
+    openingTopology: { status: openingTopologyStatus, candidateCount: openingCandidates.length, approvedCount: approvedOpenings.length, approvedOpenings },
     topologyStatus,
+    openingTopologyStatus,
     extrusionStatus,
     extrusionCandidates,
     verticalDimensions: vertical ? { floorHeightM: vertical.floorHeightM, ceilingHeightM: vertical.ceilingHeightM, sourceLabel: vertical.sourceLabel, verifiedAt: vertical.verifiedAt } : undefined,
@@ -86,9 +87,9 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     warnings: [
       ...(calibration ? ['사용자가 확인한 기준 치수로 도면 좌표를 m 단위로 환산합니다.'] : ['도면 좌표의 실제 길이 단위·축척은 검증 전까지 거리/면적으로 확정하지 않습니다.']),
       ...(approvedRooms.length ? ['승인된 폐합 폴리라인은 공간 경계 후보로 사용하지만 공적 장부 면적을 대체하지 않습니다.'] : ['공간 경계 Human Review가 완료되지 않아 3D extrusion을 진행하지 않습니다.']),
+      ...(approvedOpenings.length ? ['승인된 문·창 인접관계는 연결 그래프 후보로만 사용하며 실제 개구부 폭·높이를 확정하지 않습니다.'] : ['문·창 개구부 연결은 Human Review 전까지 모델에 확정 반영하지 않습니다.']),
       ...(vertical ? ['사용자가 확인한 층고·천장고를 3D 높이 입력 후보로 사용합니다.'] : ['3D 높이는 천장고·층고 검증 전까지 생성하지 않습니다.']),
       '3D extrusion 후보는 구조체·슬래브·벽 두께·개구부·법정면적의 확정 모델이 아닙니다.',
-      '벽·문·창·기둥·계단·엘리베이터 의미는 Human Review 결과를 기준으로 사용해야 합니다.',
     ],
   };
 }
@@ -105,11 +106,12 @@ export const digitalTwinExecutionService = {
       const modelable = models.filter((model) => model.status === 'model_candidate').length;
       const scaleVerified = models.filter((model) => 'measurementStatus' in model && model.measurementStatus === 'scale_verified').length;
       const topologyReviewed = models.filter((model) => 'topologyStatus' in model && model.topologyStatus === 'reviewed_boundary_candidates').length;
+      const openingsReviewed = models.filter((model) => 'openingTopologyStatus' in model && model.openingTopologyStatus === 'reviewed_opening_candidates').length;
       const extrusionReady = models.filter((model) => 'extrusionStatus' in model && model.extrusionStatus === 'candidate_ready').length;
       return agentOrchestratorService.complete(job, {
         resultType: 'digital_twin_model_candidate',
-        payload: { models, adapterVersion: 'digital-twin-local-v4', mode: 'geometry_scale_topology_vertical', scaleVerified, topologyReviewed, extrusionReady, safetyNote: '축척·room topology·높이는 Human Review 후에만 사용하며 실제 mesh 생성 전에도 구조·개구부 검토가 필요합니다.' },
-        confidence: models.length ? Math.min(0.97, (modelable / models.length) * 0.55 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15 + (extrusionReady / models.length) * 0.1) : 0,
+        payload: { models, adapterVersion: 'digital-twin-local-v5', mode: 'geometry_scale_topology_openings_vertical', scaleVerified, topologyReviewed, openingsReviewed, extrusionReady, safetyNote: '축척·room topology·문창 인접관계·높이는 Human Review 후에만 사용하며 실제 mesh 생성 전에도 구조·개구부 검토가 필요합니다.' },
+        confidence: models.length ? Math.min(0.98, (modelable / models.length) * 0.5 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15 + (openingsReviewed / models.length) * 0.05 + (extrusionReady / models.length) * 0.1) : 0,
         requiresReview: models.length > 0,
       });
     } catch (error) { await agentOrchestratorService.fail(job, error); throw error; }
