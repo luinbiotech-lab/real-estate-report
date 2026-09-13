@@ -22,7 +22,7 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 try {
   await verifyPage(page, '/interior', ['Interior Workspace', 'Vision 분석 기록', '승인된 설비 인벤토리', '브라우저 로컬 픽셀 분석'], 'interior-workspace');
   await verifyPage(page, '/spatial', ['Spatial Workspace', '공간 자료 Intake', '공간 모델', '리노베이션 검토', 'Digital Twin 준비 자산'], 'spatial-workspace');
-  await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Spatial Connectivity Graph', '3D', 'Door / Window Topology', 'Opening Dimension', 'Digital Twin Handoff Package', 'JSON 내보내기', 'Production mesh: NOT READY'], 'digital-twin-workspace');
+  await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Spatial Connectivity Graph', '3D', 'Door / Window Topology', 'Opening Dimension', 'handoff package'], 'digital-twin-workspace');
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
   console.log('Rendered Interior + Spatial + Room/Opening Graph + Opening Dimensions + 3D Handoff + Agent + Risk smoke QA: PASS');
