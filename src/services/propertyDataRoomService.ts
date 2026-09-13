@@ -1,5 +1,5 @@
 import { REQUIRED_DOCUMENT_TYPES } from '../domain/propertyDataRoom/labels';
-import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
+import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentExtractionMethod, DocumentExtractionStatus, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
@@ -55,7 +55,7 @@ export const propertyDataRoomService = {
       id: crypto.randomUUID(), propertyId, documentType: input.documentType, title: input.title.trim() || file.name,
       originalFileName: file.name, storagePath: `properties/${propertyId}/documents/${crypto.randomUUID()}-${file.name}`,
       fileData: file, mimeType: file.type, fileSize: file.size, sourceType: 'manual', sourceName: input.sourceName.trim() || '사용자 업로드',
-      uploadedAt: now, verificationStatus: 'unverified', version: 1, notes: '', createdAt: now, updatedAt: now,
+      uploadedAt: now, verificationStatus: 'unverified', version: 1, notes: '', extractionStatus: 'not_started', createdAt: now, updatedAt: now,
     };
     const saved = await propertyDataRoomRepository.createDocument(document);
     await propertyDataRoomRepository.saveDataSource({
@@ -64,6 +64,21 @@ export const propertyDataRoomService = {
       metadata: { documentId: saved.id, documentType: saved.documentType, originalFileName: saved.originalFileName, mimeType: saved.mimeType, fileSize: saved.fileSize }, createdAt: now,
     });
     return saved;
+  },
+  async updateDocumentExtraction(document: PropertyDocument, input: {
+    status: DocumentExtractionStatus; method?: DocumentExtractionMethod; pageCount?: number; error?: string;
+  }): Promise<PropertyDocument> {
+    const now = new Date().toISOString();
+    const updated: PropertyDocument = {
+      ...document,
+      extractionStatus: input.status,
+      extractionMethod: input.method,
+      extractionPageCount: input.pageCount,
+      extractionUpdatedAt: now,
+      extractionError: input.error,
+      updatedAt: now,
+    };
+    return propertyDataRoomRepository.updateDocument(updated);
   },
   async createVerificationCandidate(propertyId: string, input: {
     fieldKey: keyof Property; candidateValue: unknown; sourceType: DataSourceType; sourceName: string;
