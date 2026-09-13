@@ -114,7 +114,26 @@ async function executeInterior(job: AgentJob) {
 async function executeFloorPlan(job: AgentJob) {
   if (!job.resourceId) {
     return agentOrchestratorService.complete(job, {
-      resultType: 'floor_plan_intake_candidate', payload: { message: '도면 문서 또는 미디어를 연결해야 합니다.' }, confidence: 0, requiresReview: true,
+      resultType: 'floor_plan_intake_candidate', payload: { message: '도면 문서·미디어·원본 CAD 자산을 연결해야 합니다.' }, confidence: 0, requiresReview: true,
+    });
+  }
+  if (job.resourceType === 'digital_twin') {
+    const asset = (await propertyDataRoomRepository.getDigitalTwinAssets(job.propertyId)).find((item) => item.id === job.resourceId);
+    if (!asset) throw new Error('Floor Plan Agent가 참조할 Digital Twin 원본을 찾을 수 없습니다.');
+    const floor = asset.floor || inferFloor(asset.fileName || '');
+    return agentOrchestratorService.complete(job, {
+      resultType: 'floor_plan_intake_candidate',
+      payload: {
+        sourceDigitalTwinAssetId: asset.id,
+        fileName: asset.fileName || '',
+        mimeType: asset.mimeType || '',
+        storagePath: asset.storagePath,
+        assetType: asset.assetType,
+        floor,
+        nextAgent: 'digital_twin',
+      },
+      confidence: floor ? 0.88 : 0.75,
+      requiresReview: true,
     });
   }
   if (job.resourceType === 'document') {
@@ -192,20 +211,26 @@ async function applyFloorPlan(result: AgentResult) {
   const payload = result.payload;
   const sourceDocumentId = typeof payload.sourceDocumentId === 'string' ? payload.sourceDocumentId : undefined;
   const sourceMediaId = typeof payload.sourceMediaId === 'string' ? payload.sourceMediaId : undefined;
+  const sourceDigitalTwinAssetId = typeof payload.sourceDigitalTwinAssetId === 'string' ? payload.sourceDigitalTwinAssetId : undefined;
   const storagePath = typeof payload.storagePath === 'string' ? payload.storagePath : '';
   const fileName = typeof payload.fileName === 'string' ? payload.fileName : '';
   const floor = typeof payload.floor === 'string' ? payload.floor : undefined;
   const assetType = typeof payload.assetType === 'string' ? payload.assetType as DigitalTwinAsset['assetType'] : 'floor_plan';
   const existing = await propertyDataRoomRepository.getDigitalTwinAssets(result.propertyId);
-  const duplicate = existing.find((item) => item.sourceDocumentId === sourceDocumentId && sourceDocumentId);
-  if (!duplicate) {
-    const now = new Date().toISOString();
-    await propertyDataRoomRepository.saveDigitalTwinAsset({
-      id: crypto.randomUUID(), propertyId: result.propertyId, assetType, fileFormat: fileName.split('.').pop()?.toLowerCase() || 'unknown', storagePath,
-      sourceDocumentId, floor, version: 1, processingStatus: 'pending', metadata: { sourceMediaId, sourceAgentResultId: result.id }, createdAt: now, updatedAt: now,
-    });
+  const directAsset = sourceDigitalTwinAssetId ? existing.find((item) => item.id === sourceDigitalTwinAssetId) : undefined;
+  if (directAsset) {
+    await propertyDataRoomRepository.saveDigitalTwinAsset({ ...directAsset, floor: floor || directAsset.floor, processingStatus: 'pending', metadata: { ...directAsset.metadata, sourceAgentResultId: result.id }, updatedAt: new Date().toISOString() });
+  } else {
+    const duplicate = existing.find((item) => item.sourceDocumentId === sourceDocumentId && sourceDocumentId);
+    if (!duplicate) {
+      const now = new Date().toISOString();
+      await propertyDataRoomRepository.saveDigitalTwinAsset({
+        id: crypto.randomUUID(), propertyId: result.propertyId, assetType, fileFormat: fileName.split('.').pop()?.toLowerCase() || 'unknown', storagePath,
+        fileName, sourceDocumentId, floor, version: 1, processingStatus: 'pending', metadata: { sourceMediaId, sourceAgentResultId: result.id }, createdAt: now, updatedAt: now,
+      });
+    }
   }
-  await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'digital_twin', 'dependency', { sourceAgentResultId: result.id, sourceDocumentId, sourceMediaId });
+  await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'digital_twin', 'dependency', { sourceAgentResultId: result.id, sourceDocumentId, sourceMediaId, sourceDigitalTwinAssetId });
 }
 
 async function applySpaceModel(result: AgentResult) {
