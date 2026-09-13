@@ -78,6 +78,16 @@ export interface RenovationAssessment {
   createdAt: string; updatedAt: string; deletedAt?: string;
 }
 
+export type RiskCheckStatus = 'clear' | 'review' | 'missing' | 'not_applicable';
+export interface RiskCheckItem {
+  key: string; label: string; status: RiskCheckStatus; detail: string; sourceReference?: string;
+}
+export interface PropertyRiskAssessment {
+  id: string; propertyId: string; title: string; summary: string; checks: RiskCheckItem[];
+  disclaimer: string; sourceAgentResultId?: string; verificationStatus: VerificationStatus;
+  createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
 export interface PropertyVerification {
   id: string; propertyId: string; fieldKey: string; status: VerificationStatus; note: string;
   verifiedBy?: string; verifiedAt?: string; createdAt: string; updatedAt: string;
@@ -124,7 +134,7 @@ export interface DataRoomBundle {
   /** Added non-destructively for Agent Foundation. Legacy bundle literals remain valid. */
   agentJobs?: AgentJob[]; agentResults?: AgentResult[]; agentReviews?: AgentReview[];
   /** Spatial/interior model is optional for compatibility with legacy bundle literals. */
-  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[];
+  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[]; riskAssessments?: PropertyRiskAssessment[];
 }
 
 export interface DataRoomSummary {
