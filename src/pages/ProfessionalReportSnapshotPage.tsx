@@ -11,6 +11,7 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { reportSnapshotService } from '../services/reportEngine';
 import '../professional-report.css';
 import '../daon-detail-master.css';
+import '../daon-master-refinement.css';
 
 function isViewModel(value: unknown): value is ProfessionalReportViewModel {
   if (!value || typeof value !== 'object') return false;
