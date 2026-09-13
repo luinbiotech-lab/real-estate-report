@@ -2,6 +2,7 @@ import type { AgentJob, AgentResult, DigitalTwinAsset } from '../domain/property
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { readScaleCalibration } from './measurementCalibrationService';
+import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
 
 type GeometrySummary = {
   parser?: string;
@@ -26,16 +27,30 @@ function calibratedBounds(geometry: GeometrySummary, metersPerDrawingUnit: numbe
 function modelFromAsset(asset: DigitalTwinAsset) {
   const geometry = asset.metadata.geometry && typeof asset.metadata.geometry === 'object' ? asset.metadata.geometry as GeometrySummary : undefined;
   if (!geometry) {
-    return {
-      assetId: asset.id,
-      status: 'geometry_required',
-      floor: asset.floor,
-      sourceFormat: asset.fileFormat,
-      warnings: ['승인된 geometry가 없어 Digital Twin 모델 후보를 생성할 수 없습니다.'],
-    };
+    return { assetId: asset.id, status: 'geometry_required', floor: asset.floor, sourceFormat: asset.fileFormat, warnings: ['승인된 geometry가 없어 Digital Twin 모델 후보를 생성할 수 없습니다.'] };
   }
   const labels = Array.isArray(geometry.labelCandidates) ? geometry.labelCandidates : [];
   const calibration = readScaleCalibration(asset);
+  const roomCandidates = buildRoomBoundaryCandidates(asset);
+  const roomReviews = readRoomTopologyReviews(asset);
+  const approvedReviews = roomReviews.filter((review) => review.decision === 'approved');
+  const approvedIds = new Set(approvedReviews.map((review) => review.candidateId));
+  const approvedRooms = roomCandidates.filter((candidate) => approvedIds.has(candidate.id)).map((candidate) => {
+    const review = approvedReviews.find((item) => item.candidateId === candidate.id);
+    return {
+      id: candidate.id,
+      name: review?.name || '공간명 미지정',
+      floor: candidate.floor,
+      layer: candidate.layer,
+      areaSqmCandidate: candidate.areaSqmCandidate,
+      perimeterMCandidate: candidate.perimeterMCandidate,
+      boundaryPointCount: candidate.points.length,
+      reviewNote: review?.note,
+    };
+  });
+  const topologyStatus = approvedRooms.length ? 'reviewed_boundary_candidates' : roomCandidates.length ? 'review_required' : 'boundary_candidates_missing';
+  const extrusionStatus = calibration && approvedRooms.length ? 'height_required' : 'blocked';
+
   return {
     assetId: asset.id,
     status: 'model_candidate',
@@ -46,21 +61,17 @@ function modelFromAsset(asset: DigitalTwinAsset) {
     drawingLayers: Array.isArray(geometry.layers) ? geometry.layers : [],
     geometryStats: { lines: geometry.lineCount ?? 0, polylines: geometry.polylineCount ?? 0, texts: geometry.textCount ?? 0 },
     roomLabelCandidates: labels,
+    roomTopology: { status: topologyStatus, candidateCount: roomCandidates.length, approvedCount: approvedRooms.length, approvedRooms },
+    topologyStatus,
+    extrusionStatus,
     measurementStatus: calibration ? 'scale_verified' : geometry.unitStatus === 'drawing_units_unverified' ? 'scale_unverified' : 'unknown',
-    scaleCalibration: calibration ? {
-      method: calibration.method,
-      metersPerDrawingUnit: calibration.metersPerDrawingUnit,
-      referenceLabel: calibration.referenceLabel,
-      verifiedAt: calibration.verifiedAt,
-    } : undefined,
+    scaleCalibration: calibration ? { method: calibration.method, metersPerDrawingUnit: calibration.metersPerDrawingUnit, referenceLabel: calibration.referenceLabel, verifiedAt: calibration.verifiedAt } : undefined,
     meshStatus: 'not_generated',
-    warnings: calibration ? [
-      '사용자가 확인한 기준 치수로 도면 좌표를 m 단위로 환산합니다.',
-      '면적은 폐합 geometry·room topology 검증 전까지 확정하지 않습니다.',
+    warnings: [
+      ...(calibration ? ['사용자가 확인한 기준 치수로 도면 좌표를 m 단위로 환산합니다.'] : ['도면 좌표의 실제 길이 단위·축척은 검증 전까지 거리/면적으로 확정하지 않습니다.']),
+      ...(approvedRooms.length ? ['승인된 폐합 폴리라인은 공간 경계 후보로 사용하지만 공적 장부 면적을 대체하지 않습니다.'] : ['공간 경계 Human Review가 완료되지 않아 3D extrusion을 진행하지 않습니다.']),
+      '3D 높이는 천장고·층고 검증 전까지 생성하지 않습니다.',
       '벽·문·창·기둥·계단·엘리베이터 의미는 Human Review 결과를 기준으로 사용해야 합니다.',
-    ] : [
-      '도면 좌표의 실제 길이 단위·축척은 검증 전까지 거리/면적으로 확정하지 않습니다.',
-      '벽·문·창·기둥·계단·엘리베이터 의미 분리는 후속 layer/entity 매핑과 Human Review가 필요합니다.',
     ],
   };
 }
@@ -76,16 +87,14 @@ export const digitalTwinExecutionService = {
       const models = target.map(modelFromAsset);
       const modelable = models.filter((model) => model.status === 'model_candidate').length;
       const scaleVerified = models.filter((model) => 'measurementStatus' in model && model.measurementStatus === 'scale_verified').length;
+      const topologyReviewed = models.filter((model) => 'topologyStatus' in model && model.topologyStatus === 'reviewed_boundary_candidates').length;
       return agentOrchestratorService.complete(job, {
         resultType: 'digital_twin_model_candidate',
-        payload: { models, adapterVersion: 'digital-twin-local-v2', mode: 'geometry_plus_verified_scale', scaleVerified, safetyNote: '축척은 사용자 확인 기준 치수로만 확정하며 room topology 검증 전에는 면적을 확정하지 않습니다.' },
-        confidence: models.length ? Math.min(0.9, (modelable / models.length) * 0.75 + (scaleVerified / models.length) * 0.15) : 0,
+        payload: { models, adapterVersion: 'digital-twin-local-v3', mode: 'geometry_scale_topology', scaleVerified, topologyReviewed, safetyNote: '축척과 room topology는 Human Review 후에만 사용하며 층고 검증 전에는 3D extrusion을 생성하지 않습니다.' },
+        confidence: models.length ? Math.min(0.95, (modelable / models.length) * 0.65 + (scaleVerified / models.length) * 0.15 + (topologyReviewed / models.length) * 0.15) : 0,
         requiresReview: models.length > 0,
       });
-    } catch (error) {
-      await agentOrchestratorService.fail(job, error);
-      throw error;
-    }
+    } catch (error) { await agentOrchestratorService.fail(job, error); throw error; }
   },
 
   async applyApproved(result: AgentResult) {
@@ -97,12 +106,7 @@ export const digitalTwinExecutionService = {
       const asset = assets.find((item) => item.id === assetId);
       if (!asset) continue;
       const accepted = model.status === 'model_candidate';
-      await propertyDataRoomRepository.saveDigitalTwinAsset({
-        ...asset,
-        processingStatus: accepted ? 'ready' : asset.processingStatus,
-        metadata: { ...asset.metadata, digitalTwinModel: model, digitalTwinAgentResultId: result.id },
-        updatedAt: new Date().toISOString(),
-      });
+      await propertyDataRoomRepository.saveDigitalTwinAsset({ ...asset, processingStatus: accepted ? 'ready' : asset.processingStatus, metadata: { ...asset.metadata, digitalTwinModel: model, digitalTwinAgentResultId: result.id }, updatedAt: new Date().toISOString() });
     }
   },
 };
