@@ -1,5 +1,6 @@
 import type { MediaCategory, PropertyMedia } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
 
 const MAX_MEDIA_BYTES = 20 * 1024 * 1024;
@@ -39,7 +40,11 @@ export const spatialIntakeService = {
       id: crypto.randomUUID(), propertyId, resourceType: 'media', sourceType: 'manual', sourceName: file.name,
       sourceReference: saved.id, collectedAt: now, verificationStatus: 'unverified', metadata: { mediaId: saved.id, category, mimeType: file.type, fileSize: file.size }, createdAt: now,
     });
-    await agentOrchestratorService.queueMedia(saved, 'upload');
+    const job = await agentOrchestratorService.queueMedia(saved, 'upload');
+    if (job.status === 'queued') {
+      try { await agentExecutionService.execute(job); }
+      catch { /* Failed jobs remain visible and retryable in Agent Operations. */ }
+    }
     return saved;
   },
 };
