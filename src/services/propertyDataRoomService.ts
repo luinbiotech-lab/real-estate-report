@@ -3,6 +3,7 @@ import { isVerificationFieldKey } from '../domain/propertyDataRoom/verificationF
 import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentExtractionMethod, DocumentExtractionStatus, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
+import { agentOrchestratorService } from './agentOrchestratorService';
 import type { Property } from '../types';
 
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
@@ -34,12 +35,16 @@ export const propertyDataRoomService = {
     const activeCandidates = verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held');
     const requiredDocumentsVerified = REQUIRED_DOCUMENT_TYPES.every((type) => bundle.documents.some((document) =>
       document.documentType === type && (document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed')));
+    const agentJobs = bundle.agentJobs ?? [];
+    const agentReviews = bundle.agentReviews ?? [];
     return {
       documents: bundle.documents.length, media: existingMedia + bundle.media.length,
       officiallyVerified: statuses.filter((status) => status === 'verified').length,
       unverified: statuses.filter((status) => status === 'unverified' || status === 'missing' || status === 'estimated' || status === 'ai_analysis').length,
       verificationPending: activeCandidates.length,
       reports: bundle.reportSnapshots.length, digitalTwin: bundle.digitalTwinAssets.length,
+      agentQueued: agentJobs.filter((job) => job.status === 'queued' || job.status === 'running').length,
+      agentReviewRequired: agentReviews.filter((review) => review.decision === 'pending').length,
       missingDocumentTypes,
       reportReady: missingDocumentTypes.length === 0 && requiredDocumentsVerified && activeCandidates.length === 0,
     };
@@ -68,6 +73,7 @@ export const propertyDataRoomService = {
       sourceName: saved.title, sourceReference: saved.id, collectedAt: now, verificationStatus: 'unverified',
       metadata: { documentId: saved.id, documentType: saved.documentType, originalFileName: saved.originalFileName, mimeType: saved.mimeType, fileSize: saved.fileSize }, createdAt: now,
     });
+    await agentOrchestratorService.queueDocument(saved, 'upload');
     return saved;
   },
   async updateDocumentExtraction(document: PropertyDocument, input: {
