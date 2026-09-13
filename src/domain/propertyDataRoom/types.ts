@@ -62,6 +62,22 @@ export interface SpaceMediaLink {
   sourceAgentResultId?: string; createdAt: string; deletedAt?: string;
 }
 
+export type FacilityCategory = 'hvac' | 'electrical' | 'plumbing' | 'fire_safety' | 'elevator' | 'restroom' | 'kitchen' | 'internet' | 'access_control' | 'cctv' | 'signage' | 'soundproofing' | 'other';
+export interface PropertyFacility {
+  id: string; propertyId: string; category: FacilityCategory; name: string; floor?: string; spaceId?: string;
+  condition: 'unknown' | 'good' | 'fair' | 'poor' | 'not_present'; notes: string;
+  sourceType: 'manual' | 'agent'; sourceAgentResultId?: string; verificationStatus: VerificationStatus;
+  createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
+export type RenovationScope = 'retain' | 'partial' | 'full' | 'change_of_use' | 'rebuild_review';
+export interface RenovationAssessment {
+  id: string; propertyId: string; scope: RenovationScope; title: string; summary: string;
+  recommendedItems: string[]; riskItems: string[]; costStatus: 'not_estimated' | 'range_candidate';
+  sourceAgentResultId?: string; verificationStatus: VerificationStatus;
+  createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
 export interface PropertyVerification {
   id: string; propertyId: string; fieldKey: string; status: VerificationStatus; note: string;
   verifiedBy?: string; verifiedAt?: string; createdAt: string; updatedAt: string;
@@ -107,8 +123,8 @@ export interface DataRoomBundle {
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
   /** Added non-destructively for Agent Foundation. Legacy bundle literals remain valid. */
   agentJobs?: AgentJob[]; agentResults?: AgentResult[]; agentReviews?: AgentReview[];
-  /** Spatial model is optional for compatibility with legacy bundle literals. */
-  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[];
+  /** Spatial/interior model is optional for compatibility with legacy bundle literals. */
+  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[];
 }
 
 export interface DataRoomSummary {
