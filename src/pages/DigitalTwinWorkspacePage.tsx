@@ -14,6 +14,7 @@ import ReviewedMeshViewer from '../components/ReviewedMeshViewer';
 import RoomTopologyPanel from '../components/RoomTopologyPanel';
 import ScaleCalibrationPanel from '../components/ScaleCalibrationPanel';
 import SpatialGraphPanel from '../components/SpatialGraphPanel';
+import VerticalCorePanel from '../components/VerticalCorePanel';
 import VerticalDimensionPanel from '../components/VerticalDimensionPanel';
 import WallModelPanel from '../components/WallModelPanel';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
@@ -76,9 +77,9 @@ export default function DigitalTwinWorkspacePage() {
 
   return <main style={{ padding: 28, maxWidth: 1360, margin: '0 auto' }}>
     <header style={{ marginBottom: 24 }}>
-      <p className="eyebrow">FLOOR PLAN · WALLS · SLABS · MULTI-FLOOR · 3D PREPARATION</p>
+      <p className="eyebrow">FLOOR PLAN · WALLS · SLABS · VERTICAL CORES · MULTI-FLOOR · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창, 층고·천장고, 층 기준고와 slab 두께를 Human Review로 연결해 다층 Building Model 후보와 handoff package를 구성합니다.</p>
+      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창, 층고·천장고, 층 기준고와 slab 두께, 계단·엘리베이터 core 연결을 Human Review로 묶어 다층 Building Model 후보와 handoff package를 구성합니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
@@ -96,8 +97,9 @@ export default function DigitalTwinWorkspacePage() {
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 12 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
-    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고, 층 기준고와 slab 두께는 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고, 층 기준고·slab 두께, 계단·엘리베이터 core 연결은 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
     <BuildingStackPanel assets={assets} />
+    <VerticalCorePanel assets={assets} onSaved={() => load()} />
 
     <div style={{ display: 'grid', gap: 20 }}>
       {assets.map((asset) => {
