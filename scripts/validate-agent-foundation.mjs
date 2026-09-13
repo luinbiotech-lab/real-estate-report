@@ -20,6 +20,7 @@ const spatialGraph = readFileSync('src/services/spatialGraphService.ts', 'utf8')
 const vertical = readFileSync('src/services/verticalDimensionService.ts', 'utf8');
 const extrusion = readFileSync('src/services/extrusionGeometryService.ts', 'utf8');
 const digitalTwin = readFileSync('src/services/digitalTwinExecutionService.ts', 'utf8');
+const digitalTwinPackage = readFileSync('src/services/digitalTwinPackageService.ts', 'utf8');
 const spatialIntake = readFileSync('src/services/spatialIntakeService.ts', 'utf8');
 const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
 const app = readFileSync('src/App.tsx', 'utf8');
@@ -35,6 +36,7 @@ const openingDimensionPanel = readFileSync('src/components/OpeningDimensionPanel
 const graphPanel = readFileSync('src/components/SpatialGraphPanel.tsx', 'utf8');
 const verticalPanel = readFileSync('src/components/VerticalDimensionPanel.tsx', 'utf8');
 const extrusionPreview = readFileSync('src/components/ExtrusionPreview.tsx', 'utf8');
+const handoffPanel = readFileSync('src/components/DigitalTwinHandoffPanel.tsx', 'utf8');
 const agentPage = readFileSync('src/pages/AgentOpsPage.tsx', 'utf8');
 const spatialPage = readFileSync('src/pages/SpatialWorkspacePage.tsx', 'utf8');
 const riskPage = readFileSync('src/pages/RiskWorkspacePage.tsx', 'utf8');
@@ -77,6 +79,9 @@ if (!verticalPanel.includes('Vertical Dimension / 3D 높이 기준') || !vertica
 if (!extrusion.includes('buildExtrusionGeometry') || !extrusion.includes("status: 'ready'") || !extrusion.includes('volumeM3Candidate')) throw new Error('Reviewed extrusion geometry builder is incomplete.');
 if (!extrusion.includes('실시설계·공사·감정·법적 판단에 직접 사용할 수 없습니다')) throw new Error('3D extrusion safety guard is missing.');
 if (!extrusionPreview.includes('3D Extrusion Preview') || !extrusionPreview.includes('Human Review') || !extrusionPreview.includes('체적')) throw new Error('3D extrusion candidate preview is incomplete.');
+if (!digitalTwinPackage.includes("DIGITAL_TWIN_PACKAGE_VERSION = 'daon-twin-package-v1'") || !digitalTwinPackage.includes('productionMeshReady: false') || !digitalTwinPackage.includes('reviewed_candidate_package')) throw new Error('Digital Twin reviewed handoff package safety contract is incomplete.');
+if (!digitalTwinPackage.includes('rooms') || !digitalTwinPackage.includes('openings') || !digitalTwinPackage.includes('graph') || !digitalTwinPackage.includes('extrusion')) throw new Error('Digital Twin handoff package is missing reviewed spatial payloads.');
+if (!handoffPanel.includes('Digital Twin Handoff Package') || !handoffPanel.includes('JSON 내보내기') || !handoffPanel.includes('Production mesh: NOT READY')) throw new Error('Digital Twin handoff export UI is incomplete.');
 if (!floorExecution.includes("asset.assetType === 'dwg'") || !floorExecution.includes("'converter_required'") || !floorExecution.includes("geometryStatus: 'extracted_candidate'")) throw new Error('Floor Plan geometry flow is incomplete.');
 if (!digitalTwin.includes("resultType: 'digital_twin_model_candidate'") || !digitalTwin.includes("adapterVersion: 'digital-twin-local-v7'") || !digitalTwin.includes('spatialConnectivityGraph')) throw new Error('Dimension-aware local Digital Twin processing adapter is incomplete.');
 if (!digitalTwin.includes('openingDimensionStatus') || !digitalTwin.includes('openingCutStatus') || !digitalTwin.includes('openingDimensionsVerified')) throw new Error('Verified opening dimensions are missing from Digital Twin readiness.');
@@ -93,12 +98,12 @@ if (!app.includes('path="interior"') || !app.includes('InteriorWorkspacePage')) 
 if (!app.includes('path="digital-twin"') || !app.includes('DigitalTwinWorkspacePage')) throw new Error('Digital Twin Workspace route is missing.');
 if (!layout.includes('Interior Workspace') || !layout.includes('Digital Twin') || !layout.includes('Agent Operations') || !layout.includes('Spatial Workspace') || !layout.includes('Risk / Compliance')) throw new Error('Interior/Digital Twin/Agent/Spatial/Risk navigation is missing.');
 if (!interiorPage.includes('Vision 분석 기록') || !interiorPage.includes('승인된 설비 인벤토리') || !interiorPage.includes('브라우저 로컬 픽셀 분석')) throw new Error('Interior Workspace core visibility is incomplete.');
-if (!twinPage.includes('Digital Twin Workspace') || !twinPage.includes('FloorPlanGeometryPreview') || !twinPage.includes('FloorPlanSemanticReviewPanel') || !twinPage.includes('ScaleCalibrationPanel') || !twinPage.includes('RoomTopologyPanel') || !twinPage.includes('OpeningTopologyPanel') || !twinPage.includes('OpeningDimensionPanel') || !twinPage.includes('SpatialGraphPanel') || !twinPage.includes('VerticalDimensionPanel') || !twinPage.includes('ExtrusionPreview')) throw new Error('Digital Twin Workspace core graph/2D/3D/opening dimension review flow is incomplete.');
+if (!twinPage.includes('Digital Twin Workspace') || !twinPage.includes('FloorPlanGeometryPreview') || !twinPage.includes('FloorPlanSemanticReviewPanel') || !twinPage.includes('ScaleCalibrationPanel') || !twinPage.includes('RoomTopologyPanel') || !twinPage.includes('OpeningTopologyPanel') || !twinPage.includes('OpeningDimensionPanel') || !twinPage.includes('SpatialGraphPanel') || !twinPage.includes('VerticalDimensionPanel') || !twinPage.includes('ExtrusionPreview') || !twinPage.includes('DigitalTwinHandoffPanel')) throw new Error('Digital Twin Workspace core graph/2D/3D/handoff review flow is incomplete.');
 if (!twinPage.includes('Twin 후보 갱신') || !twinPage.includes("queuePropertyAgent(propertyId, 'digital_twin', 'refresh'")) throw new Error('Digital Twin candidate refresh action is missing.');
-if (!twinPage.includes('공간 경계') || !twinPage.includes('문·창 연결') || !twinPage.includes('개구부 치수') || !twinPage.includes('높이') || !twinPage.includes('extrusion')) throw new Error('Digital Twin Workspace topology/opening/3D status visibility is incomplete.');
+if (!twinPage.includes('공간 경계') || !twinPage.includes('문·창 연결') || !twinPage.includes('개구부 치수') || !twinPage.includes('높이') || !twinPage.includes('handoff package')) throw new Error('Digital Twin Workspace topology/opening/3D/handoff status visibility is incomplete.');
 if (!twinPreview.includes('검토용 2D preview') || !twinPreview.includes('축척/단위 미검증')) throw new Error('Digital Twin 2D geometry preview safety labels are missing.');
 if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digital Twin 준비 자산') || !spatialPage.includes('.pdf,.dwg,.dxf')) throw new Error('Spatial Workspace core/CAD intake sections are missing.');
 if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Interior + Spatial + DXF + Scale + Room/Opening Graph + Opening Dimensions + Vertical + 3D Extrusion + Agent + Risk integrity: PASS');
+console.log('DA:ON Interior + Spatial + DXF + Scale + Room/Opening Graph + Opening Dimensions + Vertical + 3D Extrusion + Handoff + Agent + Risk integrity: PASS');
