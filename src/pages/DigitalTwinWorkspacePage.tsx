@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AutoAwesomeRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
+import DigitalTwinHandoffPanel from '../components/DigitalTwinHandoffPanel';
 import ExtrusionPreview from '../components/ExtrusionPreview';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
 import FloorPlanSemanticReviewPanel from '../components/FloorPlanSemanticReviewPanel';
@@ -73,7 +74,7 @@ export default function DigitalTwinWorkspacePage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">FLOOR PLAN · TOPOLOGY · OPENINGS · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 문·창 연결과 확인 치수, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D extrusion 후보를 구성합니다.</p>
+      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 문·창 연결과 확인 치수, 층고·천장고를 Human Review로 연결해 공간 그래프와 3D extrusion 후보를 구성하고 검토용 handoff package로 내보냅니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
@@ -120,6 +121,7 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><OpeningDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><SpatialGraphPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><ExtrusionPreview asset={asset} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><DigitalTwinHandoffPanel asset={asset} /></div>}
           {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · openings: {String(twinModel.openingTopologyStatus || 'review_required')} · opening dimensions: {String(twinModel.openingDimensionStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
         </section>;
       })}
