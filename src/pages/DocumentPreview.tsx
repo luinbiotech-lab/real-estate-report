@@ -8,6 +8,7 @@ import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { DaonOnePageMaster } from '../components/professionalReport/DaonOnePageMaster';
 import '../daon-one-page-master.css';
+import '../daon-master-refinement.css';
 
 export default function DocumentPreview() {
   const { id = '', kind = 'proposal' } = useParams();
