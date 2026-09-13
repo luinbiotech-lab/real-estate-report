@@ -5,9 +5,11 @@ import { ArrowBackRounded, CloudUploadRounded, DocumentScannerRounded } from '@m
 import { DOCUMENT_TYPE_LABELS } from '../domain/propertyDataRoom/labels';
 import { verificationFieldLabel } from '../domain/propertyDataRoom/verificationFieldRegistry';
 import type { PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
+import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { browserOcrService } from '../services/browserOcrService';
 import { documentExtractionService } from '../services/documentExtractionService';
+import { documentTypeDetectionService } from '../services/documentTypeDetectionService';
 import { pdfTextExtractionService } from '../services/pdfTextExtractionService';
 import { propertyDataRoomService } from '../services/propertyDataRoomService';
 import type { Property } from '../types';
@@ -91,10 +93,14 @@ export default function BulkIntakePage() {
         await propertyDataRoomService.updateDocumentExtraction(document, { status: 'scan_ocr_required', method: 'ocr', pageCount: result.pageCount });
         return { queued: 0, ocr: 1, manual: 0 };
       }
-      const prefills = pdfTextExtractionService.prefill(classified, result.text);
+      const detectedType = classified === 'other' ? documentTypeDetectionService.detect(result.text, classified) : classified;
+      const extractionDocument = detectedType !== document.documentType
+        ? await propertyDataRoomRepository.updateDocument({ ...document, documentType: detectedType, updatedAt: new Date().toISOString() })
+        : document;
+      const prefills = pdfTextExtractionService.prefill(extractionDocument.documentType, result.text);
       const fields = Object.entries(prefills).map(([fieldKey, rawValue]) => ({ fieldKey: fieldKey as keyof Property, rawValue }));
-      const queued = fields.length ? await documentExtractionService.queueExtractedFields(document, fields) : 0;
-      await propertyDataRoomService.updateDocumentExtraction(document, {
+      const queued = fields.length ? await documentExtractionService.queueExtractedFields(extractionDocument, fields) : 0;
+      await propertyDataRoomService.updateDocumentExtraction(extractionDocument, {
         status: queued ? 'text_extracted' : 'manual_review', method: 'pdf_text', pageCount: result.pageCount,
       });
       return { queued, ocr: 0, manual: queued ? 0 : 1 };
@@ -172,7 +178,7 @@ export default function BulkIntakePage() {
         {busy ? '처리 중…' : 'PDF / 이미지 여러 파일 등록'}
         <input hidden multiple type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={uploadFiles} />
       </Button>
-      <small>텍스트 PDF는 즉시 필드 후보를 생성합니다. 이미지·스캔 PDF는 문서 목록에서 OCR을 실행합니다.</small>
+      <small>텍스트 PDF는 내용까지 읽어 문서 유형을 보정하고 필드 후보를 생성합니다. 이미지·스캔 PDF는 문서 목록에서 OCR을 실행합니다.</small>
     </section>
 
     <section className="panel">
