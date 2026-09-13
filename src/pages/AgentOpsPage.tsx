@@ -3,7 +3,7 @@ import { AutoAwesomeRounded, CheckRounded, PauseRounded, PlayArrowRounded, Refre
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, Stack } from '@mui/material';
 import type { AgentJob, AgentResult, AgentReview, AgentType } from '../domain/propertyDataRoom/types';
 import { propertyRepository } from '../repositories/propertyRepository';
-import { agentExecutionService } from '../services/agentExecutionService';
+import { agentRuntimeService } from '../services/agentRuntimeService';
 import { agentOrchestratorService } from '../services/agentOrchestratorService';
 import type { Property } from '../types';
 
@@ -37,6 +37,7 @@ function resultSummary(result: AgentResult) {
     const floor = typeof result.payload.floor === 'string' ? result.payload.floor : '층 미확인';
     return `도면 Intake · ${floor}`;
   }
+  if (result.resultType === 'renovation_assessment_candidate') return '리노베이션 검토 후보';
   return typeof result.payload.message === 'string' ? result.payload.message : result.resultType;
 }
 
@@ -85,7 +86,7 @@ export default function AgentOpsPage() {
 
   const execute = async (job: AgentJob) => {
     setBusyId(job.id); setError('');
-    try { await agentExecutionService.execute(job); await loadJobs(); }
+    try { await agentRuntimeService.execute(job); await loadJobs(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Agent Job을 실행하지 못했습니다.'); }
     finally { setBusyId(''); }
   };
@@ -94,7 +95,7 @@ export default function AgentOpsPage() {
     const job = jobById.get(review.jobId); const result = resultById.get(review.resultId);
     if (!job || !result) { setError('Agent 검토에 필요한 Job/Result를 찾을 수 없습니다.'); return; }
     setBusyId(review.id); setError('');
-    try { await agentExecutionService.reviewAndApply(job, review, result, decision); await loadJobs(); }
+    try { await agentRuntimeService.reviewAndApply(job, review, result, decision); await loadJobs(); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'Agent 결과를 검토하지 못했습니다.'); }
     finally { setBusyId(''); }
   };
@@ -105,7 +106,7 @@ export default function AgentOpsPage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">PROPERTY INTELLIGENCE ORCHESTRATOR</p>
       <h1 style={{ margin: '6px 0' }}>Agent Operations</h1>
-      <p style={{ color: '#667085' }}>Interior Vision → Floor Plan → Space Model → Digital Twin 흐름을 Job·Result·Human Review로 관리합니다.</p>
+      <p style={{ color: '#667085' }}>Interior Vision → Floor Plan → Space Model → Renovation → Risk / Compliance → Digital Twin 흐름을 Job·Result·Human Review로 관리합니다.</p>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -122,7 +123,7 @@ export default function AgentOpsPage() {
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>Agent Job 생성</h2>
-      <p style={{ color: '#667085' }}>분석 결과는 바로 확정값을 덮어쓰지 않습니다. 실행 결과는 검토 대기 상태로 생성되고 승인된 결과만 공간/미디어 데이터에 반영됩니다.</p>
+      <p style={{ color: '#667085' }}>분석 결과는 바로 확정값을 덮어쓰지 않습니다. 실행 결과는 검토 대기 상태로 생성되고 승인된 결과만 공간/미디어/리노베이션 데이터에 반영됩니다.</p>
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
         {MANUAL_AGENTS.map((agentType) => <Button key={agentType} variant="outlined" startIcon={<AutoAwesomeRounded />} disabled={!propertyId} onClick={() => queue(agentType)}>{AGENT_LABELS[agentType]}</Button>)}
       </Stack>
@@ -130,7 +131,7 @@ export default function AgentOpsPage() {
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div><h2 style={{ margin: 0 }}>Human Review Gate</h2><p style={{ margin: '5px 0 0', color: '#667085' }}>Interior/Floor Plan/Space Agent의 후보 결과를 승인해야 실제 데이터에 반영됩니다.</p></div>
+        <div><h2 style={{ margin: 0 }}>Human Review Gate</h2><p style={{ margin: '5px 0 0', color: '#667085' }}>Interior/Floor Plan/Space/Renovation Agent의 후보 결과를 승인해야 실제 데이터에 반영됩니다.</p></div>
         <Chip color={pendingReviews.length ? 'warning' : 'success'} label={`검토 ${pendingReviews.length}건`} />
       </div>
       <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
@@ -152,7 +153,7 @@ export default function AgentOpsPage() {
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <div><h2 style={{ margin: 0 }}>Agent Queue</h2><p style={{ margin: '5px 0 0', color: '#667085' }}>문서 업로드 시 Document/Floor Plan Agent Job도 자동 생성됩니다.</p></div>
+        <div><h2 style={{ margin: 0 }}>Agent Queue</h2><p style={{ margin: '5px 0 0', color: '#667085' }}>문서·사진·도면/CAD 업로드 시 적절한 Agent Job이 자동 생성됩니다.</p></div>
         <Button startIcon={<RefreshRounded />} onClick={() => loadJobs()}>새로고침</Button>
       </div>
       <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
