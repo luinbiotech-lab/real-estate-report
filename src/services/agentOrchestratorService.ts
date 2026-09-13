@@ -1,4 +1,4 @@
-import type { AgentJob, AgentResult, AgentReview, AgentReviewDecision, AgentType, DocumentType, PropertyDocument, PropertyMedia } from '../domain/propertyDataRoom/types';
+import type { AgentJob, AgentResult, AgentReview, AgentReviewDecision, AgentType, DigitalTwinAsset, DocumentType, PropertyDocument, PropertyMedia } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 
 const nowIso = () => new Date().toISOString();
@@ -86,6 +86,23 @@ export const agentOrchestratorService = {
     }));
   },
 
+  async queueDigitalTwin(asset: DigitalTwinAsset, trigger: AgentJob['trigger'] = 'upload'): Promise<AgentJob> {
+    const existing = await propertyDataRoomRepository.getAgentJobs(asset.propertyId);
+    const duplicate = existing.find((job) =>
+      job.resourceType === 'digital_twin' && job.resourceId === asset.id && job.agentType === 'floor_plan' &&
+      ['queued', 'running', 'review_required'].includes(job.status));
+    if (duplicate) return duplicate;
+    return propertyDataRoomRepository.saveAgentJob(createJob({
+      propertyId: asset.propertyId,
+      agentType: 'floor_plan',
+      trigger,
+      resourceType: 'digital_twin',
+      resourceId: asset.id,
+      priority: 70,
+      payload: { assetType: asset.assetType, fileName: asset.fileName, fileFormat: asset.fileFormat, floor: asset.floor },
+    }));
+  },
+
   async queuePropertyAgent(propertyId: string, agentType: AgentType, trigger: AgentJob['trigger'] = 'manual', payload: Record<string, unknown> = {}) {
     return propertyDataRoomRepository.saveAgentJob(createJob({ propertyId, agentType, trigger, resourceType: 'property', resourceId: propertyId, payload }));
   },
@@ -129,7 +146,7 @@ export const agentOrchestratorService = {
 
   async review(job: AgentJob, review: AgentReview, decision: Exclude<AgentReviewDecision, 'pending'>, note = '', reviewedBy?: string): Promise<{ job: AgentJob; review: AgentReview }> {
     if (job.status !== 'review_required') throw new Error('검토 대기 중인 Agent Job만 검토할 수 있습니다.');
-    if (review.decision !== 'pending') throw new Error('이미 처리된 Agent 검토입니다.');
+    if (review.decision !== 'pending' && review.decision !== 'held') throw new Error('이미 처리된 Agent 검토입니다.');
     const now = nowIso();
     const updatedReview = { ...review, decision, note: note.trim(), reviewedBy, reviewedAt: now, updatedAt: now };
     await propertyDataRoomRepository.saveAgentReview(updatedReview);
