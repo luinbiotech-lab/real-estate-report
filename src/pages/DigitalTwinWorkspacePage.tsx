@@ -60,6 +60,7 @@ export default function DigitalTwinWorkspacePage() {
     <div style={{ display: 'grid', gap: 20 }}>
       {assets.map((asset) => {
         const geometryStatus = typeof asset.metadata.geometryStatus === 'string' ? asset.metadata.geometryStatus : '미추출';
+        const hasGeometry = Boolean(asset.metadata.geometry && typeof asset.metadata.geometry === 'object');
         const twinModel = asset.metadata.digitalTwinModel && typeof asset.metadata.digitalTwinModel === 'object' ? asset.metadata.digitalTwinModel as Record<string, unknown> : undefined;
         return <section key={asset.id} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
@@ -67,7 +68,7 @@ export default function DigitalTwinWorkspacePage() {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin model metadata" />}</div>
           </div>
           <FloorPlanGeometryPreview asset={asset} />
-          {asset.metadata.geometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · mesh: {String(twinModel.meshStatus || 'unknown')}</p></div>}
         </section>;
       })}
