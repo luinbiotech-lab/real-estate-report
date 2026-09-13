@@ -75,6 +75,16 @@ if (!detail.includes("item.category !== 'interior'")) {
 if (onePage.includes("<Fact label=\"지목\" value={'대'}")) {
   throw new Error('지목 하드코딩 금지: 검증 데이터만 사용해야 합니다.');
 }
+const onePageFactCount = (onePage.match(/<Fact label=/g) || []).length;
+if (onePageFactCount !== 12) {
+  throw new Error(`1P MASTER property facts는 12개를 유지해야 합니다. 현재 ${onePageFactCount}개입니다.`);
+}
+if (!onePage.includes('label="공부상 주차"') || !onePage.includes('label="현장 주차"')) {
+  throw new Error('1P MASTER facts에서 공부상 주차와 현장 주차를 각각 표시해야 합니다.');
+}
+if (onePage.includes('용적률 참고 계산')) {
+  throw new Error('1P MASTER facts에 임의 용적률 계산면적을 공식값처럼 노출하지 않습니다.');
+}
 if (!onePage.includes('parkingOfficial') || !onePage.includes('parkingField')) {
   throw new Error('1P MASTER에서 공부상 주차와 현장 주차를 분리해야 합니다.');
 }
