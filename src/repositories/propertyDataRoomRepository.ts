@@ -1,7 +1,7 @@
-import type { DataRoomBundle, DigitalTwinAsset, PropertyDataSource, PropertyDocument, PropertyMedia, PropertyVerification, ReportSnapshot } from '../domain/propertyDataRoom/types';
+import type { DataRoomBundle, DigitalTwinAsset, PropertyDataSource, PropertyDocument, PropertyMedia, PropertyVerification, PropertyVerificationCandidate, ReportSnapshot } from '../domain/propertyDataRoom/types';
 import { database } from './database';
 
-type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets';
+type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets';
 
 async function byProperty<T>(storeName: StoreName, propertyId: string): Promise<T[]> {
   const values = await (await database).getAllFromIndex(storeName, 'propertyId', propertyId) as T[];
@@ -30,6 +30,8 @@ export const propertyDataRoomRepository = {
   },
   getVerifications: (propertyId: string) => byProperty<PropertyVerification>('propertyVerifications', propertyId),
   saveVerification: (value: PropertyVerification) => put('propertyVerifications', value),
+  getVerificationCandidates: (propertyId: string) => byProperty<PropertyVerificationCandidate>('propertyVerificationCandidates', propertyId),
+  saveVerificationCandidate: (value: PropertyVerificationCandidate) => put('propertyVerificationCandidates', value),
   getDataSources: (propertyId: string) => byProperty<PropertyDataSource>('propertyDataSources', propertyId),
   saveDataSource: (value: PropertyDataSource) => put('propertyDataSources', value),
   getReportSnapshots: (propertyId: string) => byProperty<ReportSnapshot>('reportSnapshots', propertyId),
@@ -59,7 +61,7 @@ export const propertyDataRoomRepository = {
   saveDigitalTwinAsset: (value: DigitalTwinAsset) => put('digitalTwinAssets', value),
   async archiveProperty(propertyId: string) {
     const db = await database; const now = new Date().toISOString();
-    const stores: StoreName[] = ['propertyDocuments', 'propertyMedia', 'propertyVerifications', 'propertyDataSources', 'reportSnapshots', 'digitalTwinAssets'];
+    const stores: StoreName[] = ['propertyDocuments', 'propertyMedia', 'propertyVerifications', 'propertyVerificationCandidates', 'propertyDataSources', 'reportSnapshots', 'digitalTwinAssets'];
     for (const storeName of stores) {
       const values = await db.getAllFromIndex(storeName, 'propertyId', propertyId) as Array<Record<string, unknown> & { id: string }>;
       const tx = db.transaction(storeName, 'readwrite');
@@ -68,10 +70,10 @@ export const propertyDataRoomRepository = {
     }
   },
   async getBundle(propertyId: string): Promise<DataRoomBundle> {
-    const [documents, media, verifications, dataSources, reportSnapshots, digitalTwinAssets] = await Promise.all([
-      this.getDocuments(propertyId), this.getMedia(propertyId), this.getVerifications(propertyId),
+    const [documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets] = await Promise.all([
+      this.getDocuments(propertyId), this.getMedia(propertyId), this.getVerifications(propertyId), this.getVerificationCandidates(propertyId),
       this.getDataSources(propertyId), this.getReportSnapshots(propertyId), this.getDigitalTwinAssets(propertyId),
     ]);
-    return { documents, media, verifications, dataSources, reportSnapshots, digitalTwinAssets };
+    return { documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets };
   },
 };
