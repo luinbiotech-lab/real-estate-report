@@ -1,9 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded } from '@mui/icons-material';
+import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
-import { ProfessionalReportV1 } from '../components/professionalReport/ProfessionalReportV1';
 import { DaonDetail7PageMaster } from '../components/professionalReport/DaonDetail7PageMaster';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
@@ -27,6 +26,7 @@ export default function ProfessionalReportSnapshotPage() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const print = useReactToPrint({ contentRef, documentTitle: snapshot ? `DAON_Professional_Report_v${snapshot.reportVersion}` : 'DAON_Professional_Report' });
 
   useEffect(() => {
@@ -42,6 +42,18 @@ export default function ProfessionalReportSnapshotPage() {
     finally { setConfirming(false); }
   };
 
+  const regenerateWithMaster = async () => {
+    if (!snapshot) return;
+    setRegenerating(true); setError('');
+    try {
+      const next = await reportSnapshotService.createDraft(snapshot.propertyId);
+      navigate(`/professional-report/snapshot/${next.id}`, { replace: true });
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '현재 DA:ON MASTER 보고서를 생성하지 못했습니다.');
+      setRegenerating(false);
+    }
+  };
+
   if (loading) return <div className="center"><CircularProgress /><p>저장된 보고서를 불러오는 중입니다.</p></div>;
   if (!snapshot || !isViewModel(snapshot.snapshotData)) return <main className="snapshot-error"><Alert severity="error">{error || '저장된 Snapshot 형식이 올바르지 않습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
 
@@ -49,9 +61,18 @@ export default function ProfessionalReportSnapshotPage() {
   if (!templateId) return <main className="snapshot-error"><Alert severity="warning">지원되지 않는 보고서 템플릿입니다: {snapshot.templateId || snapshot.templateVersion}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
 
   const isDaonMaster = templateId === DAON_DETAIL_MASTER_TEMPLATE_ID;
-  const report = isDaonMaster
-    ? <DaonDetail7PageMaster snapshot={snapshot} model={snapshot.snapshotData} />
-    : <ProfessionalReportV1 snapshot={snapshot} model={snapshot.snapshotData} />;
+  if (!isDaonMaster) {
+    return <main className="snapshot-error">
+      <Alert severity="warning">이 Snapshot은 구형 보고서 형식입니다. 현재 5174 보고서 화면에서는 확정된 DAON_DETAIL_7P_MASTER만 사용합니다. 기존 Snapshot 데이터는 삭제하지 않습니다.</Alert>
+      {error && <Alert severity="error">{error}</Alert>}
+      <div className="actions">
+        <Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button>
+        <Button variant="contained" startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? 'MASTER 생성 중…' : '현재 DA:ON MASTER로 다시 생성'}</Button>
+      </div>
+    </main>;
+  }
 
-  return <main className="professional-report-shell"><nav className="professional-report-toolbar" aria-label="Professional Report 작업"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> {isDaonMaster ? 'DAON_DETAIL_7P_MASTER · 동적 Snapshot' : 'Legacy Snapshot'}</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : '초안'} color={snapshot.status === 'ready' ? 'success' : 'default'} /></div><div>{snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming} onClick={markReady}>보고서 확정</Button>}<Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button></div></nav>{error && <Alert severity="error" className="professional-report-alert">{error}</Alert>}<div ref={contentRef}>{report}</div></main>;
+  const report = <DaonDetail7PageMaster snapshot={snapshot} model={snapshot.snapshotData} />;
+
+  return <main className="professional-report-shell"><nav className="professional-report-toolbar" aria-label="Professional Report 작업"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON_DETAIL_7P_MASTER · 동적 Snapshot</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : '초안'} color={snapshot.status === 'ready' ? 'success' : 'default'} /></div><div>{snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming} onClick={markReady}>보고서 확정</Button>}<Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button></div></nav>{error && <Alert severity="error" className="professional-report-alert">{error}</Alert>}<div ref={contentRef}>{report}</div></main>;
 }
