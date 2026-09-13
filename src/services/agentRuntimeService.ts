@@ -4,6 +4,7 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { interiorVisionExecutionService } from './interiorVisionExecutionService';
+import { visionFacilityService } from './visionFacilityService';
 
 const SPACE_RECOMMENDATIONS: Partial<Record<SpaceType, string[]>> = {
   retail: ['파사드·사인 계획 검토', '전기용량·조명 계획 검토', '냉난방 및 급배수 용량 확인'],
@@ -97,7 +98,10 @@ export const agentRuntimeService = {
     if (result.resultType !== 'renovation_assessment_candidate' && result.resultType !== 'risk_compliance_assessment_candidate') {
       const reviewed = await agentExecutionService.reviewAndApply(job, review, result, decision, note, reviewedBy);
       if (decision === 'approved') {
-        if (result.resultType === 'media_classification_candidate') await runQueuedDependency(result.propertyId, 'space');
+        if (result.resultType === 'media_classification_candidate') {
+          await visionFacilityService.applyApprovedVisionResult(result);
+          await runQueuedDependency(result.propertyId, 'space');
+        }
         if (result.resultType === 'space_model_candidate') {
           await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'renovation', 'dependency', { sourceAgentResultId: result.id });
           await runQueuedDependency(result.propertyId, 'renovation');
