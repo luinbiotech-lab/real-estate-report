@@ -56,6 +56,9 @@ jobs:
           cat /tmp/daon-vite.log
           exit 1
 
+      - name: Rendered Agent and Spatial smoke QA
+        run: node scripts/visual-agent-smoke.mjs
+
       - name: Rendered report smoke QA
         run: node scripts/visual-report-smoke.mjs
 
