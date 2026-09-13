@@ -1,13 +1,15 @@
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { extrusionGeometryService } from './extrusionGeometryService';
 import { readScaleCalibration } from './measurementCalibrationService';
+import { openingCutService } from './openingCutService';
 import { readOpeningDimensions } from './openingDimensionService';
 import { buildOpeningAdjacencyCandidates, readOpeningAdjacencyReviews } from './openingTopologyService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
 import { spatialGraphService } from './spatialGraphService';
 import { readVerticalDimensions } from './verticalDimensionService';
+import { wallModelService } from './wallModelService';
 
-export const DIGITAL_TWIN_PACKAGE_VERSION = 'daon-twin-package-v1';
+export const DIGITAL_TWIN_PACKAGE_VERSION = 'daon-twin-package-v2';
 
 export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
   const scale = readScaleCalibration(asset);
@@ -43,6 +45,8 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
     } : undefined,
   }));
 
+  const walls = wallModelService.build(asset);
+  const openingCuts = openingCutService.build(asset);
   const graph = spatialGraphService.build(asset);
   const extrusion = extrusionGeometryService.build(asset);
   const readiness = {
@@ -50,8 +54,10 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
     scaleVerified: Boolean(scale),
     verticalVerified: Boolean(vertical),
     roomTopologyReviewed: rooms.length > 0,
+    wallThicknessReviewed: walls.length > 0,
     openingTopologyReviewed: openings.length > 0,
     allReviewedOpeningsDimensioned: openings.length === 0 || openings.every((item) => Boolean(item.dimensions)),
+    openingCutsPrepared: openings.length === 0 || openingCuts.length === openings.filter((item) => Boolean(item.dimensions)).length,
     graphStatus: graph.status,
     extrusionStatus: extrusion.status,
     productionMeshReady: false,
@@ -64,7 +70,9 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
     sourceAsset: { id: asset.id, fileName: asset.fileName, fileFormat: asset.fileFormat, assetType: asset.assetType, floor: asset.floor, version: asset.version },
     measurement: { scale, vertical },
     rooms,
+    walls,
     openings,
+    openingCuts,
     graph,
     extrusion,
     readiness,
@@ -72,8 +80,10 @@ export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
       status: 'reviewed_candidate_package',
       statements: [
         '이 패키지는 Human Review를 통과한 후보 데이터만 묶어 후속 3D/원격검토 모듈에 전달하기 위한 자료입니다.',
+        '벽체는 승인된 DXF wall layer 중심선과 사람이 확인한 두께·높이를 결합한 후보이며 구조벽/비구조벽을 자동 확정하지 않습니다.',
+        'openingCuts는 승인된 문·창 연결과 확인 치수를 벽체에 대응시킨 절삭 후보이며 실제 mesh boolean은 아직 실행하지 않습니다.',
         '공적 장부 면적, 구조 안전성, 피난 적합성, 인허가 적합성, 실시설계 치수를 확정하지 않습니다.',
-        'productionMeshReady는 구조·벽 두께·개구부 위치/치수·도면 정합성 검토 전까지 false입니다.',
+        'productionMeshReady는 벽체 접합·개구부 boolean·슬래브·구조체·층간 정합성 검토 전까지 false입니다.',
       ],
     },
   };
