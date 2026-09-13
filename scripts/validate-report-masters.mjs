@@ -10,6 +10,7 @@ const requiredFiles = [
   'src/pages/ProfessionalReportSnapshotPage.tsx',
   'src/domain/professionalReport/templateIds.ts',
   'src/services/reportEngine/reportSnapshotService.ts',
+  'src/domain/professionalReport/reportAccessPolicy.ts',
 ];
 
 const forbiddenFiles = [
@@ -41,6 +42,7 @@ const documentPreview = readFileSync(requiredFiles[5], 'utf8');
 const snapshotPage = readFileSync(requiredFiles[6], 'utf8');
 const templateIds = readFileSync(requiredFiles[7], 'utf8');
 const snapshotService = readFileSync(requiredFiles[8], 'utf8');
+const accessPolicy = readFileSync(requiredFiles[9], 'utf8');
 
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
@@ -69,8 +71,30 @@ if (!onePageCss.includes('width:210mm') || !onePageCss.includes('height:297mm'))
 if (!detailCss.includes('width:210mm') || !detailCss.includes('height:297mm')) {
   throw new Error('7P MASTER는 A4 세로 고정 크기를 유지해야 합니다.');
 }
+const detailPageCount = (detail.match(/<Page page=/g) || []).length;
+if (detailPageCount !== 7) {
+  throw new Error(`7P MASTER는 정확히 7페이지여야 합니다. 현재 ${detailPageCount}페이지입니다.`);
+}
+const pageSequence = [
+  'eyebrow="WHY THIS ASSET"',
+  'eyebrow="PROPERTY PROFILE"',
+  'eyebrow="LOCATION LEVERAGE"',
+  'eyebrow="MARKET POSITION"',
+  'eyebrow="VALUE CREATION SCENARIOS"',
+  'eyebrow="BUILDING & DEVELOPMENT REVIEW"',
+  'eyebrow="TRANSACTION READINESS"',
+];
+let lastPageIndex = -1;
+for (const marker of pageSequence) {
+  const index = detail.indexOf(marker);
+  if (index < 0 || index <= lastPageIndex) throw new Error(`7P MASTER 페이지 순서가 변경되었습니다: ${marker}`);
+  lastPageIndex = index;
+}
 if (!detail.includes("item.category !== 'interior'")) {
   throw new Error('7P MASTER 내부사진 제외 정책 연결이 없습니다.');
+}
+if (!accessPolicy.includes('BANGBAE_815_11') || !accessPolicy.includes('internalPhotoAllowed')) {
+  throw new Error('방배동 815-11 내부사진 제외 정책을 유지해야 합니다.');
 }
 if (onePage.includes("<Fact label=\"지목\" value={'대'}")) {
   throw new Error('지목 하드코딩 금지: 검증 데이터만 사용해야 합니다.');
