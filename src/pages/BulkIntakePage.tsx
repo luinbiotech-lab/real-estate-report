@@ -27,6 +27,15 @@ function displayValue(value: unknown) {
   return String(value);
 }
 
+function comparisonState(candidate: PropertyVerificationCandidate): 'new' | 'same' | 'changed' {
+  const current = candidate.currentValue;
+  if (current === null || current === undefined || current === '') return 'new';
+  const normalize = (value: unknown) => typeof value === 'string' ? value.trim().replace(/\s+/g, ' ') : value;
+  return JSON.stringify(normalize(current)) === JSON.stringify(normalize(candidate.candidateValue)) ? 'same' : 'changed';
+}
+
+const COMPARISON_LABELS = { new: '신규', same: '동일', changed: '불일치' };
+
 export default function BulkIntakePage() {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
@@ -50,14 +59,18 @@ export default function BulkIntakePage() {
   const loadBundle = async (id = propertyId) => {
     if (!id) return;
     const bundle = await propertyDataRoomService.getBundle(id);
+    const active = bundle.verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held');
     setDocuments(bundle.documents);
     setCandidates(bundle.verificationCandidates);
-    setSelected(new Set(bundle.verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held').map((item) => item.id)));
+    setSelected(new Set(active.filter((item) => comparisonState(item) !== 'same').map((item) => item.id)));
   };
 
   useEffect(() => { if (propertyId) void loadBundle(propertyId); }, [propertyId]);
 
   const pending = useMemo(() => candidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held'), [candidates]);
+  const changedCount = useMemo(() => pending.filter((item) => comparisonState(item) === 'changed').length, [pending]);
+  const newCount = useMemo(() => pending.filter((item) => comparisonState(item) === 'new').length, [pending]);
+  const sameCount = useMemo(() => pending.filter((item) => comparisonState(item) === 'same').length, [pending]);
 
   const processFile = async (file: File) => {
     const classified = propertyDataRoomService.classifyDocument(file.name);
@@ -137,6 +150,10 @@ export default function BulkIntakePage() {
     setBusy(false);
   };
 
+  const selectReviewTargets = () => setSelected(new Set(pending.filter((item) => comparisonState(item) !== 'same').map((item) => item.id)));
+  const selectAll = () => setSelected(new Set(pending.map((item) => item.id)));
+  const clearSelection = () => setSelected(new Set());
+
   if (loading) return <div className="center"><CircularProgress /></div>;
 
   return <main className="data-room-page">
@@ -172,11 +189,15 @@ export default function BulkIntakePage() {
     </section>
 
     <section className="panel">
-      <div className="toolbar"><div><h2>검증 후보</h2><p>승인 전에는 Property 원본값이 변경되지 않습니다. 허용된 Property 필드만 승인할 수 있습니다.</p></div><span className="spacer" /><Button disabled={busy || !!ocrBusyId} color="success" onClick={() => bulkDecision('approved')}>선택 승인</Button><Button disabled={busy || !!ocrBusyId} onClick={() => bulkDecision('held')}>선택 보류</Button><Button disabled={busy || !!ocrBusyId} color="error" onClick={() => bulkDecision('rejected')}>선택 거절</Button></div>
-      {pending.length ? <div className="table-wrap"><table className="bulk-table"><thead><tr><th>선택</th><th>항목</th><th>현재값</th><th>후보값</th><th>출처</th><th>상태</th></tr></thead><tbody>{pending.map((candidate) => <tr key={candidate.id}>
-        <td><Checkbox checked={selected.has(candidate.id)} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(candidate.id); else next.delete(candidate.id); return next; })} /></td>
-        <td><b>{verificationFieldLabel(candidate.fieldKey)}</b><small>{candidate.fieldKey}</small></td><td>{displayValue(candidate.currentValue)}</td><td>{displayValue(candidate.candidateValue)}</td><td>{candidate.sourceName}<small>{candidate.sourceReference || ''}</small></td><td><Chip size="small" label={candidate.decisionStatus === 'held' ? '보류' : '검토 대기'} /></td>
-      </tr>)}</tbody></table></div> : <Alert severity="info">현재 검증 대기 후보가 없습니다.</Alert>}
+      <div className="toolbar"><div><h2>검증 후보</h2><p>승인 전에는 Property 원본값이 변경되지 않습니다. 기본 선택은 신규·불일치 후보만 포함합니다.</p></div><span className="spacer" /><Button size="small" onClick={selectReviewTargets}>신규·불일치 선택</Button><Button size="small" onClick={selectAll}>전체 선택</Button><Button size="small" onClick={clearSelection}>선택 해제</Button></div>
+      <div className="toolbar"><div><Chip size="small" label={`불일치 ${changedCount}`} color="warning" /> <Chip size="small" label={`신규 ${newCount}`} color="info" /> <Chip size="small" label={`동일 ${sameCount}`} /></div><span className="spacer" /><Button disabled={busy || !!ocrBusyId} color="success" onClick={() => bulkDecision('approved')}>선택 승인</Button><Button disabled={busy || !!ocrBusyId} onClick={() => bulkDecision('held')}>선택 보류</Button><Button disabled={busy || !!ocrBusyId} color="error" onClick={() => bulkDecision('rejected')}>선택 거절</Button></div>
+      {pending.length ? <div className="table-wrap"><table className="bulk-table"><thead><tr><th>선택</th><th>항목</th><th>현재값</th><th>후보값</th><th>비교</th><th>출처</th><th>상태</th></tr></thead><tbody>{pending.map((candidate) => {
+        const comparison = comparisonState(candidate);
+        return <tr key={candidate.id}>
+          <td><Checkbox checked={selected.has(candidate.id)} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(candidate.id); else next.delete(candidate.id); return next; })} /></td>
+          <td><b>{verificationFieldLabel(candidate.fieldKey)}</b><small>{candidate.fieldKey}</small></td><td>{displayValue(candidate.currentValue)}</td><td>{displayValue(candidate.candidateValue)}</td><td><Chip size="small" label={COMPARISON_LABELS[comparison]} color={comparison === 'changed' ? 'warning' : comparison === 'new' ? 'info' : 'default'} /></td><td>{candidate.sourceName}<small>{candidate.sourceReference || ''}</small></td><td><Chip size="small" label={candidate.decisionStatus === 'held' ? '보류' : '검토 대기'} /></td>
+        </tr>;
+      })}</tbody></table></div> : <Alert severity="info">현재 검증 대기 후보가 없습니다.</Alert>}
     </section>
   </main>;
 }
