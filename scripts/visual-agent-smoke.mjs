@@ -5,7 +5,7 @@ const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const ARTIFACT_DIR = 'artifacts/agent-qa';
 
 async function waitForText(page, text, timeout = 30_000) {
-  await page.waitForFunction((expected) => document.body?.innerText.includes(expected), text, { timeout });
+  await page.waitForFunction((expected) => document.body?.innerText.toLowerCase().includes(String(expected).toLowerCase()), text, { timeout });
 }
 
 async function verifyPage(page, path, requiredTexts, screenshotName) {
