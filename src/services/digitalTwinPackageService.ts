@@ -9,7 +9,7 @@ import { spatialGraphService } from './spatialGraphService';
 import { readVerticalDimensions } from './verticalDimensionService';
 import { wallModelService } from './wallModelService';
 
-export const DIGITAL_TWIN_PACKAGE_VERSION = 'daon-twin-package-v2';
+export const DIGITAL_TWIN_PACKAGE_VERSION = 'daon-twin-package-v1';
 
 export function buildDigitalTwinPackage(asset: DigitalTwinAsset) {
   const scale = readScaleCalibration(asset);
