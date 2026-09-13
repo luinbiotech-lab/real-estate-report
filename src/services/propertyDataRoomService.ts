@@ -14,11 +14,12 @@ export const propertyDataRoomService = {
     const statuses = [...bundle.documents.map((item) => item.verificationStatus), ...bundle.verifications.map((item) => item.status), ...bundle.dataSources.map((item) => item.verificationStatus)];
     const present = new Set(bundle.documents.map((item) => item.documentType));
     const missingDocumentTypes = REQUIRED_DOCUMENT_TYPES.filter((type) => !present.has(type));
+    const verificationCandidates = bundle.verificationCandidates ?? [];
     return {
       documents: bundle.documents.length, media: existingMedia + bundle.media.length,
       officiallyVerified: statuses.filter((status) => status === 'verified').length,
       unverified: statuses.filter((status) => status === 'unverified' || status === 'missing' || status === 'estimated' || status === 'ai_analysis').length,
-      verificationPending: bundle.verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held').length,
+      verificationPending: verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held').length,
       reports: bundle.reportSnapshots.length, digitalTwin: bundle.digitalTwinAssets.length,
       missingDocumentTypes, reportReady: missingDocumentTypes.length === 0,
     };
