@@ -14,6 +14,7 @@ const floorExecution = readFileSync('src/services/floorPlanExecutionService.ts',
 const semanticReview = readFileSync('src/services/floorPlanSemanticReviewService.ts', 'utf8');
 const calibration = readFileSync('src/services/measurementCalibrationService.ts', 'utf8');
 const topology = readFileSync('src/services/roomTopologyService.ts', 'utf8');
+const openingTopology = readFileSync('src/services/openingTopologyService.ts', 'utf8');
 const vertical = readFileSync('src/services/verticalDimensionService.ts', 'utf8');
 const extrusion = readFileSync('src/services/extrusionGeometryService.ts', 'utf8');
 const digitalTwin = readFileSync('src/services/digitalTwinExecutionService.ts', 'utf8');
@@ -27,6 +28,7 @@ const twinPreview = readFileSync('src/components/FloorPlanGeometryPreview.tsx', 
 const semanticPanel = readFileSync('src/components/FloorPlanSemanticReviewPanel.tsx', 'utf8');
 const calibrationPanel = readFileSync('src/components/ScaleCalibrationPanel.tsx', 'utf8');
 const topologyPanel = readFileSync('src/components/RoomTopologyPanel.tsx', 'utf8');
+const openingPanel = readFileSync('src/components/OpeningTopologyPanel.tsx', 'utf8');
 const verticalPanel = readFileSync('src/components/VerticalDimensionPanel.tsx', 'utf8');
 const extrusionPreview = readFileSync('src/components/ExtrusionPreview.tsx', 'utf8');
 const agentPage = readFileSync('src/pages/AgentOpsPage.tsx', 'utf8');
@@ -59,13 +61,17 @@ if (!calibrationPanel.includes('Scale Calibration / 치수 기준 확인') || !c
 if (!topology.includes('buildRoomBoundaryCandidates') || !topology.includes("status: 'candidate'") || !topology.includes("decision: 'approved' | 'held' | 'rejected'")) throw new Error('Room topology candidate/review service is incomplete.');
 if (!topology.includes("resourceType: 'digital_twin_topology'") || !topology.includes('areaSqmCandidate')) throw new Error('Room topology provenance or scale-aware candidate area is missing.');
 if (!topologyPanel.includes('Room Topology / 공간 경계 후보') || !topologyPanel.includes('자동으로 방·실 면적을 확정하지 않습니다') || !topologyPanel.includes('경계 승인')) throw new Error('Room topology Human Review UI is incomplete.');
+if (!openingTopology.includes('buildOpeningAdjacencyCandidates') || !openingTopology.includes('nearbyRoomIds') || !openingTopology.includes("resourceType: 'digital_twin_opening_topology'")) throw new Error('Door/window adjacency candidate and provenance flow is incomplete.');
+if (!openingTopology.includes("review.semantic === 'door' || review.semantic === 'window'") || !openingTopology.includes("decision: 'approved' | 'held' | 'rejected'")) throw new Error('Opening topology must use reviewed door/window semantics and Human Review decisions.');
+if (!openingPanel.includes('Door / Window Topology') || !openingPanel.includes('Human Review') || !openingPanel.includes('연결 승인')) throw new Error('Door/window adjacency Human Review UI is incomplete.');
 if (!vertical.includes("status: 'verified'") || !vertical.includes("resourceType: 'digital_twin_vertical_dimension'") || !vertical.includes('floorHeightM') || !vertical.includes('ceilingHeightM')) throw new Error('Reviewed vertical dimension persistence is incomplete.');
 if (!verticalPanel.includes('Vertical Dimension / 3D 높이 기준') || !verticalPanel.includes('자동 추정하지 않고') || !verticalPanel.includes('확인한 높이 저장')) throw new Error('Vertical dimension Human Review UI is incomplete.');
 if (!extrusion.includes('buildExtrusionGeometry') || !extrusion.includes("status: 'ready'") || !extrusion.includes('volumeM3Candidate')) throw new Error('Reviewed extrusion geometry builder is incomplete.');
 if (!extrusion.includes('실시설계·공사·감정·법적 판단에 직접 사용할 수 없습니다')) throw new Error('3D extrusion safety guard is missing.');
 if (!extrusionPreview.includes('3D Extrusion Preview') || !extrusionPreview.includes('Human Review') || !extrusionPreview.includes('체적')) throw new Error('3D extrusion candidate preview is incomplete.');
 if (!floorExecution.includes("asset.assetType === 'dwg'") || !floorExecution.includes("'converter_required'") || !floorExecution.includes("geometryStatus: 'extracted_candidate'")) throw new Error('Floor Plan geometry flow is incomplete.');
-if (!digitalTwin.includes("resultType: 'digital_twin_model_candidate'") || !digitalTwin.includes("adapterVersion: 'digital-twin-local-v4'") || !digitalTwin.includes('calibratedBounds')) throw new Error('Extrusion-aware local Digital Twin processing adapter is incomplete.');
+if (!digitalTwin.includes("resultType: 'digital_twin_model_candidate'") || !digitalTwin.includes("adapterVersion: 'digital-twin-local-v5'") || !digitalTwin.includes('calibratedBounds')) throw new Error('Opening-aware local Digital Twin processing adapter is incomplete.');
+if (!digitalTwin.includes('openingTopologyStatus') || !digitalTwin.includes('approvedOpenings') || !digitalTwin.includes('openingsReviewed')) throw new Error('Reviewed door/window topology is missing from Digital Twin model metadata.');
 if (!digitalTwin.includes("extrusionStatus = calibration && approvedRooms.length && extrusionHeightM ? 'candidate_ready'") || !digitalTwin.includes('volumeM3Candidate')) throw new Error('Reviewed scale/topology/height must gate extrusion candidate preparation.');
 if (!digitalTwin.includes("meshStatus: 'not_generated'") || !digitalTwin.includes('구조체·슬래브·벽 두께·개구부')) throw new Error('Digital Twin 3D safety guard is incomplete.');
 if (!runtime.includes('digitalTwinExecutionService.execute(job)') || !runtime.includes('digitalTwinExecutionService.applyApproved(result)')) throw new Error('Digital Twin runtime wiring is incomplete.');
@@ -78,11 +84,11 @@ if (!app.includes('path="interior"') || !app.includes('InteriorWorkspacePage')) 
 if (!app.includes('path="digital-twin"') || !app.includes('DigitalTwinWorkspacePage')) throw new Error('Digital Twin Workspace route is missing.');
 if (!layout.includes('Interior Workspace') || !layout.includes('Digital Twin') || !layout.includes('Agent Operations') || !layout.includes('Spatial Workspace') || !layout.includes('Risk / Compliance')) throw new Error('Interior/Digital Twin/Agent/Spatial/Risk navigation is missing.');
 if (!interiorPage.includes('Vision 분석 기록') || !interiorPage.includes('승인된 설비 인벤토리') || !interiorPage.includes('브라우저 로컬 픽셀 분석')) throw new Error('Interior Workspace core visibility is incomplete.');
-if (!twinPage.includes('Digital Twin Workspace') || !twinPage.includes('DWG는 별도 변환기') || !twinPage.includes('FloorPlanGeometryPreview') || !twinPage.includes('FloorPlanSemanticReviewPanel') || !twinPage.includes('ScaleCalibrationPanel') || !twinPage.includes('RoomTopologyPanel') || !twinPage.includes('VerticalDimensionPanel') || !twinPage.includes('ExtrusionPreview')) throw new Error('Digital Twin Workspace core 2D/3D review flow is incomplete.');
-if (!twinPage.includes('공간 경계 승인') || !twinPage.includes('높이 검증') || !twinPage.includes('extrusion')) throw new Error('Digital Twin Workspace 3D preparation status visibility is incomplete.');
+if (!twinPage.includes('Digital Twin Workspace') || !twinPage.includes('FloorPlanGeometryPreview') || !twinPage.includes('FloorPlanSemanticReviewPanel') || !twinPage.includes('ScaleCalibrationPanel') || !twinPage.includes('RoomTopologyPanel') || !twinPage.includes('OpeningTopologyPanel') || !twinPage.includes('VerticalDimensionPanel') || !twinPage.includes('ExtrusionPreview')) throw new Error('Digital Twin Workspace core 2D/3D/opening review flow is incomplete.');
+if (!twinPage.includes('공간 경계') || !twinPage.includes('문·창 연결') || !twinPage.includes('높이 검증') || !twinPage.includes('extrusion')) throw new Error('Digital Twin Workspace topology/opening/3D status visibility is incomplete.');
 if (!twinPreview.includes('검토용 2D preview') || !twinPreview.includes('축척/단위 미검증')) throw new Error('Digital Twin 2D geometry preview safety labels are missing.');
 if (!spatialPage.includes('공간 자료 Intake') || !spatialPage.includes('Digital Twin 준비 자산') || !spatialPage.includes('.pdf,.dwg,.dxf')) throw new Error('Spatial Workspace core/CAD intake sections are missing.');
 if (!riskPage.includes('사전 체크리스트') || !riskPage.includes('Human Review') || !riskPage.includes('agentRuntimeService.execute')) throw new Error('Risk / Compliance Workspace flow is incomplete.');
 if (!types.includes("AgentReviewDecision = 'pending' | 'approved' | 'held' | 'rejected'")) throw new Error('Human review gate must remain part of Agent Foundation.');
 
-console.log('DA:ON Interior + Spatial + DXF + Scale + Room Topology + Vertical + 3D Extrusion + Agent + Risk integrity: PASS');
+console.log('DA:ON Interior + Spatial + DXF + Scale + Room + Opening Topology + Vertical + 3D Extrusion + Agent + Risk integrity: PASS');
