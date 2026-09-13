@@ -1,5 +1,7 @@
 export type VerificationStatus = 'verified' | 'confirmed' | 'imported' | 'calculated' | 'estimated' | 'ai_analysis' | 'unverified' | 'missing';
 export type VerificationDecisionStatus = 'pending' | 'approved' | 'held' | 'rejected';
+export type DocumentExtractionStatus = 'not_started' | 'text_extracted' | 'scan_ocr_required' | 'manual_review' | 'failed';
+export type DocumentExtractionMethod = 'pdf_text' | 'ocr' | 'manual';
 export type DocumentType = 'building_register' | 'land_register' | 'land_use_plan' | 'registry' | 'cadastral_map' | 'lease_status' | 'floor_plan' | 'appraisal' | 'contract' | 'financial' | 'development' | 'due_diligence' | 'other';
 export type MediaCategory = 'exterior' | 'interior' | 'road' | 'entrance' | 'parking' | 'roof' | 'mechanical' | 'surroundings' | 'floor_plan' | 'aerial' | '360' | 'other';
 export type DataSourceType = 'manual' | 'excel_import' | 'public_api' | 'official_document' | 'map_provider' | 'market_data' | 'calculated' | 'ai' | 'external';
@@ -9,6 +11,8 @@ export interface PropertyDocument {
   storagePath: string; fileUrl?: string; fileData?: Blob; mimeType: string; fileSize: number;
   sourceType: DataSourceType; sourceName: string; issuedAt?: string; uploadedAt: string;
   verificationStatus: VerificationStatus; verifiedAt?: string; version: number; notes: string;
+  extractionStatus?: DocumentExtractionStatus; extractionMethod?: DocumentExtractionMethod; extractionPageCount?: number;
+  extractionUpdatedAt?: string; extractionError?: string;
   createdAt: string; updatedAt: string; deletedAt?: string;
 }
 
