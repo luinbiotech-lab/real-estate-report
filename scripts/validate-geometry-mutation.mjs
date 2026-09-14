@@ -5,8 +5,15 @@ const tx = readFileSync('src/services/geometryMutationTransactionService.ts', 'u
 const state = readFileSync('src/services/geometryProductionStateService.ts', 'utf8');
 const audit = readFileSync('src/services/geometryProductionAuditService.ts', 'utf8');
 const buildingGate = readFileSync('src/services/buildingProductionGateService.ts', 'utf8');
+const release = readFileSync('src/services/buildingReleaseSnapshotService.ts', 'utf8');
+const gltf = readFileSync('src/services/gltfExportService.ts', 'utf8');
+const remote = readFileSync('src/services/productionRemoteViewerService.ts', 'utf8');
+const bim = readFileSync('src/services/bimExternalHandoffService.ts', 'utf8');
+const database = readFileSync('src/repositories/database.ts', 'utf8');
+const repository = readFileSync('src/repositories/propertyDataRoomRepository.ts', 'utf8');
 const panel = readFileSync('src/components/GeometryMutationPanel.tsx', 'utf8');
 const buildingGatePanel = readFileSync('src/components/BuildingProductionGatePanel.tsx', 'utf8');
+const releasePanel = readFileSync('src/components/BuildingReleasePanel.tsx', 'utf8');
 const stack = readFileSync('src/components/BuildingStackPanel.tsx', 'utf8');
 const page = readFileSync('src/pages/DigitalTwinWorkspacePage.tsx', 'utf8');
 
@@ -18,11 +25,18 @@ if (!tx.includes("status: 'production_candidate'") || !tx.includes('sourceFinger
 if (!state.includes("ProductionCandidateState = 'none' | 'current' | 'stale' | 'invalid'") || !state.includes('buildGeometrySourceFingerprint') || !state.includes('candidateFingerprint !== sourceFingerprint')) throw new Error('Production candidate stale-source detection is incomplete.');
 if (!audit.includes('GeometryPromotionAuditRow') || !audit.includes('rolledBack') || !audit.includes('sourceChanged') || !audit.includes('delta:')) throw new Error('Production candidate promotion audit/diff is incomplete.');
 if (!buildingGate.includes("BUILDING_PRODUCTION_CANDIDATE_VERSION = 'daon-building-production-candidate-v1'") || !buildingGate.includes('productionCandidateReady') || !buildingGate.includes('staleCandidateCount') || !buildingGate.includes('constructionReady: false') || !buildingGate.includes('legalBimReady: false')) throw new Error('Building production release gate is incomplete.');
+if (!release.includes("BUILDING_RELEASE_SNAPSHOT_VERSION = 'daon-building-release-snapshot-v1'") || !release.includes("checksumAlgorithm: 'SHA-256'") || !release.includes("signatureAlgorithm: 'ECDSA_P256_SHA256'") || !release.includes("add('buildingReleaseSnapshots'") || !release.includes('verifyBuildingReleaseSnapshot')) throw new Error('Immutable checksum/signature release snapshot flow is incomplete.');
+if (!database.includes('DATABASE_VERSION = 9') || !database.includes("'buildingReleaseSnapshots'")) throw new Error('Building release snapshot IndexedDB store/version is incomplete.');
+if (!repository.includes("'buildingReleaseSnapshots'")) throw new Error('Building release snapshot archive lifecycle is incomplete.');
+if (!gltf.includes("GLTF_EXPORT_ADAPTER_VERSION = 'daon-gltf-export-v1'") || !gltf.includes('exportReleaseGlb') || !gltf.includes('0x46546c67') || !gltf.includes('omittedSlabsWithHoles')) throw new Error('glTF/GLB export adapter is incomplete or safety metadata is missing.');
+if (!remote.includes('DA:ON Production Candidate Remote Viewer') || !remote.includes('Immutable release snapshot') || !remote.includes('constructionReady=false')) throw new Error('Production candidate remote viewer export is incomplete.');
+if (!bim.includes("BIM_HANDOFF_VERSION = 'daon-bim-external-handoff-v1'") || !bim.includes("targetStandard: 'IFC4-compatible handoff mapping'") || !bim.includes('nativeIfcGenerated: false') || !bim.includes('legalBimReady: false')) throw new Error('BIM/external 3D handoff safety contract is incomplete.');
 if (!panel.includes('Mutation 실행·검증 저장') || !panel.includes('Production Candidate 승격') || !panel.includes('Rollback') || !panel.includes('PRODUCTION ·')) throw new Error('Geometry mutation/promotion UI is incomplete.');
 if (!panel.includes('최신 소스로 재승격') || !panel.includes('Building Production Gate') || !panel.includes('onSaved?.()')) throw new Error('Stale candidate refresh UX is incomplete.');
 if (!panel.includes('Production Audit / 승격 이력') || !panel.includes('ROLLED BACK') || !panel.includes('최근 두 승격 비교')) throw new Error('Production candidate audit UI is incomplete.');
-if (!buildingGatePanel.includes('Building Production Gate / 다층 Candidate Release') || !buildingGatePanel.includes('RELEASE READY') || !buildingGatePanel.includes('Production Package JSON')) throw new Error('Building production gate UI is incomplete.');
+if (!buildingGatePanel.includes('Building Production Gate / 다층 Candidate Release') || !buildingGatePanel.includes('RELEASE READY') || !buildingGatePanel.includes('Production Package JSON') || !buildingGatePanel.includes('BuildingReleasePanel')) throw new Error('Building production gate/release UI is incomplete.');
+if (!releasePanel.includes('불변 Release Snapshot 생성') || !releasePanel.includes('CHECKSUM + SIGNATURE VALID') || !releasePanel.includes('Remote Viewer HTML') || !releasePanel.includes('glTF') || !releasePanel.includes('GLB') || !releasePanel.includes('BIM Handoff JSON')) throw new Error('Building release export UI is incomplete.');
 if (!stack.includes("import GeometryMutationPanel from './GeometryMutationPanel'") || !stack.includes('onSaved={onSaved}')) throw new Error('Building workspace does not expose refreshable production geometry mutation controls.');
 if (!page.includes('BuildingProductionGatePanel') || !page.includes('<BuildingStackPanel assets={assets} onSaved={() => load()} />')) throw new Error('Digital Twin workspace does not connect mutation refresh to the building release gate.');
 
-console.log('DA:ON actual geometry mutation + stale detection + audit + rollback + building production release integrity: PASS');
+console.log('DA:ON geometry mutation + immutable signed release + remote viewer + glTF/GLB + BIM handoff integrity: PASS');
