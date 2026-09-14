@@ -5,7 +5,7 @@ import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { geometryMutationEngineService } from '../services/geometryMutationEngineService';
 import { geometryMutationTransactionService } from '../services/geometryMutationTransactionService';
 
-export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAsset }) {
+export default function GeometryMutationPanel({ asset, onSaved }: { asset: DigitalTwinAsset; onSaved?: () => void | Promise<void> }) {
   const [currentAsset, setCurrentAsset] = useState(asset);
   useEffect(() => setCurrentAsset(asset), [asset]);
   const preview = useMemo(() => geometryMutationEngineService.mutate(currentAsset), [currentAsset]);
@@ -34,6 +34,7 @@ export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAss
         setCurrentAsset(updated);
         setMessage('직전 rollback 가능 production candidate 승격을 복원했습니다. 원본 CAD/검증 데이터는 변경하지 않았습니다.');
       }
+      await onSaved?.();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Geometry mutation 작업을 완료하지 못했습니다.');
     } finally { setBusy(''); }
