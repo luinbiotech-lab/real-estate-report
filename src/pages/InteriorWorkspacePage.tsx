@@ -38,12 +38,14 @@ export default function InteriorWorkspacePage() {
   const facilities = bundle.facilities ?? [];
   const spaces = bundle.spaces ?? [];
   const spaceRoomLinks = bundle.spaceRoomLinks ?? [];
+  const roomRenovationAssessments = bundle.roomRenovationAssessments ?? [];
   const visionResults = (bundle.agentResults ?? []).filter((item) => item.agentType === 'interior_vision');
   const pendingVision = (bundle.agentJobs ?? []).filter((item) => item.agentType === 'interior_vision' && item.status === 'review_required').length;
   const linkedRooms = spaceRoomLinks.filter((item) => item.decision === 'approved').length;
+  const approvedRoomRenovations = roomRenovationAssessments.filter((item) => item.decision === 'approved').length;
 
   return <main style={{ padding: 28, maxWidth: 1280, margin: '0 auto' }}>
-    <header style={{ marginBottom: 24 }}><p className="eyebrow">INTERIOR INTELLIGENCE · 3D ROOM LINKING</p><h1 style={{ margin: '6px 0' }}>Interior Workspace</h1><p style={{ color: '#667085' }}>실내 사진 → Vision → Human Review → 공간/설비 인벤토리 → Digital Twin Room 연결 → Room Intelligence → 리노베이션 검토로 이어지는 작업 화면입니다.</p></header>
+    <header style={{ marginBottom: 24 }}><p className="eyebrow">INTERIOR INTELLIGENCE · 3D ROOM LINKING</p><h1 style={{ margin: '6px 0' }}>Interior Workspace</h1><p style={{ color: '#667085' }}>실내 사진 → Vision → Human Review → 공간/설비 인벤토리 → Digital Twin Room 연결 → 3D Evidence Overlay → Room Renovation Review로 이어지는 작업 화면입니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
@@ -52,16 +54,16 @@ export default function InteriorWorkspacePage() {
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(110px, 1fr))', gap: 12, marginBottom: 20 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(100px, 1fr))', gap: 12, marginBottom: 20 }}>
       {[
-        ['실내 사진', interiorMedia.length], ['Vision 결과', visionResults.length], ['검토 대기', pendingVision], ['공간 모델', spaces.length], ['3D 연결', linkedRooms], ['설비 인벤토리', facilities.length],
+        ['실내 사진', interiorMedia.length], ['Vision 결과', visionResults.length], ['검토 대기', pendingVision], ['공간 모델', spaces.length], ['3D 연결', linkedRooms], ['방별 리노베이션', approvedRoomRenovations], ['설비 인벤토리', facilities.length],
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
     <Alert severity="info" sx={{ mb: 2 }}>현재 기본 Vision Provider는 브라우저 로컬 픽셀 분석입니다. 밝기·대비·에지 밀도와 메타데이터를 보조 신호로 사용하며 하자·구조·설비 상태를 자동 확정하지 않습니다.</Alert>
 
     <InteriorRoomLinkPanel propertyId={propertyId} spaces={spaces} assets={bundle.digitalTwinAssets} links={spaceRoomLinks} onSaved={() => load()} />
-    <RoomIntelligencePanel spaces={spaces} assets={bundle.digitalTwinAssets} links={spaceRoomLinks} media={bundle.media} spaceMediaLinks={bundle.spaceMediaLinks ?? []} facilities={facilities} agentResults={bundle.agentResults ?? []} renovationAssessments={bundle.renovationAssessments ?? []} />
+    <RoomIntelligencePanel spaces={spaces} assets={bundle.digitalTwinAssets} links={spaceRoomLinks} media={bundle.media} spaceMediaLinks={bundle.spaceMediaLinks ?? []} facilities={facilities} agentResults={bundle.agentResults ?? []} renovationAssessments={bundle.renovationAssessments ?? []} roomRenovationAssessments={roomRenovationAssessments} onSaved={() => load()} />
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>Vision 분석 기록</h2>
