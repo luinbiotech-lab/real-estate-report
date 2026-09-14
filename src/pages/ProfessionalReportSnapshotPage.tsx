@@ -79,6 +79,10 @@ export default function ProfessionalReportSnapshotPage() {
       ...snapshot.snapshotData.building,
       floors: snapshot.snapshotData.building.floors ?? [],
     },
+    investment: {
+      ...snapshot.snapshotData.investment,
+      comparables: snapshot.snapshotData.investment.comparables ?? [],
+    },
   };
   const reportReady = model.dataQuality.reportReady;
   const report = <DaonDetail7PageMaster snapshot={snapshot} model={model} />;
