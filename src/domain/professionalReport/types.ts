@@ -1,5 +1,5 @@
 import type { BriefingItem } from '../../types';
-import type { DataSourceType, DocumentType, MediaCategory, VerificationStatus } from '../propertyDataRoom/types';
+import type { DataSourceType, DocumentType, MediaCategory, SpaceType, VerificationStatus } from '../propertyDataRoom/types';
 
 export type ReportValueState = 'actual' | 'missing' | 'disconnected' | 'estimated' | 'calculated' | 'ai_analysis' | 'unverified';
 
@@ -27,6 +27,18 @@ export interface ProfessionalReportSource {
   confidence: number | null; verificationStatus: VerificationStatus;
 }
 
+export interface ProfessionalReportFloor {
+  id: string;
+  floor: string;
+  name: string;
+  spaceType: SpaceType;
+  areaSqm: number | null;
+  use: string;
+  currentCondition: string;
+  verificationStatus: VerificationStatus;
+  sourceIds: string[];
+}
+
 export interface ProfessionalReportViewModel {
   identity: {
     id: string; propertyNumber: ReportValue<string>; name: ReportValue<string>; buildingName: ReportValue<string>;
@@ -47,6 +59,7 @@ export interface ProfessionalReportViewModel {
     parkingOfficial: ReportValue<number>;
     parkingField: ReportValue<number>;
     parkingFieldNote: ReportValue<string>;
+    floors: ProfessionalReportFloor[];
   };
   land: {
     landAreaSqm: ReportValue<number>; landAreaPyeong: ReportValue<number>; zoning: ReportValue<string>; roadCondition: ReportValue<string>;
