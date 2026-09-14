@@ -11,6 +11,15 @@ const splitLines = (value: ReportValue<string>, limit = 6) => (value.value || ''
 
 const display = (item: ReportValue<unknown>, fallback = '확인 필요') => item.value === null || item.value === '' ? fallback : item.display;
 const formatFloorArea = (value: number | null) => value === null ? '확인 필요' : `${value.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}㎡`;
+const formatCompactWon = (value: number) => {
+  if (!Number.isFinite(value)) return '-';
+  if (value >= 100000000) {
+    const eok = value / 100000000;
+    return `${eok.toLocaleString('ko-KR', { maximumFractionDigits: eok % 1 ? 1 : 0 })}억`;
+  }
+  if (value >= 10000) return `${Math.round(value / 10000).toLocaleString('ko-KR')}만`;
+  return value.toLocaleString('ko-KR');
+};
 
 function Page({ page, eyebrow, title, subtitle, snapshot, model, children }: {
   page: number;
@@ -66,6 +75,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const points = [...splitLines(model.investment.investmentPoints, 8), ...splitLines(model.investment.features, 8)].filter(Boolean).slice(0, 6);
   const scenarios = splitLines(model.investment.recommendedUse, 3);
   const risks = splitLines(model.risks.risks, 6);
+  const comparables = model.investment.comparables ?? [];
   const isCorner = String(model.land.roadCondition.value || '').includes('코너');
   const heroStatement = points[0] || (isCorner ? '코너 입지와 활용가치를 함께 검토하는 자산' : '입지와 활용가치를 함께 검토하는 자산');
   const parkingOfficial = display(model.building.parkingOfficial);
@@ -127,7 +137,10 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <SectionBar>가격 포지션</SectionBar>
       <div className="dd-price-position"><div><small>본건 토지 평당</small><strong>{display(model.pricing.landUnitPrice)}</strong></div><div><b>가격을 설득하는 핵심은 “평균보다 싸다”가 아닙니다.</b><p>도로조건, 명도·실사용 가능성, 기존 건물의 활용성과 같은 개별 조건을 확인된 비교사례와 함께 설명합니다.</p></div></div>
       <SectionBar right="단위: 입력자료 기준">비교 사례</SectionBar>
-      <div className="dd-comparables">{model.investment.nearbyTransactions.value ? <p>{model.investment.nearbyTransactions.display}</p> : <div><b>비교 거래 데이터 미연결</b><span>검증된 거래자료 연결 후 표와 가격포지션을 확정합니다.</span></div>}</div>
+      <div className="dd-comparables">{comparables.length ? <div style={{ display: 'grid', height: '100%', gridTemplateRows: '8mm repeat(6, minmax(0, 1fr))' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1.25fr .7fr .65fr .72fr .5fr .72fr', alignItems: 'center', background: '#f1f5f8', borderBottom: '0.25mm solid #d8dee5', padding: '0 2mm', fontSize: '6.5px', fontWeight: 800 }}><span>사례</span><span>거래가</span><span>대지</span><span>토지평당</span><span>승인</span><span>거래일</span></div>
+        {comparables.slice(0, 6).map((row) => <div key={`${row.sourceId}:${row.label}:${row.tradeDate}`} style={{ display: 'grid', gridTemplateColumns: '1.25fr .7fr .65fr .72fr .5fr .72fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2mm', fontSize: '6.7px', overflow: 'hidden' }}><b style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{row.label}</b><span>{formatCompactWon(row.salePrice)}</span><span>{row.landAreaPyeong.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}평</span><span>{formatCompactWon(row.landUnitPrice)}</span><span>{row.approvalYear || '-'}</span><span>{row.tradeDate}</span></div>)}
+      </div> : model.investment.nearbyTransactions.value ? <p>{model.investment.nearbyTransactions.display}</p> : <div><b>비교 거래 데이터 미연결</b><span>검증된 거래자료 연결 후 표와 가격포지션을 확정합니다.</span></div>}</div>
       <div className="dd-analysis-box"><b>해석</b><p>{display(model.investment.overallOpinion, '단순 평균으로 적정가격을 확정하지 않고, 입지·규모·도로조건·건물상태를 함께 검토합니다.')}</p></div>
       <SectionBar>가격을 매입 논리로 바꾸는 세 가지 포인트</SectionBar>
       <div className="dd-reason-three"><GoldCard title="총액과 규모의 균형" copy={`${display(model.land.landAreaPyeong)} 토지와 기존 건물을 함께 확보하는 구조를 검토합니다.`} /><GoldCard title="입지 프리미엄의 근거" copy={display(model.land.roadCondition)} /><GoldCard title="리스크의 투명성" copy={risks[0] || '공적자료·현장·권리관계를 확인해 가격 리스크를 투명하게 제시합니다.'} /></div>
