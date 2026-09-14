@@ -1,4 +1,4 @@
-import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDocument, PropertyRiskAssessment, PropertySpace, PropertyVerificationCandidate, RenovationAssessment } from '../domain/propertyDataRoom/types';
+import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDocument, PropertyMedia, PropertyRiskAssessment, PropertySpace, PropertyVerificationCandidate, RenovationAssessment, SpaceMediaLink } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
@@ -15,6 +15,30 @@ export interface AgentRuntimePort {
   saveAgentReview(value: AgentReview): Promise<AgentReview>;
   getAgentResults(propertyId: string): Promise<AgentResult[]>;
   getAgentReviews(propertyId: string): Promise<AgentReview[]>;
+}
+
+export interface InteriorVisionAgentPort {
+  getMedia(propertyId: string): Promise<PropertyMedia[]>;
+  getMediaItem(id: string): Promise<PropertyMedia | undefined>;
+  updateMedia(value: PropertyMedia): Promise<PropertyMedia>;
+}
+
+export interface SpaceAgentPort {
+  getMedia(propertyId: string): Promise<PropertyMedia[]>;
+  getSpaces(propertyId: string): Promise<PropertySpace[]>;
+  getSpaceMediaLinks(propertyId: string): Promise<SpaceMediaLink[]>;
+  saveSpace(value: PropertySpace): Promise<PropertySpace>;
+  saveSpaceMediaLink(value: SpaceMediaLink): Promise<SpaceMediaLink>;
+}
+
+export interface FloorPlanGeometryAgentPort {
+  getDigitalTwinAssets(propertyId: string): Promise<DigitalTwinAsset[]>;
+  saveDigitalTwinAsset(value: DigitalTwinAsset): Promise<DigitalTwinAsset>;
+}
+
+export interface DigitalTwinAgentPort {
+  getDigitalTwinAssets(propertyId: string): Promise<DigitalTwinAsset[]>;
+  saveDigitalTwinAsset(value: DigitalTwinAsset): Promise<DigitalTwinAsset>;
 }
 
 export interface RenovationAgentPort {
@@ -43,6 +67,30 @@ export const agentRuntimePort: AgentRuntimePort = {
   saveAgentReview: (value) => propertyDataRoomRepository.saveAgentReview(value),
   getAgentResults: (propertyId) => propertyDataRoomRepository.getAgentResults(propertyId),
   getAgentReviews: (propertyId) => propertyDataRoomRepository.getAgentReviews(propertyId),
+};
+
+export const interiorVisionAgentPort: InteriorVisionAgentPort = {
+  getMedia: (propertyId) => propertyDataRoomRepository.getMedia(propertyId),
+  getMediaItem: (id) => propertyDataRoomRepository.getMediaItem(id),
+  updateMedia: (value) => propertyDataRoomRepository.updateMedia(value),
+};
+
+export const spaceAgentPort: SpaceAgentPort = {
+  getMedia: (propertyId) => propertyDataRoomRepository.getMedia(propertyId),
+  getSpaces: (propertyId) => propertyDataRoomRepository.getSpaces(propertyId),
+  getSpaceMediaLinks: (propertyId) => propertyDataRoomRepository.getSpaceMediaLinks(propertyId),
+  saveSpace: (value) => propertyDataRoomRepository.saveSpace(value),
+  saveSpaceMediaLink: (value) => propertyDataRoomRepository.saveSpaceMediaLink(value),
+};
+
+export const floorPlanGeometryAgentPort: FloorPlanGeometryAgentPort = {
+  getDigitalTwinAssets: (propertyId) => propertyDataRoomRepository.getDigitalTwinAssets(propertyId),
+  saveDigitalTwinAsset: (value) => propertyDataRoomRepository.saveDigitalTwinAsset(value),
+};
+
+export const digitalTwinAgentPort: DigitalTwinAgentPort = {
+  getDigitalTwinAssets: (propertyId) => propertyDataRoomRepository.getDigitalTwinAssets(propertyId),
+  saveDigitalTwinAsset: (value) => propertyDataRoomRepository.saveDigitalTwinAsset(value),
 };
 
 export const renovationAgentPort: RenovationAgentPort = {
