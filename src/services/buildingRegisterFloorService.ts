@@ -11,6 +11,16 @@ export interface OfficialBuildingFloorInput {
 const normalizedFloor = (floor: string) => floor.trim().toUpperCase().replace(/\s+/g, '');
 const stableKey = (value: string) => encodeURIComponent(value).replace(/%/g, '').toLowerCase();
 
+function floorLabel(raw: string) {
+  const value = raw.replace(/\s+/g, '');
+  if (value === '지층') return 'B1';
+  const basement = value.match(/^지하(\d+)층$/);
+  if (basement) return `B${basement[1]}`;
+  const ground = value.match(/^(\d+)층$/);
+  if (ground) return `${ground[1]}F`;
+  return normalizedFloor(raw);
+}
+
 function inferSpaceType(officialUse: string): SpaceType {
   if (/주택|주거|다가구|다세대|아파트/i.test(officialUse)) return 'residential';
   if (/점포|근린생활|상가|판매|소매/i.test(officialUse)) return 'retail';
@@ -27,7 +37,50 @@ function sourceStatus(document: PropertyDocument): VerificationStatus {
     : 'unverified';
 }
 
+export function parseBuildingRegisterFloorText(text: string): OfficialBuildingFloorInput[] {
+  const rows = text.replace(/\r/g, '').split('\n').map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const unique = new Set<string>();
+  const parsed: OfficialBuildingFloorInput[] = [];
+
+  for (const row of rows) {
+    const match = row.match(/(?:주\d+\s+)?(지층|지하\s*\d+층|\d+층)\s+\S+\s+(.+?)\s+(\d+(?:\.\d+)?)\s*(?:㎡|m2|m²)?$/i);
+    if (!match) continue;
+    const floor = floorLabel(match[1]);
+    const officialUse = match[2].trim();
+    const areaSqm = Number(match[3]);
+    if (!officialUse || !Number.isFinite(areaSqm) || areaSqm <= 0) continue;
+    const signature = `${floor}|${officialUse}|${areaSqm}`;
+    if (unique.has(signature)) continue;
+    unique.add(signature);
+    parsed.push({ floor, officialUse, areaSqm });
+  }
+
+  const grouped = new Map<string, OfficialBuildingFloorInput>();
+  for (const row of parsed) {
+    const current = grouped.get(row.floor);
+    if (!current) {
+      grouped.set(row.floor, { ...row, spaceType: inferSpaceType(row.officialUse) });
+      continue;
+    }
+    const uses = new Set([...current.officialUse.split(' + ').map((value) => value.trim()), row.officialUse]);
+    const officialUse = [...uses].join(' + ');
+    grouped.set(row.floor, {
+      floor: row.floor,
+      officialUse,
+      areaSqm: Math.round((current.areaSqm + row.areaSqm) * 100) / 100,
+      spaceType: inferSpaceType(officialUse),
+    });
+  }
+
+  return [...grouped.values()].sort((left, right) => {
+    const score = (floor: string) => floor.startsWith('B') ? -Number(floor.slice(1) || 0) : Number(floor.replace(/F$/, '') || 0);
+    return score(right.floor) - score(left.floor);
+  });
+}
+
 export const buildingRegisterFloorService = {
+  parseText: parseBuildingRegisterFloorText,
+
   async saveOfficialFloorComposition(
     propertyId: string,
     document: PropertyDocument,
@@ -39,6 +92,7 @@ export const buildingRegisterFloorService = {
 
     const now = new Date().toISOString();
     const verificationStatus = sourceStatus(document);
+    const existingSpaces = await propertyDataRoomRepository.getSpaces(propertyId);
     const saved: PropertySpace[] = [];
 
     for (const input of floors) {
@@ -52,7 +106,7 @@ export const buildingRegisterFloorService = {
       const sourceId = `source:${spaceId}`;
       const verificationId = `verification:${spaceId}`;
       const fieldKey = `space:${spaceId}`;
-      const existing = (await propertyDataRoomRepository.getSpaces(propertyId)).find((item) => item.id === spaceId);
+      const existing = existingSpaces.find((item) => item.id === spaceId);
       const space: PropertySpace = {
         id: spaceId,
         propertyId,
@@ -86,7 +140,7 @@ export const buildingRegisterFloorService = {
           documentId: document.id,
           documentType: document.documentType,
         },
-        createdAt: now,
+        createdAt: existing ? (await propertyDataRoomRepository.getDataSources(propertyId)).find((source) => source.id === sourceId)?.createdAt ?? now : now,
       });
       await propertyDataRoomRepository.saveVerification({
         id: verificationId,
@@ -97,7 +151,7 @@ export const buildingRegisterFloorService = {
         verifiedAt: verificationStatus === 'verified' || verificationStatus === 'confirmed'
           ? document.verifiedAt ?? now
           : undefined,
-        createdAt: now,
+        createdAt: existing ? (await propertyDataRoomRepository.getVerifications(propertyId)).find((item) => item.id === verificationId)?.createdAt ?? now : now,
         updatedAt: now,
       });
       saved.push(space);
