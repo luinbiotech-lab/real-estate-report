@@ -26,6 +26,8 @@ const DAON_MANAGER = '김은미 대표 / 공인중개사';
 const DAON_PHONE = '010 9953 1270';
 const DAON_EMAIL = 'daonasset.korea@gmail.com';
 const DAON_COMPANY = 'DA:ON ASSET';
+const LEGACY_BANGBAE_MAIN_IMAGE = '/daon-master/bangbae-815-11-main.jpg';
+const LEGACY_BANGBAE_MAP_IMAGE = '/daon-master/bangbae-815-11-map.jpg';
 
 const sample: Property = { ...emptyProperty, id: 'sample-seongsu', propertyNumber: 'SS-2026-001', name: '성수동2가 331-7 신축부지', tradeType: '매매', salePrice: 5300000000, address: '서울특별시 성동구 성수동2가 331-7', occupancyStatus: '명도완료', landAreaPyeong: 36, landAreaSqm: 119.01, totalFloorAreaPyeong: 63.63, totalFloorAreaSqm: 210.35, zoning: '준공업지역', roadCondition: '4m × 2m 코너', basementFloors: 1, groundFloors: 3, completionDate: '1993-08-17', buildingCoverageRate: 64.5, floorAreaRatio: 158.82, elevator: '없음', parkingSpaces: 1, nearbyStation: '성수역', stationDistance: '도보 약 10분', managerName: DAON_MANAGER, managerPhone: DAON_PHONE, managerEmail: DAON_EMAIL, companyName: DAON_COMPANY, features: '최근 성수동2가 328-19 평당 2억원 거래\n성수 전략정비 4구역 인근\n메인스트리트 변화 예정\n상권 및 오피스 수요가 꾸준한 지역', investmentPoints: '희소한 코너 입지와 신축 개발 잠재력', locationAnalysis: '성수 핵심 업무·상업 권역과 가까우며 유동인구와 기업 수요가 안정적입니다.', developmentPlan: '주변 정비사업 및 업무시설 개발에 따른 가치 상승 기대', recommendedUse: '브랜드 플래그십, 사옥, 근린생활시설', risks: '개발 전 인허가 및 실제 도로 현황 확인 필요', overallOpinion: '입지 희소성과 개발 여력을 함께 보유한 중장기 투자 후보입니다.', nearbyTransactions: '성수동2가 328-19 · 평당 약 2억원', createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
 
@@ -36,7 +38,7 @@ const bangbae81511: Property = {
   landAreaSqm: 168.1, landAreaPyeong: 50.85, totalFloorAreaSqm: 349.08, totalFloorAreaPyeong: 105.6, buildingAreaPyeong: 24.8,
   zoning: '제2종일반주거지역(7층 이하)', mainUse: '주택 및 근린생활시설', structure: '세멘벽돌조', basementFloors: 1, groundFloors: 3,
   completionDate: '1978-07-31', buildingCoverageRate: 0, floorAreaRatio: 0, parkingSpaces: 0, parkingOfficial: undefined, parkingField: 2, parkingFieldNote: '현장 이용 기준', internalPhotoAllowed: false,
-  mainImage: '/daon-master/bangbae-815-11-main.jpg', mapImage: '/daon-master/bangbae-815-11-map.jpg',
+  mainImage: '', mapImage: '',
   features: '래미안 원페를라 인접\n서래마을·함지박사거리 생활권\n복합 코너 대지, 양면 도로 접면\n주거 배후수요 + 생활편의 수요',
   investmentPoints: '소유자 직접 사용과 잔금일 기준 전체 명도 협의 가능\n사옥·주거업무 복합공간 검토 가능\nF&B 플래그십·갤러리·문화공간 검토 가능\n기존 건물 활용과 장기 신축 가능성을 함께 검토할 수 있는 자산',
   locationAnalysis: '래미안 원페를라와 서래마을·함지박사거리 생활권에 인접한 방배동 코너 입지입니다. 양면 도로 접면으로 파사드 노출과 출입 동선 계획 측면에서 활용 여지가 있습니다.',
@@ -66,8 +68,8 @@ export default function App() {
         internalPhotoAllowed: false,
         parkingField: existingBangbae.parkingField ?? 2,
         parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준',
-        mainImage: existingBangbae.mainImage || bangbae81511.mainImage,
-        mapImage: existingBangbae.mapImage || bangbae81511.mapImage,
+        mainImage: existingBangbae.mainImage === LEGACY_BANGBAE_MAIN_IMAGE ? '' : existingBangbae.mainImage,
+        mapImage: existingBangbae.mapImage === LEGACY_BANGBAE_MAP_IMAGE ? '' : existingBangbae.mapImage,
         buildingCoverageRate: existingBangbae.buildingCoverageRate === 48.8 ? 0 : existingBangbae.buildingCoverageRate,
         floorAreaRatio: existingBangbae.floorAreaRatio === 146.3 ? 0 : existingBangbae.floorAreaRatio,
       };
