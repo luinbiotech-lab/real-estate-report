@@ -9,6 +9,9 @@ const files = {
   dataRoomService: 'src/services/propertyDataRoomService.ts',
   dataRoomRepository: 'src/repositories/propertyDataRoomRepository.ts',
   buildingFloorService: 'src/services/buildingRegisterFloorService.ts',
+  comparableService: 'src/services/comparableTransactionService.ts',
+  comparablePanel: 'src/components/propertyDataRoom/ComparableTransactionPanel.tsx',
+  mediaPanel: 'src/components/propertyDataRoom/MediaClassificationPanel.tsx',
   extractionPanel: 'src/components/propertyDataRoom/DocumentExtractionPanel.tsx',
   detailMaster: 'src/components/professionalReport/DaonDetail7PageMaster.tsx',
   app: 'src/App.tsx',
@@ -34,6 +37,9 @@ if (!text.snapshotPage.includes('DaonDetail7PageMaster') || !text.snapshotPage.i
 }
 if (!text.snapshotPage.includes('disabled={confirming || !reportReady}')) {
   throw new Error('검증 미완료 보고서의 확정 버튼은 비활성화되어야 합니다.');
+}
+if (!text.snapshotPage.includes('comparables: snapshot.snapshotData.investment.comparables ?? []')) {
+  throw new Error('기존 immutable Snapshot은 신규 비교거래 배열 누락 시 안전하게 정규화되어야 합니다.');
 }
 if (!text.snapshotService.includes('viewModel.dataQuality.reportReady')) {
   throw new Error('서비스 계층에서도 검증 미완료 보고서 확정을 차단해야 합니다.');
@@ -64,6 +70,21 @@ if (!text.dataBuilder.includes('floors: floorSpaces') || !text.dataBuilder.inclu
 }
 if (!text.detailMaster.includes('model.building.floors') || text.detailMaster.includes('층별 임대·이용 현황')) {
   throw new Error('7P 2페이지는 층별 placeholder가 아니라 ReportViewModel 실데이터를 렌더링해야 합니다.');
+}
+if (!text.comparableService.includes("resourceType: 'comparable_transaction_set'") || !text.comparableService.includes("sourceType: 'market_data'") || !text.comparableService.includes('saveVerification')) {
+  throw new Error('비교거래는 market_data DataSource와 Verification을 함께 저장해야 합니다.');
+}
+if (!text.comparablePanel.includes('비교거래 저장 및 보고서 연결') || !text.dataRoom.includes('value="market"')) {
+  throw new Error('Data Room은 사용자가 구조화 비교거래를 입력·갱신할 수 있는 경로를 제공해야 합니다.');
+}
+if (!text.dataBuilder.includes('comparables: comparableRows(bundle)') || !text.detailMaster.includes('model.investment.comparables')) {
+  throw new Error('7P 4페이지는 구조화 비교거래 DataSource를 ReportViewModel을 통해 렌더링해야 합니다.');
+}
+if (!text.mediaPanel.includes("'exterior', 'road', 'surroundings'") || !text.dataRoom.includes('MediaClassificationPanel')) {
+  throw new Error('Data Room은 외관·도로·주변 미디어를 보고서용 category로 분류할 수 있어야 합니다.');
+}
+if (!text.detailMaster.includes("item.category !== 'interior'")) {
+  throw new Error('내부사진 제외 정책은 7P 미디어 선택 과정에서 유지되어야 합니다.');
 }
 
 console.log('DA:ON report pipeline integrity: PASS');
