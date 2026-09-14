@@ -32,6 +32,8 @@ export interface SpaceAgentPort {
 }
 
 export interface FloorPlanGeometryAgentPort {
+  getDocument(id: string): Promise<PropertyDocument | undefined>;
+  getMediaItem(id: string): Promise<PropertyMedia | undefined>;
   getDigitalTwinAssets(propertyId: string): Promise<DigitalTwinAsset[]>;
   saveDigitalTwinAsset(value: DigitalTwinAsset): Promise<DigitalTwinAsset>;
 }
@@ -84,6 +86,8 @@ export const spaceAgentPort: SpaceAgentPort = {
 };
 
 export const floorPlanGeometryAgentPort: FloorPlanGeometryAgentPort = {
+  getDocument: (id) => propertyDataRoomRepository.getDocument(id),
+  getMediaItem: (id) => propertyDataRoomRepository.getMediaItem(id),
   getDigitalTwinAssets: (propertyId) => propertyDataRoomRepository.getDigitalTwinAssets(propertyId),
   saveDigitalTwinAsset: (value) => propertyDataRoomRepository.saveDigitalTwinAsset(value),
 };
