@@ -1,5 +1,6 @@
 import type { RenovationScope, RoomRenovationAssessment } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { roomHistoryService } from './roomHistoryService';
 import type { RoomIntelligenceView } from './roomIntelligenceService';
 
 function includesAny(value: string, words: string[]) {
@@ -58,6 +59,7 @@ export async function saveRoomRenovationDraft(view: RoomIntelligenceView) {
   const draft = buildRoomRenovationDraft(view);
   const row: RoomRenovationAssessment = { ...draft, id: previous?.id || crypto.randomUUID(), createdAt: previous?.createdAt || now, updatedAt: now };
   await propertyDataRoomRepository.saveRoomRenovationAssessment(row);
+  await roomHistoryService.appendRenovation(row, 'draft_created');
   await propertyDataRoomRepository.saveDataSource({
     id: crypto.randomUUID(), propertyId: row.propertyId, resourceType: 'room_renovation_assessment', sourceType: 'ai', sourceName: 'Room Renovation Candidate', sourceReference: row.roomCandidateId,
     collectedAt: now, verificationStatus: 'unverified', metadata: { assessmentId: row.id, decision: row.decision, scope: row.scope, evidenceRefs: row.evidenceRefs }, createdAt: now,
@@ -69,6 +71,7 @@ export async function reviewRoomRenovationAssessment(assessment: RoomRenovationA
   const now = new Date().toISOString();
   const updated: RoomRenovationAssessment = { ...assessment, decision, reviewedBy, reviewedAt: now, updatedAt: now };
   await propertyDataRoomRepository.saveRoomRenovationAssessment(updated);
+  await roomHistoryService.appendRenovation(updated, decision, reviewedBy);
   await propertyDataRoomRepository.saveDataSource({
     id: crypto.randomUUID(), propertyId: assessment.propertyId, resourceType: 'room_renovation_assessment', sourceType: 'manual', sourceName: 'Room Renovation Human Review', sourceReference: assessment.roomCandidateId,
     collectedAt: now, verificationStatus: decision === 'approved' ? 'confirmed' : 'unverified', metadata: { assessmentId: assessment.id, decision, scope: assessment.scope }, createdAt: now,
