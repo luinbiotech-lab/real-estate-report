@@ -20,7 +20,7 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 
 try {
-  await verifyPage(page, '/interior', ['Interior Workspace', 'Interior ↔ 3D Room Linking', '추천 연결 후보', 'Room Intelligence View', 'Intelligent rooms', '3D Room Evidence Overlay', 'Room Renovation Assessment', 'Vision 분석 기록', '승인된 설비 인벤토리', '브라우저 로컬 픽셀 분석'], 'interior-workspace');
+  await verifyPage(page, '/interior', ['Interior Workspace', 'Interior ↔ 3D Room Linking', '추천 연결 후보', 'Room Intelligence View', 'Intelligent rooms', '3D Evidence Overlay', 'Room Renovation Review', 'Vision 분석 기록', '승인된 설비 인벤토리', '브라우저 로컬 픽셀 분석'], 'interior-workspace');
   await verifyPage(page, '/spatial', ['Spatial Workspace', '공간 자료 Intake', '공간 모델', '리노베이션 검토', 'Digital Twin 준비 자산'], 'spatial-workspace');
   await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Multi-floor Building Model', 'Building Production Gate / 다층 Candidate Release', 'Building Release & Collaboration Layer', 'Geometry Readiness · Remote Inspection', 'Remote Inspection HTML', 'Spatial Workspace에서 PDF/DWG/DXF 도면 원본을 먼저 등록하세요.'], 'digital-twin-workspace');
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
