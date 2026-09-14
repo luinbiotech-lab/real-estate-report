@@ -62,6 +62,12 @@ export interface SpaceMediaLink {
   sourceAgentResultId?: string; createdAt: string; deletedAt?: string;
 }
 
+export interface SpaceRoomLink {
+  id: string; propertyId: string; spaceId: string; digitalTwinAssetId: string; roomCandidateId: string;
+  decision: 'approved' | 'held' | 'rejected'; confidence?: number; basis: string[];
+  reviewedBy?: string; reviewedAt?: string; createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
 export type FacilityCategory = 'hvac' | 'electrical' | 'plumbing' | 'fire_safety' | 'elevator' | 'restroom' | 'kitchen' | 'internet' | 'access_control' | 'cctv' | 'signage' | 'soundproofing' | 'other';
 export interface PropertyFacility {
   id: string; propertyId: string; category: FacilityCategory; name: string; floor?: string; spaceId?: string;
@@ -134,7 +140,7 @@ export interface DataRoomBundle {
   /** Added non-destructively for Agent Foundation. Legacy bundle literals remain valid. */
   agentJobs?: AgentJob[]; agentResults?: AgentResult[]; agentReviews?: AgentReview[];
   /** Spatial/interior model is optional for compatibility with legacy bundle literals. */
-  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[]; riskAssessments?: PropertyRiskAssessment[];
+  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; spaceRoomLinks?: SpaceRoomLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[]; riskAssessments?: PropertyRiskAssessment[];
 }
 
 export interface DataRoomSummary {
