@@ -84,6 +84,15 @@ export interface RenovationAssessment {
   createdAt: string; updatedAt: string; deletedAt?: string;
 }
 
+export interface RoomRenovationAssessment {
+  id: string; propertyId: string; spaceId: string; digitalTwinAssetId: string; roomCandidateId: string;
+  title: string; scope: RenovationScope; summary: string; recommendedItems: string[]; riskItems: string[];
+  costStatus: 'not_estimated' | 'range_candidate';
+  decision: 'draft' | 'approved' | 'held' | 'rejected';
+  sourceType: 'manual' | 'agent_candidate'; evidenceRefs: string[];
+  reviewedBy?: string; reviewedAt?: string; createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
 export type RiskCheckStatus = 'clear' | 'review' | 'missing' | 'not_applicable';
 export interface RiskCheckItem {
   key: string; label: string; status: RiskCheckStatus; detail: string; sourceReference?: string;
@@ -116,7 +125,6 @@ export interface PropertyDataSource {
 export type ReportType = 'proposal' | 'investment_report' | 'briefing' | 'professional_report';
 export interface ReportSnapshot {
   id: string; propertyId: string; reportType: ReportType; reportVersion: number;
-  /** Added non-destructively. Legacy snapshots may not have this field. */
   templateId?: string;
   templateVersion: string;
   engineVersion?: string;
@@ -137,10 +145,8 @@ export interface DataRoomBundle {
   documents: PropertyDocument[]; media: PropertyMedia[]; verifications: PropertyVerification[];
   verificationCandidates: PropertyVerificationCandidate[];
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
-  /** Added non-destructively for Agent Foundation. Legacy bundle literals remain valid. */
   agentJobs?: AgentJob[]; agentResults?: AgentResult[]; agentReviews?: AgentReview[];
-  /** Spatial/interior model is optional for compatibility with legacy bundle literals. */
-  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; spaceRoomLinks?: SpaceRoomLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[]; riskAssessments?: PropertyRiskAssessment[];
+  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; spaceRoomLinks?: SpaceRoomLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[]; roomRenovationAssessments?: RoomRenovationAssessment[]; riskAssessments?: PropertyRiskAssessment[];
 }
 
 export interface DataRoomSummary {
