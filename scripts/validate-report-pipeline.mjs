@@ -8,6 +8,9 @@ const files = {
   dataBuilder: 'src/services/reportEngine/reportDataBuilder.ts',
   dataRoomService: 'src/services/propertyDataRoomService.ts',
   dataRoomRepository: 'src/repositories/propertyDataRoomRepository.ts',
+  buildingFloorService: 'src/services/buildingRegisterFloorService.ts',
+  extractionPanel: 'src/components/propertyDataRoom/DocumentExtractionPanel.tsx',
+  detailMaster: 'src/components/professionalReport/DaonDetail7PageMaster.tsx',
   app: 'src/App.tsx',
 };
 
@@ -46,6 +49,21 @@ if (!text.dataRoomRepository.includes("db.transaction(['properties', 'propertyVe
 }
 if (!text.dataRoomRepository.includes('createNextReportSnapshot')) {
   throw new Error('보고서는 immutable versioned Snapshot으로 생성되어야 합니다.');
+}
+if (!text.buildingFloorService.includes('parseBuildingRegisterFloorText') || !text.buildingFloorService.includes("resourceType: 'property_space'")) {
+  throw new Error('건축물대장 층별 데이터는 구조화 파서와 PropertySpace DataSource를 통해 연결되어야 합니다.');
+}
+if (!text.buildingFloorService.includes('saveVerification') || !text.buildingFloorService.includes("sourceType: 'official_document'")) {
+  throw new Error('층별 PropertySpace에는 공식문서 DataSource와 Verification 이력이 함께 저장되어야 합니다.');
+}
+if (!text.extractionPanel.includes('층별 구성 Data Room 연결') || !text.extractionPanel.includes('buildingRegisterFloorService.parseText')) {
+  throw new Error('건축물대장 추출 화면에서 검토 후 층별 구성 연결 경로를 제공해야 합니다.');
+}
+if (!text.dataBuilder.includes('floors: floorSpaces') || !text.dataBuilder.includes("const fieldKey = `space:${space.id}`")) {
+  throw new Error('ReportViewModel은 Data Room PropertySpace와 provenance를 층별 구성으로 매핑해야 합니다.');
+}
+if (!text.detailMaster.includes('model.building.floors') || text.detailMaster.includes('층별 임대·이용 현황')) {
+  throw new Error('7P 2페이지는 층별 placeholder가 아니라 ReportViewModel 실데이터를 렌더링해야 합니다.');
 }
 
 console.log('DA:ON report pipeline integrity: PASS');
