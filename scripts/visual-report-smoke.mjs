@@ -3,6 +3,8 @@ import { chromium } from 'playwright';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const OUT_DIR = process.env.REPORT_QA_OUT_DIR || 'artifacts/report-qa';
+const QA_MAIN_IMAGE = '/__qa__/bangbae-main.svg';
+const QA_MAP_IMAGE = '/__qa__/bangbae-map.svg';
 
 function assert(condition, message) {
   if (!condition) throw new Error(message);
@@ -19,10 +21,41 @@ await mkdir(OUT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, deviceScaleFactor: 1 });
 
-await page.route('**/daon-master/bangbae-815-11-main.jpg', (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: qaSvg('hero') }));
-await page.route('**/daon-master/bangbae-815-11-map.jpg', (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: qaSvg('map') }));
+await page.route(`**${QA_MAIN_IMAGE}`, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: qaSvg('hero') }));
+await page.route(`**${QA_MAP_IMAGE}`, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: qaSvg('map') }));
 
 try {
+  // Production seed intentionally carries no fake/static Bangbae media. Inject QA-only media into IndexedDB.
+  await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+  await page.waitForSelector('body', { timeout: 30_000 });
+  await page.evaluate(async ({ mainImage, mapImage }) => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('real-estate-report', 13);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const property = await new Promise((resolve, reject) => {
+        const tx = db.transaction('properties', 'readonly');
+        const request = tx.objectStore('properties').get('daon-bangbae-815-11');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      if (!property) throw new Error('Bangbae QA property missing');
+      property.mainImage = mainImage;
+      property.mapImage = mapImage;
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('properties', 'readwrite');
+        tx.objectStore('properties').put(property);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    } finally {
+      db.close();
+    }
+  }, { mainImage: QA_MAIN_IMAGE, mapImage: QA_MAP_IMAGE });
+
   await page.goto(`${BASE_URL}/document/proposal/daon-bangbae-815-11`, { waitUntil: 'networkidle' });
   await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
   const onePage = await page.evaluate(() => {
@@ -32,6 +65,11 @@ try {
     const facts = [...document.querySelectorAll('.d1-fact')].map((item) => item.textContent?.trim() || '');
     const images = [...sheet.querySelectorAll('img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
     const rect = sheet.getBoundingClientRect();
+    const title = sheet.querySelector('.d1-head-copy h1');
+    const titleContainer = sheet.querySelector('.d1-head-copy');
+    const titleRect = title?.getBoundingClientRect();
+    const containerRect = titleContainer?.getBoundingClientRect();
+    const titleStyle = title ? getComputedStyle(title) : null;
     return {
       width: rect.width,
       height: rect.height,
@@ -44,6 +82,9 @@ try {
       templateId: root?.getAttribute('data-template-id'),
       templateVersion: root?.getAttribute('data-template-version'),
       text: sheet.textContent || '',
+      titleText: title?.textContent?.trim() || '',
+      titleTextOverflow: titleStyle?.textOverflow || '',
+      titleWithinContainer: Boolean(titleRect && containerRect && titleRect.left >= containerRect.left - 1 && titleRect.right <= containerRect.right + 1 && titleRect.top >= containerRect.top - 1 && titleRect.bottom <= containerRect.bottom + 1),
     };
   });
 
@@ -53,7 +94,11 @@ try {
   assert(onePage.facts.some((value) => value.includes('공부상 주차')), '1P 공부상 주차 fact missing');
   assert(onePage.facts.some((value) => value.includes('현장 주차')), '1P 현장 주차 fact missing');
   assert(!onePage.text.includes('용적률 참고 계산'), '1P deprecated FAR calculated fact is visible');
-  assert(onePage.images.length >= 2 && onePage.images.every((image) => image.width > 0 && image.height > 0), '1P hero/map images failed to render in QA');
+  assert(onePage.titleText === '전속매각 | 방배동 815-11 코너빌딩', `1P header title mismatch: ${onePage.titleText}`);
+  assert(onePage.titleTextOverflow !== 'ellipsis', '1P header title uses ellipsis');
+  assert(onePage.titleWithinContainer, '1P header title is clipped outside its header cell');
+  assert(onePage.images.length >= 2 && onePage.images.every((image) => image.width > 0 && image.height > 0), '1P QA fixture images failed to render');
+  assert(onePage.images.every((image) => image.src.startsWith('/__qa__/')), '1P unexpected production media dependency in rendered QA');
   assert(onePage.scrollHeight <= onePage.clientHeight + 2, `1P vertical overflow: ${onePage.scrollHeight}/${onePage.clientHeight}`);
   assert(onePage.scrollWidth <= onePage.clientWidth + 2, `1P horizontal overflow: ${onePage.scrollWidth}/${onePage.clientWidth}`);
   await page.screenshot({ path: `${OUT_DIR}/daon-1p.png`, fullPage: true });
@@ -90,7 +135,8 @@ try {
     assert(item.scrollHeight <= item.clientHeight + 2, `7P page ${index + 1} vertical overflow: ${item.scrollHeight}/${item.clientHeight}`);
     assert(item.scrollWidth <= item.clientWidth + 2, `7P page ${index + 1} horizontal overflow: ${item.scrollWidth}/${item.clientWidth}`);
   }
-  assert(sevenPage.images.length > 0 && sevenPage.images.every((image) => image.width > 0 && image.height > 0), '7P rendered image slots contain broken images');
+  assert(sevenPage.images.length > 0 && sevenPage.images.every((image) => image.width > 0 && image.height > 0), '7P QA fixture image slots contain broken images');
+  assert(sevenPage.images.every((image) => image.src.startsWith('/__qa__/')), '7P unexpected production media dependency in rendered QA');
   assert(sevenPage.text.includes('공부상 주차'), '7P 공부상 주차 semantics missing');
   assert(sevenPage.text.includes('현장 주차'), '7P 현장 주차 semantics missing');
   assert(!sevenPage.text.includes('BANGBAE-DONG PREMIUM ASSET'), '7P forbidden Bangbae-only legacy copy visible');
