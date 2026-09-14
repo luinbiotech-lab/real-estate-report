@@ -1,8 +1,8 @@
-import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDataSource, PropertyDocument, PropertyFacility, PropertyMedia, PropertyRiskAssessment, PropertySpace, PropertyVerification, PropertyVerificationCandidate, RenovationAssessment, ReportSnapshot, SpaceMediaLink, SpaceRoomLink } from '../domain/propertyDataRoom/types';
+import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDataSource, PropertyDocument, PropertyFacility, PropertyMedia, PropertyRiskAssessment, PropertySpace, PropertyVerification, PropertyVerificationCandidate, RenovationAssessment, ReportSnapshot, RoomRenovationAssessment, SpaceMediaLink, SpaceRoomLink } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 import { database } from './database';
 
-type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets' | 'agentJobs' | 'agentResults' | 'agentReviews' | 'propertySpaces' | 'spaceMediaLinks' | 'spaceRoomLinks' | 'propertyFacilities' | 'renovationAssessments' | 'riskAssessments' | 'buildingReleaseSnapshots';
+type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets' | 'agentJobs' | 'agentResults' | 'agentReviews' | 'propertySpaces' | 'spaceMediaLinks' | 'spaceRoomLinks' | 'propertyFacilities' | 'renovationAssessments' | 'roomRenovationAssessments' | 'riskAssessments' | 'buildingReleaseSnapshots';
 
 async function byProperty<T>(storeName: StoreName, propertyId: string): Promise<T[]> {
   const values = await (await database).getAllFromIndex(storeName, 'propertyId', propertyId) as T[];
@@ -41,6 +41,8 @@ export const propertyDataRoomRepository = {
   saveFacility: (value: PropertyFacility) => put('propertyFacilities', value),
   getRenovationAssessments: (propertyId: string) => byProperty<RenovationAssessment>('renovationAssessments', propertyId),
   saveRenovationAssessment: (value: RenovationAssessment) => put('renovationAssessments', value),
+  getRoomRenovationAssessments: (propertyId: string) => byProperty<RoomRenovationAssessment>('roomRenovationAssessments', propertyId),
+  saveRoomRenovationAssessment: (value: RoomRenovationAssessment) => put('roomRenovationAssessments', value),
   getRiskAssessments: (propertyId: string) => byProperty<PropertyRiskAssessment>('riskAssessments', propertyId),
   saveRiskAssessment: (value: PropertyRiskAssessment) => put('riskAssessments', value),
   getVerifications: (propertyId: string) => byProperty<PropertyVerification>('propertyVerifications', propertyId),
@@ -49,12 +51,7 @@ export const propertyDataRoomRepository = {
   saveVerificationCandidate: (value: PropertyVerificationCandidate) => put('propertyVerificationCandidates', value),
   getDataSources: (propertyId: string) => byProperty<PropertyDataSource>('propertyDataSources', propertyId),
   saveDataSource: (value: PropertyDataSource) => put('propertyDataSources', value),
-  async approveVerificationCandidate(input: {
-    property: Property;
-    candidate: PropertyVerificationCandidate;
-    verification: PropertyVerification;
-    dataSource: PropertyDataSource;
-  }): Promise<PropertyVerificationCandidate> {
+  async approveVerificationCandidate(input: { property: Property; candidate: PropertyVerificationCandidate; verification: PropertyVerification; dataSource: PropertyDataSource; }): Promise<PropertyVerificationCandidate> {
     const db = await database;
     const tx = db.transaction(['properties', 'propertyVerificationCandidates', 'propertyVerifications', 'propertyDataSources'], 'readwrite');
     await Promise.all([
@@ -70,24 +67,15 @@ export const propertyDataRoomRepository = {
   async getReportSnapshot(id: string) { return (await database).get('reportSnapshots', id) as Promise<ReportSnapshot | undefined>; },
   async saveReportSnapshot(value: ReportSnapshot) { await (await database).add('reportSnapshots', value); return value; },
   async updateReportSnapshotStatus(id: string, status: ReportSnapshot['status']): Promise<ReportSnapshot> {
-    const db = await database;
-    const tx = db.transaction('reportSnapshots', 'readwrite');
-    const current = await tx.store.get(id) as ReportSnapshot | undefined;
+    const db = await database; const tx = db.transaction('reportSnapshots', 'readwrite'); const current = await tx.store.get(id) as ReportSnapshot | undefined;
     if (!current) { await tx.done; throw new Error('보고서 Snapshot을 찾을 수 없습니다.'); }
-    const updated = { ...current, status };
-    await tx.store.put(updated);
-    await tx.done;
-    return updated;
+    const updated = { ...current, status }; await tx.store.put(updated); await tx.done; return updated;
   },
   async createNextReportSnapshot(input: Omit<ReportSnapshot, 'reportVersion'>): Promise<ReportSnapshot> {
-    const db = await database;
-    const tx = db.transaction('reportSnapshots', 'readwrite');
+    const db = await database; const tx = db.transaction('reportSnapshots', 'readwrite');
     const existing = await tx.store.index('propertyId').getAll(input.propertyId) as ReportSnapshot[];
     const reportVersion = Math.max(0, ...existing.filter((item) => item.reportType === input.reportType).map((item) => item.reportVersion)) + 1;
-    const snapshot = { ...input, reportVersion };
-    await tx.store.add(snapshot);
-    await tx.done;
-    return snapshot;
+    const snapshot = { ...input, reportVersion }; await tx.store.add(snapshot); await tx.done; return snapshot;
   },
   getDigitalTwinAssets: (propertyId: string) => byProperty<DigitalTwinAsset>('digitalTwinAssets', propertyId),
   saveDigitalTwinAsset: (value: DigitalTwinAsset) => put('digitalTwinAssets', value),
@@ -97,12 +85,10 @@ export const propertyDataRoomRepository = {
   saveAgentResult: (value: AgentResult) => put('agentResults', value),
   getAgentReviews: (propertyId: string) => byProperty<AgentReview>('agentReviews', propertyId),
   saveAgentReview: (value: AgentReview) => put('agentReviews', value),
-  async getAgentResultsByJob(jobId: string): Promise<AgentResult[]> {
-    return (await database).getAllFromIndex('agentResults', 'jobId', jobId) as Promise<AgentResult[]>;
-  },
+  async getAgentResultsByJob(jobId: string): Promise<AgentResult[]> { return (await database).getAllFromIndex('agentResults', 'jobId', jobId) as Promise<AgentResult[]>; },
   async archiveProperty(propertyId: string) {
     const db = await database; const now = new Date().toISOString();
-    const stores: StoreName[] = ['propertyDocuments', 'propertyMedia', 'propertyVerifications', 'propertyVerificationCandidates', 'propertyDataSources', 'reportSnapshots', 'digitalTwinAssets', 'agentJobs', 'agentResults', 'agentReviews', 'propertySpaces', 'spaceMediaLinks', 'spaceRoomLinks', 'propertyFacilities', 'renovationAssessments', 'riskAssessments', 'buildingReleaseSnapshots'];
+    const stores: StoreName[] = ['propertyDocuments', 'propertyMedia', 'propertyVerifications', 'propertyVerificationCandidates', 'propertyDataSources', 'reportSnapshots', 'digitalTwinAssets', 'agentJobs', 'agentResults', 'agentReviews', 'propertySpaces', 'spaceMediaLinks', 'spaceRoomLinks', 'propertyFacilities', 'renovationAssessments', 'roomRenovationAssessments', 'riskAssessments', 'buildingReleaseSnapshots'];
     for (const storeName of stores) {
       const values = await db.getAllFromIndex(storeName, 'propertyId', propertyId) as Array<Record<string, unknown> & { id: string }>;
       const tx = db.transaction(storeName, 'readwrite');
@@ -111,10 +97,9 @@ export const propertyDataRoomRepository = {
     }
   },
   async getBundle(propertyId: string): Promise<DataRoomBundle> {
-    const [documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets, agentJobs, agentResults, agentReviews, spaces, spaceMediaLinks, spaceRoomLinks, facilities, renovationAssessments, riskAssessments] = await Promise.all([
-      this.getDocuments(propertyId), this.getMedia(propertyId), this.getVerifications(propertyId), this.getVerificationCandidates(propertyId),
-      this.getDataSources(propertyId), this.getReportSnapshots(propertyId), this.getDigitalTwinAssets(propertyId), this.getAgentJobs(propertyId), this.getAgentResults(propertyId), this.getAgentReviews(propertyId), this.getSpaces(propertyId), this.getSpaceMediaLinks(propertyId), this.getSpaceRoomLinks(propertyId), this.getFacilities(propertyId), this.getRenovationAssessments(propertyId), this.getRiskAssessments(propertyId),
+    const [documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets, agentJobs, agentResults, agentReviews, spaces, spaceMediaLinks, spaceRoomLinks, facilities, renovationAssessments, roomRenovationAssessments, riskAssessments] = await Promise.all([
+      this.getDocuments(propertyId), this.getMedia(propertyId), this.getVerifications(propertyId), this.getVerificationCandidates(propertyId), this.getDataSources(propertyId), this.getReportSnapshots(propertyId), this.getDigitalTwinAssets(propertyId), this.getAgentJobs(propertyId), this.getAgentResults(propertyId), this.getAgentReviews(propertyId), this.getSpaces(propertyId), this.getSpaceMediaLinks(propertyId), this.getSpaceRoomLinks(propertyId), this.getFacilities(propertyId), this.getRenovationAssessments(propertyId), this.getRoomRenovationAssessments(propertyId), this.getRiskAssessments(propertyId),
     ]);
-    return { documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets, agentJobs, agentResults, agentReviews, spaces, spaceMediaLinks, spaceRoomLinks, facilities, renovationAssessments, riskAssessments };
+    return { documents, media, verifications, verificationCandidates, dataSources, reportSnapshots, digitalTwinAssets, agentJobs, agentResults, agentReviews, spaces, spaceMediaLinks, spaceRoomLinks, facilities, renovationAssessments, roomRenovationAssessments, riskAssessments };
   },
 };
