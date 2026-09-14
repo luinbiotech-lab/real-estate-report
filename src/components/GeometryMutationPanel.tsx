@@ -1,15 +1,19 @@
 import { Alert, Button, Chip } from '@mui/material';
 import { RestartAltRounded, RocketLaunchRounded, ScienceRounded } from '@mui/icons-material';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { geometryMutationEngineService } from '../services/geometryMutationEngineService';
 import { geometryMutationTransactionService } from '../services/geometryMutationTransactionService';
 
 export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAsset }) {
   const [currentAsset, setCurrentAsset] = useState(asset);
+  useEffect(() => setCurrentAsset(asset), [asset]);
   const preview = useMemo(() => geometryMutationEngineService.mutate(currentAsset), [currentAsset]);
   const productionCandidate = useMemo(() => geometryMutationTransactionService.getProductionCandidate(currentAsset), [currentAsset]);
+  const productionState = useMemo(() => geometryMutationTransactionService.getState(currentAsset), [currentAsset]);
   const history = useMemo(() => geometryMutationTransactionService.getHistory(currentAsset), [currentAsset]);
+  const rolledBackPromotionIds = useMemo(() => new Set(history.filter((item) => item.action === 'rollback' && item.targetPromotionId).map((item) => item.targetPromotionId)), [history]);
+  const rollbackAvailable = useMemo(() => history.some((item) => item.action === 'production_candidate_promoted' && !rolledBackPromotionIds.has(item.id)), [history, rolledBackPromotionIds]);
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -28,7 +32,7 @@ export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAss
       } else {
         const updated = await geometryMutationTransactionService.rollback(currentAsset);
         setCurrentAsset(updated);
-        setMessage('직전 production candidate 승격을 rollback했습니다. 원본 CAD/검증 데이터는 변경하지 않았습니다.');
+        setMessage('직전 rollback 가능 production candidate 승격을 복원했습니다. 원본 CAD/검증 데이터는 변경하지 않았습니다.');
       }
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Geometry mutation 작업을 완료하지 못했습니다.');
@@ -45,7 +49,7 @@ export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAss
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         <Chip size="small" label={preview.engineId} variant="outlined" />
         <Chip size="small" color={preview.validation.valid ? 'success' : 'warning'} label={preview.validation.valid ? 'VALID' : 'BLOCKED'} />
-        {productionCandidate && <Chip size="small" color="success" label="PRODUCTION CANDIDATE" />}
+        {productionCandidate && <Chip size="small" color={productionState.state === 'current' ? 'success' : productionState.state === 'stale' ? 'warning' : 'error'} label={`PRODUCTION · ${productionState.state.toUpperCase()}`} />}
       </div>
     </div>
 
@@ -55,6 +59,7 @@ export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAss
       ].map(([label, value]) => <div key={String(label)} style={{ border: '1px solid #e5eaf0', borderRadius: 8, padding: 10 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', marginTop: 4, fontSize: 20 }}>{value}</strong></div>)}
     </div>
 
+    {productionCandidate && productionState.state !== 'current' && <Alert severity={productionState.state === 'stale' ? 'warning' : 'error'} sx={{ mt: 1.5 }}>{productionState.reason} 최신 소스 기준으로 mutation 검증 후 다시 승격해야 Building Production Gate에서 사용할 수 있습니다.</Alert>}
     {preview.validation.errors.length > 0 && <Alert severity="warning" sx={{ mt: 1.5 }}>{preview.validation.errors.join(' / ')}</Alert>}
     {preview.validation.warnings.length > 0 && <Alert severity="info" sx={{ mt: 1.5 }}>{preview.validation.warnings.join(' / ')}</Alert>}
     {message && <Alert severity="success" sx={{ mt: 1.5 }} onClose={() => setMessage('')}>{message}</Alert>}
@@ -62,8 +67,8 @@ export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAss
 
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 14 }}>
       <Button variant="outlined" startIcon={<ScienceRounded />} disabled={Boolean(busy)} onClick={() => void run('save')}>Mutation 실행·검증 저장</Button>
-      <Button variant="contained" startIcon={<RocketLaunchRounded />} disabled={Boolean(busy) || !preview.productionCandidateEligible} onClick={() => void run('promote')}>Production Candidate 승격</Button>
-      <Button variant="outlined" color="warning" startIcon={<RestartAltRounded />} disabled={Boolean(busy) || !productionCandidate || !history.some((item) => item.action === 'production_candidate_promoted')} onClick={() => void run('rollback')}>Rollback</Button>
+      <Button variant="contained" startIcon={<RocketLaunchRounded />} disabled={Boolean(busy) || !preview.productionCandidateEligible} onClick={() => void run('promote')}>{productionState.state === 'stale' ? '최신 소스로 재승격' : 'Production Candidate 승격'}</Button>
+      <Button variant="outlined" color="warning" startIcon={<RestartAltRounded />} disabled={Boolean(busy) || !rollbackAvailable} onClick={() => void run('rollback')}>Rollback</Button>
     </div>
 
     <Alert severity="warning" sx={{ mt: 1.5 }}>production candidate는 자동 시공·구조·법정 BIM 승인이 아닙니다. constructionReady=false / legalBimReady=false를 유지하며 원본 CAD와 Human Review provenance는 보존됩니다.</Alert>
