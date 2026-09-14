@@ -55,8 +55,8 @@ if (!slabPanel.includes('Slab Geometry / 슬래브 형상 후보') || !slabPanel
 if (!corePanel.includes('Vertical Core / 계단·엘리베이터 층간 연결') || !corePanel.includes('자동 연결은 하지 않습니다') || !corePanel.includes('production connectivity')) throw new Error('Vertical core Human Review UI is incomplete.');
 if (!stackPanel.includes('Multi-floor Building Model / 층간 Stack') || !stackPanel.includes('Building OBJ') || !stackPanel.includes('Building JSON') || !stackPanel.includes('BuildingGeometryReadinessPanel')) throw new Error('Multi-floor building stack/remote inspection viewer is incomplete.');
 if (!stackPanel.includes('Geometry Operation Plan / 실행 전 Manifest') || !stackPanel.includes('Operation Plan JSON')) throw new Error('Geometry operation plan UI/export is incomplete.');
-if (!stackPanel.includes('Geometry Engine / 비파괴 Dry Run') || !stackPanel.includes('Dry Run JSON') || !stackPanel.includes('mutationApplied=false')) throw new Error('Geometry engine capability/dry-run UI is incomplete.');
+if (!stackPanel.includes('Geometry Engine / 비파괴 Dry Run') || !stackPanel.includes('Dry Run JSON') || !stackPanel.includes('Production Candidate 승격')) throw new Error('Geometry engine capability/dry-run UI is incomplete.');
 if (!readinessPanel.includes('Geometry Readiness · Remote Inspection') || !readinessPanel.includes('Remote Inspection HTML') || !readinessPanel.includes('BOOLEAN ELIGIBLE') || !readinessPanel.includes('MERGE READY')) throw new Error('Geometry readiness/remote inspection UI is incomplete.');
 for (const component of ['WallModelPanel', 'WallJunctionPanel', 'OpeningCutPanel', 'FloorPlacementPanel', 'SlabGeometryPanel', 'VerticalCorePanel', 'BuildingStackPanel']) if (!twinPage.includes(component)) throw new Error(`Digital Twin Workspace missing ${component}.`);
 
-console.log('DA:ON geometry engine boundary + dry run + operation plan + remote inspection integrity: PASS');
+console.log('DA:ON geometry engine boundary + dry run + production mutation + operation plan + remote inspection integrity: PASS');
