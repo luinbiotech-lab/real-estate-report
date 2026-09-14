@@ -6,6 +6,7 @@ import { BUILDING_STACK_VERSION, buildingStackService } from '../services/buildi
 import { geometryEngineService } from '../services/geometryEngineService';
 import { geometryOperationPlanService } from '../services/geometryOperationPlanService';
 import BuildingGeometryReadinessPanel from './BuildingGeometryReadinessPanel';
+import GeometryMutationPanel from './GeometryMutationPanel';
 
 function project(point: { x: number; y: number; z: number }, yawDeg: number, pitchDeg: number) {
   const yaw = yawDeg * Math.PI / 180;
@@ -84,7 +85,7 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
 
       <div style={{ marginTop: 16, padding: 14, border: '1px solid #d9e0e8', borderRadius: 10, background: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div><strong>Geometry Engine / 비파괴 Dry Run</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>현재 엔진은 endpoint snap preview와 cutter volume 생성까지만 지원하며 실제 union/boolean mutation은 비활성화되어 있습니다.</p></div>
+          <div><strong>Geometry Engine / 비파괴 Dry Run</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>기존 preview 엔진은 endpoint snap과 cutter volume을 먼저 검토합니다. 실제 mutation은 아래 DA:ON Solid Partition Engine에서 별도로 실행·검증·rollback합니다.</p></div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <Chip size="small" color="primary" variant="outlined" label={`${engineDryRun.engine.label} · ${engineDryRun.engine.mode}`} />
             <Chip size="small" variant="outlined" label={`Snapped walls ${operationPreview.summary.snapCount}`} />
@@ -93,8 +94,8 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
             <Button size="small" variant="outlined" startIcon={<DownloadRounded />} onClick={exportOperationPreview}>Dry Run JSON</Button>
           </div>
         </div>
-        {engineDryRun.unsupportedEligibleOperations.length > 0 && <p style={{ margin: '10px 0 0', color: '#b54708', fontSize: 13 }}>Mutation provider 필요: {engineDryRun.unsupportedEligibleOperations.join(', ')}</p>}
-        <Alert severity="warning" sx={{ mt: 1.5 }}>원본 Digital Twin asset은 변경하지 않습니다. mutationApplied=false, geometryMutated=false, booleanApplied=false 상태입니다.</Alert>
+        {engineDryRun.unsupportedEligibleOperations.length > 0 && <p style={{ margin: '10px 0 0', color: '#b54708', fontSize: 13 }}>Preview engine 미지원 operation: {engineDryRun.unsupportedEligibleOperations.join(', ')}</p>}
+        <Alert severity="warning" sx={{ mt: 1.5 }}>Dry Run은 원본을 변경하지 않습니다. Production Candidate 승격은 실제 mutation validation을 별도로 통과해야 합니다.</Alert>
       </div>
 
       {!scene ? <Alert severity="info" sx={{ mt: 1.5 }}>각 층 자산에 검증된 층 배치와 reviewed mesh가 준비되면 다층 모델이 표시됩니다.</Alert> : <>
@@ -118,5 +119,8 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
       <Alert severity="warning" sx={{ mt: 1.5 }}>{stack.warnings.join(' ')}</Alert>
     </section>
     <BuildingGeometryReadinessPanel assets={assets} />
+    <section style={{ display: 'grid', gap: 14, marginBottom: 20 }}>
+      {assets.map((asset) => <GeometryMutationPanel key={asset.id} asset={asset} />)}
+    </section>
   </>;
 }
