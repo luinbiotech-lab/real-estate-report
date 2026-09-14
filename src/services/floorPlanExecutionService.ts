@@ -1,5 +1,5 @@
 import type { AgentJob, DigitalTwinAsset } from '../domain/propertyDataRoom/types';
-import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { floorPlanGeometryAgentPort } from '../agents/agentDataPorts';
 import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { floorPlanGeometryService } from './floorPlanGeometryService';
@@ -53,7 +53,7 @@ async function executeDigitalTwin(job: AgentJob, asset: DigitalTwinAsset) {
 export const floorPlanExecutionService = {
   async execute(job: AgentJob) {
     if (job.agentType !== 'floor_plan' || job.resourceType !== 'digital_twin' || !job.resourceId) return agentExecutionService.execute(job);
-    const asset = (await propertyDataRoomRepository.getDigitalTwinAssets(job.propertyId)).find((item) => item.id === job.resourceId);
+    const asset = (await floorPlanGeometryAgentPort.getDigitalTwinAssets(job.propertyId)).find((item) => item.id === job.resourceId);
     if (!asset) return agentExecutionService.execute(job);
     return executeDigitalTwin(job, asset);
   },
@@ -61,12 +61,12 @@ export const floorPlanExecutionService = {
   async applyApprovedGeometry(result: { propertyId: string; id: string; payload: Record<string, unknown> }) {
     const assetId = typeof result.payload.sourceDigitalTwinAssetId === 'string' ? result.payload.sourceDigitalTwinAssetId : '';
     if (!assetId) return;
-    const assets = await propertyDataRoomRepository.getDigitalTwinAssets(result.propertyId);
+    const assets = await floorPlanGeometryAgentPort.getDigitalTwinAssets(result.propertyId);
     const asset = assets.find((item) => item.id === assetId);
     if (!asset) return;
     const geometry = result.payload.geometry && typeof result.payload.geometry === 'object' ? result.payload.geometry as Record<string, unknown> : undefined;
     const geometryStatus = typeof result.payload.geometryStatus === 'string' ? result.payload.geometryStatus : undefined;
-    await propertyDataRoomRepository.saveDigitalTwinAsset({
+    await floorPlanGeometryAgentPort.saveDigitalTwinAsset({
       ...asset,
       processingStatus: geometry ? 'processing' : asset.processingStatus,
       metadata: { ...asset.metadata, geometryStatus, geometry, geometryAgentResultId: result.id },
