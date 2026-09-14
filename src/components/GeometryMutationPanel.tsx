@@ -5,10 +5,11 @@ import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { geometryMutationEngineService } from '../services/geometryMutationEngineService';
 import { geometryMutationTransactionService } from '../services/geometryMutationTransactionService';
 
-export default function GeometryMutationPanel({ asset, onSaved }: { asset: DigitalTwinAsset; onSaved: () => void | Promise<void> }) {
-  const preview = useMemo(() => geometryMutationEngineService.mutate(asset), [asset]);
-  const productionCandidate = useMemo(() => geometryMutationTransactionService.getProductionCandidate(asset), [asset]);
-  const history = useMemo(() => geometryMutationTransactionService.getHistory(asset), [asset]);
+export default function GeometryMutationPanel({ asset }: { asset: DigitalTwinAsset }) {
+  const [currentAsset, setCurrentAsset] = useState(asset);
+  const preview = useMemo(() => geometryMutationEngineService.mutate(currentAsset), [currentAsset]);
+  const productionCandidate = useMemo(() => geometryMutationTransactionService.getProductionCandidate(currentAsset), [currentAsset]);
+  const history = useMemo(() => geometryMutationTransactionService.getHistory(currentAsset), [currentAsset]);
   const [busy, setBusy] = useState('');
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -17,16 +18,18 @@ export default function GeometryMutationPanel({ asset, onSaved }: { asset: Digit
     setBusy(action); setMessage(''); setError('');
     try {
       if (action === 'save') {
-        const { result } = await geometryMutationTransactionService.runAndSave(asset);
+        const { asset: updated, result } = await geometryMutationTransactionService.runAndSave(currentAsset);
+        setCurrentAsset(updated);
         setMessage(result.validation.valid ? 'Mutation 결과와 검증 결과를 저장했습니다.' : 'Mutation 결과는 저장했지만 validation blocker가 남아 있습니다.');
       } else if (action === 'promote') {
-        await geometryMutationTransactionService.promote(asset);
+        const { asset: updated } = await geometryMutationTransactionService.promote(currentAsset);
+        setCurrentAsset(updated);
         setMessage('검증을 통과한 geometry를 production candidate로 승격했습니다. construction/legal BIM ready 상태는 아닙니다.');
       } else {
-        await geometryMutationTransactionService.rollback(asset);
+        const updated = await geometryMutationTransactionService.rollback(currentAsset);
+        setCurrentAsset(updated);
         setMessage('직전 production candidate 승격을 rollback했습니다. 원본 CAD/검증 데이터는 변경하지 않았습니다.');
       }
-      await onSaved();
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Geometry mutation 작업을 완료하지 못했습니다.');
     } finally { setBusy(''); }
