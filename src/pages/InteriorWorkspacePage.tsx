@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { RefreshRounded, VisibilityRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import InteriorRoomLinkPanel from '../components/InteriorRoomLinkPanel';
+import RoomIntelligencePanel from '../components/RoomIntelligencePanel';
 import type { PropertyFacility } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -42,7 +43,7 @@ export default function InteriorWorkspacePage() {
   const linkedRooms = spaceRoomLinks.filter((item) => item.decision === 'approved').length;
 
   return <main style={{ padding: 28, maxWidth: 1280, margin: '0 auto' }}>
-    <header style={{ marginBottom: 24 }}><p className="eyebrow">INTERIOR INTELLIGENCE · 3D ROOM LINKING</p><h1 style={{ margin: '6px 0' }}>Interior Workspace</h1><p style={{ color: '#667085' }}>실내 사진 → Vision → Human Review → 공간/설비 인벤토리 → Digital Twin Room 연결 → 리노베이션 검토로 이어지는 작업 화면입니다.</p></header>
+    <header style={{ marginBottom: 24 }}><p className="eyebrow">INTERIOR INTELLIGENCE · 3D ROOM LINKING</p><h1 style={{ margin: '6px 0' }}>Interior Workspace</h1><p style={{ color: '#667085' }}>실내 사진 → Vision → Human Review → 공간/설비 인벤토리 → Digital Twin Room 연결 → Room Intelligence → 리노베이션 검토로 이어지는 작업 화면입니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
@@ -60,6 +61,7 @@ export default function InteriorWorkspacePage() {
     <Alert severity="info" sx={{ mb: 2 }}>현재 기본 Vision Provider는 브라우저 로컬 픽셀 분석입니다. 밝기·대비·에지 밀도와 메타데이터를 보조 신호로 사용하며 하자·구조·설비 상태를 자동 확정하지 않습니다.</Alert>
 
     <InteriorRoomLinkPanel propertyId={propertyId} spaces={spaces} assets={bundle.digitalTwinAssets} links={spaceRoomLinks} onSaved={() => load()} />
+    <RoomIntelligencePanel spaces={spaces} assets={bundle.digitalTwinAssets} links={spaceRoomLinks} media={bundle.media} spaceMediaLinks={bundle.spaceMediaLinks ?? []} facilities={facilities} agentResults={bundle.agentResults ?? []} renovationAssessments={bundle.renovationAssessments ?? []} />
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>Vision 분석 기록</h2>
