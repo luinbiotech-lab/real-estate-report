@@ -4,30 +4,31 @@ import { ArrowForwardRounded, HubRounded, RefreshRounded } from '@mui/icons-mate
 import { useNavigate } from 'react-router-dom';
 import { PLATFORM_AGENT_REGISTRY } from '../agents/agentRegistry';
 import { buildAgentHealthSnapshots, type AgentHealthState } from '../agents/agentStatusService';
-import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
-import { propertyRepository } from '../repositories/propertyRepository';
+import { integratorReadPort } from '../agents/agentDataPorts';
+import type { DataRoomBundle } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 
 const HEALTH_COLOR: Record<AgentHealthState, 'default' | 'success' | 'warning' | 'error'> = { idle: 'default', ready: 'success', attention: 'warning', blocked: 'error', deferred: 'default' };
+const EMPTY_BUNDLE: DataRoomBundle = { documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
 
 export default function AgentControlCenterPage() {
   const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
-  const [bundle, setBundle] = useState<Awaited<ReturnType<typeof propertyDataRoomRepository.getBundle>>>({ documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] });
+  const [bundle, setBundle] = useState<DataRoomBundle>(EMPTY_BUNDLE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const selected = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
   const health = useMemo(() => buildAgentHealthSnapshots(bundle), [bundle]);
   const healthByAgent = useMemo(() => new Map(health.map((item) => [item.agentId, item])), [health]);
-  const load = async (id = propertyId) => { if (id) setBundle(await propertyDataRoomRepository.getBundle(id)); };
+  const load = async (id = propertyId) => { if (id) setBundle(await integratorReadPort.getBundle(id)); };
 
   useEffect(() => {
     (async () => {
       try {
-        const list = await propertyRepository.getAll(); setProperties(list);
-        const first = list[0]?.id || ''; setPropertyId(first); if (first) setBundle(await propertyDataRoomRepository.getBundle(first));
+        const list = await integratorReadPort.getProperties(); setProperties(list);
+        const first = list[0]?.id || ''; setPropertyId(first); if (first) setBundle(await integratorReadPort.getBundle(first));
       } catch (reason) { setError(reason instanceof Error ? reason.message : 'Control Center를 불러오지 못했습니다.'); }
       finally { setLoading(false); }
     })();
