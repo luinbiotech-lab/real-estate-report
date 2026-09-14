@@ -3,8 +3,8 @@ import { Alert, Button, Chip, Slider } from '@mui/material';
 import { useMemo, useState } from 'react';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { BUILDING_STACK_VERSION, buildingStackService } from '../services/buildingStackService';
+import { geometryEngineService } from '../services/geometryEngineService';
 import { geometryOperationPlanService } from '../services/geometryOperationPlanService';
-import { geometryOperationPreviewService } from '../services/geometryOperationPreviewService';
 import BuildingGeometryReadinessPanel from './BuildingGeometryReadinessPanel';
 
 function project(point: { x: number; y: number; z: number }, yawDeg: number, pitchDeg: number) {
@@ -26,7 +26,8 @@ function downloadText(content: string, mime: string, fileName: string) {
 export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsset[] }) {
   const stack = useMemo(() => buildingStackService.build(assets), [assets]);
   const operationPlan = useMemo(() => geometryOperationPlanService.build(assets), [assets]);
-  const operationPreview = useMemo(() => geometryOperationPreviewService.build(assets), [assets]);
+  const engineDryRun = useMemo(() => geometryEngineService.dryRun(assets), [assets]);
+  const operationPreview = engineDryRun.preview;
   const [yaw, setYaw] = useState(35);
   const [pitch, setPitch] = useState(-28);
   const [visibleFloors, setVisibleFloors] = useState<Record<string, boolean>>({});
@@ -46,7 +47,7 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
   const exportJson = () => downloadText(JSON.stringify(stack, null, 2), 'application/json;charset=utf-8', `${BUILDING_STACK_VERSION}.json`);
   const exportObj = () => downloadText(buildingStackService.toObj(stack), 'text/plain;charset=utf-8', `${BUILDING_STACK_VERSION}.obj`);
   const exportOperationPlan = () => downloadText(JSON.stringify(operationPlan, null, 2), 'application/json;charset=utf-8', 'daon-geometry-operation-plan-v1.json');
-  const exportOperationPreview = () => downloadText(JSON.stringify(operationPreview, null, 2), 'application/json;charset=utf-8', 'daon-geometry-operation-preview-v1.json');
+  const exportOperationPreview = () => downloadText(JSON.stringify(engineDryRun, null, 2), 'application/json;charset=utf-8', 'daon-geometry-engine-dry-run-v1.json');
 
   return <>
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
@@ -83,15 +84,17 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
 
       <div style={{ marginTop: 16, padding: 14, border: '1px solid #d9e0e8', borderRadius: 10, background: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-          <div><strong>Geometry Operation Preview / 비파괴 실행 미리보기</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>eligible 단계만 대상으로 endpoint snap 결과와 opening/slab cutter volume을 메모리상 후보로 생성합니다.</p></div>
+          <div><strong>Geometry Engine / 비파괴 Dry Run</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>현재 엔진은 endpoint snap preview와 cutter volume 생성까지만 지원하며 실제 union/boolean mutation은 비활성화되어 있습니다.</p></div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Chip size="small" color="primary" variant="outlined" label={`${engineDryRun.engine.label} · ${engineDryRun.engine.mode}`} />
             <Chip size="small" variant="outlined" label={`Snapped walls ${operationPreview.summary.snapCount}`} />
             <Chip size="small" variant="outlined" label={`Opening cutters ${operationPreview.summary.openingCutterCount}`} />
             <Chip size="small" variant="outlined" label={`Slab/Core cutters ${operationPreview.summary.slabCoreCutterCount}`} />
-            <Button size="small" variant="outlined" startIcon={<DownloadRounded />} onClick={exportOperationPreview}>Preview JSON</Button>
+            <Button size="small" variant="outlined" startIcon={<DownloadRounded />} onClick={exportOperationPreview}>Dry Run JSON</Button>
           </div>
         </div>
-        <Alert severity="warning" sx={{ mt: 1.5 }}>이 미리보기는 원본 Digital Twin asset을 변경하지 않습니다. geometryMutated=false, booleanApplied=false 상태입니다.</Alert>
+        {engineDryRun.unsupportedEligibleOperations.length > 0 && <p style={{ margin: '10px 0 0', color: '#b54708', fontSize: 13 }}>Mutation provider 필요: {engineDryRun.unsupportedEligibleOperations.join(', ')}</p>}
+        <Alert severity="warning" sx={{ mt: 1.5 }}>원본 Digital Twin asset은 변경하지 않습니다. mutationApplied=false, geometryMutated=false, booleanApplied=false 상태입니다.</Alert>
       </div>
 
       {!scene ? <Alert severity="info" sx={{ mt: 1.5 }}>각 층 자산에 검증된 층 배치와 reviewed mesh가 준비되면 다층 모델이 표시됩니다.</Alert> : <>
