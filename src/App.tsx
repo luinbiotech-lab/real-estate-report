@@ -35,7 +35,7 @@ const bangbae81511: Property = {
   occupancyStatus: '소유자 직접 사용 / 잔금일 기준 전체 명도 가능', address: '서울 서초구 동광로18길 7', nearbyStation: '7호선 내방역', roadCondition: '양면 도로 코너',
   landAreaSqm: 168.1, landAreaPyeong: 50.85, totalFloorAreaSqm: 349.08, totalFloorAreaPyeong: 105.6, buildingAreaPyeong: 24.8,
   zoning: '제2종일반주거지역(7층 이하)', mainUse: '주택 및 근린생활시설', structure: '세멘벽돌조', basementFloors: 1, groundFloors: 3,
-  completionDate: '1978-07-31', buildingCoverageRate: 48.8, floorAreaRatio: 146.3, parkingSpaces: 0, parkingOfficial: undefined, parkingField: 2, parkingFieldNote: '현장 이용 기준', internalPhotoAllowed: false,
+  completionDate: '1978-07-31', buildingCoverageRate: 0, floorAreaRatio: 0, parkingSpaces: 0, parkingOfficial: undefined, parkingField: 2, parkingFieldNote: '현장 이용 기준', internalPhotoAllowed: false,
   mainImage: '/daon-master/bangbae-815-11-main.jpg', mapImage: '/daon-master/bangbae-815-11-map.jpg',
   features: '래미안 원페를라 인접\n서래마을·함지박사거리 생활권\n복합 코너 대지, 양면 도로 접면\n주거 배후수요 + 생활편의 수요',
   investmentPoints: '소유자 직접 사용과 잔금일 기준 전체 명도 협의 가능\n사옥·주거업무 복합공간 검토 가능\nF&B 플래그십·갤러리·문화공간 검토 가능\n기존 건물 활용과 장기 신축 가능성을 함께 검토할 수 있는 자산',
@@ -57,7 +57,20 @@ export default function App() {
     const existingBangbae = await propertyRepository.getById(bangbae81511.id);
     if (!existingBangbae) await propertyRepository.create(bangbae81511);
     else {
-      const normalizedBangbae: Property = { ...existingBangbae, managerName: DAON_MANAGER, managerPhone: DAON_PHONE, managerEmail: DAON_EMAIL, companyName: DAON_COMPANY, internalPhotoAllowed: false, parkingField: existingBangbae.parkingField ?? 2, parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준', mainImage: existingBangbae.mainImage || bangbae81511.mainImage, mapImage: existingBangbae.mapImage || bangbae81511.mapImage };
+      const normalizedBangbae: Property = {
+        ...existingBangbae,
+        managerName: DAON_MANAGER,
+        managerPhone: DAON_PHONE,
+        managerEmail: DAON_EMAIL,
+        companyName: DAON_COMPANY,
+        internalPhotoAllowed: false,
+        parkingField: existingBangbae.parkingField ?? 2,
+        parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준',
+        mainImage: existingBangbae.mainImage || bangbae81511.mainImage,
+        mapImage: existingBangbae.mapImage || bangbae81511.mapImage,
+        buildingCoverageRate: existingBangbae.buildingCoverageRate === 48.8 ? 0 : existingBangbae.buildingCoverageRate,
+        floorAreaRatio: existingBangbae.floorAreaRatio === 146.3 ? 0 : existingBangbae.floorAreaRatio,
+      };
       if (JSON.stringify(normalizedBangbae) !== JSON.stringify(existingBangbae)) await propertyRepository.update({ ...normalizedBangbae, updatedAt: new Date().toISOString() });
     }
     const stored = await settingsRepository.get();
