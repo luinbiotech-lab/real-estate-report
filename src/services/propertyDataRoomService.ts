@@ -1,13 +1,15 @@
 import { REQUIRED_DOCUMENT_TYPES } from '../domain/propertyDataRoom/labels';
 import { isVerificationFieldKey } from '../domain/propertyDataRoom/verificationFieldRegistry';
-import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentExtractionMethod, DocumentExtractionStatus, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
+import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentExtractionMethod, DocumentExtractionStatus, DocumentType, MediaCategory, PropertyDocument, PropertyMedia, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import type { Property } from '../types';
 
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
+const MAX_MEDIA_BYTES = 12 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
 const DOCUMENT_NAME_RULES: Array<{ type: DocumentType; patterns: RegExp[] }> = [
   { type: 'building_register', patterns: [/건축물대장/i, /건축물.?대장/i, /building.?register/i] },
@@ -23,6 +25,15 @@ const DOCUMENT_NAME_RULES: Array<{ type: DocumentType; patterns: RegExp[] }> = [
   { type: 'development', patterns: [/개발계획/i, /정비계획/i, /development/i] },
   { type: 'due_diligence', patterns: [/실사/i, /due.?diligence/i] },
 ];
+
+async function dataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string' ? resolve(reader.result) : reject(new Error('이미지 변환 결과가 올바르지 않습니다.'));
+    reader.onerror = () => reject(new Error('이미지 파일을 읽지 못했습니다.'));
+    reader.readAsDataURL(file);
+  });
+}
 
 export const propertyDataRoomService = {
   getBundle: (propertyId: string) => propertyDataRoomRepository.getBundle(propertyId),
@@ -57,6 +68,49 @@ export const propertyDataRoomService = {
     if (!ALLOWED_DOCUMENT_TYPES.includes(file.type)) return 'PDF, JPG, PNG, WEBP 파일만 등록할 수 있습니다.';
     if (file.size > MAX_DOCUMENT_BYTES) return '파일은 20MB 이하만 등록할 수 있습니다.';
     return '';
+  },
+  validateMedia(file: File) {
+    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) return 'JPG, PNG, WEBP 이미지만 등록할 수 있습니다.';
+    if (file.size > MAX_MEDIA_BYTES) return '이미지는 12MB 이하만 등록할 수 있습니다.';
+    return '';
+  },
+  async uploadMedia(propertyId: string, file: File, input: { category: MediaCategory; caption?: string; isPrimary?: boolean }): Promise<PropertyMedia> {
+    const error = this.validateMedia(file); if (error) throw new Error(error);
+    const now = new Date().toISOString();
+    const id = crypto.randomUUID();
+    const media: PropertyMedia = {
+      id,
+      propertyId,
+      mediaType: 'image',
+      category: input.category,
+      storagePath: `properties/${propertyId}/media/${id}-${file.name}`,
+      url: await dataUrl(file),
+      fileData: file,
+      fileName: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+      caption: input.caption?.trim() || file.name.replace(/\.[^.]+$/, ''),
+      aiTags: [],
+      verificationStatus: 'unverified',
+      sortOrder: Date.now(),
+      isPrimary: Boolean(input.isPrimary),
+      createdAt: now,
+      updatedAt: now,
+    };
+    const saved = await propertyDataRoomRepository.createMedia(media);
+    await propertyDataRoomRepository.saveDataSource({
+      id: `media-source:${id}`,
+      propertyId,
+      resourceType: 'property_media',
+      sourceType: 'manual',
+      sourceName: saved.caption || saved.fileName,
+      sourceReference: saved.id,
+      collectedAt: now,
+      verificationStatus: 'unverified',
+      metadata: { mediaId: saved.id, category: saved.category, fileName: saved.fileName, mimeType: saved.mimeType, fileSize: saved.fileSize },
+      createdAt: now,
+    });
+    return saved;
   },
   async uploadDocument(propertyId: string, file: File, input: { documentType: DocumentType; title: string; sourceName: string }): Promise<PropertyDocument> {
     const error = this.validateDocument(file); if (error) throw new Error(error);
