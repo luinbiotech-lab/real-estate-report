@@ -10,6 +10,7 @@ const slabGeometry = readFileSync('src/services/slabGeometryService.ts', 'utf8')
 const slabCore = readFileSync('src/services/slabCoreAlignmentService.ts', 'utf8');
 const verticalCore = readFileSync('src/services/verticalCoreService.ts', 'utf8');
 const buildingStack = readFileSync('src/services/buildingStackService.ts', 'utf8');
+const operationPlan = readFileSync('src/services/geometryOperationPlanService.ts', 'utf8');
 const remoteInspection = readFileSync('src/services/remoteInspectionService.ts', 'utf8');
 const twinPackage = readFileSync('src/services/digitalTwinPackageService.ts', 'utf8');
 const twinPage = readFileSync('src/pages/DigitalTwinWorkspacePage.tsx', 'utf8');
@@ -34,7 +35,10 @@ if (!verticalCore.includes("review.decision === 'approved' && (review.semantic =
 if (!verticalCore.includes('productionConnectivityReady: false') || !verticalCore.includes('alignmentStatus: sorted.length >= 2')) throw new Error('Vertical core alignment safety gate is incomplete.');
 if (!buildingStack.includes("BUILDING_STACK_VERSION = 'daon-building-stack-v1'") || !buildingStack.includes('productionModelReady: false') || !buildingStack.includes('buildingStackToObj')) throw new Error('Multi-floor building stack export is incomplete.');
 if (!buildingStack.includes('NOT FOR CONSTRUCTION / NOT PRODUCTION BIM') || !buildingStack.includes('openingBooleanApplied=false')) throw new Error('Building stack export safety guard is missing.');
+if (!operationPlan.includes("schemaVersion: 'daon-geometry-operation-plan-v1'") || !operationPlan.includes("type: 'wall_endpoint_snap'") || !operationPlan.includes("type: 'wall_union_miter'") || !operationPlan.includes("type: 'opening_boolean'") || !operationPlan.includes("type: 'slab_core_boolean'") || !operationPlan.includes("type: 'floor_stack_publish'")) throw new Error('Geometry operation plan sequence is incomplete.');
+if (!operationPlan.includes('executableNow: false') || !operationPlan.includes('applied: false')) throw new Error('Geometry operation plan must remain non-mutating before explicit execution engine.');
 if (!remoteInspection.includes("REMOTE_INSPECTION_VERSION = 'daon-remote-inspection-v1'") || !remoteInspection.includes('buildRemoteInspectionHtml') || !remoteInspection.includes('productionReady: false')) throw new Error('Multi-floor remote inspection package/html is incomplete.');
+if (!remoteInspection.includes('operationPlan') || !remoteInspection.includes('Geometry Operation Plan') || !remoteInspection.includes('operationEligibleCount')) throw new Error('Remote inspection must expose geometry operation plan/readiness.');
 if (!twinPackage.includes('wallGeometryMergeEligible') || !twinPackage.includes('openingBooleanEligible') || !twinPackage.includes('slabCoreAligned')) throw new Error('Twin handoff readiness is missing merge/boolean/slab-core eligibility signals.');
 if (!twinPackage.includes('wallMergeEligibility') || !twinPackage.includes('openingBooleanEligibility') || !twinPackage.includes('slabCoreAlignment') || !twinPackage.includes('productionMeshReady: false')) throw new Error('Twin handoff geometry eligibility payload is incomplete.');
 if (!wallPanel.includes('Wall Model / 벽 두께 검증') || !wallPanel.includes('자동 추정값만으로 벽 두께를 확정하지 않습니다')) throw new Error('Wall Human Review UI is incomplete.');
@@ -44,7 +48,8 @@ if (!floorPanel.includes('Floor Stack / 층 배치·슬래브') || !floorPanel.i
 if (!slabPanel.includes('Slab Geometry / 슬래브 형상 후보') || !slabPanel.includes('productionSlabReady=false')) throw new Error('Slab geometry review UI is incomplete.');
 if (!corePanel.includes('Vertical Core / 계단·엘리베이터 층간 연결') || !corePanel.includes('자동 연결은 하지 않습니다') || !corePanel.includes('production connectivity')) throw new Error('Vertical core Human Review UI is incomplete.');
 if (!stackPanel.includes('Multi-floor Building Model / 층간 Stack') || !stackPanel.includes('Building OBJ') || !stackPanel.includes('Building JSON') || !stackPanel.includes('BuildingGeometryReadinessPanel')) throw new Error('Multi-floor building stack/remote inspection viewer is incomplete.');
+if (!stackPanel.includes('Geometry Operation Plan / 실행 전 Manifest') || !stackPanel.includes('Operation Plan JSON')) throw new Error('Geometry operation plan UI/export is incomplete.');
 if (!readinessPanel.includes('Geometry Readiness · Remote Inspection') || !readinessPanel.includes('Remote Inspection HTML') || !readinessPanel.includes('BOOLEAN ELIGIBLE') || !readinessPanel.includes('MERGE READY')) throw new Error('Geometry readiness/remote inspection UI is incomplete.');
 for (const component of ['WallModelPanel', 'WallJunctionPanel', 'OpeningCutPanel', 'FloorPlacementPanel', 'SlabGeometryPanel', 'VerticalCorePanel', 'BuildingStackPanel']) if (!twinPage.includes(component)) throw new Error(`Digital Twin Workspace missing ${component}.`);
 
-console.log('DA:ON geometry merge + opening boolean + slab/core alignment + remote inspection integrity: PASS');
+console.log('DA:ON geometry operation plan + merge + boolean + slab/core + remote inspection integrity: PASS');
