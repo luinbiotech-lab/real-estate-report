@@ -1,5 +1,5 @@
 import type { AgentJob, AgentResult, AgentReview, AgentReviewDecision, DigitalTwinAsset, MediaCategory, PropertyMedia, PropertySpace, SpaceMediaLink, SpaceType } from '../domain/propertyDataRoom/types';
-import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { floorPlanGeometryAgentPort, interiorVisionAgentPort, spaceAgentPort } from '../agents/agentDataPorts';
 import { agentOrchestratorService } from './agentOrchestratorService';
 
 type MediaCandidate = {
@@ -66,17 +66,14 @@ function classifyMedia(media: PropertyMedia): MediaCandidate {
   const text = combinedText(media);
   const matched = CATEGORY_RULES.find((rule) => rule.patterns.some((pattern) => pattern.test(text)));
   const suggestedCategory = matched?.category ?? (media.category === 'other' ? 'interior' : media.category);
-  const inferredFloor = media.floor || inferFloor(text);
-  const inferredRoom = media.room || inferRoom(text, suggestedCategory);
-  const confidence = matched ? 0.82 : media.category !== 'other' ? 0.7 : 0.5;
   return {
     mediaId: media.id,
     currentCategory: media.category,
     suggestedCategory,
-    suggestedFloor: inferredFloor,
-    suggestedRoom: inferredRoom,
+    suggestedFloor: media.floor || inferFloor(text),
+    suggestedRoom: media.room || inferRoom(text, suggestedCategory),
     tags: Array.from(new Set([...media.aiTags, ...(matched?.tags ?? []), suggestedCategory])),
-    confidence,
+    confidence: matched ? 0.82 : media.category !== 'other' ? 0.7 : 0.5,
   };
 }
 
@@ -99,75 +96,38 @@ function floorPlanAssetType(fileName: string, mimeType: string): DigitalTwinAsse
 
 async function executeInterior(job: AgentJob) {
   const media = job.resourceType === 'media' && job.resourceId
-    ? [await propertyDataRoomRepository.getMediaItem(job.resourceId)].filter(Boolean) as PropertyMedia[]
-    : (await propertyDataRoomRepository.getMedia(job.propertyId)).filter((item) => item.mediaType === 'image' && item.category !== 'floor_plan');
+    ? [await interiorVisionAgentPort.getMediaItem(job.resourceId)].filter(Boolean) as PropertyMedia[]
+    : (await interiorVisionAgentPort.getMedia(job.propertyId)).filter((item) => item.mediaType === 'image' && item.category !== 'floor_plan');
   const candidates = media.map(classifyMedia);
   const confidence = candidates.length ? candidates.reduce((sum, item) => sum + item.confidence, 0) / candidates.length : 0;
-  return agentOrchestratorService.complete(job, {
-    resultType: 'media_classification_candidate',
-    payload: { candidates, method: 'local_metadata_rules', adapterVersion: 'interior-metadata-v1' },
-    confidence,
-    requiresReview: candidates.length > 0,
-  });
+  return agentOrchestratorService.complete(job, { resultType: 'media_classification_candidate', payload: { candidates, method: 'local_metadata_rules', adapterVersion: 'interior-metadata-v1' }, confidence, requiresReview: candidates.length > 0 });
 }
 
 async function executeFloorPlan(job: AgentJob) {
-  if (!job.resourceId) {
-    return agentOrchestratorService.complete(job, {
-      resultType: 'floor_plan_intake_candidate', payload: { message: '도면 문서·미디어·원본 CAD 자산을 연결해야 합니다.' }, confidence: 0, requiresReview: true,
-    });
-  }
+  if (!job.resourceId) return agentOrchestratorService.complete(job, { resultType: 'floor_plan_intake_candidate', payload: { message: '도면 문서·미디어·원본 CAD 자산을 연결해야 합니다.' }, confidence: 0, requiresReview: true });
+
   if (job.resourceType === 'digital_twin') {
-    const asset = (await propertyDataRoomRepository.getDigitalTwinAssets(job.propertyId)).find((item) => item.id === job.resourceId);
+    const asset = (await floorPlanGeometryAgentPort.getDigitalTwinAssets(job.propertyId)).find((item) => item.id === job.resourceId);
     if (!asset) throw new Error('Floor Plan Agent가 참조할 Digital Twin 원본을 찾을 수 없습니다.');
     const floor = asset.floor || inferFloor(asset.fileName || '');
-    return agentOrchestratorService.complete(job, {
-      resultType: 'floor_plan_intake_candidate',
-      payload: {
-        sourceDigitalTwinAssetId: asset.id,
-        fileName: asset.fileName || '',
-        mimeType: asset.mimeType || '',
-        storagePath: asset.storagePath,
-        assetType: asset.assetType,
-        floor,
-        nextAgent: 'digital_twin',
-      },
-      confidence: floor ? 0.88 : 0.75,
-      requiresReview: true,
-    });
+    return agentOrchestratorService.complete(job, { resultType: 'floor_plan_intake_candidate', payload: { sourceDigitalTwinAssetId: asset.id, fileName: asset.fileName || '', mimeType: asset.mimeType || '', storagePath: asset.storagePath, assetType: asset.assetType, floor, nextAgent: 'digital_twin' }, confidence: floor ? 0.88 : 0.75, requiresReview: true });
   }
+
   if (job.resourceType === 'document') {
-    const document = await propertyDataRoomRepository.getDocument(job.resourceId);
+    const document = await floorPlanGeometryAgentPort.getDocument(job.resourceId);
     if (!document) throw new Error('Floor Plan Agent가 참조할 문서를 찾을 수 없습니다.');
     const floor = inferFloor(`${document.title} ${document.originalFileName}`);
-    return agentOrchestratorService.complete(job, {
-      resultType: 'floor_plan_intake_candidate',
-      payload: {
-        sourceDocumentId: document.id,
-        fileName: document.originalFileName,
-        mimeType: document.mimeType,
-        storagePath: document.storagePath,
-        assetType: floorPlanAssetType(document.originalFileName, document.mimeType),
-        floor,
-        nextAgent: 'digital_twin',
-      },
-      confidence: floor ? 0.82 : 0.7,
-      requiresReview: true,
-    });
+    return agentOrchestratorService.complete(job, { resultType: 'floor_plan_intake_candidate', payload: { sourceDocumentId: document.id, fileName: document.originalFileName, mimeType: document.mimeType, storagePath: document.storagePath, assetType: floorPlanAssetType(document.originalFileName, document.mimeType), floor, nextAgent: 'digital_twin' }, confidence: floor ? 0.82 : 0.7, requiresReview: true });
   }
-  const media = await propertyDataRoomRepository.getMediaItem(job.resourceId);
+
+  const media = await floorPlanGeometryAgentPort.getMediaItem(job.resourceId);
   if (!media) throw new Error('Floor Plan Agent가 참조할 미디어를 찾을 수 없습니다.');
   const floor = media.floor || inferFloor(combinedText(media));
-  return agentOrchestratorService.complete(job, {
-    resultType: 'floor_plan_intake_candidate',
-    payload: { sourceMediaId: media.id, fileName: media.fileName, mimeType: media.mimeType, storagePath: media.storagePath, assetType: 'scanned_plan', floor, nextAgent: 'digital_twin' },
-    confidence: floor ? 0.8 : 0.65,
-    requiresReview: true,
-  });
+  return agentOrchestratorService.complete(job, { resultType: 'floor_plan_intake_candidate', payload: { sourceMediaId: media.id, fileName: media.fileName, mimeType: media.mimeType, storagePath: media.storagePath, assetType: 'scanned_plan', floor, nextAgent: 'digital_twin' }, confidence: floor ? 0.8 : 0.65, requiresReview: true });
 }
 
 async function executeSpace(job: AgentJob) {
-  const media = await propertyDataRoomRepository.getMedia(job.propertyId);
+  const media = await spaceAgentPort.getMedia(job.propertyId);
   const groups = new Map<string, SpaceCandidate>();
   for (const item of media.filter((entry) => entry.mediaType === 'image' && entry.category !== 'floor_plan')) {
     const floor = item.floor || inferFloor(combinedText(item));
@@ -181,28 +141,15 @@ async function executeSpace(job: AgentJob) {
   }
   const spaces = [...groups.values()];
   const confidence = spaces.length ? spaces.reduce((sum, item) => sum + item.confidence, 0) / spaces.length : 0;
-  return agentOrchestratorService.complete(job, {
-    resultType: 'space_model_candidate',
-    payload: { spaces, method: 'media_grouping', adapterVersion: 'space-model-v1' },
-    confidence,
-    requiresReview: spaces.length > 0,
-  });
+  return agentOrchestratorService.complete(job, { resultType: 'space_model_candidate', payload: { spaces, method: 'media_grouping', adapterVersion: 'space-model-v1' }, confidence, requiresReview: spaces.length > 0 });
 }
 
 async function applyMediaClassification(result: AgentResult) {
   const candidates = Array.isArray(result.payload.candidates) ? result.payload.candidates as MediaCandidate[] : [];
   for (const candidate of candidates) {
-    const media = await propertyDataRoomRepository.getMediaItem(candidate.mediaId);
+    const media = await interiorVisionAgentPort.getMediaItem(candidate.mediaId);
     if (!media || media.propertyId !== result.propertyId) continue;
-    await propertyDataRoomRepository.updateMedia({
-      ...media,
-      category: candidate.suggestedCategory,
-      floor: candidate.suggestedFloor || media.floor,
-      room: candidate.suggestedRoom || media.room,
-      aiTags: Array.from(new Set([...media.aiTags, ...candidate.tags])),
-      verificationStatus: 'confirmed',
-      updatedAt: new Date().toISOString(),
-    });
+    await interiorVisionAgentPort.updateMedia({ ...media, category: candidate.suggestedCategory, floor: candidate.suggestedFloor || media.floor, room: candidate.suggestedRoom || media.room, aiTags: Array.from(new Set([...media.aiTags, ...candidate.tags])), verificationStatus: 'confirmed', updatedAt: new Date().toISOString() });
   }
   if (candidates.length) await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'space', 'dependency', { sourceAgentResultId: result.id });
 }
@@ -216,18 +163,15 @@ async function applyFloorPlan(result: AgentResult) {
   const fileName = typeof payload.fileName === 'string' ? payload.fileName : '';
   const floor = typeof payload.floor === 'string' ? payload.floor : undefined;
   const assetType = typeof payload.assetType === 'string' ? payload.assetType as DigitalTwinAsset['assetType'] : 'floor_plan';
-  const existing = await propertyDataRoomRepository.getDigitalTwinAssets(result.propertyId);
+  const existing = await floorPlanGeometryAgentPort.getDigitalTwinAssets(result.propertyId);
   const directAsset = sourceDigitalTwinAssetId ? existing.find((item) => item.id === sourceDigitalTwinAssetId) : undefined;
   if (directAsset) {
-    await propertyDataRoomRepository.saveDigitalTwinAsset({ ...directAsset, floor: floor || directAsset.floor, processingStatus: 'pending', metadata: { ...directAsset.metadata, sourceAgentResultId: result.id }, updatedAt: new Date().toISOString() });
+    await floorPlanGeometryAgentPort.saveDigitalTwinAsset({ ...directAsset, floor: floor || directAsset.floor, processingStatus: 'pending', metadata: { ...directAsset.metadata, sourceAgentResultId: result.id }, updatedAt: new Date().toISOString() });
   } else {
     const duplicate = existing.find((item) => item.sourceDocumentId === sourceDocumentId && sourceDocumentId);
     if (!duplicate) {
       const now = new Date().toISOString();
-      await propertyDataRoomRepository.saveDigitalTwinAsset({
-        id: crypto.randomUUID(), propertyId: result.propertyId, assetType, fileFormat: fileName.split('.').pop()?.toLowerCase() || 'unknown', storagePath,
-        fileName, sourceDocumentId, floor, version: 1, processingStatus: 'pending', metadata: { sourceMediaId, sourceAgentResultId: result.id }, createdAt: now, updatedAt: now,
-      });
+      await floorPlanGeometryAgentPort.saveDigitalTwinAsset({ id: crypto.randomUUID(), propertyId: result.propertyId, assetType, fileFormat: fileName.split('.').pop()?.toLowerCase() || 'unknown', storagePath, fileName, sourceDocumentId, floor, version: 1, processingStatus: 'pending', metadata: { sourceMediaId, sourceAgentResultId: result.id }, createdAt: now, updatedAt: now });
     }
   }
   await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'digital_twin', 'dependency', { sourceAgentResultId: result.id, sourceDocumentId, sourceMediaId, sourceDigitalTwinAssetId });
@@ -235,20 +179,17 @@ async function applyFloorPlan(result: AgentResult) {
 
 async function applySpaceModel(result: AgentResult) {
   const candidates = Array.isArray(result.payload.spaces) ? result.payload.spaces as SpaceCandidate[] : [];
-  const existingSpaces = await propertyDataRoomRepository.getSpaces(result.propertyId);
-  const existingLinks = await propertyDataRoomRepository.getSpaceMediaLinks(result.propertyId);
+  const existingSpaces = await spaceAgentPort.getSpaces(result.propertyId);
+  const existingLinks = await spaceAgentPort.getSpaceMediaLinks(result.propertyId);
   for (const candidate of candidates) {
     const existing = existingSpaces.find((space) => space.floor === candidate.floor && space.name === candidate.name && space.spaceType === candidate.spaceType);
     const now = new Date().toISOString();
-    const space: PropertySpace = existing ?? {
-      id: crypto.randomUUID(), propertyId: result.propertyId, name: candidate.name, spaceType: candidate.spaceType, floor: candidate.floor, roomCode: candidate.roomCode,
-      sourceType: 'agent', sourceAgentResultId: result.id, verificationStatus: 'confirmed', createdAt: now, updatedAt: now,
-    };
-    if (!existing) await propertyDataRoomRepository.saveSpace(space);
+    const space: PropertySpace = existing ?? { id: crypto.randomUUID(), propertyId: result.propertyId, name: candidate.name, spaceType: candidate.spaceType, floor: candidate.floor, roomCode: candidate.roomCode, sourceType: 'agent', sourceAgentResultId: result.id, verificationStatus: 'confirmed', createdAt: now, updatedAt: now };
+    if (!existing) await spaceAgentPort.saveSpace(space);
     for (const mediaId of candidate.mediaIds) {
       if (existingLinks.some((link) => link.spaceId === space.id && link.mediaId === mediaId)) continue;
       const link: SpaceMediaLink = { id: crypto.randomUUID(), propertyId: result.propertyId, spaceId: space.id, mediaId, confidence: candidate.confidence, sourceAgentResultId: result.id, createdAt: now };
-      await propertyDataRoomRepository.saveSpaceMediaLink(link);
+      await spaceAgentPort.saveSpaceMediaLink(link);
     }
   }
 }
@@ -264,15 +205,10 @@ export const agentExecutionService = {
     let job = sourceJob;
     try {
       if (job.status !== 'running') job = await agentOrchestratorService.start(job);
-      if (job.agentType === 'interior_vision') return await executeInterior(job);
-      if (job.agentType === 'floor_plan') return await executeFloorPlan(job);
-      if (job.agentType === 'space') return await executeSpace(job);
-      return await agentOrchestratorService.complete(job, {
-        resultType: 'adapter_pending',
-        payload: { agentType: job.agentType, message: '실행 어댑터 연결 대기', requestedInput: job.input },
-        confidence: 0,
-        requiresReview: true,
-      });
+      if (job.agentType === 'interior_vision') return executeInterior(job);
+      if (job.agentType === 'floor_plan') return executeFloorPlan(job);
+      if (job.agentType === 'space') return executeSpace(job);
+      return agentOrchestratorService.complete(job, { resultType: 'adapter_pending', payload: { agentType: job.agentType, message: '실행 어댑터 연결 대기', requestedInput: job.input }, confidence: 0, requiresReview: true });
     } catch (error) {
       await agentOrchestratorService.fail(job, error);
       throw error;
@@ -283,10 +219,7 @@ export const agentExecutionService = {
     const reviewed = await agentOrchestratorService.review(job, review, decision, note, reviewedBy);
     if (decision === 'approved') {
       try { await applyResult(result); }
-      catch (error) {
-        await agentOrchestratorService.fail(reviewed.job, error);
-        throw error;
-      }
+      catch (error) { await agentOrchestratorService.fail(reviewed.job, error); throw error; }
     }
     return reviewed;
   },
