@@ -1,5 +1,5 @@
 import type { AgentJob, AgentResult, DigitalTwinAsset } from '../domain/propertyDataRoom/types';
-import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { digitalTwinAgentPort } from '../agents/agentDataPorts';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { readScaleCalibration } from './measurementCalibrationService';
 import { readOpeningDimensions } from './openingDimensionService';
@@ -118,7 +118,7 @@ export const digitalTwinExecutionService = {
     let job = sourceJob;
     try {
       if (job.status !== 'running') job = await agentOrchestratorService.start(job);
-      const assets = await propertyDataRoomRepository.getDigitalTwinAssets(job.propertyId);
+      const assets = await digitalTwinAgentPort.getDigitalTwinAssets(job.propertyId);
       const targetIds = [job.input.sourceDigitalTwinAssetId, job.resourceId].filter((value): value is string => typeof value === 'string' && Boolean(value));
       const target = targetIds.length
         ? assets.filter((asset) => targetIds.includes(asset.id))
@@ -145,13 +145,13 @@ export const digitalTwinExecutionService = {
   async applyApproved(result: AgentResult) {
     if (result.resultType !== 'digital_twin_model_candidate') return;
     const models = Array.isArray(result.payload.models) ? result.payload.models as Array<Record<string, unknown>> : [];
-    const assets = await propertyDataRoomRepository.getDigitalTwinAssets(result.propertyId);
+    const assets = await digitalTwinAgentPort.getDigitalTwinAssets(result.propertyId);
     for (const model of models) {
       const assetId = typeof model.assetId === 'string' ? model.assetId : '';
       const asset = assets.find((item) => item.id === assetId);
       if (!asset) continue;
       const accepted = model.status === 'model_candidate';
-      await propertyDataRoomRepository.saveDigitalTwinAsset({ ...asset, processingStatus: accepted ? 'ready' : asset.processingStatus, metadata: { ...asset.metadata, digitalTwinModel: model, digitalTwinAgentResultId: result.id }, updatedAt: new Date().toISOString() });
+      await digitalTwinAgentPort.saveDigitalTwinAsset({ ...asset, processingStatus: accepted ? 'ready' : asset.processingStatus, metadata: { ...asset.metadata, digitalTwinModel: model, digitalTwinAgentResultId: result.id }, updatedAt: new Date().toISOString() });
     }
   },
 };
