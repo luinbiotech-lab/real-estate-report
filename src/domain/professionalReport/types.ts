@@ -39,6 +39,18 @@ export interface ProfessionalReportFloor {
   sourceIds: string[];
 }
 
+export interface ProfessionalReportComparable {
+  label: string;
+  address: string;
+  salePrice: number;
+  landAreaPyeong: number;
+  landUnitPrice: number;
+  approvalYear: number | null;
+  tradeDate: string;
+  sourceId: string;
+  verificationStatus: VerificationStatus;
+}
+
 export interface ProfessionalReportViewModel {
   identity: {
     id: string; propertyNumber: ReportValue<string>; name: ReportValue<string>; buildingName: ReportValue<string>;
@@ -82,7 +94,7 @@ export interface ProfessionalReportViewModel {
   };
   investment: {
     features: ReportValue<string>; investmentPoints: ReportValue<string>; developmentPlan: ReportValue<string>;
-    recommendedUse: ReportValue<string>; nearbyTransactions: ReportValue<string>; overallOpinion: ReportValue<string>;
+    recommendedUse: ReportValue<string>; nearbyTransactions: ReportValue<string>; comparables: ProfessionalReportComparable[]; overallOpinion: ReportValue<string>;
   };
   risks: { risks: ReportValue<string> };
   sources: { items: ProfessionalReportSource[]; count: number };
