@@ -36,5 +36,6 @@ export const PLATFORM_AGENT_REGISTRY: PlatformAgentDefinition[] = [
 export const PLATFORM_AGENT_BY_ID = new Map(PLATFORM_AGENT_REGISTRY.map((agent) => [agent.id, agent]));
 
 export function getPlatformAgent(id: string) {
-  return PLATFORM_AGENT_REGISTRY.find((agent) => agent.id === id);
+  const normalized = id.replaceAll('-', '_');
+  return PLATFORM_AGENT_REGISTRY.find((agent) => agent.id === normalized);
 }
