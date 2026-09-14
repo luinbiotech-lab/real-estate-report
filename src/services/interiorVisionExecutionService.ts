@@ -1,5 +1,5 @@
-import type { AgentJob, MediaCategory, PropertyMedia } from '../domain/propertyDataRoom/types';
-import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import type { AgentJob, AgentResult, MediaCategory, PropertyMedia } from '../domain/propertyDataRoom/types';
+import { interiorVisionAgentPort } from '../agents/agentDataPorts';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { visionProviderService } from './visionProviderService';
 
@@ -75,8 +75,8 @@ export const interiorVisionExecutionService = {
     try {
       if (job.status !== 'running') job = await agentOrchestratorService.start(job);
       const media = job.resourceType === 'media' && job.resourceId
-        ? [await propertyDataRoomRepository.getMediaItem(job.resourceId)].filter(Boolean) as PropertyMedia[]
-        : (await propertyDataRoomRepository.getMedia(job.propertyId)).filter((item) => item.mediaType === 'image' && item.category !== 'floor_plan');
+        ? [await interiorVisionAgentPort.getMediaItem(job.resourceId)].filter(Boolean) as PropertyMedia[]
+        : (await interiorVisionAgentPort.getMedia(job.propertyId)).filter((item) => item.mediaType === 'image' && item.category !== 'floor_plan');
       const candidates = await Promise.all(media.map(classify));
       const confidence = candidates.length ? candidates.reduce((sum, item) => sum + item.confidence, 0) / candidates.length : 0;
       return agentOrchestratorService.complete(job, {
@@ -95,5 +95,24 @@ export const interiorVisionExecutionService = {
       await agentOrchestratorService.fail(job, error);
       throw error;
     }
+  },
+
+  async applyApproved(result: AgentResult) {
+    if (result.resultType !== 'media_classification_candidate') return;
+    const candidates = Array.isArray(result.payload.candidates) ? result.payload.candidates as MediaCandidate[] : [];
+    for (const candidate of candidates) {
+      const media = await interiorVisionAgentPort.getMediaItem(candidate.mediaId);
+      if (!media || media.propertyId !== result.propertyId) continue;
+      await interiorVisionAgentPort.updateMedia({
+        ...media,
+        category: candidate.suggestedCategory,
+        floor: candidate.suggestedFloor || media.floor,
+        room: candidate.suggestedRoom || media.room,
+        aiTags: Array.from(new Set([...media.aiTags, ...candidate.tags])),
+        verificationStatus: 'confirmed',
+        updatedAt: new Date().toISOString(),
+      });
+    }
+    if (candidates.length) await agentOrchestratorService.queuePropertyAgent(result.propertyId, 'space', 'dependency', { sourceAgentResultId: result.id });
   },
 };
