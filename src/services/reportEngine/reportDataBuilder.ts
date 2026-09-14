@@ -43,6 +43,15 @@ function collectValues(input: unknown, path = '', result: Array<{ path: string; 
   return result;
 }
 
+function floorSortKey(floor?: string) {
+  const normalized = String(floor ?? '').trim().toUpperCase();
+  const basement = normalized.match(/^B(\d+)$/);
+  if (basement) return -Number(basement[1]);
+  const ground = normalized.match(/^(\d+)(?:F|층)?$/);
+  if (ground) return Number(ground[1]);
+  return Number.NEGATIVE_INFINITY;
+}
+
 export function buildProfessionalReportViewModel(property: Property, bundle: DataRoomBundle, options: BuilderOptions = {}): ProfessionalReportViewModel {
   const verifications = bundle.verifications; const sources = bundle.dataSources;
   const context = (fieldKey: string, extra: Partial<Parameters<typeof reportValue>[1]> = {}) => ({ fieldKey, verifications, sources, ...extra });
@@ -70,6 +79,27 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     negotiable: reportValue(property.negotiable, context('negotiable', { formatter: ((value: boolean) => value ? '협의 가능' : '협의 없음') as (value: never) => string })),
     occupancyStatus: text('occupancyStatus'),
   };
+  const floorSpaces = [...(bundle.spaces ?? [])]
+    .filter((space) => space.floor)
+    .sort((left, right) => floorSortKey(right.floor) - floorSortKey(left.floor) || left.name.localeCompare(right.name, 'ko'))
+    .map((space) => {
+      const fieldKey = `space:${space.id}`;
+      const verification = bundle.verifications.find((item) => item.fieldKey === fieldKey);
+      const sourceIds = bundle.dataSources
+        .filter((source) => source.fieldKey === fieldKey || source.sourceReference === space.id || source.metadata?.spaceId === space.id)
+        .map((source) => source.id);
+      return {
+        id: space.id,
+        floor: space.floor || '',
+        name: space.name,
+        spaceType: space.spaceType,
+        areaSqm: typeof space.areaSqm === 'number' ? space.areaSqm : null,
+        use: space.recommendedUse || space.name,
+        currentCondition: space.currentCondition || '',
+        verificationStatus: verification?.status ?? space.verificationStatus,
+        sourceIds,
+      };
+    });
   const building = {
     totalFloorAreaSqm: number('totalFloorAreaSqm', (value) => formatNullableArea(value, '㎡')),
     totalFloorAreaPyeong: number('totalFloorAreaPyeong', (value) => formatNullableArea(value, '평')),
@@ -82,6 +112,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     parkingOfficial: number('parkingOfficial', (value) => formatNullableNumber(value, '대')),
     parkingField: number('parkingField', (value) => formatNullableNumber(value, '대')),
     parkingFieldNote: text('parkingFieldNote'),
+    floors: floorSpaces,
   };
   const land = {
     landAreaSqm: numericReportValue(landSqm, context('landAreaSqm', { calculated: landSqmCalculated, formatter: ((value: number) => formatNullableArea(value, '㎡')) as (value: never) => string })),
