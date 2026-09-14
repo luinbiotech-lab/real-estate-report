@@ -1,5 +1,5 @@
 import type { DataRoomBundle, DocumentType, VerificationStatus } from '../../domain/propertyDataRoom/types';
-import type { ProfessionalReportMedia, ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
+import type { ProfessionalReportComparable, ProfessionalReportMedia, ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
 import { numericReportValue, reportValue } from '../../domain/professionalReport/valuePolicy';
 import { calculateUnitPrice, roundArea, sqmToPyeong, pyeongToSqm } from '../../domain/professionalReport/calculations';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
@@ -50,6 +50,35 @@ function floorSortKey(floor?: string) {
   const ground = normalized.match(/^(\d+)(?:F|층)?$/);
   if (ground) return Number(ground[1]);
   return Number.NEGATIVE_INFINITY;
+}
+
+function comparableRows(bundle: DataRoomBundle): ProfessionalReportComparable[] {
+  const source = bundle.dataSources.find((item) => item.resourceType === 'comparable_transaction_set' && item.fieldKey === 'nearbyTransactions');
+  const rows = source?.metadata?.rows;
+  if (!source || !Array.isArray(rows)) return [];
+  const result: ProfessionalReportComparable[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const value = row as Record<string, unknown>;
+    const label = typeof value.label === 'string' ? value.label.trim() : '';
+    const salePrice = Number(value.salePrice);
+    const landAreaPyeong = Number(value.landAreaPyeong);
+    const landUnitPrice = Number(value.landUnitPrice);
+    const tradeDate = typeof value.tradeDate === 'string' ? value.tradeDate : '';
+    if (!label || !Number.isFinite(salePrice) || !Number.isFinite(landAreaPyeong) || !Number.isFinite(landUnitPrice) || !tradeDate) continue;
+    result.push({
+      label,
+      address: typeof value.address === 'string' ? value.address : '',
+      salePrice,
+      landAreaPyeong,
+      landUnitPrice,
+      approvalYear: Number.isFinite(Number(value.approvalYear)) ? Number(value.approvalYear) : null,
+      tradeDate,
+      sourceId: source.id,
+      verificationStatus: source.verificationStatus,
+    });
+  }
+  return result.sort((left, right) => right.tradeDate.localeCompare(left.tradeDate));
 }
 
 export function buildProfessionalReportViewModel(property: Property, bundle: DataRoomBundle, options: BuilderOptions = {}): ProfessionalReportViewModel {
@@ -144,7 +173,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const verification = { items: bundle.verifications.map((item) => ({ fieldKey: item.fieldKey, status: item.status, note: item.note, verifiedAt: item.verifiedAt ?? null })), counts: verificationCounts };
   const investment = {
     features: text('features'), investmentPoints: text('investmentPoints'), developmentPlan: text('developmentPlan'),
-    recommendedUse: text('recommendedUse'), nearbyTransactions: text('nearbyTransactions'), overallOpinion: text('overallOpinion'),
+    recommendedUse: text('recommendedUse'), nearbyTransactions: text('nearbyTransactions'), comparables: comparableRows(bundle), overallOpinion: text('overallOpinion'),
   };
   const risks = { risks: text('risks') };
   const sourceItems = bundle.dataSources.map((source) => ({ id: source.id, fieldKey: source.fieldKey ?? null, resourceType: source.resourceType ?? null, sourceType: source.sourceType, sourceName: source.sourceName, sourceReference: source.sourceReference ?? null, collectedAt: source.collectedAt, sourceDate: source.sourceDate ?? null, confidence: source.confidence ?? null, verificationStatus: source.verificationStatus }));
