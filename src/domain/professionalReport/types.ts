@@ -59,8 +59,8 @@ export interface ProfessionalReportViewModel {
     parkingOfficial: ReportValue<number>;
     parkingField: ReportValue<number>;
     parkingFieldNote: ReportValue<string>;
-    /** Added after report-engine-1 snapshots existed; optional keeps immutable legacy snapshots renderable. */
-    floors?: ProfessionalReportFloor[];
+    /** Legacy snapshots are normalized to an empty array at the snapshot boundary. */
+    floors: ProfessionalReportFloor[];
   };
   land: {
     landAreaSqm: ReportValue<number>; landAreaPyeong: ReportValue<number>; zoning: ReportValue<string>; roadCondition: ReportValue<string>;
