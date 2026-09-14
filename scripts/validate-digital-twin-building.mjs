@@ -12,6 +12,7 @@ const verticalCore = readFileSync('src/services/verticalCoreService.ts', 'utf8')
 const buildingStack = readFileSync('src/services/buildingStackService.ts', 'utf8');
 const operationPlan = readFileSync('src/services/geometryOperationPlanService.ts', 'utf8');
 const operationPreview = readFileSync('src/services/geometryOperationPreviewService.ts', 'utf8');
+const geometryEngine = readFileSync('src/services/geometryEngineService.ts', 'utf8');
 const remoteInspection = readFileSync('src/services/remoteInspectionService.ts', 'utf8');
 const twinPackage = readFileSync('src/services/digitalTwinPackageService.ts', 'utf8');
 const twinPage = readFileSync('src/pages/DigitalTwinWorkspacePage.tsx', 'utf8');
@@ -40,6 +41,8 @@ if (!operationPlan.includes("schemaVersion: 'daon-geometry-operation-plan-v1'") 
 if (!operationPlan.includes('executableNow: false') || !operationPlan.includes('applied: false')) throw new Error('Geometry operation plan must remain non-mutating before explicit execution engine.');
 if (!operationPreview.includes("schemaVersion: 'daon-geometry-operation-preview-v1'") || !operationPreview.includes('buildSnappedWallPreview') || !operationPreview.includes('buildOpeningCutterPreviews') || !operationPreview.includes('buildSlabCoreCutterPreviews')) throw new Error('Geometry operation preview package is incomplete.');
 if (!operationPreview.includes('geometryMutated: false') || !operationPreview.includes('booleanApplied: false') || !operationPreview.includes('previewOnly: true')) throw new Error('Geometry preview must remain non-mutating/non-boolean.');
+if (!geometryEngine.includes("mode: 'preview_only'") || !geometryEngine.includes('wallUnionMiter: false') || !geometryEngine.includes('openingBoolean: false') || !geometryEngine.includes('slabCoreBoolean: false') || !geometryEngine.includes('productionExport: false')) throw new Error('Geometry engine provider boundary must default to preview-only/non-mutating capabilities.');
+if (!geometryEngine.includes('assertMutationEngineConfigured') || !geometryEngine.includes('mutationApplied: false')) throw new Error('Geometry mutation engine guard is missing.');
 if (!remoteInspection.includes("REMOTE_INSPECTION_VERSION = 'daon-remote-inspection-v1'") || !remoteInspection.includes('buildRemoteInspectionHtml') || !remoteInspection.includes('productionReady: false')) throw new Error('Multi-floor remote inspection package/html is incomplete.');
 if (!remoteInspection.includes('operationPlan') || !remoteInspection.includes('Geometry Operation Plan') || !remoteInspection.includes('operationEligibleCount')) throw new Error('Remote inspection must expose geometry operation plan/readiness.');
 if (!twinPackage.includes('wallGeometryMergeEligible') || !twinPackage.includes('openingBooleanEligible') || !twinPackage.includes('slabCoreAligned')) throw new Error('Twin handoff readiness is missing merge/boolean/slab-core eligibility signals.');
@@ -52,8 +55,8 @@ if (!slabPanel.includes('Slab Geometry / 슬래브 형상 후보') || !slabPanel
 if (!corePanel.includes('Vertical Core / 계단·엘리베이터 층간 연결') || !corePanel.includes('자동 연결은 하지 않습니다') || !corePanel.includes('production connectivity')) throw new Error('Vertical core Human Review UI is incomplete.');
 if (!stackPanel.includes('Multi-floor Building Model / 층간 Stack') || !stackPanel.includes('Building OBJ') || !stackPanel.includes('Building JSON') || !stackPanel.includes('BuildingGeometryReadinessPanel')) throw new Error('Multi-floor building stack/remote inspection viewer is incomplete.');
 if (!stackPanel.includes('Geometry Operation Plan / 실행 전 Manifest') || !stackPanel.includes('Operation Plan JSON')) throw new Error('Geometry operation plan UI/export is incomplete.');
-if (!stackPanel.includes('Geometry Operation Preview / 비파괴 실행 미리보기') || !stackPanel.includes('Preview JSON') || !stackPanel.includes('geometryMutated=false')) throw new Error('Non-mutating geometry operation preview UI/export is incomplete.');
+if (!stackPanel.includes('Geometry Engine / 비파괴 Dry Run') || !stackPanel.includes('Dry Run JSON') || !stackPanel.includes('mutationApplied=false')) throw new Error('Geometry engine capability/dry-run UI is incomplete.');
 if (!readinessPanel.includes('Geometry Readiness · Remote Inspection') || !readinessPanel.includes('Remote Inspection HTML') || !readinessPanel.includes('BOOLEAN ELIGIBLE') || !readinessPanel.includes('MERGE READY')) throw new Error('Geometry readiness/remote inspection UI is incomplete.');
 for (const component of ['WallModelPanel', 'WallJunctionPanel', 'OpeningCutPanel', 'FloorPlacementPanel', 'SlabGeometryPanel', 'VerticalCorePanel', 'BuildingStackPanel']) if (!twinPage.includes(component)) throw new Error(`Digital Twin Workspace missing ${component}.`);
 
-console.log('DA:ON geometry plan + non-mutating preview + merge + boolean + slab/core + remote inspection integrity: PASS');
+console.log('DA:ON geometry engine boundary + dry run + operation plan + remote inspection integrity: PASS');
