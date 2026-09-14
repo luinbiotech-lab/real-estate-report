@@ -1,4 +1,4 @@
-import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDocument, PropertyMedia, PropertyRiskAssessment, PropertySpace, PropertyVerificationCandidate, RenovationAssessment, SpaceMediaLink } from '../domain/propertyDataRoom/types';
+import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDocument, PropertyFacility, PropertyMedia, PropertyRiskAssessment, PropertySpace, PropertyVerificationCandidate, RenovationAssessment, SpaceMediaLink } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
@@ -21,6 +21,8 @@ export interface InteriorVisionAgentPort {
   getMedia(propertyId: string): Promise<PropertyMedia[]>;
   getMediaItem(id: string): Promise<PropertyMedia | undefined>;
   updateMedia(value: PropertyMedia): Promise<PropertyMedia>;
+  getFacilities(propertyId: string): Promise<PropertyFacility[]>;
+  saveFacility(value: PropertyFacility): Promise<PropertyFacility>;
 }
 
 export interface SpaceAgentPort {
@@ -75,6 +77,8 @@ export const interiorVisionAgentPort: InteriorVisionAgentPort = {
   getMedia: (propertyId) => propertyDataRoomRepository.getMedia(propertyId),
   getMediaItem: (id) => propertyDataRoomRepository.getMediaItem(id),
   updateMedia: (value) => propertyDataRoomRepository.updateMedia(value),
+  getFacilities: (propertyId) => propertyDataRoomRepository.getFacilities(propertyId),
+  saveFacility: (value) => propertyDataRoomRepository.saveFacility(value),
 };
 
 export const spaceAgentPort: SpaceAgentPort = {
