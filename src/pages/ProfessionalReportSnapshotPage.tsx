@@ -73,7 +73,13 @@ export default function ProfessionalReportSnapshotPage() {
     </main>;
   }
 
-  const model = snapshot.snapshotData;
+  const model: ProfessionalReportViewModel = {
+    ...snapshot.snapshotData,
+    building: {
+      ...snapshot.snapshotData.building,
+      floors: snapshot.snapshotData.building.floors ?? [],
+    },
+  };
   const reportReady = model.dataQuality.reportReady;
   const report = <DaonDetail7PageMaster snapshot={snapshot} model={model} />;
 
