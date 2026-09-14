@@ -1,6 +1,7 @@
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { geometryMutationEngineService, type GeometryMutationResult } from './geometryMutationEngineService';
+import { geometryProductionStateService } from './geometryProductionStateService';
 
 export const PRODUCTION_CANDIDATE_VERSION = 'daon-production-candidate-v1';
 
@@ -11,6 +12,8 @@ export interface GeometryMutationHistoryEntry {
   engineId: string;
   result: GeometryMutationResult;
   previousProductionCandidate?: unknown;
+  targetPromotionId?: string;
+  sourceFingerprint?: string;
 }
 
 function historyOf(asset: DigitalTwinAsset): GeometryMutationHistoryEntry[] {
@@ -30,9 +33,10 @@ export function getProductionCandidate(asset: DigitalTwinAsset) {
 export async function runAndSaveMutation(asset: DigitalTwinAsset) {
   const result = geometryMutationEngineService.mutate(asset);
   const now = new Date().toISOString();
+  const sourceFingerprint = geometryProductionStateService.fingerprint(asset);
   const entry: GeometryMutationHistoryEntry = {
     id: nextId('mutation'), createdAt: now, action: 'mutation_preview_saved', engineId: result.engineId, result,
-    previousProductionCandidate: getProductionCandidate(asset),
+    previousProductionCandidate: getProductionCandidate(asset), sourceFingerprint,
   };
   const updated: DigitalTwinAsset = {
     ...asset,
@@ -54,11 +58,15 @@ export async function promoteProductionCandidate(asset: DigitalTwinAsset) {
     throw new Error(`Production candidate 승격 불가: ${result.validation.errors.join(' / ') || 'geometry validation failed'}`);
   }
   const now = new Date().toISOString();
+  const promotionId = nextId('promotion');
+  const sourceFingerprint = geometryProductionStateService.fingerprint(asset);
   const candidate = {
     schemaVersion: PRODUCTION_CANDIDATE_VERSION,
+    promotionId,
     promotedAt: now,
     engineId: result.engineId,
     sourceAssetId: asset.id,
+    sourceFingerprint,
     status: 'production_candidate',
     geometry: result,
     validation: result.validation,
@@ -67,8 +75,8 @@ export async function promoteProductionCandidate(asset: DigitalTwinAsset) {
     rollbackAvailable: true,
   } as const;
   const entry: GeometryMutationHistoryEntry = {
-    id: nextId('promotion'), createdAt: now, action: 'production_candidate_promoted', engineId: result.engineId, result,
-    previousProductionCandidate: getProductionCandidate(asset),
+    id: promotionId, createdAt: now, action: 'production_candidate_promoted', engineId: result.engineId, result,
+    previousProductionCandidate: getProductionCandidate(asset), sourceFingerprint,
   };
   const updated: DigitalTwinAsset = {
     ...asset,
@@ -85,15 +93,20 @@ export async function promoteProductionCandidate(asset: DigitalTwinAsset) {
   return { asset: updated, candidate };
 }
 
+function findRollbackablePromotion(history: GeometryMutationHistoryEntry[]) {
+  const rolledBack = new Set(history.filter((item) => item.action === 'rollback' && item.targetPromotionId).map((item) => item.targetPromotionId));
+  return [...history].reverse().find((item) => item.action === 'production_candidate_promoted' && !rolledBack.has(item.id));
+}
+
 export async function rollbackProductionCandidate(asset: DigitalTwinAsset) {
   const history = historyOf(asset);
-  const lastPromotionIndex = [...history].map((item) => item.action).lastIndexOf('production_candidate_promoted');
-  if (lastPromotionIndex < 0) throw new Error('Rollback 가능한 production candidate 이력이 없습니다.');
-  const promotion = history[lastPromotionIndex];
+  const promotion = findRollbackablePromotion(history);
+  if (!promotion) throw new Error('Rollback 가능한 production candidate 이력이 없습니다.');
   const now = new Date().toISOString();
   const rollbackEntry: GeometryMutationHistoryEntry = {
     id: nextId('rollback'), createdAt: now, action: 'rollback', engineId: promotion.engineId, result: promotion.result,
-    previousProductionCandidate: getProductionCandidate(asset),
+    previousProductionCandidate: getProductionCandidate(asset), targetPromotionId: promotion.id,
+    sourceFingerprint: geometryProductionStateService.fingerprint(asset),
   };
   const metadata = { ...asset.metadata };
   if (promotion.previousProductionCandidate && typeof promotion.previousProductionCandidate === 'object') metadata.productionGeometryCandidate = promotion.previousProductionCandidate;
@@ -108,6 +121,7 @@ export async function rollbackProductionCandidate(asset: DigitalTwinAsset) {
 export const geometryMutationTransactionService = {
   getHistory: historyOf,
   getProductionCandidate,
+  getState: geometryProductionStateService.getState,
   runAndSave: runAndSaveMutation,
   promote: promoteProductionCandidate,
   rollback: rollbackProductionCandidate,
