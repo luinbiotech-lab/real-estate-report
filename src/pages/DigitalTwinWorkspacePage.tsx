@@ -82,7 +82,7 @@ export default function DigitalTwinWorkspacePage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">FLOOR PLAN · WALLS · SLABS · VERTICAL CORES · MULTI-FLOOR · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창, 층고·천장고, 층 기준고와 slab 두께, 계단·엘리베이터 core 연결을 Human Review로 묶어 다층 Building Model 후보와 production release gate를 구성합니다.</p>
+      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창, 층고·천장고, 층 기준고와 slab 두께, 계단·엘리베이터 core 연결을 Human Review로 묶어 다층 Building Model 후보, production release gate와 handoff package를 구성합니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
