@@ -37,23 +37,47 @@ function sourceStatus(document: PropertyDocument): VerificationStatus {
     : 'unverified';
 }
 
+function parseFloorCandidate(raw: string): OfficialBuildingFloorInput | undefined {
+  const normalized = raw.replace(/\s+/g, ' ').trim();
+  const match = normalized.match(/(?:주\d+\s+)?(지층|지하\s*\d+층|\d+층)\s+\S+\s+(.+?)\s+(\d+(?:\.\d+)?)\s*(?:㎡|m2|m²)?$/i);
+  if (!match) return undefined;
+  const floor = floorLabel(match[1]);
+  const officialUse = match[2].trim().replace(/\s+([)])/g, '$1');
+  const areaSqm = Number(match[3]);
+  if (!officialUse || !Number.isFinite(areaSqm) || areaSqm <= 0) return undefined;
+  return { floor, officialUse, areaSqm };
+}
+
 export function parseBuildingRegisterFloorText(text: string): OfficialBuildingFloorInput[] {
-  const rows = text.replace(/\r/g, '').split('\n').map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
+  const lines = text.replace(/\r/g, '').split('\n').map((line) => line.replace(/\s+/g, ' ').trim()).filter(Boolean);
   const unique = new Set<string>();
   const parsed: OfficialBuildingFloorInput[] = [];
+  const floorStart = /(?:^|\s)(?:주\d+\s+)?(?:지층|지하\s*\d+층|\d+층)\s+\S+/i;
+  let buffer = '';
 
-  for (const row of rows) {
-    const match = row.match(/(?:주\d+\s+)?(지층|지하\s*\d+층|\d+층)\s+\S+\s+(.+?)\s+(\d+(?:\.\d+)?)\s*(?:㎡|m2|m²)?$/i);
-    if (!match) continue;
-    const floor = floorLabel(match[1]);
-    const officialUse = match[2].trim();
-    const areaSqm = Number(match[3]);
-    if (!officialUse || !Number.isFinite(areaSqm) || areaSqm <= 0) continue;
-    const signature = `${floor}|${officialUse}|${areaSqm}`;
-    if (unique.has(signature)) continue;
+  const flush = () => {
+    if (!buffer) return;
+    const row = parseFloorCandidate(buffer);
+    buffer = '';
+    if (!row) return;
+    const signature = `${row.floor}|${row.officialUse}|${row.areaSqm}`;
+    if (unique.has(signature)) return;
     unique.add(signature);
-    parsed.push({ floor, officialUse, areaSqm });
+    parsed.push(row);
+  };
+
+  for (const line of lines) {
+    if (floorStart.test(line)) {
+      flush();
+      buffer = line;
+      if (/\d+(?:\.\d+)?\s*(?:㎡|m2|m²)?$/i.test(line) && parseFloorCandidate(buffer)) flush();
+      continue;
+    }
+    if (!buffer) continue;
+    buffer = `${buffer} ${line}`;
+    if (/\d+(?:\.\d+)?\s*(?:㎡|m2|m²)?$/i.test(line) && parseFloorCandidate(buffer)) flush();
   }
+  flush();
 
   const grouped = new Map<string, OfficialBuildingFloorInput>();
   for (const row of parsed) {
@@ -92,7 +116,11 @@ export const buildingRegisterFloorService = {
 
     const now = new Date().toISOString();
     const verificationStatus = sourceStatus(document);
-    const existingSpaces = await propertyDataRoomRepository.getSpaces(propertyId);
+    const [existingSpaces, existingSources, existingVerifications] = await Promise.all([
+      propertyDataRoomRepository.getSpaces(propertyId),
+      propertyDataRoomRepository.getDataSources(propertyId),
+      propertyDataRoomRepository.getVerifications(propertyId),
+    ]);
     const saved: PropertySpace[] = [];
 
     for (const input of floors) {
@@ -140,7 +168,7 @@ export const buildingRegisterFloorService = {
           documentId: document.id,
           documentType: document.documentType,
         },
-        createdAt: existing ? (await propertyDataRoomRepository.getDataSources(propertyId)).find((source) => source.id === sourceId)?.createdAt ?? now : now,
+        createdAt: existingSources.find((source) => source.id === sourceId)?.createdAt ?? now,
       });
       await propertyDataRoomRepository.saveVerification({
         id: verificationId,
@@ -151,7 +179,7 @@ export const buildingRegisterFloorService = {
         verifiedAt: verificationStatus === 'verified' || verificationStatus === 'confirmed'
           ? document.verifiedAt ?? now
           : undefined,
-        createdAt: existing ? (await propertyDataRoomRepository.getVerifications(propertyId)).find((item) => item.id === verificationId)?.createdAt ?? now : now,
+        createdAt: existingVerifications.find((item) => item.id === verificationId)?.createdAt ?? now,
         updatedAt: now,
       });
       saved.push(space);
