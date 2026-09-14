@@ -1,6 +1,6 @@
 import { DOCUMENT_TYPE_LABELS, REQUIRED_DOCUMENT_TYPES } from '../domain/propertyDataRoom/labels';
 import type { AgentJob, AgentResult, AgentReview, AgentReviewDecision, AgentType, PropertyRiskAssessment, RenovationAssessment, RiskCheckItem, SpaceType } from '../domain/propertyDataRoom/types';
-import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { agentRuntimePort, renovationAgentPort, riskComplianceAgentPort } from '../agents/agentDataPorts';
 import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { digitalTwinExecutionService } from './digitalTwinExecutionService';
@@ -28,7 +28,7 @@ async function executeRenovation(sourceJob: AgentJob) {
   let job = sourceJob;
   try {
     if (job.status !== 'running') job = await agentOrchestratorService.start(job);
-    const spaces = await propertyDataRoomRepository.getSpaces(job.propertyId);
+    const spaces = await renovationAgentPort.getSpaces(job.propertyId);
     const spaceTypes = spaces.map((space) => space.spaceType);
     const recommendedItems = buildRecommendations(spaceTypes);
     const scope = spaces.length >= 3 ? 'partial' : 'retain';
@@ -46,7 +46,7 @@ async function executeRiskCompliance(sourceJob: AgentJob) {
   try {
     if (job.status !== 'running') job = await agentOrchestratorService.start(job);
     const [documents, candidates, renovations, digitalTwinAssets, spaces] = await Promise.all([
-      propertyDataRoomRepository.getDocuments(job.propertyId), propertyDataRoomRepository.getVerificationCandidates(job.propertyId), propertyDataRoomRepository.getRenovationAssessments(job.propertyId), propertyDataRoomRepository.getDigitalTwinAssets(job.propertyId), propertyDataRoomRepository.getSpaces(job.propertyId),
+      riskComplianceAgentPort.getDocuments(job.propertyId), riskComplianceAgentPort.getVerificationCandidates(job.propertyId), riskComplianceAgentPort.getRenovationAssessments(job.propertyId), riskComplianceAgentPort.getDigitalTwinAssets(job.propertyId), riskComplianceAgentPort.getSpaces(job.propertyId),
     ]);
     const checks: RiskCheckItem[] = REQUIRED_DOCUMENT_TYPES.map((type) => {
       const document = documents.find((item) => item.documentType === type);
@@ -67,7 +67,7 @@ async function applyRenovation(result: AgentResult) {
   const raw = result.payload.assessment; if (!raw || typeof raw !== 'object') throw new Error('Renovation Agent 결과 형식이 올바르지 않습니다.');
   const value = raw as Record<string, unknown>; const now = new Date().toISOString();
   const assessment: RenovationAssessment = { id: crypto.randomUUID(), propertyId: result.propertyId, scope: ['retain', 'partial', 'full', 'change_of_use', 'rebuild_review'].includes(String(value.scope)) ? value.scope as RenovationAssessment['scope'] : 'retain', title: String(value.title || '리노베이션 검토'), summary: String(value.summary || ''), recommendedItems: Array.isArray(value.recommendedItems) ? value.recommendedItems.map(String) : [], riskItems: Array.isArray(value.riskItems) ? value.riskItems.map(String) : [], costStatus: value.costStatus === 'range_candidate' ? 'range_candidate' : 'not_estimated', sourceAgentResultId: result.id, verificationStatus: 'confirmed', createdAt: now, updatedAt: now };
-  await propertyDataRoomRepository.saveRenovationAssessment(assessment);
+  await renovationAgentPort.saveRenovationAssessment(assessment);
   return agentOrchestratorService.queuePropertyAgent(result.propertyId, 'risk_compliance', 'dependency', { sourceAgentResultId: result.id, renovationAssessmentId: assessment.id });
 }
 
@@ -75,11 +75,11 @@ async function applyRiskCompliance(result: AgentResult) {
   const raw = result.payload.assessment; if (!raw || typeof raw !== 'object') throw new Error('Risk / Compliance Agent 결과 형식이 올바르지 않습니다.');
   const value = raw as Record<string, unknown>; const checks = Array.isArray(value.checks) ? value.checks.filter((item): item is RiskCheckItem => Boolean(item && typeof item === 'object' && 'key' in item && 'label' in item && 'status' in item && 'detail' in item)) : []; const now = new Date().toISOString();
   const assessment: PropertyRiskAssessment = { id: crypto.randomUUID(), propertyId: result.propertyId, title: String(value.title || '사전 리스크 검토'), summary: String(value.summary || ''), checks, disclaimer: String(value.disclaimer || '자동 사전검토 결과이며 전문가의 확정 판단이 아닙니다.'), sourceAgentResultId: result.id, verificationStatus: 'confirmed', createdAt: now, updatedAt: now };
-  await propertyDataRoomRepository.saveRiskAssessment(assessment);
+  await riskComplianceAgentPort.saveRiskAssessment(assessment);
 }
 
 async function runQueuedDependency(propertyId: string, agentType: AgentType) {
-  const jobs = await propertyDataRoomRepository.getAgentJobs(propertyId);
+  const jobs = await agentRuntimePort.getAgentJobs(propertyId);
   const job = jobs.filter((item) => item.agentType === agentType && item.status === 'queued').sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
   if (!job) return;
   if (agentType === 'interior_vision') await interiorVisionExecutionService.execute(job);
