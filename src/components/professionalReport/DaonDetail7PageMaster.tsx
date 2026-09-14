@@ -10,6 +10,7 @@ const splitLines = (value: ReportValue<string>, limit = 6) => (value.value || ''
   .slice(0, limit);
 
 const display = (item: ReportValue<unknown>, fallback = '확인 필요') => item.value === null || item.value === '' ? fallback : item.display;
+const formatFloorArea = (value: number | null) => value === null ? '확인 필요' : `${value.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}㎡`;
 
 function Page({ page, eyebrow, title, subtitle, snapshot, model, children }: {
   page: number;
@@ -102,7 +103,12 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <SectionBar>자산 개요</SectionBar>
       <div className="dd-profile-grid"><ImageSlot src={hero} caption="본건 외관" /><div className="dd-info-table">{facts.map(([label, value]) => <InfoRow key={label} label={label} value={value} />)}</div></div>
       <SectionBar>층별 구성과 현재 활용</SectionBar>
-      <div className="dd-floor-placeholder"><b>층별 임대·이용 현황</b><span>Property Data Room의 층별 데이터 완전 매핑 단계에서 확정값을 주입합니다.</span></div>
+      <div className="dd-floor-placeholder" style={{ display: 'grid', placeItems: 'stretch', alignContent: 'stretch', gap: 0 }}>
+        {model.building.floors.length ? <>
+          <div style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', background: '#f1f5f8', borderBottom: '0.25mm solid #d8dee5', padding: '0 2.5mm', fontSize: '6.7px', fontWeight: 800 }}><span>층</span><span>공적대장 용도</span><span>면적</span><span>현재 이용 / 비고</span></div>
+          {model.building.floors.slice(0, 4).map((floor) => <div key={floor.id} style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2.5mm', minHeight: 0, fontSize: '6.8px', overflow: 'hidden' }}><b style={{ fontSize: '7.2px' }}>{floor.floor}</b><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{floor.name}</span><span>{formatFloorArea(floor.areaSqm)}</span><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#6d7a88' }}>{floor.currentCondition || '현장 이용 확인 필요'}</span></div>)}
+        </> : <><b>층별 구성 데이터 미연결</b><span>Property Data Room의 검증된 층별 자료 연결 후 표시합니다.</span></>}
+      </div>
       <SectionBar>공간에서 보이는 가능성</SectionBar>
       <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권·주변 상권" /><ImageSlot src={imageAt(2)} caption="주변 상업·업무 환경" /></div>
       <div className="dd-insight compact"><b>현재 활용을 존중하면서 다음 용도를 설계할 수 있습니다.</b><p>{display(model.investment.recommendedUse, '사옥, 주거, 업무, 복합공간 등 활용 방향은 인허가 및 현장검토 후 확정합니다.')}</p></div>
