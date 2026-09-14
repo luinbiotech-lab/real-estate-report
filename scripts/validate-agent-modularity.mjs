@@ -8,6 +8,7 @@ const orchestrator = readFileSync('src/services/agentOrchestratorService.ts', 'u
 const runtime = readFileSync('src/services/agentRuntimeService.ts', 'utf8');
 const execution = readFileSync('src/services/agentExecutionService.ts', 'utf8');
 const interiorVision = readFileSync('src/services/interiorVisionExecutionService.ts', 'utf8');
+const visionFacility = readFileSync('src/services/visionFacilityService.ts', 'utf8');
 const floorPlan = readFileSync('src/services/floorPlanExecutionService.ts', 'utf8');
 const digitalTwin = readFileSync('src/services/digitalTwinExecutionService.ts', 'utf8');
 const control = readFileSync('src/pages/AgentControlCenterPage.tsx', 'utf8');
@@ -28,14 +29,14 @@ if (!status.includes("AgentHealthState = 'idle' | 'ready' | 'attention' | 'block
 
 for (const name of ['IntegratorReadPort', 'AgentRuntimePort', 'InteriorVisionAgentPort', 'SpaceAgentPort', 'FloorPlanGeometryAgentPort', 'DigitalTwinAgentPort', 'RenovationAgentPort', 'RiskComplianceAgentPort', 'integratorReadPort', 'agentRuntimePort', 'interiorVisionAgentPort', 'spaceAgentPort', 'floorPlanGeometryAgentPort', 'digitalTwinAgentPort', 'renovationAgentPort', 'riskComplianceAgentPort']) if (!ports.includes(name)) throw new Error(`Narrow agent data port missing ${name}`);
 
-for (const [name, source] of [['orchestrator', orchestrator], ['runtime', runtime], ['execution', execution], ['interiorVision', interiorVision], ['floorPlan', floorPlan], ['digitalTwin', digitalTwin]]) {
+for (const [name, source] of [['orchestrator', orchestrator], ['runtime', runtime], ['execution', execution], ['interiorVision', interiorVision], ['visionFacility', visionFacility], ['floorPlan', floorPlan], ['digitalTwin', digitalTwin]]) {
   if (source.includes("../repositories/propertyDataRoomRepository")) throw new Error(`${name} must not directly import the shared repository.`);
 }
-if (!orchestrator.includes("../agents/agentDataPorts") || !runtime.includes("../agents/agentDataPorts") || !execution.includes("../agents/agentDataPorts") || !interiorVision.includes("../agents/agentDataPorts") || !floorPlan.includes("../agents/agentDataPorts") || !digitalTwin.includes("../agents/agentDataPorts")) throw new Error('A4-A7/runtime/orchestrator services must use agent data ports.');
+if (!orchestrator.includes("../agents/agentDataPorts") || !runtime.includes("../agents/agentDataPorts") || !execution.includes("../agents/agentDataPorts") || !interiorVision.includes("../agents/agentDataPorts") || !visionFacility.includes("../agents/agentDataPorts") || !floorPlan.includes("../agents/agentDataPorts") || !digitalTwin.includes("../agents/agentDataPorts")) throw new Error('A4-A7/runtime/orchestrator services must use agent data ports.');
 if (!runtime.includes('renovationAgentPort.saveRenovationAssessment') || !runtime.includes('riskComplianceAgentPort.saveRiskAssessment')) throw new Error('Domain writes are not routed through owning agent ports.');
 if (!execution.includes('spaceAgentPort.saveSpace') || !execution.includes('spaceAgentPort.saveSpaceMediaLink')) throw new Error('A5 Space writes must use the Space Agent port.');
 if (!floorPlan.includes('floorPlanGeometryAgentPort.saveDigitalTwinAsset') || !digitalTwin.includes('digitalTwinAgentPort.saveDigitalTwinAsset')) throw new Error('A6/A7 geometry writes must use owning ports.');
-if (!interiorVision.includes('interiorVisionAgentPort.updateMedia')) throw new Error('A4 Interior Vision writes must use the Interior Vision port.');
+if (!interiorVision.includes('interiorVisionAgentPort.updateMedia') || !visionFacility.includes('interiorVisionAgentPort.saveFacility')) throw new Error('A4 Interior Vision writes must use the Interior Vision port.');
 
 if (control.includes('../repositories/propertyDataRoomRepository') || control.includes('../repositories/propertyRepository')) throw new Error('A0 Control Center must not directly import repositories.');
 if (!control.includes('integratorReadPort.getProperties') || !control.includes('integratorReadPort.getBundle')) throw new Error('A0 Control Center must use the read-only integrator port.');
