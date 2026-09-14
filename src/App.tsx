@@ -9,10 +9,12 @@ import PropertyForm from './pages/PropertyForm';
 import ExcelImport from './pages/ExcelImport';
 import BulkIntakePage from './pages/BulkIntakePage';
 import AgentOpsPage from './pages/AgentOpsPage';
+import AgentControlCenterPage from './pages/AgentControlCenterPage';
+import AgentWorkspacePage from './pages/AgentWorkspacePage';
 import InteriorWorkspacePage from './pages/InteriorWorkspacePage';
+import RoomTwinOperationsPage from './pages/RoomTwinOperationsPage';
 import SpatialWorkspacePage from './pages/SpatialWorkspacePage';
 import DigitalTwinWorkspacePage from './pages/DigitalTwinWorkspacePage';
-import RoomTwinOperationsPage from './pages/RoomTwinOperationsPage';
 import RiskWorkspacePage from './pages/RiskWorkspacePage';
 import SettingsPage from './pages/SettingsPage';
 import DocumentPreview from './pages/DocumentPreview';
@@ -63,5 +65,5 @@ export default function App() {
     setReady(true);
   })(); }, []);
   if (!ready) return <div className="center"><CircularProgress /></div>;
-  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="bulk-intake" element={<BulkIntakePage />} /><Route path="interior" element={<InteriorWorkspacePage />} /><Route path="spatial" element={<SpatialWorkspacePage />} /><Route path="digital-twin" element={<DigitalTwinWorkspacePage />} /><Route path="room-ops" element={<RoomTwinOperationsPage />} /><Route path="risk" element={<RiskWorkspacePage />} /><Route path="agents" element={<AgentOpsPage />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
+  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="control-center" element={<AgentControlCenterPage />} /><Route path="agents/:agentId" element={<AgentWorkspacePage />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="bulk-intake" element={<BulkIntakePage />} /><Route path="interior" element={<InteriorWorkspacePage />} /><Route path="room-ops" element={<RoomTwinOperationsPage />} /><Route path="spatial" element={<SpatialWorkspacePage />} /><Route path="digital-twin" element={<DigitalTwinWorkspacePage />} /><Route path="risk" element={<RiskWorkspacePage />} /><Route path="agents" element={<AgentOpsPage />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
 }
