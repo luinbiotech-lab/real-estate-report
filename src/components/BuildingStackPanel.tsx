@@ -24,7 +24,7 @@ function downloadText(content: string, mime: string, fileName: string) {
   anchor.href = url; anchor.download = fileName; document.body.appendChild(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url);
 }
 
-export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsset[] }) {
+export default function BuildingStackPanel({ assets, onSaved }: { assets: DigitalTwinAsset[]; onSaved?: () => void | Promise<void> }) {
   const stack = useMemo(() => buildingStackService.build(assets), [assets]);
   const operationPlan = useMemo(() => geometryOperationPlanService.build(assets), [assets]);
   const engineDryRun = useMemo(() => geometryEngineService.dryRun(assets), [assets]);
@@ -120,7 +120,7 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
     </section>
     <BuildingGeometryReadinessPanel assets={assets} />
     <section style={{ display: 'grid', gap: 14, marginBottom: 20 }}>
-      {assets.map((asset) => <GeometryMutationPanel key={asset.id} asset={asset} />)}
+      {assets.map((asset) => <GeometryMutationPanel key={asset.id} asset={asset} onSaved={onSaved} />)}
     </section>
   </>;
 }
