@@ -1,7 +1,10 @@
 import type { AgentJob, AgentResult, AgentReview, DataRoomBundle, DigitalTwinAsset, PropertyDocument, PropertyRiskAssessment, PropertySpace, PropertyVerificationCandidate, RenovationAssessment } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { propertyRepository } from '../repositories/propertyRepository';
+import type { Property } from '../types';
 
 export interface IntegratorReadPort {
+  getProperties(): Promise<Property[]>;
   getBundle(propertyId: string): Promise<DataRoomBundle>;
 }
 
@@ -29,6 +32,7 @@ export interface RiskComplianceAgentPort {
 }
 
 export const integratorReadPort: IntegratorReadPort = {
+  getProperties: () => propertyRepository.getAll(),
   getBundle: (propertyId) => propertyDataRoomRepository.getBundle(propertyId),
 };
 
