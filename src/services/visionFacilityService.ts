@@ -1,5 +1,5 @@
 import type { AgentResult, FacilityCategory, MediaCategory, PropertyFacility } from '../domain/propertyDataRoom/types';
-import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { interiorVisionAgentPort } from '../agents/agentDataPorts';
 
 type VisionCandidate = {
   mediaId?: string;
@@ -25,7 +25,7 @@ export const visionFacilityService = {
   async applyApprovedVisionResult(result: AgentResult) {
     if (result.resultType !== 'media_classification_candidate') return [] as PropertyFacility[];
     const candidates = Array.isArray(result.payload.candidates) ? result.payload.candidates as VisionCandidate[] : [];
-    const existing = await propertyDataRoomRepository.getFacilities(result.propertyId);
+    const existing = await interiorVisionAgentPort.getFacilities(result.propertyId);
     const created: PropertyFacility[] = [];
     for (const candidate of candidates) {
       const mappings = candidate.suggestedCategory ? FACILITY_BY_CATEGORY[candidate.suggestedCategory] ?? [] : [];
@@ -42,7 +42,7 @@ export const visionFacilityService = {
           notes: noteParts.length ? `승인된 Vision 결과 기반 인벤토리 · ${noteParts.join(' · ')}` : '승인된 Vision 결과 기반 인벤토리. 실제 상태는 현장 확인 필요.',
           sourceType: 'agent', sourceAgentResultId: result.id, verificationStatus: 'confirmed', createdAt: now, updatedAt: now,
         };
-        await propertyDataRoomRepository.saveFacility(facility);
+        await interiorVisionAgentPort.saveFacility(facility);
         existing.push(facility); created.push(facility);
       }
     }
