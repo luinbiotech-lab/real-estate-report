@@ -36,6 +36,9 @@ jobs:
       - name: Validate Agent Foundation
         run: npm run validate:agents
 
+      - name: Validate modular Agent architecture
+        run: node scripts/validate-agent-modularity.mjs
+
       - name: Validate Digital Twin building flow
         run: npm run validate:twin-building
 
