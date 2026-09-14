@@ -3,6 +3,7 @@ import { Alert, Button, Chip, Slider } from '@mui/material';
 import { useMemo, useState } from 'react';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { BUILDING_STACK_VERSION, buildingStackService } from '../services/buildingStackService';
+import { geometryOperationPlanService } from '../services/geometryOperationPlanService';
 import BuildingGeometryReadinessPanel from './BuildingGeometryReadinessPanel';
 
 function project(point: { x: number; y: number; z: number }, yawDeg: number, pitchDeg: number) {
@@ -23,6 +24,7 @@ function downloadText(content: string, mime: string, fileName: string) {
 
 export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsset[] }) {
   const stack = useMemo(() => buildingStackService.build(assets), [assets]);
+  const operationPlan = useMemo(() => geometryOperationPlanService.build(assets), [assets]);
   const [yaw, setYaw] = useState(35);
   const [pitch, setPitch] = useState(-28);
   const [visibleFloors, setVisibleFloors] = useState<Record<string, boolean>>({});
@@ -41,6 +43,7 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
 
   const exportJson = () => downloadText(JSON.stringify(stack, null, 2), 'application/json;charset=utf-8', `${BUILDING_STACK_VERSION}.json`);
   const exportObj = () => downloadText(buildingStackService.toObj(stack), 'text/plain;charset=utf-8', `${BUILDING_STACK_VERSION}.obj`);
+  const exportOperationPlan = () => downloadText(JSON.stringify(operationPlan, null, 2), 'application/json;charset=utf-8', 'daon-geometry-operation-plan-v1.json');
 
   return <>
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
@@ -53,6 +56,26 @@ export default function BuildingStackPanel({ assets }: { assets: DigitalTwinAsse
           <Button size="small" variant="outlined" startIcon={<DownloadRounded />} disabled={!stack.floors.length} onClick={exportJson}>Building JSON</Button>
           <Button size="small" variant="outlined" startIcon={<ViewInArRounded />} disabled={!stack.floors.length} onClick={exportObj}>Building OBJ</Button>
         </div>
+      </div>
+
+      <div style={{ marginTop: 16, padding: 14, border: '1px solid #d9e0e8', borderRadius: 10, background: '#fbfcfe' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div><strong>Geometry Operation Plan / 실행 전 Manifest</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>Wall snap → wall union/miter → opening boolean → slab/core boolean → floor stack publish 순서와 blocker를 고정합니다.</p></div>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+            <Chip size="small" color="success" variant="outlined" label={`Eligible ${operationPlan.summary.eligible}`} />
+            <Chip size="small" color={operationPlan.summary.blocked ? 'warning' : 'default'} variant="outlined" label={`Blocked ${operationPlan.summary.blocked}`} />
+            <Chip size="small" variant="outlined" label={`N/A ${operationPlan.summary.notApplicable}`} />
+            <Button size="small" variant="outlined" startIcon={<DownloadRounded />} onClick={exportOperationPlan}>Operation Plan JSON</Button>
+          </div>
+        </div>
+        <div style={{ display: 'grid', gap: 8, marginTop: 12 }}>
+          {operationPlan.steps.map((step) => <div key={step.id} style={{ display: 'grid', gridTemplateColumns: '150px 150px 1fr', gap: 10, alignItems: 'start', padding: 9, background: '#fff', border: '1px solid #e5eaf0', borderRadius: 8 }}>
+            <strong>{step.floorLabel || 'BUILDING'}</strong>
+            <Chip size="small" color={step.status === 'eligible' ? 'success' : step.status === 'blocked' ? 'warning' : 'default'} label={`${step.type} · ${step.status}`} />
+            <div style={{ color: '#667085', fontSize: 13 }}>{step.blockers.length ? step.blockers.join(' / ') : `${step.targets.length} target · applied=false`}</div>
+          </div>)}
+        </div>
+        <Alert severity="info" sx={{ mt: 1.5 }}>eligible은 실제 geometry mutation 완료가 아니라 실행 전 조건 충족을 뜻합니다. 현재 manifest의 모든 step은 applied=false입니다.</Alert>
       </div>
 
       {!scene ? <Alert severity="info" sx={{ mt: 1.5 }}>각 층 자산에 검증된 층 배치와 reviewed mesh가 준비되면 다층 모델이 표시됩니다.</Alert> : <>
