@@ -1,6 +1,7 @@
 import { openDB } from 'idb';
 
 export const DATABASE_NAME = 'real-estate-report';
+export const RISK_AGENT_FOUNDATION_DATABASE_VERSION = 8;
 export const DATABASE_VERSION = 9;
 
 export const database = openDB(DATABASE_NAME, DATABASE_VERSION, {
