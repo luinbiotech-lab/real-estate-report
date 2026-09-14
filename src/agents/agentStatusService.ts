@@ -28,7 +28,7 @@ function facts(bundle: DataRoomBundle, agentId: PlatformAgentId) {
     case 'intake': return { count: bundle.documents.length + bundle.media.length + bundle.digitalTwinAssets.length, blockers: [] as string[] };
     case 'document': return { count: bundle.verificationCandidates.length, blockers: bundle.documents.length ? [] : ['문서 원본 없음'] };
     case 'verification': {
-      const pending = bundle.verificationCandidates.filter((item) => !['approved', 'rejected'].includes(item.status)).length;
+      const pending = bundle.verificationCandidates.filter((item) => !['approved', 'rejected'].includes(item.decisionStatus)).length;
       return { count: bundle.verifications.length, blockers: pending ? [`미검토 후보 ${pending}건`] : [] };
     }
     case 'interior_vision': return { count: (bundle.agentResults ?? []).filter((item) => item.agentType === 'interior_vision').length, blockers: bundle.media.some((item) => item.mediaType === 'image') ? [] : ['분석할 이미지 없음'] };
