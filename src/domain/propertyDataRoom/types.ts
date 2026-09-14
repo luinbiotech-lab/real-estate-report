@@ -76,6 +76,23 @@ export interface PropertyFacility {
   createdAt: string; updatedAt: string; deletedAt?: string;
 }
 
+export type RoomEvidenceResourceType = 'media' | 'facility';
+export type RoomEvidenceAnchor = 'floor' | 'wall' | 'ceiling' | 'free';
+export interface RoomEvidencePosition {
+  id: string; propertyId: string; spaceId: string; digitalTwinAssetId: string; roomCandidateId: string;
+  resourceType: RoomEvidenceResourceType; resourceId: string;
+  normalizedX: number; normalizedY: number; normalizedZ: number; anchor: RoomEvidenceAnchor;
+  decision: 'approved' | 'held' | 'rejected'; note: string;
+  reviewedBy?: string; reviewedAt?: string; createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
+export type RoomConditionRating = 'unknown' | 'good' | 'fair' | 'poor';
+export interface RoomConditionHistoryEntry {
+  id: string; propertyId: string; spaceId: string; digitalTwinAssetId: string; roomCandidateId: string;
+  rating: RoomConditionRating; summary: string; evidenceRefs: string[];
+  recordedBy?: string; recordedAt: string; createdAt: string; deletedAt?: string;
+}
+
 export type RenovationScope = 'retain' | 'partial' | 'full' | 'change_of_use' | 'rebuild_review';
 export interface RenovationAssessment {
   id: string; propertyId: string; scope: RenovationScope; title: string; summary: string;
@@ -91,6 +108,13 @@ export interface RoomRenovationAssessment {
   decision: 'draft' | 'approved' | 'held' | 'rejected';
   sourceType: 'manual' | 'agent_candidate'; evidenceRefs: string[];
   reviewedBy?: string; reviewedAt?: string; createdAt: string; updatedAt: string; deletedAt?: string;
+}
+
+export interface RoomRenovationHistoryEntry {
+  id: string; propertyId: string; spaceId: string; digitalTwinAssetId: string; roomCandidateId: string;
+  assessmentId: string; action: 'draft_created' | 'approved' | 'held' | 'rejected';
+  scope: RenovationScope; summary: string; evidenceRefs: string[];
+  actor?: string; recordedAt: string; createdAt: string; deletedAt?: string;
 }
 
 export type RiskCheckStatus = 'clear' | 'review' | 'missing' | 'not_applicable';
@@ -146,7 +170,10 @@ export interface DataRoomBundle {
   verificationCandidates: PropertyVerificationCandidate[];
   dataSources: PropertyDataSource[]; reportSnapshots: ReportSnapshot[]; digitalTwinAssets: DigitalTwinAsset[];
   agentJobs?: AgentJob[]; agentResults?: AgentResult[]; agentReviews?: AgentReview[];
-  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; spaceRoomLinks?: SpaceRoomLink[]; facilities?: PropertyFacility[]; renovationAssessments?: RenovationAssessment[]; roomRenovationAssessments?: RoomRenovationAssessment[]; riskAssessments?: PropertyRiskAssessment[];
+  spaces?: PropertySpace[]; spaceMediaLinks?: SpaceMediaLink[]; spaceRoomLinks?: SpaceRoomLink[]; facilities?: PropertyFacility[];
+  roomEvidencePositions?: RoomEvidencePosition[]; roomConditionHistory?: RoomConditionHistoryEntry[];
+  renovationAssessments?: RenovationAssessment[]; roomRenovationAssessments?: RoomRenovationAssessment[]; roomRenovationHistory?: RoomRenovationHistoryEntry[];
+  riskAssessments?: PropertyRiskAssessment[];
 }
 
 export interface DataRoomSummary {
