@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { geometryMutationEngineService } from '../services/geometryMutationEngineService';
 import { geometryMutationTransactionService } from '../services/geometryMutationTransactionService';
+import { geometryProductionAuditService } from '../services/geometryProductionAuditService';
 
 export default function GeometryMutationPanel({ asset, onSaved }: { asset: DigitalTwinAsset; onSaved?: () => void | Promise<void> }) {
   const [currentAsset, setCurrentAsset] = useState(asset);
@@ -12,6 +13,7 @@ export default function GeometryMutationPanel({ asset, onSaved }: { asset: Digit
   const productionCandidate = useMemo(() => geometryMutationTransactionService.getProductionCandidate(currentAsset), [currentAsset]);
   const productionState = useMemo(() => geometryMutationTransactionService.getState(currentAsset), [currentAsset]);
   const history = useMemo(() => geometryMutationTransactionService.getHistory(currentAsset), [currentAsset]);
+  const audit = useMemo(() => geometryProductionAuditService.build(currentAsset), [currentAsset]);
   const rolledBackPromotionIds = useMemo(() => new Set(history.filter((item) => item.action === 'rollback' && item.targetPromotionId).map((item) => item.targetPromotionId)), [history]);
   const rollbackAvailable = useMemo(() => history.some((item) => item.action === 'production_candidate_promoted' && !rolledBackPromotionIds.has(item.id)), [history, rolledBackPromotionIds]);
   const [busy, setBusy] = useState('');
@@ -41,6 +43,7 @@ export default function GeometryMutationPanel({ asset, onSaved }: { asset: Digit
   };
 
   const s = preview.validation.stats;
+  const diffEntries = Object.entries(audit.diff.delta).filter(([, value]) => value !== 0);
   return <section style={{ border: '1px solid #d9e0e8', borderRadius: 12, padding: 18, background: '#fff' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div>
@@ -70,6 +73,12 @@ export default function GeometryMutationPanel({ asset, onSaved }: { asset: Digit
       <Button variant="outlined" startIcon={<ScienceRounded />} disabled={Boolean(busy)} onClick={() => void run('save')}>Mutation 실행·검증 저장</Button>
       <Button variant="contained" startIcon={<RocketLaunchRounded />} disabled={Boolean(busy) || !preview.productionCandidateEligible} onClick={() => void run('promote')}>{productionState.state === 'stale' ? '최신 소스로 재승격' : 'Production Candidate 승격'}</Button>
       <Button variant="outlined" color="warning" startIcon={<RestartAltRounded />} disabled={Boolean(busy) || !rollbackAvailable} onClick={() => void run('rollback')}>Rollback</Button>
+    </div>
+
+    <div style={{ marginTop: 16, borderTop: '1px solid #e5eaf0', paddingTop: 14 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><strong>Production Audit / 승격 이력</strong><span style={{ color: '#667085', fontSize: 13 }}>promotions {audit.promotions.length} · rollback {audit.rollbackCount}</span></div>
+      {audit.promotions.length ? <div style={{ display: 'grid', gap: 7, marginTop: 10 }}>{audit.promotions.slice(-4).reverse().map((row) => <div key={row.promotionId} style={{ display: 'grid', gridTemplateColumns: 'minmax(145px,1fr) auto auto', gap: 8, alignItems: 'center', padding: 9, border: '1px solid #e5eaf0', borderRadius: 8 }}><div><strong style={{ fontSize: 13 }}>{row.promotionId}</strong><small style={{ display: 'block', color: '#667085', marginTop: 2 }}>{row.createdAt} · {row.sourceFingerprint || 'legacy fingerprint 없음'}</small></div><span style={{ color: '#667085', fontSize: 12 }}>walls {row.stats.wallCount} · openings {row.stats.openingSubtractionCount} · cores {row.stats.slabCoreSubtractionCount}</span><Chip size="small" color={row.rolledBack ? 'warning' : 'success'} label={row.rolledBack ? 'ROLLED BACK' : 'PROMOTED'} /></div>)}</div> : <p style={{ margin: '8px 0 0', color: '#667085', fontSize: 13 }}>아직 production 승격 이력이 없습니다.</p>}
+      {audit.promotions.length >= 2 && <Alert severity={audit.diff.sourceChanged ? 'info' : 'success'} sx={{ mt: 1.2 }}>최근 두 승격 비교: source {audit.diff.sourceChanged ? '변경됨' : '동일'}{diffEntries.length ? ` · ${diffEntries.map(([key, value]) => `${key} ${value > 0 ? '+' : ''}${value}`).join(' / ')}` : ' · geometry count 변화 없음'}</Alert>}
     </div>
 
     <Alert severity="warning" sx={{ mt: 1.5 }}>production candidate는 자동 시공·구조·법정 BIM 승인이 아닙니다. constructionReady=false / legalBimReady=false를 유지하며 원본 CAD와 Human Review provenance는 보존됩니다.</Alert>
