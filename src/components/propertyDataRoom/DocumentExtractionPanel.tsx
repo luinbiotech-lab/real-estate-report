@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Alert, Button, Chip, TextField } from '@mui/material';
 import type { DocumentExtractionStatus, PropertyDocument } from '../../domain/propertyDataRoom/types';
+import { buildingRegisterFloorService, type OfficialBuildingFloorInput } from '../../services/buildingRegisterFloorService';
 import { documentExtractionService } from '../../services/documentExtractionService';
 import { pdfTextExtractionService } from '../../services/pdfTextExtractionService';
 import { propertyDataRoomService } from '../../services/propertyDataRoomService';
@@ -19,6 +20,8 @@ export default function DocumentExtractionPanel({ document, onQueued }: { docume
   const [values, setValues] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [extracting, setExtracting] = useState(false);
+  const [savingFloors, setSavingFloors] = useState(false);
+  const [floorRows, setFloorRows] = useState<OfficialBuildingFloorInput[]>([]);
   const [extractedText, setExtractedText] = useState('');
   const [pageCount, setPageCount] = useState(document.extractionPageCount ?? 0);
   const [scanOnly, setScanOnly] = useState(document.extractionStatus === 'scan_ocr_required');
@@ -33,7 +36,7 @@ export default function DocumentExtractionPanel({ document, onQueued }: { docume
   };
 
   const extractPdf = async () => {
-    setExtracting(true); setError(''); setScanOnly(false);
+    setExtracting(true); setError(''); setScanOnly(false); setFloorRows([]);
     try {
       let source: Blob | undefined = document.fileData;
       if (!source && document.fileUrl) {
@@ -53,12 +56,24 @@ export default function DocumentExtractionPanel({ document, onQueued }: { docume
       await persistExtraction('text_extracted', { pageCount: result.pageCount, method: 'pdf_text' });
       const prefills = pdfTextExtractionService.prefill(document.documentType, result.text);
       setValues((current) => ({ ...prefills, ...current }));
-      if (!Object.keys(prefills).length) setError('PDF 텍스트는 읽었지만 자동으로 식별된 필드가 없습니다. 아래 값은 직접 확인해 입력해 주세요.');
+      if (document.documentType === 'building_register') setFloorRows(buildingRegisterFloorService.parseText(result.text));
+      if (!Object.keys(prefills).length && document.documentType !== 'building_register') setError('PDF 텍스트는 읽었지만 자동으로 식별된 필드가 없습니다. 아래 값은 직접 확인해 입력해 주세요.');
     } catch (reason) {
       const message = reason instanceof Error ? reason.message : 'PDF 텍스트를 읽지 못했습니다.';
       setError(message);
       try { await persistExtraction('failed', { error: message, method: 'pdf_text' }); } catch { /* 원본 오류를 우선 표시 */ }
     } finally { setExtracting(false); }
+  };
+
+  const saveFloors = async () => {
+    if (!floorRows.length) { setError('연결할 층별 구성 행이 없습니다. 원문을 확인해 주세요.'); return; }
+    setSavingFloors(true); setError('');
+    try {
+      await buildingRegisterFloorService.saveOfficialFloorComposition(document.propertyId, document, floorRows);
+      await onQueued();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '층별 구성을 Data Room에 연결하지 못했습니다.');
+    } finally { setSavingFloors(false); }
   };
 
   const queue = async () => {
@@ -96,6 +111,13 @@ export default function DocumentExtractionPanel({ document, onQueued }: { docume
         maxRows={7}
         slotProps={{ input: { readOnly: true } }}
       />}
+      {document.documentType === 'building_register' && floorRows.length > 0 && <div className="building-floor-extraction">
+        <Alert severity={document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed' ? 'success' : 'info'}>
+          층별 구성 {floorRows.length}개 층을 인식했습니다. 연결 시 PropertySpace와 함께 DataSource·Verification 이력이 저장됩니다.
+        </Alert>
+        <div className="asset-list">{floorRows.map((row) => <article key={`${row.floor}-${row.officialUse}`}><b>{row.floor}</b><span>{row.officialUse} · {row.areaSqm.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}㎡</span><Chip size="small" label={document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed' ? '공적자료 확인' : '미검증 출처'} /></article>)}</div>
+        <Button size="small" variant="outlined" disabled={savingFloors} onClick={saveFloors}>{savingFloors ? '연결 중…' : '층별 구성 Data Room 연결'}</Button>
+      </div>}
       {fields.map((field) => <TextField
         key={String(field.fieldKey)}
         size="small"
