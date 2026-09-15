@@ -6,6 +6,7 @@ import { emptyProperty, type Property, type Settings } from './types';
 import Layout from './components/Layout';
 import PropertyList from './pages/PropertyList';
 import PropertyForm from './pages/PropertyForm';
+import PropertyHubPage from './pages/PropertyHubPage';
 import ExcelImport from './pages/ExcelImport';
 import BulkIntakePage from './pages/BulkIntakePage';
 import AgentOpsPage from './pages/AgentOpsPage';
@@ -66,14 +67,8 @@ export default function App() {
     if (!existingBangbae) await propertyRepository.create(bangbae81511);
     else {
       const normalizedBangbae: Property = {
-        ...existingBangbae,
-        managerName: DAON_MANAGER,
-        managerPhone: DAON_PHONE,
-        managerEmail: DAON_EMAIL,
-        companyName: DAON_COMPANY,
-        internalPhotoAllowed: false,
-        parkingField: existingBangbae.parkingField ?? 2,
-        parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준',
+        ...existingBangbae, managerName: DAON_MANAGER, managerPhone: DAON_PHONE, managerEmail: DAON_EMAIL, companyName: DAON_COMPANY,
+        internalPhotoAllowed: false, parkingField: existingBangbae.parkingField ?? 2, parkingFieldNote: existingBangbae.parkingFieldNote || '현장 이용 기준',
         mainImage: existingBangbae.mainImage === LEGACY_BANGBAE_MAIN_IMAGE ? '' : existingBangbae.mainImage,
         mapImage: existingBangbae.mapImage === LEGACY_BANGBAE_MAP_IMAGE ? '' : existingBangbae.mapImage,
         buildingCoverageRate: existingBangbae.buildingCoverageRate === 48.8 ? 0 : existingBangbae.buildingCoverageRate,
@@ -87,5 +82,5 @@ export default function App() {
     setReady(true);
   })(); }, []);
   if (!ready) return <div className="center"><CircularProgress /></div>;
-  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="control-center" element={<AgentControlCenterPage />} /><Route path="agents/:agentId" element={<AgentWorkspacePage />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="bulk-intake" element={<BulkIntakePage />} /><Route path="interior" element={<InteriorWorkspacePage />} /><Route path="room-ops" element={<RoomTwinOperationsPage />} /><Route path="spatial" element={<SpatialWorkspacePage />} /><Route path="digital-twin-intake" element={<DigitalTwinIntakePage />} /><Route path="digital-twin" element={<DigitalTwinWorkspacePage />} /><Route path="external-shares" element={<ExternalShareCenterPage />} /><Route path="income" element={<RentalIncomeWorkspacePage />} /><Route path="review-history" element={<ReviewHistoryPage />} /><Route path="risk" element={<RiskWorkspacePage />} /><Route path="agents" element={<AgentOpsPage />} /><Route path="report-history" element={<ReportHistoryPage />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
+  return <ThemeProvider theme={theme}><Routes><Route element={<Layout />}><Route index element={<PropertyList />} /><Route path="control-center" element={<AgentControlCenterPage />} /><Route path="agents/:agentId" element={<AgentWorkspacePage />} /><Route path="property/new" element={<PropertyForm settings={settings} />} /><Route path="property/:id" element={<PropertyHubPage />} /><Route path="property/:id/data-room" element={<PropertyDataRoomPage />} /><Route path="property/:id/edit" element={<PropertyForm settings={settings} />} /><Route path="import" element={<ExcelImport />} /><Route path="bulk-intake" element={<BulkIntakePage />} /><Route path="interior" element={<InteriorWorkspacePage />} /><Route path="room-ops" element={<RoomTwinOperationsPage />} /><Route path="spatial" element={<SpatialWorkspacePage />} /><Route path="digital-twin-intake" element={<DigitalTwinIntakePage />} /><Route path="digital-twin" element={<DigitalTwinWorkspacePage />} /><Route path="external-shares" element={<ExternalShareCenterPage />} /><Route path="income" element={<RentalIncomeWorkspacePage />} /><Route path="review-history" element={<ReviewHistoryPage />} /><Route path="risk" element={<RiskWorkspacePage />} /><Route path="agents" element={<AgentOpsPage />} /><Route path="report-history" element={<ReportHistoryPage />} /><Route path="settings" element={<SettingsPage settings={settings} onSave={setSettings} />} /></Route><Route path="document/:kind/:id" element={<DocumentPreview />} /><Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} /><Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} /><Route path="*" element={<Navigate to="/" />} /></Routes></ThemeProvider>;
 }
