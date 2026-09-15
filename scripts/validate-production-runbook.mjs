@@ -5,6 +5,7 @@ const files = {
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
   access: 'src/services/accessControlService.ts',
+  spreadsheetSecurity: 'docs/security-spreadsheet-parser.md',
 };
 
 for (const file of Object.values(files)) {
@@ -28,12 +29,28 @@ for (const required of [
   '/api/poi/search',
   'Kakao Developers Web platform',
   'Supabase Auth Site URL / Redirect URL',
+  'Spreadsheet parser release gate',
+  'docs/security-spreadsheet-parser.md',
+  'xlsx` locked version = `0.20.3',
+  'CVE-2023-30533',
+  'CVE-2024-22363',
+  'node scripts/validate-excel-security.mjs',
   'Production E2E gate',
   '브라우저 secret scan',
   'REMOTE AUTH: NOT CONFIGURED',
   'REMOTE / PUBLIC share: NOT CONFIGURED',
 ]) {
   if (!text.runbook.includes(required)) throw new Error(`Production runbook 필수 규칙 누락: ${required}`);
+}
+
+for (const required of [
+  'PATCHED VERSION PINNED / RELEASE ADVISORY REVIEW REQUIRED',
+  '0.20.3',
+  'CVE-2023-30533',
+  'CVE-2024-22363',
+  'actual file signature check',
+]) {
+  if (!text.spreadsheetSecurity.includes(required)) throw new Error(`Spreadsheet security decision 필수 규칙 누락: ${required}`);
 }
 
 if (!text.authMigration.includes("default 'viewer'")) throw new Error('Auth migration의 viewer 기본값이 유지되어야 합니다.');
