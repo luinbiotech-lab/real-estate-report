@@ -26,7 +26,7 @@ for (const pair of ["core: 1", "documents: 2", "provenance: 3", "verification: 4
 if (!text.nextAction.includes("return `/property/${propertyId}/data-room${stage.pathSuffix || ''}`")) throw new Error('Next Action은 해당 보완 화면으로 직접 연결되어야 합니다.');
 
 if (!text.worklog.includes("STORAGE_KEY = 'daon:property-readiness-worklog:v1'")) throw new Error('Readiness 작업 이력은 버전된 local-first 저장소를 사용해야 합니다.');
-if (!text.worklog.includes("status: 'open' | 'improved' | 'completed'")) throw new Error('Readiness 작업 이력은 OPEN/IMPROVED/COMPLETED 상태를 가져야 합니다.');
+if (!text.worklog.includes("export type ReadinessWorklogStatus = 'open' | 'improved' | 'completed'")) throw new Error('Readiness 작업 이력은 OPEN/IMPROVED/COMPLETED 상태를 가져야 합니다.');
 if (!text.worklog.includes('stateRank[stage.state] > stateRank[entry.initialState]')) throw new Error('작업 개선은 실제 readiness state 상승으로만 판정해야 합니다.');
 if (!text.worklog.includes("stage.state === 'ready' ? 'completed' : improved ? 'improved' : 'open'")) throw new Error('COMPLETED는 실제 READY 상태에서만 판정해야 합니다.');
 if (!text.worklog.includes('recordOpened(action: PropertyNextAction)') || !text.worklog.includes('reconcile(rows:')) throw new Error('작업 오픈 기록과 실제 데이터 재검사 경로가 필요합니다.');
