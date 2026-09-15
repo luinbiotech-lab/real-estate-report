@@ -4,6 +4,7 @@ import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { DaonDetail7PageMaster } from '../components/professionalReport/DaonDetail7PageMaster';
+import { reportMediaCategoryAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
@@ -17,6 +18,19 @@ function isViewModel(value: unknown): value is ProfessionalReportViewModel {
   if (!value || typeof value !== 'object') return false;
   const candidate = value as Partial<ProfessionalReportViewModel>;
   return Boolean(candidate.identity?.name && candidate.pricing?.salePrice && candidate.generated?.generatedAt && candidate.dataQuality);
+}
+
+function applySnapshotMediaPolicy(model: ProfessionalReportViewModel): ProfessionalReportViewModel {
+  if (model.media.internalPhotoAllowed) return model;
+  return {
+    ...model,
+    media: {
+      ...model.media,
+      mainImage: { ...model.media.mainImage, value: null, display: '미연결', state: 'missing', sourceIds: [] },
+      additionalImages: { ...model.media.additionalImages, value: [], display: '미연결', state: 'missing', sourceIds: [] },
+      items: model.media.items.filter((item) => item.id !== 'property-main' && item.category !== 'additional' && reportMediaCategoryAllowed(item.category, false)),
+    },
+  };
 }
 
 export default function ProfessionalReportSnapshotPage() {
@@ -73,7 +87,7 @@ export default function ProfessionalReportSnapshotPage() {
     </main>;
   }
 
-  const model: ProfessionalReportViewModel = {
+  const model = applySnapshotMediaPolicy({
     ...snapshot.snapshotData,
     building: {
       ...snapshot.snapshotData.building,
@@ -83,7 +97,7 @@ export default function ProfessionalReportSnapshotPage() {
       ...snapshot.snapshotData.investment,
       comparables: snapshot.snapshotData.investment.comparables ?? [],
     },
-  };
+  });
   const reportReady = model.dataQuality.reportReady;
   const report = <DaonDetail7PageMaster snapshot={snapshot} model={model} />;
 
