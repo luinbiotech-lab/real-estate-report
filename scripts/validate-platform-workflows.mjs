@@ -16,6 +16,8 @@ const files = {
   externalShareCenter: 'src/pages/ExternalShareCenterPage.tsx',
   rentalIncomePage: 'src/pages/RentalIncomeWorkspacePage.tsx',
   rentalIncomeService: 'src/services/rentalIncomeScenarioService.ts',
+  reviewHistoryPage: 'src/pages/ReviewHistoryPage.tsx',
+  reviewHistoryService: 'src/services/reviewHistoryService.ts',
 };
 
 for (const file of Object.values(files)) {
@@ -41,6 +43,12 @@ if (!text.rentalIncomePage.includes('임대 · 수익 분석') || !text.rentalIn
 if (!text.rentalIncomePage.includes('시나리오 저장') || !text.rentalIncomePage.includes('저장된 시나리오')) throw new Error('임대·수익 Workspace는 복수 시나리오 저장/재사용을 제공해야 합니다.');
 if (!text.rentalIncomeService.includes('calculateRentalIncomeMetrics') || !text.rentalIncomeService.includes('effectiveGrossIncome') || !text.rentalIncomeService.includes('cashOnCashReturnPct')) throw new Error('임대·수익 서비스는 EGI/NOI/Cap Rate/Cash-on-Cash 계산을 유지해야 합니다.');
 if (!text.rentalIncomeService.includes("STORAGE_KEY = 'daon:rental-income-scenarios:v1'")) throw new Error('임대·수익 시나리오는 버전된 로컬 저장소에 보존되어야 합니다.');
+
+if (!text.app.includes('path="review-history"') || !text.layout.includes('to="/review-history"')) throw new Error('검토 이력 통합 route/navigation 연결이 필요합니다.');
+if (!text.reviewHistoryPage.includes('검토 이력 통합') || !text.reviewHistoryPage.includes('자료 검증') || !text.reviewHistoryPage.includes('Agent Review') || !text.reviewHistoryPage.includes('외부 검토')) throw new Error('검토 이력 화면은 자료/Agent/보고서/외부검토를 한 화면에 제공해야 합니다.');
+if (!text.reviewHistoryPage.includes('AUDIT TIMELINE') || !text.reviewHistoryPage.includes('시간순 검토 기록')) throw new Error('검토 이력 화면은 시간순 감사 타임라인을 제공해야 합니다.');
+if (!text.reviewHistoryService.includes("kind: 'verification'") || !text.reviewHistoryService.includes("kind: 'agent_review'") || !text.reviewHistoryService.includes("kind: 'report_snapshot'") || !text.reviewHistoryService.includes("kind: 'external_review'")) throw new Error('검토 이력 서비스는 4개 원천을 모두 통합해야 합니다.');
+if (!text.reviewHistoryService.includes(".sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))")) throw new Error('통합 검토 이력은 최신순으로 정렬되어야 합니다.');
 
 if (!text.releasePanel.includes("import ReleaseShareWorkspace from './ReleaseShareWorkspace'") || !text.releasePanel.includes('<ReleaseShareWorkspace')) throw new Error('Building Release 화면은 외부 공유·원격 검토 Workspace를 연결해야 합니다.');
 if (!text.releaseShareWorkspace.includes('SHARE READY') || !text.releaseShareWorkspace.includes('SHARE BLOCKED') || !text.releaseShareWorkspace.includes('ACCESS POLICY') || !text.releaseShareWorkspace.includes('SHARE HISTORY') || !text.releaseShareWorkspace.includes('REVIEW LOOP')) throw new Error('외부 공유 Workspace는 준비상태, 접근정책, 공유이력, 검토루프를 모두 제공해야 합니다.');
