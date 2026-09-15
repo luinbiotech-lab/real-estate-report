@@ -34,6 +34,9 @@ if (!text.dataRoom.includes('/document/report/${property.id}') || !text.dataRoom
 if (!text.onePage.includes('DaonOnePageMaster')) {
   throw new Error('1P 미리보기는 DAON_1P_MASTER renderer를 사용해야 합니다.');
 }
+if (!text.onePage.includes('propertyDataRoomRepository.getBundle(id)') || !text.onePage.includes('reportMediaCategoryAllowed(item.category, allowInternal)') || !text.onePage.includes('allowInternal ? (value.mainImage || dataRoomHero) : dataRoomHero')) {
+  throw new Error('1P는 Data Room 미디어와 중앙 내부사진 제외 정책을 통해 안전한 대표 외관을 선택해야 합니다.');
+}
 if (!text.snapshotPage.includes('DaonDetail7PageMaster') || !text.snapshotPage.includes('최신 데이터로 다시 생성')) {
   throw new Error('7P Snapshot 화면은 DAON_DETAIL_7P_MASTER와 최신 데이터 재생성 경로를 제공해야 합니다.');
 }
