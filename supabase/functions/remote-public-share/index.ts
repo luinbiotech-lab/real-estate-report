@@ -69,10 +69,24 @@ function json(body: unknown, status = 200, origin: string | null = null) {
   });
 }
 
+function canonicalize(value: unknown): string {
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(canonicalize).join(',')}]`;
+  const entries = Object.entries(value as Json)
+    .filter(([, child]) => child !== undefined)
+    .sort(([a], [b]) => a.localeCompare(b));
+  return `{${entries.map(([key, child]) => `${JSON.stringify(key)}:${canonicalize(child)}`).join(',')}}`;
+}
+
 function toBase64Url(bytes: Uint8Array) {
   let binary = '';
   for (const byte of bytes) binary += String.fromCharCode(byte);
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
+
+function base64ToBytes(value: string) {
+  const binary = atob(value);
+  return Uint8Array.from(binary, (character) => character.charCodeAt(0));
 }
 
 function createRawToken() {
@@ -110,13 +124,50 @@ function sanitizeSnapshot(value: unknown): unknown {
   );
 }
 
-function validateSnapshot(snapshot: unknown) {
+async function validateSnapshot(snapshot: unknown) {
   if (!snapshot || typeof snapshot !== 'object') throw new Error('snapshot is required.');
   const row = snapshot as Json;
   const id = text(row.id, 300);
   const propertyId = text(row.propertyId, 300);
   const schemaVersion = text(row.schemaVersion, 200);
+  const canonicalPackage = text(row.canonicalPackage, 2_000_000);
+  const checksumHex = text(row.checksumHex, 128).toLowerCase();
+  const signatureBase64 = text(row.signatureBase64, 1000);
+  const checksumAlgorithm = text(row.checksumAlgorithm, 50);
+  const signatureAlgorithm = text(row.signatureAlgorithm, 80);
+
   if (!id || !propertyId || !schemaVersion) throw new Error('snapshot id/propertyId/schemaVersion are required.');
+  if (schemaVersion !== 'daon-building-release-snapshot-v1') throw new Error('snapshot schemaVersion is not supported.');
+  if (row.immutable !== true) throw new Error('snapshot must be immutable.');
+  if (checksumAlgorithm !== 'SHA-256' || signatureAlgorithm !== 'ECDSA_P256_SHA256') throw new Error('snapshot integrity algorithms are invalid.');
+  if (!row.package || typeof row.package !== 'object' || !canonicalPackage || !checksumHex || !signatureBase64 || !row.publicKeyJwk) {
+    throw new Error('snapshot integrity fields are required.');
+  }
+
+  const canonical = canonicalize(row.package);
+  if (canonical !== canonicalPackage) throw new Error('snapshot canonical payload mismatch.');
+  if (await sha256Hex(canonical) !== checksumHex) throw new Error('snapshot checksum verification failed.');
+
+  let signatureValid = false;
+  try {
+    const publicKey = await crypto.subtle.importKey(
+      'jwk',
+      row.publicKeyJwk as JsonWebKey,
+      { name: 'ECDSA', namedCurve: 'P-256' },
+      false,
+      ['verify'],
+    );
+    signatureValid = await crypto.subtle.verify(
+      { name: 'ECDSA', hash: 'SHA-256' },
+      publicKey,
+      base64ToBytes(signatureBase64),
+      new TextEncoder().encode(canonical),
+    );
+  } catch {
+    signatureValid = false;
+  }
+  if (!signatureValid) throw new Error('snapshot signature verification failed.');
+
   return { id, propertyId, payload: sanitizeSnapshot(snapshot) };
 }
 
@@ -160,7 +211,7 @@ async function resolveShare(rawToken: string): Promise<{ row?: ShareRow; status:
 async function issue(body: Json, req: Request, origin: string | null) {
   if (!PUBLIC_SHARE_BASE_URL) throw new Error('PUBLIC_SHARE_BASE_URL is required before issuing public URLs.');
   const user = await requireShareManager(req);
-  const snapshot = validateSnapshot(body.snapshot);
+  const snapshot = await validateSnapshot(body.snapshot);
   const expiresAt = optionalFutureIso(body.expiresAt);
   const allowDownload = body.allowDownload === true;
   const recipientNote = text(body.recipientNote, 500) || null;
@@ -310,7 +361,7 @@ Deno.serve(async (req) => {
     const message = reason instanceof Error ? reason.message : 'remote_share_error';
     const status = message === 'authentication_required' ? 401
       : message === 'share_management_forbidden' ? 403
-        : /required|invalid|future/.test(message) ? 400
+        : /required|invalid|future|unsupported|mismatch|verification failed|immutable/.test(message) ? 400
           : 500;
     return json({ error: message }, status, origin);
   }
