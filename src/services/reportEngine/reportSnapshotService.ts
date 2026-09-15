@@ -1,5 +1,6 @@
 import type { ProfessionalReportViewModel } from '../../domain/professionalReport/types';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
+import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import {
   PROFESSIONAL_REPORT_TEMPLATE_ID,
@@ -8,8 +9,21 @@ import {
   reportDataBuilder,
 } from './reportDataBuilder';
 
+function applySnapshotMediaPolicy(viewModel: ProfessionalReportViewModel): ProfessionalReportViewModel {
+  if (viewModel.media.internalPhotoAllowed) return viewModel;
+  return {
+    ...viewModel,
+    media: {
+      ...viewModel.media,
+      mainImage: { ...viewModel.media.mainImage, value: null, display: '미연결', state: 'missing', sourceIds: [] },
+      additionalImages: { ...viewModel.media.additionalImages, value: [], display: '미연결', state: 'missing', sourceIds: [] },
+      items: viewModel.media.items.filter((item) => item.id !== 'property-main' && item.category !== 'additional' && reportMediaCategoryAllowed(item.category, false)),
+    },
+  };
+}
+
 function snapshotData(viewModel: ProfessionalReportViewModel): Record<string, unknown> {
-  return JSON.parse(JSON.stringify(viewModel)) as Record<string, unknown>;
+  return JSON.parse(JSON.stringify(applySnapshotMediaPolicy(viewModel))) as Record<string, unknown>;
 }
 
 function snapshotViewModel(snapshot: ReportSnapshot): ProfessionalReportViewModel | null {
