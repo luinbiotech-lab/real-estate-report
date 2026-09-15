@@ -122,7 +122,33 @@ production URL 확정 후:
 4. CORS origin을 production frontend로 제한
 5. localhost는 production 설정에서 불필요하면 제거
 
-## 7. Production E2E gate
+## 7. Spreadsheet parser release gate
+
+보안 결정 기록:
+
+- `docs/security-spreadsheet-parser.md`
+
+현재 기준:
+
+- `xlsx` locked version = `0.20.3`
+- CVE-2023-30533 fixed-version floor = `0.19.3`
+- CVE-2024-22363 fixed-version floor = `0.20.2`
+- parser input size limit = 10 MiB
+- XLSX/ZIP 및 XLS/OLE 실제 file signature 검증 후에만 parser 진입
+- formula / HTML / VBA / dependency / embedded-file parsing 비활성화
+
+release 직전 필수:
+
+1. `package-lock.json`의 실제 locked version 확인
+2. SheetJS/GitHub advisory source 재검토
+3. `node scripts/validate-excel-security.mjs` PASS
+4. 정상 `.xlsx`, legacy `.xls` import 확인
+5. 비스프레드시트 파일을 `.xlsx`로 rename한 입력이 parser 전에 거부되는지 확인
+6. `npm audit` zero만으로 SheetJS CDN dependency를 안전하다고 판정하지 않는다.
+
+새 advisory가 현재 locked version에 영향을 주면 Production READY 판정을 중단하고 upgrade/replacement를 먼저 수행한다.
+
+## 8. Production E2E gate
 
 최종 배포 승인 전 실제 URL에서 아래를 모두 검증한다.
 
@@ -140,8 +166,9 @@ production URL 확정 후:
 12. backup/export 및 최소 1회 restore rehearsal
 13. cross-device 동일 사용자 상태 확인
 14. 브라우저 secret scan
+15. Spreadsheet parser release gate PASS
 
-## 8. 현재 상태
+## 9. 현재 상태
 
 현재 repository 기준:
 
@@ -152,5 +179,7 @@ production URL 확정 후:
 - production frontend host: MISSING EXTERNAL INFRA
 - protected backend proxy: MISSING EXTERNAL INFRA
 - production provider/domain allowlist: CHECK REQUIRED
+- spreadsheet parser known-advisory baseline: PATCHED/PINNED
+- spreadsheet parser release advisory review: REQUIRED
 
 외부 인프라가 준비되기 전에는 위 상태를 임의로 READY로 바꾸지 않는다.
