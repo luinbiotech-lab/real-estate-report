@@ -9,6 +9,7 @@
 - 유료 리소스 생성 또는 요금제 변경은 사용자 승인 후 진행한다.
 - `service_role`, NAVER secret, Kakao REST key 등 서버 전용 secret은 브라우저 bundle에 넣지 않는다.
 - 실제 backend가 연결되기 전에는 public URL, remote revoke, RLS가 동작하는 것처럼 표시하지 않는다.
+- Excel parser mitigation과 dependency upgrade를 구분한다. 완화책만 적용된 상태를 취약점 해결로 표시하지 않는다.
 
 ## 1. 신규 Backend 프로젝트 준비
 
@@ -67,7 +68,31 @@
 - download policy 강제
 - review note 서버 동기화
 
-## 4. Production Frontend / Protected Proxy
+## 4. Spreadsheet Import Security
+
+현재 완화책:
+
+- Excel import buffer 최대 10MB
+- formula parsing 비활성화
+- HTML cell 생성 비활성화
+- VBA / dependency / raw file preservation 비활성화
+- `parseWorkbook`과 `parseImportJob`이 동일 hardened reader 사용
+- CI `Validate Excel import security boundary`
+
+Production 전 필수:
+
+- [ ] 현재 `xlsx@0.18.5`를 공식 지원 버전으로 교체
+- [ ] package-lock을 네트워크 가능한 정상 설치 환경에서 재생성
+- [ ] 수동 lockfile 조작 금지
+- [ ] 기존 표준양식 다운로드 회귀검증
+- [ ] `.xlsx` import 회귀검증
+- [ ] `.xls` import 회귀검증
+- [ ] 중복/검증후보/숫자/날짜 파싱 회귀검증
+- [ ] `npm audit` 재확인
+
+현재 `npm run readiness:prod`에서 `spreadsheetParserDependency = UPGRADE_REQUIRED`가 표시되는 것이 정상이다.
+
+## 5. Production Frontend / Protected Proxy
 
 현재 개발 구조:
 
@@ -85,32 +110,33 @@ Production 준비:
 - [ ] CORS / origin 제한
 - [ ] rate limit / abuse guard 검토
 
-## 5. Provider Domain Allowlist
+## 6. Provider Domain Allowlist
 
 - [ ] NAVER production domain 등록
 - [ ] Kakao production domain 등록
 - [ ] Kakao JavaScript SDK origin 확인
 - [ ] localhost 개발 도메인과 production 도메인 분리 확인
 
-## 6. Production E2E
+## 7. Production E2E
 
 필수 시나리오:
 
 1. OWNER 로그인
 2. 물건 생성/수정
-3. Data Room 문서/미디어 업로드
-4. Verification 생성
-5. Report Snapshot 생성
-6. 외부 public share 생성
-7. 익명/검토자 public URL 접근
-8. 만료 테스트
-9. remote revoke 테스트
-10. review note 동기화
-11. 다른 device에서 동일 데이터 확인
-12. backup export 확인
-13. 기존 DAON MASTER render regression 확인
+3. Excel 표준양식 다운로드 및 import
+4. Data Room 문서/미디어 업로드
+5. Verification 생성
+6. Report Snapshot 생성
+7. 외부 public share 생성
+8. 익명/검토자 public URL 접근
+9. 만료 테스트
+10. remote revoke 테스트
+11. review note 동기화
+12. 다른 device에서 동일 데이터 확인
+13. backup export 확인
+14. 기존 DAON MASTER render regression 확인
 
-## 7. 배포 승인 Gate
+## 8. 배포 승인 Gate
 
 다음이 모두 충족되어야 Production READY로 본다.
 
@@ -120,6 +146,8 @@ Production 준비:
 - [ ] Production frontend host LIVE
 - [ ] Protected backend proxy LIVE
 - [ ] Provider allowlist 완료
+- [ ] spreadsheet parser dependency upgrade 완료
+- [ ] Excel import regression PASS
 - [ ] server secret browser 미노출 확인
 - [ ] Typecheck PASS
 - [ ] Lint PASS
@@ -133,4 +161,4 @@ Production 준비:
 npm run readiness:prod
 ```
 
-현재 미연결 항목이 `NOT_CONFIGURED`, `MISSING_EXTERNAL_INFRA`, `CHECK_REQUIRED`로 표시되는 것은 정상이다. 실제 외부 리소스가 연결된 이후에만 READY로 승격한다.
+현재 미연결/미해결 항목이 `NOT_CONFIGURED`, `MISSING_EXTERNAL_INFRA`, `CHECK_REQUIRED`, `UPGRADE_REQUIRED`로 표시되는 것은 정상이다. 실제 외부 리소스 및 dependency가 검증된 이후에만 READY로 승격한다.
