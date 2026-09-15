@@ -1,4 +1,4 @@
-import { AdminPanelSettingsRounded, FactCheckRounded, HistoryRounded, PaidRounded, RateReviewRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded } from '@mui/icons-material';
+import { AdminPanelSettingsRounded, FactCheckRounded, HistoryRounded, PaidRounded, PlaylistAddCheckRounded, RateReviewRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded } from '@mui/icons-material';
 import { Button, Chip } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
 import { AUTH_BACKEND_CONNECTED } from '../services/accessControlService';
@@ -31,6 +31,7 @@ export default function PortfolioOperationsHub({ items }: { items: Property[] })
   };
 
   const workspaces = [
+    { label: '준비도 센터', detail: '물건별 7단계 보완 항목 점검', path: '/readiness', icon: <PlaylistAddCheckRounded /> },
     { label: 'Intake · Verification', detail: '대량 자료 등록과 검증', path: '/bulk-intake', icon: <FactCheckRounded /> },
     { label: '임대 · 수익', detail: 'NOI · Cap Rate · 시나리오', path: '/income', icon: <PaidRounded /> },
     { label: '검토 이력', detail: '자료·Agent·보고서 감사 타임라인', path: '/review-history', icon: <RateReviewRounded /> },
