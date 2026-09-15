@@ -11,6 +11,7 @@ const files = {
   packageJson: 'package.json',
   packageLock: 'package-lock.json',
   excel: 'src/utils/excel.ts',
+  spreadsheetSecurityDecision: 'docs/security-spreadsheet-parser.md',
 };
 
 for (const file of Object.values(files)) {
@@ -35,13 +36,41 @@ for (const marker of ['/api/maps/geocode', '/api/maps/static', '/api/poi/search'
   if (!text.proxy.includes(marker)) throw new Error(`production proxy 승격 대상 route 누락: ${marker}`);
 }
 
-if (!text.excel.includes('MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024') || !text.excel.includes('cellFormula: false') || !text.excel.includes('bookVBA: false')) {
-  throw new Error('Excel upload mitigation이 Production readiness 경계에 포함되어야 합니다.');
+for (const marker of [
+  'MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024',
+  'hasExcelFileSignature',
+  'cellFormula: false',
+  'bookVBA: false',
+]) {
+  if (!text.excel.includes(marker)) throw new Error(`Excel upload mitigation 누락: ${marker}`);
 }
+for (const marker of ['CVE-2023-30533', 'CVE-2024-22363', 'RELEASE ADVISORY REVIEW REQUIRED']) {
+  if (!text.spreadsheetSecurityDecision.includes(marker)) throw new Error(`Spreadsheet security decision 누락: ${marker}`);
+}
+
 const pkg = JSON.parse(text.packageJson);
 const lock = JSON.parse(text.packageLock);
 const lockedXlsxVersion = String(lock.packages?.['node_modules/xlsx']?.version ?? '');
-const spreadsheetParserDependency = lockedXlsxVersion === '0.18.5' ? 'UPGRADE_REQUIRED' : 'REVIEW_REQUIRED';
+
+function compareVersion(a, b) {
+  const av = a.split('.').map((value) => Number.parseInt(value, 10) || 0);
+  const bv = b.split('.').map((value) => Number.parseInt(value, 10) || 0);
+  for (let i = 0; i < Math.max(av.length, bv.length); i += 1) {
+    const diff = (av[i] ?? 0) - (bv[i] ?? 0);
+    if (diff !== 0) return diff;
+  }
+  return 0;
+}
+
+const spreadsheetParserDependency = !lockedXlsxVersion
+  ? 'MISSING'
+  : compareVersion(lockedXlsxVersion, '0.20.2') < 0
+    ? 'UPGRADE_REQUIRED'
+    : 'PATCHED_PINNED_REVIEW_AT_RELEASE';
+
+if (spreadsheetParserDependency === 'MISSING' || spreadsheetParserDependency === 'UPGRADE_REQUIRED') {
+  throw new Error(`Spreadsheet parser dependency 상태가 Production 기준을 충족하지 않습니다: ${spreadsheetParserDependency}`);
+}
 
 const status = {
   localDevelopment: 'READY',
@@ -51,6 +80,8 @@ const status = {
   protectedBackendProxy: 'MISSING_EXTERNAL_INFRA',
   productionDomainAllowlist: 'CHECK_REQUIRED',
   spreadsheetParserDependency,
+  spreadsheetParserKnownAdvisoryFloor: '>=0.20.2',
+  spreadsheetParserReleaseAdvisoryReview: 'REQUIRED',
   spreadsheetParserSpec: String(pkg.dependencies?.xlsx ?? 'MISSING'),
   spreadsheetParserLockedVersion: lockedXlsxVersion || 'MISSING',
 };
