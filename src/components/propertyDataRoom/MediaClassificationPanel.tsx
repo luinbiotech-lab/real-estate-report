@@ -1,6 +1,7 @@
 import { useState, type ChangeEvent } from 'react';
 import { Alert, Button, Chip, MenuItem, TextField } from '@mui/material';
 import type { MediaCategory, PropertyMedia } from '../../domain/propertyDataRoom/types';
+import { isInternalMediaCategory } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { propertyDataRoomService } from '../../services/propertyDataRoomService';
 
@@ -23,6 +24,10 @@ export default function MediaClassificationPanel({ propertyId, media, internalPh
   const [message, setMessage] = useState('');
 
   const update = async (item: PropertyMedia, nextCategory: MediaCategory) => {
+    if (!internalPhotoAllowed && isInternalMediaCategory(item.category)) {
+      setError('내부사진 제외 물건의 기존 실내 미디어는 보고서용 외부 카테고리로 변경할 수 없습니다.');
+      return;
+    }
     setSavingId(item.id); setError(''); setMessage('');
     try {
       await propertyDataRoomRepository.updateMedia({ ...item, category: nextCategory, updatedAt: new Date().toISOString() });
@@ -54,10 +59,13 @@ export default function MediaClassificationPanel({ propertyId, media, internalPh
       <TextField size="small" label="캡션" value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="예: 동광로18길 코너 외관" />
       <Button component="label" variant="contained" disabled={uploading}>{uploading ? '등록 중…' : '사진 등록'}<input hidden type="file" accept="image/jpeg,image/png,image/webp" onChange={upload} /></Button>
     </div>
-    {media.length ? <div className="document-list">{media.map((item) => <article key={item.id}>
-      <div className="file-icon">{item.url ? <img src={item.url} alt={item.caption || item.fileName} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} /> : null}</div>
-      <div><b>{item.caption || item.fileName}</b><span>{labels[item.category]} · {item.verificationStatus}</span><small>{item.floor ? `${item.floor} · ` : ''}{item.captureDate || item.createdAt.slice(0, 10)}</small></div>
-      <TextField select size="small" label="보고서 분류" value={reportCategories.includes(item.category) ? item.category : 'other'} disabled={savingId === item.id} onChange={(event) => update(item, event.target.value as MediaCategory)}>{reportCategories.map((value) => <MenuItem key={value} value={value}>{labels[value]}</MenuItem>)}</TextField>
-    </article>)}</div> : <Alert severity="info">등록된 Data Room 미디어가 없습니다. 외관·도로·주변환경 이미지를 위에서 등록하세요.</Alert>}
+    {media.length ? <div className="document-list">{media.map((item) => {
+      const lockedInternal = !internalPhotoAllowed && isInternalMediaCategory(item.category);
+      return <article key={item.id}>
+        <div className="file-icon">{item.url ? <img src={item.url} alt={item.caption || item.fileName} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} /> : null}</div>
+        <div><b>{item.caption || item.fileName}</b><span>{labels[item.category]} · {item.verificationStatus}{lockedInternal ? ' · 보고서 제외 고정' : ''}</span><small>{item.floor ? `${item.floor} · ` : ''}{item.captureDate || item.createdAt.slice(0, 10)}</small></div>
+        <TextField select size="small" label={lockedInternal ? '보고서 제외' : '보고서 분류'} value={reportCategories.includes(item.category) ? item.category : 'other'} disabled={savingId === item.id || lockedInternal} onChange={(event) => update(item, event.target.value as MediaCategory)}>{reportCategories.map((value) => <MenuItem key={value} value={value}>{labels[value]}</MenuItem>)}</TextField>
+      </article>;
+    })}</div> : <Alert severity="info">등록된 Data Room 미디어가 없습니다. 외관·도로·주변환경 이미지를 위에서 등록하세요.</Alert>}
   </section>;
 }
