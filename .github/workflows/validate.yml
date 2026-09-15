@@ -69,6 +69,9 @@ jobs:
       - name: Validate production connection runbook
         run: node scripts/validate-production-runbook.mjs
 
+      - name: Validate remote public share Edge boundary
+        run: node scripts/validate-remote-public-share.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
