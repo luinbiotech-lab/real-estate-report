@@ -14,6 +14,7 @@ const files = {
   comparablePanel: 'src/components/propertyDataRoom/ComparableTransactionPanel.tsx',
   mediaPanel: 'src/components/propertyDataRoom/MediaClassificationPanel.tsx',
   extractionPanel: 'src/components/propertyDataRoom/DocumentExtractionPanel.tsx',
+  spaceOverviewPanel: 'src/components/propertyDataRoom/PropertySpaceOverviewPanel.tsx',
   detailMaster: 'src/components/professionalReport/DaonDetail7PageMaster.tsx',
   accessPolicy: 'src/domain/professionalReport/reportAccessPolicy.ts',
   app: 'src/App.tsx',
@@ -111,6 +112,12 @@ if (!text.bangbaeSeed.includes("verificationStatus: 'imported'") || !text.bangba
 }
 if (!text.bangbaeSeed.includes("{ floor: '3F'") || !text.bangbaeSeed.includes("{ floor: 'B1'") || !text.bangbaeSeed.includes("label: '방배동 448-37'")) {
   throw new Error('방배동 층별 4개와 비교거래 6건 seed 데이터가 누락되었습니다.');
+}
+if (!text.dataRoom.includes("import PropertySpaceOverviewPanel from '../components/propertyDataRoom/PropertySpaceOverviewPanel'") || !text.dataRoom.includes('<PropertySpaceOverviewPanel spaces={bundle.spaces ?? []} sources={bundle.dataSources} />')) {
+  throw new Error('Data Room 개요에서 구조화 PropertySpace 층별 구성을 직접 확인할 수 있어야 합니다.');
+}
+if (!text.spaceOverviewPanel.includes('OFFICIAL FLOOR STRUCTURE') || !text.spaceOverviewPanel.includes('층별 구성 · Data Room') || !text.spaceOverviewPanel.includes('imported 상태를 임의로 verified로 승격하지 않습니다.')) {
+  throw new Error('층별 구성 패널은 공부상 층·면적·검증상태·출처를 표시하고 imported provenance를 명확히 유지해야 합니다.');
 }
 
 console.log('DA:ON report pipeline integrity: PASS');
