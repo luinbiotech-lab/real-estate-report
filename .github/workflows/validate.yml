@@ -42,6 +42,9 @@ jobs:
       - name: Validate Digital Twin building flow
         run: npm run validate:twin-building
 
+      - name: Validate platform workflows
+        run: npm run validate:platform
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
