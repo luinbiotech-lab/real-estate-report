@@ -19,6 +19,11 @@ function downloadText(content: string, fileName: string, mime = 'application/jso
   URL.revokeObjectURL(url);
 }
 
+function csvCell(value: unknown) {
+  const text = value == null ? '' : String(value);
+  return `"${text.replace(/"/g, '""')}"`;
+}
+
 export default function ExternalShareCenterPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [shares, setShares] = useState<BuildingReleaseShare[]>([]);
@@ -68,6 +73,42 @@ export default function ExternalShareCenterPage() {
     return !query.trim() || haystack.includes(query.trim().toLowerCase());
   }), [shares, status, query, propertyMap]);
 
+  const auditRows = useMemo(() => shares.map((share) => {
+    const property = propertyMap.get(share.propertyId);
+    return {
+      propertyId: share.propertyId,
+      propertyName: property?.name || '',
+      address: property?.address || '',
+      snapshotId: share.snapshotId,
+      shareId: share.id,
+      recipientOrNote: share.note || '',
+      status: share.status,
+      access: share.access,
+      allowDownload: share.allowDownload,
+      createdAt: share.createdAt,
+      expiresAt: share.expiresAt || '',
+      openReviewCount: openReviewBySnapshot.get(share.snapshotId) ?? 0,
+    };
+  }), [shares, propertyMap, openReviewBySnapshot]);
+
+  const exportAuditJson = () => {
+    const payload = {
+      schemaVersion: 'daon-external-share-audit-v1',
+      exportedAt: new Date().toISOString(),
+      counts,
+      shares: auditRows,
+      reviewNotes: notes,
+      localOnlyWarning: 'REVOKED는 현재 로컬 감사상태입니다. 이미 전달된 standalone HTML 복사본은 서버 권한 없이 원격 차단할 수 없습니다.',
+    };
+    downloadText(JSON.stringify(payload, null, 2), `daon-external-share-audit-${new Date().toISOString().slice(0, 10)}.json`);
+  };
+
+  const exportAuditCsv = () => {
+    const headers = ['propertyId', 'propertyName', 'address', 'snapshotId', 'shareId', 'recipientOrNote', 'status', 'access', 'allowDownload', 'createdAt', 'expiresAt', 'openReviewCount'];
+    const rows = auditRows.map((row) => headers.map((key) => csvCell(row[key as keyof typeof row])).join(','));
+    downloadText(`\uFEFF${headers.map(csvCell).join(',')}\n${rows.join('\n')}`, `daon-external-share-audit-${new Date().toISOString().slice(0, 10)}.csv`, 'text/csv;charset=utf-8');
+  };
+
   const getSnapshot = async (share: BuildingReleaseShare) => {
     const snapshots = await buildingReleaseSnapshotService.list(share.propertyId);
     const snapshot = snapshots.find((item) => item.id === share.snapshotId);
@@ -100,7 +141,7 @@ export default function ExternalShareCenterPage() {
     try {
       await buildingReleaseCollaborationService.revokeShare(share);
       await load();
-      setNotice('공유를 회수했습니다.');
+      setNotice('공유 감사상태를 REVOKED로 변경했습니다. 이미 전달된 로컬 HTML 복사본은 서버 권한 연결 전에는 원격 차단되지 않습니다.');
     } catch (reason) { setError(reason instanceof Error ? reason.message : '공유를 회수하지 못했습니다.'); }
     finally { setBusyId(''); }
   };
@@ -110,7 +151,7 @@ export default function ExternalShareCenterPage() {
   return <main style={{ padding: 28, maxWidth: 1380, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 22 }}>
       <div><p className="eyebrow">EXTERNAL SHARE · ACCESS POLICY · REVIEW AUDIT</p><h1 style={{ margin: '5px 0' }}>외부 공유 센터</h1><p style={{ margin: 0, color: '#667085' }}>모든 물건의 Release Snapshot 공유, 만료, 회수와 미해결 검토 의견을 한 화면에서 관리합니다.</p></div>
-      <Button startIcon={<RefreshRounded />} onClick={() => void load()}>새로고침</Button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Button startIcon={<DownloadRounded />} onClick={exportAuditCsv}>감사대장 CSV</Button><Button startIcon={<DownloadRounded />} onClick={exportAuditJson}>감사대장 JSON</Button><Button startIcon={<RefreshRounded />} onClick={() => void load()}>새로고침</Button></div>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
@@ -121,6 +162,8 @@ export default function ExternalShareCenterPage() {
         ['전체 공유', counts.total], ['ACTIVE', counts.active], ['EXPIRED', counts.expired], ['REVOKED', counts.revoked], ['미해결 검토', counts.openReview],
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
     </section>
+
+    <Alert severity="warning" sx={{ mb: 1.5 }}>현재 `회수(REVOKED)`는 로컬 감사상태 변경입니다. 이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다. 실제 접근 차단은 public URL + 서버 인증 계층이 연결된 뒤 적용됩니다.</Alert>
 
     <section style={{ background: '#10243f', color: '#fff', borderRadius: 12, padding: 16, marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10 }}>
       <TextField size="small" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="물건명 · 주소 · 공유대상 · Snapshot 검색" sx={{ background: '#fff', borderRadius: 1 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded /></InputAdornment> }} />
