@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { AddRounded, DeleteOutlineRounded, SaveRounded } from '@mui/icons-material';
-import { Alert, Button, Card, CardContent, Chip, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Button, Card, CardContent, CircularProgress, MenuItem, Stack, TextField, Typography } from '@mui/material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { calculateRentalIncomeMetrics, rentalIncomeScenarioService, type RentalIncomeScenario } from '../services/rentalIncomeScenarioService';
 import type { Property } from '../types';
