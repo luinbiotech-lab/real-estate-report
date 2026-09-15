@@ -58,6 +58,15 @@ for (const marker of [
   "#token=${encodeURIComponent(rawToken)}",
   "'cache-control': 'no-store'",
   'PUBLIC_SHARE_ALLOWED_ORIGINS.includes(origin)',
+  "schemaVersion !== 'daon-building-release-snapshot-v1'",
+  'row.immutable !== true',
+  "checksumAlgorithm !== 'SHA-256'",
+  "signatureAlgorithm !== 'ECDSA_P256_SHA256'",
+  'canonical !== canonicalPackage',
+  'await sha256Hex(canonical) !== checksumHex',
+  "crypto.subtle.importKey(",
+  "crypto.subtle.verify(",
+  "const snapshot = await validateSnapshot(body.snapshot)",
 ]) {
   if (!text.edge.includes(marker)) throw new Error(`Remote share Edge 보안 규칙 누락: ${marker}`);
 }
@@ -82,6 +91,10 @@ for (const marker of [
   'Only `token_hash` is persisted',
   'List responses intentionally contain no raw token',
   'no wildcard origin',
+  'canonical package matches `canonicalPackage`',
+  'SHA-256 checksum matches `checksumHex`',
+  'ECDSA P-256 / SHA-256 signature verifies',
+  'tampered-snapshot issuance rejection',
 ]) {
   if (!text.edgeReadme.includes(marker)) throw new Error(`Remote share 배포 계약 누락: ${marker}`);
 }
