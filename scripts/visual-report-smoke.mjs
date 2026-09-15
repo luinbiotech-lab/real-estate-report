@@ -25,7 +25,7 @@ await page.route(`**${QA_MAIN_IMAGE}`, (route) => route.fulfill({ status: 200, c
 await page.route(`**${QA_MAP_IMAGE}`, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: qaSvg('map') }));
 
 try {
-  // Production seed intentionally carries no fake/static Bangbae media. Inject QA-only media into IndexedDB.
+  // Production seed intentionally carries no fake/static Bangbae media. Inject QA-only, policy-valid Data Room exterior media.
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.waitForSelector('body', { timeout: 30_000 });
   await page.evaluate(async ({ mainImage, mapImage }) => {
@@ -44,9 +44,27 @@ try {
       if (!property) throw new Error('Bangbae QA property missing');
       property.mainImage = mainImage;
       property.mapImage = mapImage;
+      const now = new Date().toISOString();
       await new Promise((resolve, reject) => {
-        const tx = db.transaction('properties', 'readwrite');
+        const tx = db.transaction(['properties', 'propertyMedia'], 'readwrite');
         tx.objectStore('properties').put(property);
+        tx.objectStore('propertyMedia').put({
+          id: 'qa-bangbae-exterior',
+          propertyId: 'daon-bangbae-815-11',
+          mediaType: 'image',
+          category: 'exterior',
+          storagePath: 'qa/bangbae-main.svg',
+          url: mainImage,
+          fileName: 'bangbae-main.svg',
+          mimeType: 'image/svg+xml',
+          caption: 'QA 대표 외관',
+          aiTags: [],
+          verificationStatus: 'confirmed',
+          sortOrder: 0,
+          isPrimary: true,
+          createdAt: now,
+          updatedAt: now,
+        });
         tx.oncomplete = () => resolve();
         tx.onerror = () => reject(tx.error);
         tx.onabort = () => reject(tx.error);
