@@ -10,7 +10,7 @@ async function waitForText(page, text, timeout = 30_000) {
 
 await mkdir(ARTIFACT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1500, height: 1200 } });
+const page = await browser.newPage({ viewport: { width: 1500, height: 1300 } });
 
 try {
   await page.goto(`${BASE_URL}/readiness`, { waitUntil: 'domcontentloaded' });
@@ -21,6 +21,11 @@ try {
     '보완 필요',
     '80% 이상',
     '평균 준비도',
+    'NEXT ACTION QUEUE',
+    '준비도 기반 다음 작업',
+    'MISSING',
+    'PARTIAL',
+    '보완 화면',
     '방배동 815-11 코너빌딩',
     '기본정보',
     '문서',
@@ -32,10 +37,10 @@ try {
     'Verification이 없는 imported 자료는 검증 완료로 승격하지 않습니다.',
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/property-readiness-center.png`, fullPage: true });
-  console.log('Rendered property readiness center QA: PASS');
+  console.log('Rendered property readiness + next action queue QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/readiness-failure.png`, fullPage: true });
-  console.error('Rendered property readiness center QA: FAIL');
+  console.error('Rendered property readiness + next action queue QA: FAIL');
   console.error(error);
   throw error;
 } finally {
