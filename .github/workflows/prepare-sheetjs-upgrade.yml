@@ -8,6 +8,9 @@ on:
       - .github/workflows/prepare-sheetjs-upgrade.yml
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   prepare:
     runs-on: ubuntu-latest
@@ -15,6 +18,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: feat/daon-master-code-lock
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -48,7 +53,19 @@ jobs:
       - name: Audit upgraded dependency tree
         run: |
           npm audit --json > sheetjs-upgrade-audit.json || true
-          node -e "const a=require('./sheetjs-upgrade-audit.json'); const v=a.metadata?.vulnerabilities||{}; if((v.high||0)>0 || (v.critical||0)>0) throw new Error('High/critical vulnerabilities remain: '+JSON.stringify(v)); console.log('audit',v)"
+          node -e "const a=require('./sheetjs-upgrade-audit.json'); const v=a.metadata?.vulnerabilities||{}; if((v.high||0)>0 || (v.critical||0)>0 || (v.total||0)>0) throw new Error('Vulnerabilities remain: '+JSON.stringify(v)); console.log('audit',v)"
+
+      - name: Commit verified generated lockfiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes to commit"
+            exit 0
+          fi
+          git commit -m "security: upgrade SheetJS to official 0.20.3"
+          git push origin HEAD:feat/daon-master-code-lock
 
       - name: Upload generated lockfiles
         uses: actions/upload-artifact@v4
