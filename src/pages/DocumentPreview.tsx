@@ -3,7 +3,9 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { Button, CircularProgress } from '@mui/material';
 import { ArrowBackRounded, PrintRounded } from '@mui/icons-material';
 import { useReactToPrint } from 'react-to-print';
+import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
+import { internalPhotoAllowed, reportMediaCategoryAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { DaonOnePageMaster } from '../components/professionalReport/DaonOnePageMaster';
@@ -29,8 +31,15 @@ export default function DocumentPreview() {
         .catch((reason) => { if (!cancelled) { setError(reason instanceof Error ? reason.message : '7P 상세보고서를 생성하지 못했습니다.'); setRedirecting(false); } });
       return () => { cancelled = true; };
     }
-    propertyRepository.getById(id)
-      .then((value) => { if (!cancelled) { if (value) setProperty(value); else setError('물건을 찾을 수 없습니다.'); } })
+    Promise.all([propertyRepository.getById(id), propertyDataRoomRepository.getBundle(id)])
+      .then(([value, bundle]) => {
+        if (cancelled) return;
+        if (!value) { setError('물건을 찾을 수 없습니다.'); return; }
+        const allowInternal = internalPhotoAllowed(value);
+        const dataRoomHero = bundle.media.find((item) => item.url && reportMediaCategoryAllowed(item.category, allowInternal))?.url || '';
+        const mainImage = allowInternal ? (value.mainImage || dataRoomHero) : dataRoomHero;
+        setProperty({ ...value, mainImage });
+      })
       .catch((reason) => { if (!cancelled) setError(reason instanceof Error ? reason.message : '물건을 불러오지 못했습니다.'); });
     return () => { cancelled = true; };
   }, [id, kind, navigate]);
