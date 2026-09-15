@@ -49,5 +49,7 @@ if (!text.releaseSharePackage.includes('constructionReady=false / legalBimReady=
 if (!text.app.includes('path="external-shares"') || !text.layout.includes('to="/external-shares"')) throw new Error('외부 공유 센터 route/navigation 연결이 필요합니다.');
 if (!text.externalShareCenter.includes('외부 공유 센터') || !text.externalShareCenter.includes('ACTIVE') || !text.externalShareCenter.includes('EXPIRED') || !text.externalShareCenter.includes('REVOKED')) throw new Error('외부 공유 센터는 전체/활성/만료/회수 상태를 요약해야 합니다.');
 if (!text.externalShareCenter.includes('releaseSharePackageService.toHtml') || !text.externalShareCenter.includes('revokeShare')) throw new Error('외부 공유 센터에서 standalone HTML 재생성과 공유 회수가 가능해야 합니다.');
+if (!text.externalShareCenter.includes('감사대장 CSV') || !text.externalShareCenter.includes('감사대장 JSON') || !text.externalShareCenter.includes('daon-external-share-audit-v1')) throw new Error('외부 공유 센터는 감사대장 CSV/JSON 내보내기를 제공해야 합니다.');
+if (!text.externalShareCenter.includes('이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다')) throw new Error('로컬 standalone HTML의 원격 회수 불가 안전경계를 명시해야 합니다.');
 
 console.log('Platform workflow integrity: PASS');
