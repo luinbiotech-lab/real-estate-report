@@ -51,6 +51,9 @@ jobs:
       - name: Validate portfolio operations hub
         run: node scripts/validate-portfolio-hub.mjs
 
+      - name: Validate property readiness center
+        run: node scripts/validate-readiness-center.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
@@ -86,6 +89,9 @@ jobs:
 
       - name: Rendered portfolio hub QA
         run: node scripts/visual-portfolio-smoke.mjs
+
+      - name: Rendered readiness center QA
+        run: node scripts/visual-readiness-smoke.mjs
 
       - name: Rendered report smoke QA
         run: node scripts/visual-report-smoke.mjs
