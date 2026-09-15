@@ -57,6 +57,9 @@ jobs:
       - name: Validate company settings policy
         run: node scripts/validate-company-settings.mjs
 
+      - name: Validate local backup and restore
+        run: node scripts/validate-local-backup.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
@@ -98,6 +101,9 @@ jobs:
 
       - name: Rendered company settings QA
         run: node scripts/visual-settings-smoke.mjs
+
+      - name: Rendered local backup center QA
+        run: node scripts/visual-backup-smoke.mjs
 
       - name: Rendered report smoke QA
         run: node scripts/visual-report-smoke.mjs
