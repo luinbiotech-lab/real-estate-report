@@ -59,27 +59,47 @@
 
 ## 4. REMOTE / PUBLIC external share
 
-적용 migration:
+준비된 코드:
 
 - `supabase/migrations/20260915_external_public_share.sql`
+- `supabase/functions/remote-public-share/index.ts`
+- `supabase/functions/remote-public-share/README.md`
+
+현재 상태는 **PREPARED / NOT DEPLOYED**이다. 실제 부동산 전용 Supabase가 준비되기 전에는 `REMOTE / PUBLIC`을 READY로 표시하지 않는다.
+
+배포 순서:
+
+1. Auth/profile migration을 먼저 적용한다.
+2. external-share migration을 적용한다.
+3. `PUBLIC_SHARE_BASE_URL`, `PUBLIC_SHARE_ALLOWED_ORIGINS`를 서버 secret/environment로 설정한다.
+4. `supabase functions deploy remote-public-share --no-verify-jwt`로 배포한다.
+5. 관리 action(`issue`, `revoke`, `list`)이 함수 내부 `auth.getUser()` + active `owner/admin` 검증을 통과하는지 확인한다.
+6. 익명 action(`resolve`, `add_review`)은 raw token 검증으로만 접근되며 table 직접 anon access는 계속 금지한다.
 
 서버/Edge Function에서 반드시 수행:
 
-1. 충분한 entropy의 raw token을 issuance 시점에만 생성한다.
-2. raw token을 SHA-256 이상으로 hash하여 `token_hash`만 DB에 저장한다.
-3. 조회 시 presented token을 서버에서 hash하여 session을 resolve한다.
-4. `revoked_at`, `expires_at`, `read_only`, `allow_download`를 서버에서 검사한다.
-5. public client가 `external_share_sessions` 테이블을 직접 조회하지 못하게 유지한다.
-6. review-note write도 동일 token validation을 통과한 경우에만 허용한다.
+1. 충분한 entropy의 32-byte raw token을 issuance 시점에만 생성한다.
+2. raw token을 SHA-256으로 hash하여 `token_hash`만 DB에 저장한다.
+3. public URL에는 raw token을 query/path가 아니라 URL fragment `#token=...`으로 1회 전달한다.
+4. 감사/list 응답에는 raw token 및 재구성 가능한 public URL을 반환하지 않는다.
+5. 조회 시 presented token을 서버에서 hash하여 session을 resolve한다.
+6. `revoked_at`, `expires_at`, `read_only`, `allow_download`를 서버에서 검사한다.
+7. public client가 `external_share_sessions` 테이블을 직접 조회하지 못하게 유지한다.
+8. review-note write도 동일 token validation을 통과한 경우에만 허용한다.
+9. Release Snapshot 발급 전 `schemaVersion`, `immutable`, canonical package, SHA-256 checksum, ECDSA P-256/SHA-256 signature를 서버에서 검증한다.
+10. tampered snapshot, checksum mismatch, invalid signature는 issuance 전에 거부한다.
+11. browser CORS는 `PUBLIC_SHARE_ALLOWED_ORIGINS` exact allowlist를 사용하고 wildcard origin을 사용하지 않는다.
 
 완료 조건:
 
-- public URL 발급
+- valid signed snapshot public URL 발급
+- tampered snapshot 발급 차단
 - 만료 후 접근 차단
 - revoke 후 즉시 접근 차단
 - download policy 강제
 - remote review sync
 - raw token DB 비저장 확인
+- list/audit 응답 raw token 비노출
 
 ## 5. Frontend / protected proxy production deployment
 
@@ -102,7 +122,7 @@ production에서는 다음을 분리한다.
 - `NAVER_MAP_CLIENT_SECRET`
 - `KAKAO_REST_API_KEY`
 - Supabase `service_role`
-- external-share signing/token-management server secrets
+- external-share token-management server secrets
 
 proxy 승격 대상 route:
 
@@ -119,7 +139,7 @@ production URL 확정 후:
 1. Kakao Developers Web platform에 production origin 등록
 2. NAVER 허용 도메인/서비스 설정 확인
 3. Supabase Auth Site URL / Redirect URL 등록
-4. CORS origin을 production frontend로 제한
+4. CORS origin을 production frontend/public viewer origin으로 제한
 5. localhost는 production 설정에서 불필요하면 제거
 
 ## 7. Spreadsheet parser release gate
@@ -158,15 +178,17 @@ release 직전 필수:
 4. property CRUD 권한별 차단
 5. Data Room upload/read/verification
 6. 1P/7P report render/print/PDF
-7. REMOTE/PUBLIC URL 생성
-8. 익명 recipient read-only view
-9. expiry/revoke
-10. review-note sync
-11. NAVER geocode/static + Kakao POI/Roadview
-12. backup/export 및 최소 1회 restore rehearsal
-13. cross-device 동일 사용자 상태 확인
-14. 브라우저 secret scan
-15. Spreadsheet parser release gate PASS
+7. signed Snapshot REMOTE/PUBLIC URL 생성
+8. tampered Snapshot issuance 거부
+9. 익명 recipient read-only resolve
+10. expiry/revoke 후 접근 차단
+11. review-note sync
+12. remote share list에 raw token 비노출
+13. NAVER geocode/static + Kakao POI/Roadview
+14. backup/export 및 최소 1회 restore rehearsal
+15. cross-device 동일 사용자 상태 확인
+16. 브라우저 secret scan
+17. Spreadsheet parser release gate PASS
 
 ## 9. 현재 상태
 
@@ -175,7 +197,8 @@ release 직전 필수:
 - LOCAL POLICY: READY
 - REMOTE AUTH: NOT CONFIGURED
 - LOCAL / OFFLINE share: READY
-- REMOTE / PUBLIC share: NOT CONFIGURED
+- REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED
+- REMOTE / PUBLIC backend connection: NOT CONFIGURED
 - production frontend host: MISSING EXTERNAL INFRA
 - protected backend proxy: MISSING EXTERNAL INFRA
 - production provider/domain allowlist: CHECK REQUIRED
