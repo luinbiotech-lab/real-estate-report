@@ -21,8 +21,8 @@ for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_RE
 }
 if (!text.envExample.includes('Server-only credentials. Never commit real values.')) throw new Error('서버 전용 지도 credential 보안 경계를 명시해야 합니다.');
 
-if (!text.authProvider.includes("status: 'not_configured'") || !text.authProvider.includes('REMOTE AUTH')) throw new Error('실제 Auth backend 미연결 상태를 명시해야 합니다.');
-if (!text.shareProvider.includes("status: 'not_configured'") || !text.shareProvider.includes('REMOTE / PUBLIC')) throw new Error('Remote public share 미연결 상태를 명시해야 합니다.');
+if (!text.authProvider.includes("status: 'not_configured'") || !text.authProvider.includes("label: 'REMOTE AUTH'")) throw new Error('실제 Auth backend 미연결 상태를 명시해야 합니다.');
+if (!text.shareProvider.includes("availability: 'not_configured'") || !text.shareProvider.includes("label: 'REMOTE / PUBLIC'")) throw new Error('Remote public share 미연결 상태를 명시해야 합니다.');
 
 if (!text.authMigration.includes('Do not apply it to GPS/Sports projects')) throw new Error('Auth migration은 부동산 전용 backend에만 적용해야 합니다.');
 if (!text.authMigration.includes('Do NOT expose service_role credentials to the browser')) throw new Error('service_role browser 노출 금지 경계가 필요합니다.');
