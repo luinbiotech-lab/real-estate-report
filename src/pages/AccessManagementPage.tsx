@@ -3,7 +3,6 @@ import { Alert, Button, Chip, MenuItem, TextField } from '@mui/material';
 import { useMemo, useState } from 'react';
 import {
   ACCESS_STORAGE_KEY,
-  AUTH_BACKEND_CONNECTED,
   CAPABILITY_LABELS,
   ROLE_CAPABILITIES,
   ROLE_LABELS,
@@ -11,8 +10,17 @@ import {
   type AccessProfile,
   type AccessRole,
 } from '../services/accessControlService';
+import { AUTH_PROVIDER_SUMMARIES } from '../services/authProviderService';
 
 const ROLES: AccessRole[] = ['owner', 'admin', 'editor', 'viewer'];
+const AUTH_CAPABILITY_LABELS = [
+  ['authenticatedSession', '인증 세션'],
+  ['userInvitation', '사용자 초대'],
+  ['persistentProfile', '서버 프로필'],
+  ['rlsEnforcement', 'RLS 강제'],
+  ['ownerOnlyAdministration', 'OWNER 전용 관리'],
+  ['multiDevicePersistence', '멀티디바이스 동기화'],
+] as const;
 
 export default function AccessManagementPage() {
   const [profiles, setProfiles] = useState<AccessProfile[]>(() => accessControlService.listProfiles());
@@ -65,13 +73,26 @@ export default function AccessManagementPage() {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Chip color="success" icon={<ShieldRounded />} label="LOCAL POLICY READY" />
-        <Chip color={AUTH_BACKEND_CONNECTED ? 'success' : 'warning'} icon={<LockPersonRounded />} label={AUTH_BACKEND_CONNECTED ? 'AUTH CONNECTED' : 'AUTH NOT CONNECTED'} />
+        <Chip color="warning" icon={<LockPersonRounded />} label="AUTH NOT CONNECTED" />
       </div>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
     <Alert severity="info" sx={{ mb: 1.5 }}>현재 프로필은 `{ACCESS_STORAGE_KEY}`에 저장되는 로컬 권한정책입니다. 이메일 초대, 비밀번호, 로그인 세션, 서버 RLS는 아직 연결하지 않았습니다.</Alert>
+
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(320px,1fr))', gap: 12, marginBottom: 16 }}>
+      {AUTH_PROVIDER_SUMMARIES.map((provider) => <div key={provider.kind} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
+          <div><small style={{ color: '#667085', letterSpacing: '.08em' }}>AUTH PROVIDER</small><strong style={{ display: 'block', marginTop: 4 }}>{provider.label}</strong></div>
+          <Chip size="small" color={provider.status === 'ready' ? 'success' : 'warning'} label={provider.status === 'ready' ? 'READY' : 'NOT CONFIGURED'} />
+        </div>
+        <p style={{ color: '#667085', fontSize: 12, lineHeight: 1.55 }}>{provider.description}</p>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+          {AUTH_CAPABILITY_LABELS.map(([key, label]) => <Chip key={key} size="small" variant="outlined" color={provider.status === 'ready' && provider.capabilities[key] ? 'success' : 'default'} label={`${label} ${provider.capabilities[key] ? '✓' : '—'}`} />)}
+        </div>
+      </div>)}
+    </section>
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(160px,1fr))', gap: 10, marginBottom: 16 }}>
       {[
