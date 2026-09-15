@@ -60,6 +60,9 @@ jobs:
       - name: Validate local backup and restore
         run: node scripts/validate-local-backup.mjs
 
+      - name: Validate Excel import security boundary
+        run: node scripts/validate-excel-security.mjs
+
       - name: Validate production readiness boundary
         run: node scripts/validate-production-readiness.mjs
 
