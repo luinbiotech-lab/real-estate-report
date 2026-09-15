@@ -14,6 +14,25 @@ async function put<T extends { id: string }>(storeName: StoreName, value: T): Pr
   return value;
 }
 
+const REPORT_MEDIA_PRIORITY: Partial<Record<PropertyMedia['category'], number>> = {
+  exterior: 0,
+  road: 1,
+  surroundings: 2,
+  entrance: 3,
+  facade_detail: 4,
+  aerial: 5,
+  parking: 6,
+};
+
+function sortReportMedia(items: PropertyMedia[]) {
+  return [...items].sort((left, right) => {
+    if (left.isPrimary !== right.isPrimary) return left.isPrimary ? -1 : 1;
+    const categoryOrder = (REPORT_MEDIA_PRIORITY[left.category] ?? 50) - (REPORT_MEDIA_PRIORITY[right.category] ?? 50);
+    if (categoryOrder !== 0) return categoryOrder;
+    return left.sortOrder - right.sortOrder || left.createdAt.localeCompare(right.createdAt);
+  });
+}
+
 export const propertyDataRoomRepository = {
   getDocuments: (propertyId: string) => byProperty<PropertyDocument>('propertyDocuments', propertyId),
   async getDocument(id: string) { return (await database).get('propertyDocuments', id) as Promise<PropertyDocument | undefined>; },
@@ -23,7 +42,7 @@ export const propertyDataRoomRepository = {
     const db = await database; const value = await db.get('propertyDocuments', id) as PropertyDocument | undefined;
     if (value) await db.put('propertyDocuments', { ...value, deletedAt: new Date().toISOString(), updatedAt: new Date().toISOString(), fileData: undefined });
   },
-  getMedia: (propertyId: string) => byProperty<PropertyMedia>('propertyMedia', propertyId),
+  async getMedia(propertyId: string) { return sortReportMedia(await byProperty<PropertyMedia>('propertyMedia', propertyId)); },
   async getMediaItem(id: string) { return (await database).get('propertyMedia', id) as Promise<PropertyMedia | undefined>; },
   createMedia: (value: PropertyMedia) => put('propertyMedia', value),
   updateMedia: (value: PropertyMedia) => put('propertyMedia', value),
