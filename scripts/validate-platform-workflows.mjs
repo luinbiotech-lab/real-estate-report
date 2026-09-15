@@ -1,30 +1,21 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const files = {
-  app: 'src/App.tsx',
-  layout: 'src/components/Layout.tsx',
-  reportHistoryPage: 'src/pages/ReportHistoryPage.tsx',
-  reportHistoryService: 'src/services/reportSnapshotHistoryService.ts',
-  twinIntakePage: 'src/pages/DigitalTwinIntakePage.tsx',
-  twinIntakeService: 'src/services/digitalTwinAssetIntakeService.ts',
-  orchestrator: 'src/services/agentOrchestratorService.ts',
-  repository: 'src/repositories/propertyDataRoomRepository.ts',
-  releasePanel: 'src/components/BuildingReleasePanel.tsx',
-  releaseShareWorkspace: 'src/components/ReleaseShareWorkspace.tsx',
-  releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts',
-  releaseSharePackage: 'src/services/releaseSharePackageService.ts',
-  externalShareCenter: 'src/pages/ExternalShareCenterPage.tsx',
-  rentalIncomePage: 'src/pages/RentalIncomeWorkspacePage.tsx',
-  rentalIncomeService: 'src/services/rentalIncomeScenarioService.ts',
-  reviewHistoryPage: 'src/pages/ReviewHistoryPage.tsx',
-  reviewHistoryService: 'src/services/reviewHistoryService.ts',
+  app: 'src/App.tsx', layout: 'src/components/Layout.tsx', propertyHub: 'src/pages/PropertyHubPage.tsx',
+  reportHistoryPage: 'src/pages/ReportHistoryPage.tsx', reportHistoryService: 'src/services/reportSnapshotHistoryService.ts',
+  twinIntakePage: 'src/pages/DigitalTwinIntakePage.tsx', twinIntakeService: 'src/services/digitalTwinAssetIntakeService.ts', orchestrator: 'src/services/agentOrchestratorService.ts', repository: 'src/repositories/propertyDataRoomRepository.ts',
+  releasePanel: 'src/components/BuildingReleasePanel.tsx', releaseShareWorkspace: 'src/components/ReleaseShareWorkspace.tsx', releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts', releaseSharePackage: 'src/services/releaseSharePackageService.ts', externalShareCenter: 'src/pages/ExternalShareCenterPage.tsx',
+  rentalIncomePage: 'src/pages/RentalIncomeWorkspacePage.tsx', rentalIncomeService: 'src/services/rentalIncomeScenarioService.ts',
+  reviewHistoryPage: 'src/pages/ReviewHistoryPage.tsx', reviewHistoryService: 'src/services/reviewHistoryService.ts',
 };
-
-for (const file of Object.values(files)) {
-  if (!existsSync(file)) throw new Error(`플랫폼 workflow 필수 파일 누락: ${file}`);
-}
-
+for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(`플랫폼 workflow 필수 파일 누락: ${file}`);
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
+
+if (!text.app.includes('PropertyHubPage') || !text.app.includes('path="property/:id" element={<PropertyHubPage')} || !text.app.includes('path="property/:id/data-room" element={<PropertyDataRoomPage')} ) throw new Error('물건 상세 메인 허브와 Data Room 세부 route를 분리해야 합니다.');
+if (!text.propertyHub.includes('PROPERTY DETAIL HUB') || !text.propertyHub.includes('WORKSPACE NAVIGATION') || !text.propertyHub.includes('Data Room 전체보기')) throw new Error('물건 상세 허브는 핵심정보와 세부 Workspace 진입판을 제공해야 합니다.');
+for (const label of ['사진 · 미디어', '문서 · 공적자료', '비교거래', '임대 · 수익 분석', '검토 이력', '보고서', '3D · 도면', '입지 브리핑']) if (!text.propertyHub.includes(label)) throw new Error(`물건 상세 허브 필수 항목 누락: ${label}`);
+if (!text.propertyHub.includes('/income?propertyId=') || !text.propertyHub.includes('/review-history?propertyId=')) throw new Error('상세 허브는 선택 물건 context를 임대·수익/검토 이력으로 전달해야 합니다.');
+if (!text.propertyHub.includes('대표 외관 미디어 미연결') || !text.propertyHub.includes('provenance')) throw new Error('대표미디어가 없을 때 가짜 사진 대신 미연결 상태와 provenance 원칙을 표시해야 합니다.');
 
 if (!text.app.includes('path="report-history"') || !text.layout.includes('to="/report-history"')) throw new Error('보고서 Snapshot 이력 화면의 route/navigation 연결이 필요합니다.');
 if (!text.reportHistoryService.includes('isLatestReady') || !text.reportHistoryService.includes('archiveSupersededDrafts')) throw new Error('보고서 이력 서비스는 최신 확정본 식별과 이전 draft 보관 기능을 유지해야 합니다.');
@@ -39,12 +30,14 @@ if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntak
 if (!text.repository.includes('getDigitalTwinAssets') || !text.repository.includes('saveDigitalTwinAsset')) throw new Error('Digital Twin asset repository read/write 경로를 유지해야 합니다.');
 
 if (!text.app.includes('path="income"') || !text.layout.includes('to="/income"')) throw new Error('임대·수익 분석 route/navigation 연결이 필요합니다.');
+if (!text.rentalIncomePage.includes('useSearchParams') || !text.rentalIncomePage.includes("searchParams.get('propertyId')")) throw new Error('임대·수익 Workspace는 허브에서 전달한 propertyId context를 유지해야 합니다.');
 if (!text.rentalIncomePage.includes('임대 · 수익 분석') || !text.rentalIncomePage.includes('NOI') || !text.rentalIncomePage.includes('Cap Rate') || !text.rentalIncomePage.includes('Cash-on-Cash')) throw new Error('임대·수익 Workspace는 핵심 투자수익 지표를 제공해야 합니다.');
 if (!text.rentalIncomePage.includes('시나리오 저장') || !text.rentalIncomePage.includes('저장된 시나리오')) throw new Error('임대·수익 Workspace는 복수 시나리오 저장/재사용을 제공해야 합니다.');
 if (!text.rentalIncomeService.includes('calculateRentalIncomeMetrics') || !text.rentalIncomeService.includes('effectiveGrossIncome') || !text.rentalIncomeService.includes('cashOnCashReturnPct')) throw new Error('임대·수익 서비스는 EGI/NOI/Cap Rate/Cash-on-Cash 계산을 유지해야 합니다.');
 if (!text.rentalIncomeService.includes("STORAGE_KEY = 'daon:rental-income-scenarios:v1'")) throw new Error('임대·수익 시나리오는 버전된 로컬 저장소에 보존되어야 합니다.');
 
 if (!text.app.includes('path="review-history"') || !text.layout.includes('to="/review-history"')) throw new Error('검토 이력 통합 route/navigation 연결이 필요합니다.');
+if (!text.reviewHistoryPage.includes('useSearchParams') || !text.reviewHistoryPage.includes("searchParams.get('propertyId')")) throw new Error('검토 이력 Workspace는 허브에서 전달한 propertyId context를 유지해야 합니다.');
 if (!text.reviewHistoryPage.includes('검토 이력 통합') || !text.reviewHistoryPage.includes('자료 검증') || !text.reviewHistoryPage.includes('Agent Review') || !text.reviewHistoryPage.includes('외부 검토')) throw new Error('검토 이력 화면은 자료/Agent/보고서/외부검토를 한 화면에 제공해야 합니다.');
 if (!text.reviewHistoryPage.includes('AUDIT TIMELINE') || !text.reviewHistoryPage.includes('시간순 검토 기록')) throw new Error('검토 이력 화면은 시간순 감사 타임라인을 제공해야 합니다.');
 if (!text.reviewHistoryService.includes("kind: 'verification'") || !text.reviewHistoryService.includes("kind: 'agent_review'") || !text.reviewHistoryService.includes("kind: 'report_snapshot'") || !text.reviewHistoryService.includes("kind: 'external_review'")) throw new Error('검토 이력 서비스는 4개 원천을 모두 통합해야 합니다.');
