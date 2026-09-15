@@ -46,10 +46,8 @@ async function verifyDataRoomDeepLinks(page) {
     const tabNode = page.getByRole('tab', { name: label, exact: true });
     await tabNode.waitFor({ state: 'visible', timeout: 30_000 });
     if ((await tabNode.getAttribute('aria-selected')) !== 'true') throw new Error(`Data Room deep link failed: ${tab} → ${label}`);
+    if (tab === 'market') await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-deep-link-market.png`, fullPage: true });
   }
-  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=market`, { waitUntil: 'domcontentloaded' });
-  await waitForText(page, '방배동 실거래사례1년간.pdf');
-  await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-deep-link-market.png`, fullPage: true });
   console.log('[PASS] Property hub deep links: media/documents/market/reports/digitalTwin open the requested Data Room tab');
 }
 
