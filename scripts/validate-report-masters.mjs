@@ -90,11 +90,11 @@ for (const marker of pageSequence) {
   if (index < 0 || index <= lastPageIndex) throw new Error(`7P MASTER 페이지 순서가 변경되었습니다: ${marker}`);
   lastPageIndex = index;
 }
-if (!detail.includes("item.category !== 'interior'")) {
+if (!detail.includes('reportMediaCategoryAllowed(item.category, model.media.internalPhotoAllowed)')) {
   throw new Error('7P MASTER 내부사진 제외 정책 연결이 없습니다.');
 }
-if (!accessPolicy.includes('BANGBAE_815_11') || !accessPolicy.includes('internalPhotoAllowed')) {
-  throw new Error('방배동 815-11 내부사진 제외 정책을 유지해야 합니다.');
+if (!accessPolicy.includes('BANGBAE_815_11') || !accessPolicy.includes('internalPhotoAllowed') || !accessPolicy.includes('INTERNAL_MEDIA_CATEGORIES') || !accessPolicy.includes('reportMediaCategoryAllowed')) {
+  throw new Error('방배동 815-11 내부사진 제외 중앙 정책을 유지해야 합니다.');
 }
 if (/label="지목"[^>]*value=\{'대'\}/.test(onePage)) {
   throw new Error('지목 하드코딩 금지: 검증 데이터만 사용해야 합니다.');
@@ -120,6 +120,9 @@ if (detail.includes('현장주차') && !detail.includes('공부상 주차')) {
 }
 if (!documentPreview.includes('DaonOnePageMaster') || documentPreview.includes('ProfessionalReportV1')) {
   throw new Error('현재 1P 미리보기는 DAON_1P_MASTER만 사용해야 합니다.');
+}
+if (!documentPreview.includes('propertyDataRoomRepository.getBundle(id)') || !documentPreview.includes('reportMediaCategoryAllowed(item.category, allowInternal)')) {
+  throw new Error('1P 미리보기는 Data Room 미디어와 중앙 내부사진 제외 정책을 사용해야 합니다.');
 }
 if (!snapshotPage.includes('DaonDetail7PageMaster') || snapshotPage.includes("import { ProfessionalReportV1")) {
   throw new Error('현재 7P 미리보기는 DAON_DETAIL_7P_MASTER만 사용해야 합니다.');
