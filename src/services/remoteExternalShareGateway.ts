@@ -8,7 +8,11 @@ export interface RemoteShareIssueRequest {
   recipientNote?: string;
 }
 
-export interface RemoteShareSession {
+/**
+ * Returned only at issuance time. The raw token must never be persisted by the
+ * remote provider, so this shape must not be reused for audit/list responses.
+ */
+export interface RemoteShareIssuedSession {
   remoteShareId: string;
   publicUrl: string;
   rawToken: string;
@@ -17,6 +21,22 @@ export interface RemoteShareSession {
   allowDownload: boolean;
   createdAt: string;
 }
+
+/** Persistable/auditable metadata. It intentionally contains no raw token. */
+export interface RemoteShareRecord {
+  remoteShareId: string;
+  snapshotId: string;
+  propertyId: string;
+  status: 'active' | 'revoked' | 'expired';
+  expiresAt?: string;
+  allowDownload: boolean;
+  recipientNote?: string;
+  createdAt: string;
+  revokedAt?: string;
+}
+
+// Compatibility name for issuance consumers only.
+export type RemoteShareSession = RemoteShareIssuedSession;
 
 export interface RemoteShareAccessResult {
   status: 'active' | 'revoked' | 'expired' | 'not_found';
@@ -28,10 +48,10 @@ export interface RemoteShareAccessResult {
 }
 
 export interface RemoteExternalShareGateway {
-  issue(request: RemoteShareIssueRequest): Promise<RemoteShareSession>;
+  issue(request: RemoteShareIssueRequest): Promise<RemoteShareIssuedSession>;
   revoke(remoteShareId: string): Promise<void>;
   resolve(rawToken: string): Promise<RemoteShareAccessResult>;
-  listForSnapshot(snapshotId: string): Promise<RemoteShareSession[]>;
+  listForSnapshot(snapshotId: string): Promise<RemoteShareRecord[]>;
   addReviewNote(rawToken: string, author: string, body: string): Promise<BuildingReleaseReviewNote>;
 }
 
@@ -40,10 +60,10 @@ class NotConfiguredRemoteExternalShareGateway implements RemoteExternalShareGate
     throw new Error('REMOTE / PUBLIC Provider가 아직 연결되지 않았습니다. 부동산 전용 서버 프로젝트가 필요합니다.');
   }
 
-  async issue(): Promise<RemoteShareSession> { return this.unavailable(); }
+  async issue(): Promise<RemoteShareIssuedSession> { return this.unavailable(); }
   async revoke(): Promise<void> { this.unavailable(); }
   async resolve(): Promise<RemoteShareAccessResult> { return this.unavailable(); }
-  async listForSnapshot(): Promise<RemoteShareSession[]> { return this.unavailable(); }
+  async listForSnapshot(): Promise<RemoteShareRecord[]> { return this.unavailable(); }
   async addReviewNote(): Promise<BuildingReleaseReviewNote> { return this.unavailable(); }
 }
 
