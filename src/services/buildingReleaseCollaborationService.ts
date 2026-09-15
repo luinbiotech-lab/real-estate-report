@@ -38,6 +38,9 @@ function token() {
   const bytes = crypto.getRandomValues(new Uint8Array(24));
   return [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('');
 }
+function resolveShareStatus(row: BuildingReleaseShare, now = new Date().toISOString()): BuildingReleaseShare {
+  return row.status === 'active' && row.expiresAt && row.expiresAt <= now ? { ...row, status: 'expired' as const } : row;
+}
 
 export async function getSnapshotStates(propertyId: string): Promise<BuildingReleaseSnapshotState[]> {
   return await (await database).getAllFromIndex('buildingReleaseSnapshotStates', 'propertyId', propertyId) as BuildingReleaseSnapshotState[];
@@ -65,7 +68,13 @@ export async function createShare(snapshot: BuildingReleaseSnapshot, input: { ex
 export async function listShares(snapshotId: string): Promise<BuildingReleaseShare[]> {
   const rows = await (await database).getAllFromIndex('buildingReleaseShares', 'snapshotId', snapshotId) as BuildingReleaseShare[];
   const now = new Date().toISOString();
-  return rows.map((row) => row.status === 'active' && row.expiresAt && row.expiresAt <= now ? { ...row, status: 'expired' as const } : row).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  return rows.map((row) => resolveShareStatus(row, now)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function listAllShares(): Promise<BuildingReleaseShare[]> {
+  const rows = await (await database).getAll('buildingReleaseShares') as BuildingReleaseShare[];
+  const now = new Date().toISOString();
+  return rows.map((row) => resolveShareStatus(row, now)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function revokeShare(share: BuildingReleaseShare) {
@@ -83,6 +92,11 @@ export async function addReviewNote(snapshot: BuildingReleaseSnapshot, author: s
 
 export async function listReviewNotes(snapshotId: string): Promise<BuildingReleaseReviewNote[]> {
   const rows = await (await database).getAllFromIndex('buildingReleaseReviewNotes', 'snapshotId', snapshotId) as BuildingReleaseReviewNote[];
+  return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export async function listAllReviewNotes(): Promise<BuildingReleaseReviewNote[]> {
+  const rows = await (await database).getAll('buildingReleaseReviewNotes') as BuildingReleaseReviewNote[];
   return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
@@ -109,4 +123,4 @@ export function buildShareManifest(snapshot: BuildingReleaseSnapshot, share: Bui
   };
 }
 
-export const buildingReleaseCollaborationService = { getSnapshotStates, setSnapshotState, resolveSnapshotStatus, createShare, listShares, revokeShare, addReviewNote, listReviewNotes, resolveReviewNote, buildShareManifest };
+export const buildingReleaseCollaborationService = { getSnapshotStates, setSnapshotState, resolveSnapshotStatus, createShare, listShares, listAllShares, revokeShare, addReviewNote, listReviewNotes, listAllReviewNotes, resolveReviewNote, buildShareManifest };
