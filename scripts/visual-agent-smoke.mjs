@@ -32,6 +32,27 @@ async function verifyPropertyHub(page) {
   console.log('[PASS] Bangbae property hub: fact-first summary + 8 workspace entry cards + no fabricated hero media');
 }
 
+async function verifyDataRoomDeepLinks(page) {
+  const cases = [
+    ['media', '사진'],
+    ['documents', '문서'],
+    ['market', '비교거래'],
+    ['reports', '보고서'],
+    ['digitalTwin', '3D'],
+  ];
+  for (const [tab, label] of cases) {
+    await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=${tab}`, { waitUntil: 'domcontentloaded' });
+    await waitForText(page, 'PROPERTY DATA ROOM');
+    const tabNode = page.getByRole('tab', { name: label, exact: true });
+    await tabNode.waitFor({ state: 'visible', timeout: 30_000 });
+    if ((await tabNode.getAttribute('aria-selected')) !== 'true') throw new Error(`Data Room deep link failed: ${tab} → ${label}`);
+  }
+  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=market`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '방배동 실거래사례1년간.pdf');
+  await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-deep-link-market.png`, fullPage: true });
+  console.log('[PASS] Property hub deep links: media/documents/market/reports/digitalTwin open the requested Data Room tab');
+}
+
 async function verifyBangbaeDataRoom(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room`, { waitUntil: 'domcontentloaded' });
   for (const text of ['방배동 815-11 코너빌딩', '층별 구성 · Data Room', '4개 층', '합계 349.08㎡', '3F', '2F', '1F', 'B1', '제2종근린생활시설(부동산중개업소) + 점포', '다가구용단독주택(1가구)', '외부자료', '방배동 815-11 건축물대장.pdf', '비교거래 요약', '6건', '5,862만/평 ~ 8,788만/평', '2026-06-02', '방배동 실거래사례1년간.pdf', '비교거래 전체 보기']) await waitForText(page, text);
@@ -55,8 +76,9 @@ try {
   await verifyPage(page, '/review-history?propertyId=daon-bangbae-815-11', ['검토 이력 통합', '방배동 815-11 코너빌딩', '자료 검증', 'Agent Review', '보고서', '외부 검토', 'AUDIT TIMELINE', '시간순 검토 기록'], 'review-history-workspace');
   await verifyExternalShareCenter(page);
   await verifyPropertyHub(page);
+  await verifyDataRoomDeepLinks(page);
   await verifyBangbaeDataRoom(page);
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
-  console.log('Rendered core platform + property hub + Data Room + financial/review workspaces smoke QA: PASS');
+  console.log('Rendered core platform + property hub deep links + Data Room + financial/review workspaces smoke QA: PASS');
 } catch (error) { await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }); console.error('Rendered modular agent contract architecture smoke QA: FAIL'); console.error(error); throw error; } finally { await browser.close(); }
