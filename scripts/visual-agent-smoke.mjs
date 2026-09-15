@@ -55,9 +55,15 @@ async function verifyBangbaeDataRoom(page) {
     '다가구용단독주택(1가구)',
     '외부자료',
     '방배동 815-11 건축물대장.pdf',
+    '비교거래 요약',
+    '6건',
+    '5,862만/평 ~ 8,788만/평',
+    '2026-06-02',
+    '방배동 실거래사례1년간.pdf',
+    '비교거래 전체 보기',
   ]) await waitForText(page, text);
-  await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-floor-structure.png`, fullPage: true });
-  console.log('[PASS] Bangbae Data Room: 4 seeded floors + 349.08㎡ + imported provenance + building-register source rendered');
+  await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-overview.png`, fullPage: true });
+  console.log('[PASS] Bangbae Data Room: floor provenance + 6 comparable transactions + market summary rendered');
 }
 
 await mkdir(ARTIFACT_DIR, { recursive: true });
@@ -78,7 +84,7 @@ try {
   await verifyBangbaeDataRoom(page);
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
-  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + External Share Center + Bangbae Data Room floor provenance + existing domain workspaces smoke QA: PASS');
+  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + External Share Center + Bangbae Data Room floor/market provenance + existing domain workspaces smoke QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true });
   console.error('Rendered modular agent contract architecture smoke QA: FAIL');
