@@ -12,6 +12,7 @@ const files = {
   releasePanel: 'src/components/BuildingReleasePanel.tsx',
   releaseShareWorkspace: 'src/components/ReleaseShareWorkspace.tsx',
   releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts',
+  releaseSharePackage: 'src/services/releaseSharePackageService.ts',
 };
 
 for (const file of Object.values(files)) {
@@ -64,11 +65,23 @@ if (!text.releaseShareWorkspace.includes("lifecycleStatus === 'current'") || !te
 if (!text.releaseShareWorkspace.includes('revokeShare') || !text.releaseShareWorkspace.includes('resolveNote')) {
   throw new Error('외부 공유는 회수와 검토 코멘트 해결 처리를 제공해야 합니다.');
 }
+if (!text.releaseShareWorkspace.includes('releaseSharePackageService.toHtml') || !text.releaseShareWorkspace.includes('공유 HTML')) {
+  throw new Error('공유 이력에서 standalone 원격검토 HTML 패키지를 생성할 수 있어야 합니다.');
+}
 if (!text.releaseCollaboration.includes("status: 'active' | 'revoked' | 'expired'") || !text.releaseCollaboration.includes("access: 'read_only'")) {
   throw new Error('공유 lifecycle 및 read-only 접근정책을 유지해야 합니다.');
 }
 if (!text.releaseCollaboration.includes('expiresAt') || !text.releaseCollaboration.includes('allowDownload') || !text.releaseCollaboration.includes('token')) {
   throw new Error('공유 manifest는 token/expiry/download policy를 유지해야 합니다.');
+}
+if (!text.releaseSharePackage.includes('READ ONLY SHARE') || !text.releaseSharePackage.includes('RELEASE_SHARE_PACKAGE_VERSION')) {
+  throw new Error('standalone 공유 HTML은 읽기전용 정책과 package version을 표시해야 합니다.');
+}
+if (!text.releaseSharePackage.includes("SHARE.status!=='active'") || !text.releaseSharePackage.includes('Date.now()>=new Date(SHARE.expiresAt).getTime()')) {
+  throw new Error('standalone 공유 HTML은 회수/만료 상태에서 열람을 차단해야 합니다.');
+}
+if (!text.releaseSharePackage.includes('constructionReady=false / legalBimReady=false')) {
+  throw new Error('standalone 공유 HTML은 비시공·비법정 BIM 안전 경계를 유지해야 합니다.');
 }
 
 console.log('Platform workflow integrity: PASS');
