@@ -1,7 +1,7 @@
 # DA:ON Real Estate Platform — Implementation Status
 
 Updated baseline: 2026-09-16
-Verified baseline: `7cedec1e639dc025a20d031561c7c380887ae521` / GitHub Actions #672 PASS
+Verified baseline: `6d3087958c21d3779269461923db563b2de9d095` / GitHub Actions #688 PASS
 Branch: `feat/daon-master-code-lock`
 
 이 문서는 완료 기능을 반복 개발하지 않고, 실제 미구축 영역과 외부 의존성을 분리하기 위한 현재 기준선이다.
@@ -78,6 +78,15 @@ Branch: `feat/daon-master-code-lock`
 
 ### Production readiness automation
 - CI `Validate production readiness boundary`
+- CI `Validate production connection runbook`
+- 운영 연결 문서 `docs/production-connection-runbook.md`
+  - 부동산 전용 backend provision 순서
+  - Auth/profile/최초 OWNER bootstrap
+  - Property/Data RLS 확장 원칙
+  - REMOTE/PUBLIC token hash·expiry·revoke 경계
+  - frontend/protected proxy 배포 분리
+  - provider/domain allowlist
+  - production E2E gate
 - 현재 상태를 다음과 같이 자동 판정
   - localDevelopment = READY
   - authBackend = NOT_CONFIGURED
@@ -87,6 +96,7 @@ Branch: `feat/daon-master-code-lock`
   - productionDomainAllowlist = CHECK_REQUIRED
 - server-only NAVER/Kakao secret 경계 검증
 - production proxy 승격 대상 API route 검증
+- Excel import parser security boundary 검증 및 production dependency review gate
 
 ## 2. 부분 구축 — 외부 인프라가 있어야 완료되는 영역
 
@@ -129,6 +139,7 @@ Branch: `feat/daon-master-code-lock`
 - front 5174 + local proxy 5175 개발 구조
 - NAVER/Kakao REST secret은 proxy에 유지
 - Production Readiness validator
+- Production Connection Runbook + CI integrity validator
 - 외부 인프라 미연결 상태 자동 판정
 
 실제 완료에 필요한 외부 조건:
@@ -162,7 +173,7 @@ Branch: `feat/daon-master-code-lock`
 
 1. local-first 내부 핵심 기능은 신규 화면을 반복 생성하지 않고 안정화/회귀검증 위주로 전환
 2. 실제 데이터가 들어오면 Readiness Center의 Next Action Queue를 통해 보완
-3. backend 계정을 별도로 준비하는 시점에 준비된 Auth/RLS + Remote Public Share migration/gateway를 실제 provider에 연결
+3. backend 계정을 별도로 준비하는 시점에 `docs/production-connection-runbook.md` 순서대로 Auth/RLS + Remote Public Share migration/gateway를 실제 provider에 연결
 4. production host/backend가 정해지는 시점에 Production Readiness의 MISSING_EXTERNAL_INFRA 항목을 실제 연결로 전환
 5. 사용자가 보고서 디자인을 선택하는 시점에 DAON_DETAIL_7P_MASTER 최종 form 확정
 6. 마지막 단계에서 production deploy / cross-device sync / external delivery E2E 수행
