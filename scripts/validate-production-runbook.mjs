@@ -29,7 +29,7 @@ for (const required of [
   'Kakao Developers Web platform',
   'Supabase Auth Site URL / Redirect URL',
   'Production E2E gate',
-  'browser secret scan',
+  '브라우저 secret scan',
   'REMOTE AUTH: NOT CONFIGURED',
   'REMOTE / PUBLIC share: NOT CONFIGURED',
 ]) {
