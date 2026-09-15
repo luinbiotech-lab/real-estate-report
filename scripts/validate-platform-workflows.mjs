@@ -14,6 +14,8 @@ const files = {
   releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts',
   releaseSharePackage: 'src/services/releaseSharePackageService.ts',
   externalShareCenter: 'src/pages/ExternalShareCenterPage.tsx',
+  rentalIncomePage: 'src/pages/RentalIncomeWorkspacePage.tsx',
+  rentalIncomeService: 'src/services/rentalIncomeScenarioService.ts',
 };
 
 for (const file of Object.values(files)) {
@@ -33,6 +35,12 @@ if (!text.twinIntakeService.includes('saveDigitalTwinAsset(asset)') || !text.twi
 if (!text.twinIntakeService.includes("queueDigitalTwin(saved, 'upload')") || !text.orchestrator.includes('async queueDigitalTwin')) throw new Error('Digital Twin 업로드는 Agent Human Review 흐름에 연결되어야 합니다.');
 if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntakePage.includes("navigate('/digital-twin')")) throw new Error('Digital Twin Intake 화면은 업로드와 Workspace handoff를 제공해야 합니다.');
 if (!text.repository.includes('getDigitalTwinAssets') || !text.repository.includes('saveDigitalTwinAsset')) throw new Error('Digital Twin asset repository read/write 경로를 유지해야 합니다.');
+
+if (!text.app.includes('path="income"') || !text.layout.includes('to="/income"')) throw new Error('임대·수익 분석 route/navigation 연결이 필요합니다.');
+if (!text.rentalIncomePage.includes('임대 · 수익 분석') || !text.rentalIncomePage.includes('NOI') || !text.rentalIncomePage.includes('Cap Rate') || !text.rentalIncomePage.includes('Cash-on-Cash')) throw new Error('임대·수익 Workspace는 핵심 투자수익 지표를 제공해야 합니다.');
+if (!text.rentalIncomePage.includes('시나리오 저장') || !text.rentalIncomePage.includes('저장된 시나리오')) throw new Error('임대·수익 Workspace는 복수 시나리오 저장/재사용을 제공해야 합니다.');
+if (!text.rentalIncomeService.includes('calculateRentalIncomeMetrics') || !text.rentalIncomeService.includes('effectiveGrossIncome') || !text.rentalIncomeService.includes('cashOnCashReturnPct')) throw new Error('임대·수익 서비스는 EGI/NOI/Cap Rate/Cash-on-Cash 계산을 유지해야 합니다.');
+if (!text.rentalIncomeService.includes("STORAGE_KEY = 'daon:rental-income-scenarios:v1'")) throw new Error('임대·수익 시나리오는 버전된 로컬 저장소에 보존되어야 합니다.');
 
 if (!text.releasePanel.includes("import ReleaseShareWorkspace from './ReleaseShareWorkspace'") || !text.releasePanel.includes('<ReleaseShareWorkspace')) throw new Error('Building Release 화면은 외부 공유·원격 검토 Workspace를 연결해야 합니다.');
 if (!text.releaseShareWorkspace.includes('SHARE READY') || !text.releaseShareWorkspace.includes('SHARE BLOCKED') || !text.releaseShareWorkspace.includes('ACCESS POLICY') || !text.releaseShareWorkspace.includes('SHARE HISTORY') || !text.releaseShareWorkspace.includes('REVIEW LOOP')) throw new Error('외부 공유 Workspace는 준비상태, 접근정책, 공유이력, 검토루프를 모두 제공해야 합니다.');
