@@ -1,0 +1,48 @@
+import { existsSync, readFileSync } from 'node:fs';
+
+const files = {
+  runbook: 'docs/production-connection-runbook.md',
+  authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
+  shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
+  access: 'src/services/accessControlService.ts',
+};
+
+for (const file of Object.values(files)) {
+  if (!existsSync(file)) throw new Error(`Production runbook 필수 파일 누락: ${file}`);
+}
+
+const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
+
+for (const required of [
+  'GPS Tracker 또는 Sports AI Supabase 프로젝트를 재사용하지 않는다',
+  '`service_role` key',
+  'raw external-share token',
+  '부동산 전용 Supabase/backend 프로젝트',
+  '최초 1명만 `owner`로 승격',
+  '신규 사용자가 기본 `viewer`',
+  'Property/Data RLS expansion',
+  'SHA-256 이상으로 hash',
+  '`revoked_at`, `expires_at`, `read_only`, `allow_download`',
+  '/api/maps/geocode',
+  '/api/maps/static',
+  '/api/poi/search',
+  'Kakao Developers Web platform',
+  'Supabase Auth Site URL / Redirect URL',
+  'Production E2E gate',
+  'browser secret scan',
+  'REMOTE AUTH: NOT CONFIGURED',
+  'REMOTE / PUBLIC share: NOT CONFIGURED',
+]) {
+  if (!text.runbook.includes(required)) throw new Error(`Production runbook 필수 규칙 누락: ${required}`);
+}
+
+if (!text.authMigration.includes("default 'viewer'")) throw new Error('Auth migration의 viewer 기본값이 유지되어야 합니다.');
+if (!text.authMigration.includes('daon_is_owner()')) throw new Error('Auth migration의 OWNER enforcement가 유지되어야 합니다.');
+if (!text.shareMigration.includes('token_hash')) throw new Error('External share migration의 token_hash 설계가 유지되어야 합니다.');
+if (!text.shareMigration.includes('Intentionally NO anon')) throw new Error('External share table의 direct anonymous access 차단이 유지되어야 합니다.');
+
+for (const role of ["'owner'", "'admin'", "'editor'", "'viewer'"]) {
+  if (!text.access.includes(role)) throw new Error(`Access role 누락: ${role}`);
+}
+
+console.log('Production connection runbook integrity: PASS');
