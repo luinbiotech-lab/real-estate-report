@@ -1,0 +1,55 @@
+name: Prepare SheetJS Upgrade
+
+on:
+  push:
+    branches:
+      - feat/daon-master-code-lock
+    paths:
+      - .github/workflows/prepare-sheetjs-upgrade.yml
+  workflow_dispatch:
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install current lockfile
+        run: npm ci
+
+      - name: Install official SheetJS 0.20.3
+        run: npm install --save https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+
+      - name: Verify installed SheetJS
+        run: |
+          node -e "const p=require('./node_modules/xlsx/package.json'); if(p.version!=='0.20.3') throw new Error('Expected xlsx 0.20.3, got '+p.version); console.log('xlsx',p.version)"
+          node -e "const l=require('./package-lock.json'); console.log(l.packages['node_modules/xlsx'])"
+
+      - name: Typecheck with upgraded parser
+        run: npm run typecheck
+
+      - name: Lint with upgraded parser
+        run: npm run lint
+
+      - name: Build with upgraded parser
+        run: npm run build
+
+      - name: Audit upgraded dependency tree
+        run: npm audit --json > sheetjs-upgrade-audit.json || true
+
+      - name: Upload generated lockfiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: sheetjs-upgrade-lockfiles
+          path: |
+            package.json
+            package-lock.json
+            sheetjs-upgrade-audit.json
