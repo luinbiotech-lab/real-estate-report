@@ -55,19 +55,15 @@ All calls are `POST` JSON with `action`.
 
 ### issue — authenticated OWNER/ADMIN
 
-Input:
+Input includes the complete `BuildingReleaseSnapshot` plus expiry/download policy. Before persistence the server verifies:
 
-```json
-{
-  "action": "issue",
-  "snapshot": { "id": "...", "propertyId": "...", "schemaVersion": "..." },
-  "expiresAt": "2026-12-31T00:00:00.000Z",
-  "allowDownload": false,
-  "recipientNote": "optional"
-}
-```
+- `schemaVersion === daon-building-release-snapshot-v1`
+- `immutable === true`
+- canonical package matches `canonicalPackage`
+- SHA-256 checksum matches `checksumHex`
+- ECDSA P-256 / SHA-256 signature verifies against `publicKeyJwk`
 
-The full sanitized immutable snapshot is stored as `snapshot_payload`. The response contains `rawToken` and `publicUrl` **once**. Only `token_hash` is persisted.
+Only after successful integrity verification is the sanitized immutable snapshot stored as `snapshot_payload`. The response contains `rawToken` and `publicUrl` **once**. Only `token_hash` is persisted.
 
 ### resolve — anonymous token access
 
@@ -115,7 +111,8 @@ List responses intentionally contain no raw token and no reconstructable public 
 - exact-origin CORS allowlist; no wildcard origin
 - `issue/revoke/list` require active `owner` or `admin`
 - `resolve/add_review` validate hash + revoke + expiry before access
+- Release Snapshot canonical/checksum/signature integrity is verified before issuance
 - snapshot payload is recursively stripped of obvious secret/private-key/token fields before persistence
 - responses use `Cache-Control: no-store`
 
-Before Production READY, exercise issue → resolve → review → revoke → blocked resolve E2E against the dedicated backend.
+Before Production READY, exercise valid issue → resolve → review → revoke → blocked resolve, plus tampered-snapshot issuance rejection, against the dedicated backend.
