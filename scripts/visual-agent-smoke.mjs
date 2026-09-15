@@ -15,6 +15,23 @@ async function verifyPage(page, path, requiredTexts, screenshotName) {
   console.log(`[PASS] ${path}: ${requiredTexts.join(' | ')}`);
 }
 
+async function verifyDigitalTwinIntake(page) {
+  await page.goto(`${BASE_URL}/digital-twin-intake`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '도면 · 3D · 측정자료 등록');
+  const dxf = `0\nSECTION\n2\nENTITIES\n0\nLINE\n8\nWALL\n10\n0\n20\n0\n11\n4\n21\n0\n0\nLINE\n8\nWALL\n10\n4\n20\n0\n11\n4\n21\n3\n0\nENDSEC\n0\nEOF\n`;
+  await page.locator('input[type="file"]').setInputFiles({ name: 'qa-floor.dxf', mimeType: 'application/dxf', buffer: Buffer.from(dxf, 'utf8') });
+  await waitForText(page, 'qa-floor.dxf 등록 완료');
+  await waitForText(page, 'Agent 검토 큐 연결');
+  await waitForText(page, 'qa-floor.dxf');
+  await page.screenshot({ path: `${ARTIFACT_DIR}/digital-twin-intake-upload.png`, fullPage: true });
+
+  await page.goto(`${BASE_URL}/digital-twin`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, 'Digital Twin Workspace');
+  await waitForText(page, 'qa-floor.dxf');
+  await page.screenshot({ path: `${ARTIFACT_DIR}/digital-twin-intake-handoff.png`, fullPage: true });
+  console.log('[PASS] Digital Twin intake: DXF upload → asset persistence → Agent queue → Workspace handoff');
+}
+
 await mkdir(ARTIFACT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -27,10 +44,11 @@ try {
   await verifyPage(page, '/interior', ['Interior Workspace', 'Interior ↔ 3D Room Linking', '추천 연결 후보', 'Room Intelligence View', 'Intelligent rooms', '승인된 설비 인벤토리', '브라우저 로컬 픽셀 분석'], 'interior-workspace');
   await verifyPage(page, '/room-ops', ['Room Twin Operations', 'Digital Twin × Room Intelligence Operations'], 'room-twin-operations');
   await verifyPage(page, '/spatial', ['Spatial Workspace', '공간 자료 Intake', '공간 모델', '리노베이션 검토', 'Digital Twin 준비 자산'], 'spatial-workspace');
-  await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Multi-floor Building Model', 'Building Production Gate / 다층 Candidate Release', 'Building Release & Collaboration Layer', 'Geometry Readiness · Remote Inspection', 'Remote Inspection HTML', 'Spatial Workspace에서 PDF/DWG/DXF 도면 원본을 먼저 등록하세요.'], 'digital-twin-workspace');
+  await verifyDigitalTwinIntake(page);
+  await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Multi-floor Building Model', 'Building Production Gate / 다층 Candidate Release', 'Building Release & Collaboration Layer', 'Geometry Readiness · Remote Inspection', 'Remote Inspection HTML'], 'digital-twin-workspace');
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
-  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + existing domain workspaces smoke QA: PASS');
+  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + existing domain workspaces smoke QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true });
   console.error('Rendered modular agent contract architecture smoke QA: FAIL');
