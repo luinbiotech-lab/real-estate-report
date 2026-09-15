@@ -15,6 +15,7 @@ const files = {
   mediaPanel: 'src/components/propertyDataRoom/MediaClassificationPanel.tsx',
   extractionPanel: 'src/components/propertyDataRoom/DocumentExtractionPanel.tsx',
   detailMaster: 'src/components/professionalReport/DaonDetail7PageMaster.tsx',
+  accessPolicy: 'src/domain/professionalReport/reportAccessPolicy.ts',
   app: 'src/App.tsx',
 };
 
@@ -84,8 +85,14 @@ if (!text.dataBuilder.includes('comparables: comparableRows(bundle)') || !text.d
 if (!text.mediaPanel.includes("'exterior', 'road', 'surroundings'") || !text.dataRoom.includes('MediaClassificationPanel')) {
   throw new Error('Data Room은 외관·도로·주변 미디어를 보고서용 category로 분류할 수 있어야 합니다.');
 }
-if (!text.detailMaster.includes("item.category !== 'interior'")) {
-  throw new Error('내부사진 제외 정책은 7P 미디어 선택 과정에서 유지되어야 합니다.');
+if (!text.accessPolicy.includes('INTERNAL_MEDIA_CATEGORIES') || !text.accessPolicy.includes("'interior'") || !text.accessPolicy.includes("'lobby'") || !text.accessPolicy.includes("'office'") || !text.accessPolicy.includes("'corridor'") || !text.accessPolicy.includes("'restroom'") || !text.accessPolicy.includes("'basement'") || !text.accessPolicy.includes("'mechanical_room'")) {
+  throw new Error('내부사진 제외 정책은 대표적인 실내 카테고리 전체를 중앙 정책으로 관리해야 합니다.');
+}
+if (!text.dataBuilder.includes('reportMediaCategoryAllowed(media.category, allowInternal)') || !text.detailMaster.includes('reportMediaCategoryAllowed(item.category, model.media.internalPhotoAllowed)')) {
+  throw new Error('Builder와 7P renderer는 동일한 중앙 미디어 접근정책을 사용해야 합니다.');
+}
+if (!text.mediaPanel.includes('lockedInternal') || !text.mediaPanel.includes('보고서 제외 고정') || !text.mediaPanel.includes('isInternalMediaCategory(item.category)')) {
+  throw new Error('내부사진 제외 물건의 기존 실내 미디어는 Data Room UI에서 외부 카테고리로 우회 변경할 수 없어야 합니다.');
 }
 if (!text.dataRoomRepository.includes('REPORT_MEDIA_PRIORITY') || !text.dataRoomRepository.includes('exterior: 0') || !text.dataRoomRepository.includes('road: 1') || !text.dataRoomRepository.includes('surroundings: 2') || !text.dataRoomRepository.includes('sortReportMedia')) {
   throw new Error('Professional Report 미디어는 외관 → 도로 → 주변환경 우선순위를 유지해야 합니다.');
