@@ -35,6 +35,7 @@ const DAON_MANAGER = '김은미 대표 / 공인중개사';
 const DAON_PHONE = '010 9953 1270';
 const DAON_EMAIL = 'daonasset.korea@gmail.com';
 const DAON_COMPANY = 'DA:ON ASSET';
+const DAON_SLOGAN = 'PROPERTY DATA & AGENT PLATFORM';
 const LEGACY_BANGBAE_MAIN_IMAGE = '/daon-master/bangbae-815-11-main.jpg';
 const LEGACY_BANGBAE_MAP_IMAGE = '/daon-master/bangbae-815-11-map.jpg';
 
@@ -58,7 +59,16 @@ const bangbae81511: Property = {
   createdAt: '2026-09-09T00:00:00.000Z', updatedAt: '2026-09-09T00:00:00.000Z',
 };
 
-const defaults: Settings = { companyName: DAON_COMPANY, logo: '', defaultManager: DAON_MANAGER, phone: DAON_PHONE, email: DAON_EMAIL, footerText: '본 자료는 매각 검토용 요약자료이며 계약 전 권리관계 및 현장 재확인이 필요합니다.' };
+const defaults: Settings = {
+  companyName: DAON_COMPANY,
+  brandSlogan: DAON_SLOGAN,
+  logo: '',
+  defaultManager: DAON_MANAGER,
+  phone: DAON_PHONE,
+  email: DAON_EMAIL,
+  footerText: '본 자료는 매각 검토용 요약자료이며 계약 전 권리관계 및 현장 재확인이 필요합니다.',
+  reportContactMode: 'mobile_email_only',
+};
 const theme = createTheme({ palette: { primary: { main: '#073a69' }, secondary: { main: '#b47a25' }, background: { default: '#f3f5f8' } }, typography: { fontFamily: 'Pretendard, "Noto Sans KR", Arial, sans-serif' }, shape: { borderRadius: 10 } });
 
 export default function App() {
@@ -80,7 +90,11 @@ export default function App() {
     }
     await bangbae81511DataSeedService.ensure();
     const stored = await settingsRepository.get();
-    if (stored?.companyName === '에셋브리프 부동산중개' || !stored) { await settingsRepository.save(defaults); setSettings(defaults); } else setSettings(stored);
+    const normalizedSettings: Settings = stored?.companyName === '에셋브리프 부동산중개'
+      ? defaults
+      : { ...defaults, ...(stored ?? {}), reportContactMode: 'mobile_email_only' };
+    if (!stored || JSON.stringify(normalizedSettings) !== JSON.stringify(stored)) await settingsRepository.save(normalizedSettings);
+    setSettings(normalizedSettings);
     setReady(true);
   })(); }, []);
   if (!ready) return <div className="center"><CircularProgress /></div>;
