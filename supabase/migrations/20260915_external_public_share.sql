@@ -9,6 +9,7 @@ create table if not exists public.external_share_sessions (
   id uuid primary key default gen_random_uuid(),
   property_id text not null,
   snapshot_id text not null,
+  snapshot_payload jsonb not null,
   provider text not null default 'remote_public' check (provider = 'remote_public'),
   access_mode text not null default 'read_only' check (access_mode = 'read_only'),
   token_hash text not null unique,
@@ -57,12 +58,14 @@ alter table public.external_share_review_notes enable row level security;
 -- 2) resolves token_hash,
 -- 3) rejects revoked or expired sessions,
 -- 4) enforces read_only + allow_download,
--- 5) returns only the minimal snapshot payload required by the public viewer,
+-- 5) returns only the minimal snapshot_payload required by the public viewer,
 -- 6) accepts review-note writes only after the same token validation.
 
 comment on table public.external_share_sessions is
   'Server-controlled remote/public share sessions. Never store raw external share tokens.';
 comment on column public.external_share_sessions.token_hash is
   'SHA-256 or stronger one-way hash of the raw token. Raw token exists only at issuance/presentation time.';
+comment on column public.external_share_sessions.snapshot_payload is
+  'Sanitized immutable release snapshot payload returned only through token-validating server code.';
 comment on table public.external_share_review_notes is
   'Remote reviewer comments associated with a token-validated public share session.';
