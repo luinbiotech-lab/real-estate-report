@@ -6,7 +6,7 @@ import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
 import type { Property } from '../../types';
-import { internalPhotoAllowed } from '../../domain/professionalReport/reportAccessPolicy';
+import { internalPhotoAllowed, reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 
@@ -27,7 +27,7 @@ function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalRep
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
 
   for (const media of bundle.media) {
-    if (!allowInternal && media.category === 'interior') continue;
+    if (!reportMediaCategoryAllowed(media.category, allowInternal)) continue;
     items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
   }
   return items;
