@@ -11,7 +11,7 @@ const files = {
 for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(`플랫폼 workflow 필수 파일 누락: ${file}`);
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-if (!text.app.includes('PropertyHubPage') || !text.app.includes('path="property/:id" element={<PropertyHubPage')} || !text.app.includes('path="property/:id/data-room" element={<PropertyDataRoomPage')} ) throw new Error('물건 상세 메인 허브와 Data Room 세부 route를 분리해야 합니다.');
+if (!text.app.includes('PropertyHubPage') || !text.app.includes('path="property/:id" element={<PropertyHubPage')} || !text.app.includes('path="property/:id/data-room" element={<PropertyDataRoomPage')) throw new Error('물건 상세 메인 허브와 Data Room 세부 route를 분리해야 합니다.');
 if (!text.propertyHub.includes('PROPERTY DETAIL HUB') || !text.propertyHub.includes('WORKSPACE NAVIGATION') || !text.propertyHub.includes('Data Room 전체보기')) throw new Error('물건 상세 허브는 핵심정보와 세부 Workspace 진입판을 제공해야 합니다.');
 for (const label of ['사진 · 미디어', '문서 · 공적자료', '비교거래', '임대 · 수익 분석', '검토 이력', '보고서', '3D · 도면', '입지 브리핑']) if (!text.propertyHub.includes(label)) throw new Error(`물건 상세 허브 필수 항목 누락: ${label}`);
 if (!text.propertyHub.includes('/income?propertyId=') || !text.propertyHub.includes('/review-history?propertyId=')) throw new Error('상세 허브는 선택 물건 context를 임대·수익/검토 이력으로 전달해야 합니다.');
