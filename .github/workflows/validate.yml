@@ -45,6 +45,9 @@ jobs:
       - name: Validate platform workflows
         run: npm run validate:platform
 
+      - name: Validate access control policy
+        run: node scripts/validate-access-control.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
@@ -74,6 +77,9 @@ jobs:
 
       - name: Rendered Agent and Spatial smoke QA
         run: node scripts/visual-agent-smoke.mjs
+
+      - name: Rendered access and share boundary QA
+        run: node scripts/visual-access-smoke.mjs
 
       - name: Rendered report smoke QA
         run: node scripts/visual-report-smoke.mjs
