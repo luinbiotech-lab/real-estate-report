@@ -19,13 +19,17 @@ if (!text.repository.includes('getBundle(propertyId: string)')) throw new Error(
 for (const id of ["'core'", "'documents'", "'provenance'", "'verification'", "'media'", "'report'", "'digital_twin'"]) {
   if (!text.service.includes(id)) throw new Error(`Readiness stage 누락: ${id}`);
 }
+for (const label of ['기본정보', '문서', '구조화 / 출처', '검증', '미디어', '보고서', '3D / Digital Twin']) {
+  if (!text.service.includes(`label: '${label}'`)) throw new Error(`Readiness stage label 누락: ${label}`);
+}
 if (!text.service.includes("bundle.verifications.length > 0 ? 'ready' : bundle.verificationCandidates.length > 0 ? 'partial' : 'missing'")) throw new Error('Verification 기록이 없는 imported/candidate 자료를 READY로 승격하면 안 됩니다.');
 if (!text.service.includes("snapshot.status === 'ready'")) throw new Error('보고서 READY는 ready Snapshot 존재 여부로 판단해야 합니다.');
 if (!text.service.includes('weighted = readyCount + partialCount * 0.5')) throw new Error('Readiness score는 ready/partial/missing 상태에서 계산되어야 합니다.');
 
-for (const label of ['Property Readiness Center', '기본정보', '문서', '구조화 / 출처', '검증', '미디어', '보고서', '3D / Digital Twin', '보완 필요', '평균 준비도']) {
+for (const label of ['Property Readiness Center', '보완 필요', '평균 준비도']) {
   if (!text.page.includes(label)) throw new Error(`Readiness UI 필수 표시 누락: ${label}`);
 }
+if (!text.page.includes('readiness.stages.map((stage)')) throw new Error('Readiness stage 정의를 화면에서 동적으로 렌더해야 합니다.');
 if (!text.page.includes('Verification이 없는 imported 자료는 검증 완료로 승격하지 않습니다')) throw new Error('imported와 verified 상태를 구분하는 안전문구가 필요합니다.');
 if (!text.page.includes("navigate(`/property/${propertyId}/data-room${stage.pathSuffix || ''}`)")) throw new Error('Readiness stage에서 해당 Data Room 보완 화면으로 이동할 수 있어야 합니다.');
 
