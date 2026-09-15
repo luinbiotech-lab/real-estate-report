@@ -10,6 +10,7 @@ const files = {
   dataRoomRepository: 'src/repositories/propertyDataRoomRepository.ts',
   buildingFloorService: 'src/services/buildingRegisterFloorService.ts',
   comparableService: 'src/services/comparableTransactionService.ts',
+  bangbaeSeed: 'src/services/bangbae81511DataSeedService.ts',
   comparablePanel: 'src/components/propertyDataRoom/ComparableTransactionPanel.tsx',
   mediaPanel: 'src/components/propertyDataRoom/MediaClassificationPanel.tsx',
   extractionPanel: 'src/components/propertyDataRoom/DocumentExtractionPanel.tsx',
@@ -85,6 +86,15 @@ if (!text.mediaPanel.includes("'exterior', 'road', 'surroundings'") || !text.dat
 }
 if (!text.detailMaster.includes("item.category !== 'interior'")) {
   throw new Error('내부사진 제외 정책은 7P 미디어 선택 과정에서 유지되어야 합니다.');
+}
+if (!text.app.includes('bangbae81511DataSeedService.ensure()') || !text.bangbaeSeed.includes("const PROPERTY_ID = 'daon-bangbae-815-11'")) {
+  throw new Error('방배동 샘플 Data Room 실데이터 bootstrap 경로를 유지해야 합니다.');
+}
+if (!text.bangbaeSeed.includes("verificationStatus: 'imported'") || !text.bangbaeSeed.includes('if (!spaces.length)') || !text.bangbaeSeed.includes('if (!sources.some((item) => item.id === COMPARABLE_SOURCE_ID))')) {
+  throw new Error('방배동 bootstrap은 imported provenance를 보존하고 기존 Data Room 데이터를 덮어쓰지 않아야 합니다.');
+}
+if (!text.bangbaeSeed.includes("{ floor: '3F'") || !text.bangbaeSeed.includes("{ floor: 'B1'") || !text.bangbaeSeed.includes("label: '방배동 448-37'")) {
+  throw new Error('방배동 층별 4개와 비교거래 6건 seed 데이터가 누락되었습니다.');
 }
 
 console.log('DA:ON report pipeline integrity: PASS');
