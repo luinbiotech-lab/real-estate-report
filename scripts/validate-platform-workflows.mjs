@@ -4,7 +4,7 @@ const files = {
   app: 'src/App.tsx', layout: 'src/components/Layout.tsx', propertyHub: 'src/pages/PropertyHubPage.tsx',
   reportHistoryPage: 'src/pages/ReportHistoryPage.tsx', reportHistoryService: 'src/services/reportSnapshotHistoryService.ts',
   twinIntakePage: 'src/pages/DigitalTwinIntakePage.tsx', twinIntakeService: 'src/services/digitalTwinAssetIntakeService.ts', orchestrator: 'src/services/agentOrchestratorService.ts', repository: 'src/repositories/propertyDataRoomRepository.ts',
-  releasePanel: 'src/components/BuildingReleasePanel.tsx', releaseShareWorkspace: 'src/components/ReleaseShareWorkspace.tsx', releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts', releaseSharePackage: 'src/services/releaseSharePackageService.ts', externalShareCenter: 'src/pages/ExternalShareCenterPage.tsx',
+  releasePanel: 'src/components/BuildingReleasePanel.tsx', releaseShareWorkspace: 'src/components/ReleaseShareWorkspace.tsx', releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts', releaseSharePackage: 'src/services/releaseSharePackageService.ts', externalShareCenter: 'src/pages/ExternalShareCenterPage.tsx', externalShareProvider: 'src/services/externalShareProviderService.ts',
   rentalIncomePage: 'src/pages/RentalIncomeWorkspacePage.tsx', rentalIncomeService: 'src/services/rentalIncomeScenarioService.ts',
   reviewHistoryPage: 'src/pages/ReviewHistoryPage.tsx', reviewHistoryService: 'src/services/reviewHistoryService.ts',
 };
@@ -55,8 +55,15 @@ if (!text.releaseSharePackage.includes('READ ONLY SHARE') || !text.releaseShareP
 if (!text.releaseSharePackage.includes("SHARE.status!=='active'") || !text.releaseSharePackage.includes('Date.now()>=new Date(SHARE.expiresAt).getTime()')) throw new Error('standalone 공유 HTML은 회수/만료 상태에서 열람을 차단해야 합니다.');
 if (!text.releaseSharePackage.includes('constructionReady=false / legalBimReady=false')) throw new Error('standalone 공유 HTML은 비시공·비법정 BIM 안전 경계를 유지해야 합니다.');
 
+if (!text.externalShareProvider.includes("'local_offline' | 'remote_public'")) throw new Error('외부공유 Provider는 local/offline과 remote/public을 명시적으로 분리해야 합니다.');
+if (!text.externalShareProvider.includes("availability: 'ready'") || !text.externalShareProvider.includes("availability: 'not_configured'")) throw new Error('외부공유 Provider는 현재 사용 가능 여부를 과장 없이 표시해야 합니다.');
+for (const capability of ['publicUrl', 'remoteRevoke', 'serverExpiry', 'authenticatedAccess', 'syncedReview']) if (!text.externalShareProvider.includes(capability)) throw new Error(`외부공유 Provider capability 누락: ${capability}`);
+if (!text.externalShareProvider.includes('부동산 전용 서버 프로젝트가 연결되지 않았습니다.')) throw new Error('Remote Provider 미연결 사유를 명시해야 합니다.');
+
 if (!text.app.includes('path="external-shares"') || !text.layout.includes('to="/external-shares"')) throw new Error('외부 공유 센터 route/navigation 연결이 필요합니다.');
 if (!text.externalShareCenter.includes('외부 공유 센터') || !text.externalShareCenter.includes('ACTIVE') || !text.externalShareCenter.includes('EXPIRED') || !text.externalShareCenter.includes('REVOKED')) throw new Error('외부 공유 센터는 전체/활성/만료/회수 상태를 요약해야 합니다.');
+if (!text.externalShareCenter.includes('LOCAL / OFFLINE') || !text.externalShareCenter.includes('REMOTE / PUBLIC') || !text.externalShareCenter.includes('NOT CONFIGURED')) throw new Error('외부 공유 센터는 Local/Remote Provider 상태를 구분해 표시해야 합니다.');
+if (!text.externalShareCenter.includes('현재 실제 remote revoke는 사용할 수 없습니다.')) throw new Error('Remote Provider 연결 전 실제 원격 회수가 불가능함을 명시해야 합니다.');
 if (!text.externalShareCenter.includes('releaseSharePackageService.toHtml') || !text.externalShareCenter.includes('revokeShare')) throw new Error('외부 공유 센터에서 standalone HTML 재생성과 공유 회수가 가능해야 합니다.');
 if (!text.externalShareCenter.includes('감사대장 CSV') || !text.externalShareCenter.includes('감사대장 JSON') || !text.externalShareCenter.includes('daon-external-share-audit-v1')) throw new Error('외부 공유 센터는 감사대장 CSV/JSON 내보내기를 제공해야 합니다.');
 if (!text.externalShareCenter.includes('이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다')) throw new Error('로컬 standalone HTML의 원격 회수 불가 안전경계를 명시해야 합니다.');
