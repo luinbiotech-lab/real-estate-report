@@ -1,9 +1,10 @@
-import { FactCheckRounded, RefreshRounded, WarningAmberRounded } from '@mui/icons-material';
+import { ArrowForwardRounded, FactCheckRounded, RefreshRounded, WarningAmberRounded } from '@mui/icons-material';
 import { Button, Chip, CircularProgress, MenuItem, TextField } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { derivePropertyNextActions } from '../services/propertyNextActionService';
 import { assessPropertyReadiness, type PropertyReadinessAssessment, type ReadinessStage, type ReadinessState } from '../services/propertyReadinessService';
 import type { Property } from '../types';
 
@@ -50,6 +51,10 @@ export default function PropertyReadinessCenterPage() {
     avg: rows.length ? Math.round(rows.reduce((sum, row) => sum + row.readiness.scorePct, 0) / rows.length) : 0,
   }), [rows]);
 
+  const nextActions = useMemo(() => derivePropertyNextActions(rows), [rows]);
+  const missingActions = useMemo(() => nextActions.filter((action) => action.state === 'missing').length, [nextActions]);
+  const partialActions = nextActions.length - missingActions;
+
   const filtered = useMemo(() => rows.filter((row) => {
     if (filter === 'attention' && row.readiness.missingCount === 0) return false;
     if (filter === 'strong' && row.readiness.scorePct < 80) return false;
@@ -81,6 +86,24 @@ export default function PropertyReadinessCenterPage() {
         ['80% 이상', metrics.strong, '건'],
         ['평균 준비도', metrics.avg, '%'],
       ].map(([label, value, unit]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><div style={{ display: 'flex', gap: 4, alignItems: 'baseline', marginTop: 4 }}><strong style={{ fontSize: 28 }}>{value}</strong><span style={{ color: '#98a2b3' }}>{unit}</span></div></div>)}
+    </section>
+
+    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
+      <div style={{ background: '#10243f', color: '#fff', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div><small style={{ color: '#d7c8a7', letterSpacing: '.1em' }}>NEXT ACTION QUEUE</small><strong style={{ display: 'block', marginTop: 3 }}>준비도 기반 다음 작업</strong></div>
+        <div style={{ display: 'flex', gap: 6 }}><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`MISSING ${missingActions}`} /><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`PARTIAL ${partialActions}`} /></div>
+      </div>
+      {!nextActions.length && <div style={{ padding: 18, color: '#667085' }}>현재 준비도 기준으로 보완할 항목이 없습니다.</div>}
+      <div style={{ display: 'grid' }}>
+        {nextActions.slice(0, 12).map((action, index) => <div key={action.id} style={{ display: 'grid', gridTemplateColumns: '90px minmax(220px,.8fr) 150px 1fr auto', gap: 10, alignItems: 'center', padding: '11px 14px', borderTop: index === 0 ? 'none' : '1px solid #edf0f4' }}>
+          <Chip size="small" color={action.state === 'missing' ? 'default' : 'warning'} variant="outlined" label={action.state.toUpperCase()} />
+          <div><strong style={{ display: 'block', fontSize: 13 }}>{action.propertyName}</strong><small style={{ color: '#98a2b3' }}>workflow #{action.workflowOrder}</small></div>
+          <strong style={{ fontSize: 13 }}>{action.stageLabel}</strong>
+          <span style={{ color: '#667085', fontSize: 12 }}>{action.detail}</span>
+          <Button size="small" endIcon={<ArrowForwardRounded />} onClick={() => navigate(action.path)}>보완 화면</Button>
+        </div>)}
+      </div>
+      {nextActions.length > 12 && <div style={{ padding: '9px 14px', borderTop: '1px solid #edf0f4', color: '#667085', fontSize: 12 }}>상위 12개 작업을 표시 중 · 전체 {nextActions.length}개</div>}
     </section>
 
     <section style={{ background: '#10243f', borderRadius: 12, padding: 14, display: 'grid', gridTemplateColumns: '1fr 190px', gap: 10, marginBottom: 14 }}>
