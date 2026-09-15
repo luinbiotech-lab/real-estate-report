@@ -63,7 +63,12 @@ for (const marker of [
 }
 
 if (text.edge.includes("'Access-Control-Allow-Origin': '*'")) throw new Error('REMOTE / PUBLIC Edge는 wildcard CORS를 사용하면 안 됩니다.');
-if (/\.insert\([\s\S]{0,500}raw[_-]?token/i.test(text.edge)) throw new Error('Edge Function이 raw token을 DB insert payload에 포함하면 안 됩니다.');
+
+const insertPayloads = [...text.edge.matchAll(/\.insert\(\{([\s\S]*?)\}\)\s*\.select/g)].map((match) => match[1]);
+if (!insertPayloads.length) throw new Error('Edge Function DB insert payload를 찾을 수 없습니다.');
+for (const payload of insertPayloads) {
+  if (/\brawToken\b|\braw_token\b/i.test(payload)) throw new Error('Edge Function이 raw token을 DB insert payload에 포함하면 안 됩니다.');
+}
 
 const listFunction = text.edge.match(/async function list\([\s\S]*?\n\}\n\nasync function resolve/)?.[0] ?? '';
 if (!listFunction) throw new Error('Remote share list handler를 찾을 수 없습니다.');
