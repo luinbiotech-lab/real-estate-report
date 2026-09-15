@@ -9,6 +9,9 @@ const files = {
   twinIntakeService: 'src/services/digitalTwinAssetIntakeService.ts',
   orchestrator: 'src/services/agentOrchestratorService.ts',
   repository: 'src/repositories/propertyDataRoomRepository.ts',
+  releasePanel: 'src/components/BuildingReleasePanel.tsx',
+  releaseShareWorkspace: 'src/components/ReleaseShareWorkspace.tsx',
+  releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts',
 };
 
 for (const file of Object.values(files)) {
@@ -47,6 +50,25 @@ if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntak
 }
 if (!text.repository.includes('getDigitalTwinAssets') || !text.repository.includes('saveDigitalTwinAsset')) {
   throw new Error('Digital Twin asset repository read/write 경로를 유지해야 합니다.');
+}
+
+if (!text.releasePanel.includes("import ReleaseShareWorkspace from './ReleaseShareWorkspace'") || !text.releasePanel.includes('<ReleaseShareWorkspace')) {
+  throw new Error('Building Release 화면은 외부 공유·원격 검토 Workspace를 연결해야 합니다.');
+}
+if (!text.releaseShareWorkspace.includes('SHARE READY') || !text.releaseShareWorkspace.includes('SHARE BLOCKED') || !text.releaseShareWorkspace.includes('ACCESS POLICY') || !text.releaseShareWorkspace.includes('SHARE HISTORY') || !text.releaseShareWorkspace.includes('REVIEW LOOP')) {
+  throw new Error('외부 공유 Workspace는 준비상태, 접근정책, 공유이력, 검토루프를 모두 제공해야 합니다.');
+}
+if (!text.releaseShareWorkspace.includes("lifecycleStatus === 'current'") || !text.releaseShareWorkspace.includes('integrityValid === true')) {
+  throw new Error('새 외부 공유는 CURRENT + integrity verified Snapshot에서만 허용해야 합니다.');
+}
+if (!text.releaseShareWorkspace.includes('revokeShare') || !text.releaseShareWorkspace.includes('resolveNote')) {
+  throw new Error('외부 공유는 회수와 검토 코멘트 해결 처리를 제공해야 합니다.');
+}
+if (!text.releaseCollaboration.includes("status: 'active' | 'revoked' | 'expired'") || !text.releaseCollaboration.includes("access: 'read_only'")) {
+  throw new Error('공유 lifecycle 및 read-only 접근정책을 유지해야 합니다.');
+}
+if (!text.releaseCollaboration.includes('expiresAt') || !text.releaseCollaboration.includes('allowDownload') || !text.releaseCollaboration.includes('token')) {
+  throw new Error('공유 manifest는 token/expiry/download policy를 유지해야 합니다.');
 }
 
 console.log('Platform workflow integrity: PASS');
