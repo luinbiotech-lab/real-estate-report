@@ -158,6 +158,7 @@ async function resolveShare(rawToken: string): Promise<{ row?: ShareRow; status:
 }
 
 async function issue(body: Json, req: Request, origin: string | null) {
+  if (!PUBLIC_SHARE_BASE_URL) throw new Error('PUBLIC_SHARE_BASE_URL is required before issuing public URLs.');
   const user = await requireShareManager(req);
   const snapshot = validateSnapshot(body.snapshot);
   const expiresAt = optionalFutureIso(body.expiresAt);
@@ -182,7 +183,6 @@ async function issue(body: Json, req: Request, origin: string | null) {
     .single();
   if (error || !data) throw new Error('share_issue_failed');
 
-  if (!PUBLIC_SHARE_BASE_URL) throw new Error('PUBLIC_SHARE_BASE_URL is required before issuing public URLs.');
   const publicUrl = `${PUBLIC_SHARE_BASE_URL.replace(/\/$/, '')}#token=${encodeURIComponent(rawToken)}`;
   return json({
     remoteShareId: data.id,
@@ -246,7 +246,7 @@ async function resolve(body: Json, origin: string | null) {
       snapshotId: result.row.snapshot_id,
       propertyId: result.row.property_id,
       expiresAt: result.row.expires_at ?? undefined,
-    }, result.status === 'revoked' ? 410 : 410, origin);
+    }, 410, origin);
   }
   return json({
     status: 'active',
@@ -264,7 +264,8 @@ async function addReview(body: Json, origin: string | null) {
   const noteBody = text(body.body, 5000);
   if (!author || !noteBody) throw new Error('author and body are required.');
   const result = await resolveShare(rawToken);
-  if (!result.row || result.status !== 'active') return json({ status: result.status }, 410, origin);
+  if (!result.row) return json({ status: 'not_found' }, 404, origin);
+  if (result.status !== 'active') return json({ status: result.status }, 410, origin);
 
   const { data, error } = await admin
     .from('external_share_review_notes')
