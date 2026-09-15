@@ -41,56 +41,57 @@ export const bangbae81511DataSeedService = {
     ]);
     const now = new Date().toISOString();
 
-    if (!spaces.length) {
-      for (const seed of floorSeed) {
-        const id = spaceId(seed.floor!);
-        const fieldKey = floorFieldKey(id);
-        const space: PropertySpace = {
-          id,
-          propertyId: PROPERTY_ID,
-          name: seed.name,
-          spaceType: seed.spaceType,
+    for (const seed of floorSeed) {
+      const existingFloor = spaces.some((space) => String(space.floor || '').toUpperCase() === seed.floor);
+      if (existingFloor) continue;
+
+      const id = spaceId(seed.floor);
+      const fieldKey = floorFieldKey(id);
+      const space: PropertySpace = {
+        id,
+        propertyId: PROPERTY_ID,
+        name: seed.name,
+        spaceType: seed.spaceType,
+        floor: seed.floor,
+        areaSqm: seed.areaSqm,
+        currentCondition: '',
+        recommendedUse: seed.name,
+        sourceType: 'manual',
+        verificationStatus: 'imported',
+        createdAt: now,
+        updatedAt: now,
+      };
+      const source: PropertyDataSource = {
+        id: `${BUILDING_SOURCE_ID}-${seed.floor.toLowerCase()}`,
+        propertyId: PROPERTY_ID,
+        fieldKey,
+        resourceType: 'property_space',
+        sourceType: 'official_document',
+        sourceName: BUILDING_SOURCE_NAME,
+        sourceReference: BUILDING_SOURCE_REFERENCE,
+        collectedAt: now,
+        verificationStatus: 'imported',
+        metadata: {
+          spaceId: id,
           floor: seed.floor,
+          officialUse: seed.name,
           areaSqm: seed.areaSqm,
-          currentCondition: '',
-          recommendedUse: seed.name,
-          sourceType: 'manual',
-          verificationStatus: 'imported',
-          createdAt: now,
-          updatedAt: now,
-        };
-        const source: PropertyDataSource = {
-          id: `${BUILDING_SOURCE_ID}-${seed.floor!.toLowerCase()}`,
-          propertyId: PROPERTY_ID,
-          fieldKey,
-          resourceType: 'property_space',
-          sourceType: 'official_document',
-          sourceName: BUILDING_SOURCE_NAME,
-          sourceReference: BUILDING_SOURCE_REFERENCE,
-          collectedAt: now,
-          verificationStatus: 'imported',
-          metadata: {
-            spaceId: id,
-            floor: seed.floor,
-            officialUse: seed.name,
-            areaSqm: seed.areaSqm,
-            bootstrap: true,
-          },
-          createdAt: now,
-        };
-        const verification: PropertyVerification = {
-          id: `verification:${id}`,
-          propertyId: PROPERTY_ID,
-          fieldKey,
-          status: 'imported',
-          note: `${BUILDING_SOURCE_NAME} 기재사항 초기 연결. 원본 문서 검증 시 verified/confirmed로 승격합니다.`,
-          createdAt: now,
-          updatedAt: now,
-        };
-        await propertyDataRoomRepository.saveSpace(space);
-        if (!sources.some((item) => item.id === source.id)) await propertyDataRoomRepository.saveDataSource(source);
-        if (!verifications.some((item) => item.id === verification.id)) await propertyDataRoomRepository.saveVerification(verification);
-      }
+          bootstrap: true,
+        },
+        createdAt: now,
+      };
+      const verification: PropertyVerification = {
+        id: `verification:${id}`,
+        propertyId: PROPERTY_ID,
+        fieldKey,
+        status: 'imported',
+        note: `${BUILDING_SOURCE_NAME} 기재사항 초기 연결. 원본 문서 검증 시 verified/confirmed로 승격합니다.`,
+        createdAt: now,
+        updatedAt: now,
+      };
+      await propertyDataRoomRepository.saveSpace(space);
+      if (!sources.some((item) => item.id === source.id)) await propertyDataRoomRepository.saveDataSource(source);
+      if (!verifications.some((item) => item.id === verification.id)) await propertyDataRoomRepository.saveVerification(verification);
     }
 
     if (!sources.some((item) => item.id === COMPARABLE_SOURCE_ID)) {
