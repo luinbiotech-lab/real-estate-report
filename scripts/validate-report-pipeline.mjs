@@ -40,6 +40,9 @@ if (!text.onePage.includes('propertyDataRoomRepository.getBundle(id)') || !text.
 if (!text.snapshotPage.includes('DaonDetail7PageMaster') || !text.snapshotPage.includes('최신 데이터로 다시 생성')) {
   throw new Error('7P Snapshot 화면은 DAON_DETAIL_7P_MASTER와 최신 데이터 재생성 경로를 제공해야 합니다.');
 }
+if (!text.snapshotPage.includes('applySnapshotMediaPolicy') || !text.snapshotPage.includes("item.id !== 'property-main'") || !text.snapshotPage.includes("item.category !== 'additional'")) {
+  throw new Error('7P Snapshot 경계는 내부사진 제외 물건의 미분류 직접 대표이미지와 추가이미지를 제거해야 합니다.');
+}
 if (!text.snapshotPage.includes('disabled={confirming || !reportReady}')) {
   throw new Error('검증 미완료 보고서의 확정 버튼은 비활성화되어야 합니다.');
 }
