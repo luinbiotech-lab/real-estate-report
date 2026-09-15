@@ -87,6 +87,9 @@ if (!text.mediaPanel.includes("'exterior', 'road', 'surroundings'") || !text.dat
 if (!text.detailMaster.includes("item.category !== 'interior'")) {
   throw new Error('내부사진 제외 정책은 7P 미디어 선택 과정에서 유지되어야 합니다.');
 }
+if (!text.dataRoomRepository.includes('REPORT_MEDIA_PRIORITY') || !text.dataRoomRepository.includes('exterior: 0') || !text.dataRoomRepository.includes('road: 1') || !text.dataRoomRepository.includes('surroundings: 2') || !text.dataRoomRepository.includes('sortReportMedia')) {
+  throw new Error('Professional Report 미디어는 외관 → 도로 → 주변환경 우선순위를 유지해야 합니다.');
+}
 if (!text.app.includes('bangbae81511DataSeedService.ensure()') || !text.bangbaeSeed.includes("const PROPERTY_ID = 'daon-bangbae-815-11'")) {
   throw new Error('방배동 샘플 Data Room 실데이터 bootstrap 경로를 유지해야 합니다.');
 }
