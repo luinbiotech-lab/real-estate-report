@@ -40,11 +40,11 @@ class NotConfiguredRemoteExternalShareGateway implements RemoteExternalShareGate
     throw new Error('REMOTE / PUBLIC Provider가 아직 연결되지 않았습니다. 부동산 전용 서버 프로젝트가 필요합니다.');
   }
 
-  async issue(_request: RemoteShareIssueRequest): Promise<RemoteShareSession> { return this.unavailable(); }
-  async revoke(_remoteShareId: string): Promise<void> { this.unavailable(); }
-  async resolve(_rawToken: string): Promise<RemoteShareAccessResult> { return this.unavailable(); }
-  async listForSnapshot(_snapshotId: string): Promise<RemoteShareSession[]> { return this.unavailable(); }
-  async addReviewNote(_rawToken: string, _author: string, _body: string): Promise<BuildingReleaseReviewNote> { return this.unavailable(); }
+  async issue(): Promise<RemoteShareSession> { return this.unavailable(); }
+  async revoke(): Promise<void> { this.unavailable(); }
+  async resolve(): Promise<RemoteShareAccessResult> { return this.unavailable(); }
+  async listForSnapshot(): Promise<RemoteShareSession[]> { return this.unavailable(); }
+  async addReviewNote(): Promise<BuildingReleaseReviewNote> { return this.unavailable(); }
 }
 
 export const remoteExternalShareGateway: RemoteExternalShareGateway = new NotConfiguredRemoteExternalShareGateway();
