@@ -35,7 +35,16 @@ export interface Property {
   createdAt: string; updatedAt: string;
 }
 
-export interface Settings { companyName: string; logo: string; defaultManager: string; phone: string; email: string; footerText: string }
+export interface Settings {
+  companyName: string;
+  brandSlogan: string;
+  logo: string;
+  defaultManager: string;
+  phone: string;
+  email: string;
+  footerText: string;
+  reportContactMode: 'mobile_email_only';
+}
 
 export const emptyProperty: Property = {
   id: '', propertyNumber: '', name: '', buildingName: '', tradeType: '매매', salePrice: 0, deposit: 0, monthlyRent: 0,
