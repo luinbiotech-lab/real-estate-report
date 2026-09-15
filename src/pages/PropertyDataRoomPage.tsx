@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, EditOutlined, MapOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, MenuItem, Tab, Tabs, TextField } from '@mui/material';
 import ComparableTransactionOverviewPanel from '../components/propertyDataRoom/ComparableTransactionOverviewPanel';
@@ -17,8 +17,13 @@ import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
 
 type TabKey = 'overview' | 'media' | 'documents' | 'official' | 'market' | 'verification' | 'reports' | 'digitalTwin';
+const TAB_KEYS: TabKey[] = ['overview', 'media', 'documents', 'official', 'market', 'verification', 'reports', 'digitalTwin'];
 const emptyBundle: DataRoomBundle = { documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
 const officialTypes: DocumentType[] = ['building_register', 'land_register', 'land_use_plan', 'registry', 'cadastral_map'];
+
+function isTabKey(value: string | null): value is TabKey {
+  return !!value && TAB_KEYS.includes(value as TabKey);
+}
 
 function EmptyState({ title, detail }: { title: string; detail: string }) {
   return <div className="data-room-empty"><DescriptionOutlined /><h3>{title}</h3><p>{detail}</p></div>;
@@ -43,9 +48,10 @@ const DECISION_LABELS: Record<VerificationDecisionStatus, string> = {
 };
 
 export default function PropertyDataRoomPage() {
-  const { id = '' } = useParams(); const navigate = useNavigate();
+  const { id = '' } = useParams(); const navigate = useNavigate(); const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get('tab');
   const [property, setProperty] = useState<Property>(); const [bundle, setBundle] = useState<DataRoomBundle>(emptyBundle);
-  const [tab, setTab] = useState<TabKey>('overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const [tab, setTab] = useState<TabKey>(() => isTabKey(requestedTab) ? requestedTab : 'overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('other');
   const [creatingReport, setCreatingReport] = useState(false); const [reviewingCandidateId, setReviewingCandidateId] = useState('');
 
@@ -59,6 +65,10 @@ export default function PropertyDataRoomPage() {
     finally { setLoading(false); }
   }, [id]);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    const nextTab = searchParams.get('tab');
+    if (isTabKey(nextTab)) setTab(nextTab);
+  }, [searchParams]);
 
   const summary = useMemo(() => property ? propertyDataRoomService.summarize(property, bundle) : undefined, [property, bundle]);
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
