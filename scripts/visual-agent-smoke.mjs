@@ -40,6 +40,26 @@ async function verifyExternalShareCenter(page) {
   console.log('[PASS] /external-shares: audit KPIs + CSV/JSON export + revoke boundary + status filter + search input');
 }
 
+async function verifyBangbaeDataRoom(page) {
+  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11`, { waitUntil: 'domcontentloaded' });
+  for (const text of [
+    '방배동 815-11 코너빌딩',
+    '층별 구성 · Data Room',
+    '4개 층',
+    '합계 349.08㎡',
+    '3F',
+    '2F',
+    '1F',
+    'B1',
+    '제2종근린생활시설(부동산중개업소) + 점포',
+    '다가구용단독주택(1가구)',
+    '외부자료',
+    '방배동 815-11 건축물대장.pdf',
+  ]) await waitForText(page, text);
+  await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-floor-structure.png`, fullPage: true });
+  console.log('[PASS] Bangbae Data Room: 4 seeded floors + 349.08㎡ + imported provenance + building-register source rendered');
+}
+
 await mkdir(ARTIFACT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -55,9 +75,10 @@ try {
   await verifyDigitalTwinIntake(page);
   await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Multi-floor Building Model', 'Building Production Gate / 다층 Candidate Release', 'Building Release & Collaboration Layer', 'Geometry Readiness · Remote Inspection', 'Remote Inspection HTML'], 'digital-twin-workspace');
   await verifyExternalShareCenter(page);
+  await verifyBangbaeDataRoom(page);
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
-  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + External Share Center + existing domain workspaces smoke QA: PASS');
+  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + External Share Center + Bangbae Data Room floor provenance + existing domain workspaces smoke QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true });
   console.error('Rendered modular agent contract architecture smoke QA: FAIL');
