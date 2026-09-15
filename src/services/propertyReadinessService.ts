@@ -37,6 +37,7 @@ function coreStage(property: Property): ReadinessStage {
 }
 
 export function assessPropertyReadiness(property: Property, bundle: DataRoomBundle): PropertyReadinessAssessment {
+  const spaces = bundle.spaces ?? [];
   const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
   const hasReport = bundle.reportSnapshots.length > 0;
   const stages: ReadinessStage[] = [
@@ -51,8 +52,8 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
     {
       id: 'provenance',
       label: '구조화 / 출처',
-      state: bundle.spaces.length > 0 && bundle.dataSources.length > 0 ? 'ready' : (bundle.spaces.length > 0 || bundle.dataSources.length > 0) ? 'partial' : 'missing',
-      detail: `공간 ${bundle.spaces.length} · 출처 ${bundle.dataSources.length}`,
+      state: spaces.length > 0 && bundle.dataSources.length > 0 ? 'ready' : (spaces.length > 0 || bundle.dataSources.length > 0) ? 'partial' : 'missing',
+      detail: `공간 ${spaces.length} · 출처 ${bundle.dataSources.length}`,
     },
     {
       id: 'verification',
