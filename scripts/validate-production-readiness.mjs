@@ -8,6 +8,9 @@ const files = {
   shareProvider: 'src/services/externalShareProviderService.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
+  packageJson: 'package.json',
+  packageLock: 'package-lock.json',
+  excel: 'src/utils/excel.ts',
 };
 
 for (const file of Object.values(files)) {
@@ -32,6 +35,14 @@ for (const marker of ['/api/maps/geocode', '/api/maps/static', '/api/poi/search'
   if (!text.proxy.includes(marker)) throw new Error(`production proxy 승격 대상 route 누락: ${marker}`);
 }
 
+if (!text.excel.includes('MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024') || !text.excel.includes('cellFormula: false') || !text.excel.includes('bookVBA: false')) {
+  throw new Error('Excel upload mitigation이 Production readiness 경계에 포함되어야 합니다.');
+}
+const pkg = JSON.parse(text.packageJson);
+const lock = JSON.parse(text.packageLock);
+const lockedXlsxVersion = String(lock.packages?.['node_modules/xlsx']?.version ?? '');
+const spreadsheetParserDependency = lockedXlsxVersion === '0.18.5' ? 'UPGRADE_REQUIRED' : 'REVIEW_REQUIRED';
+
 const status = {
   localDevelopment: 'READY',
   authBackend: 'NOT_CONFIGURED',
@@ -39,6 +50,9 @@ const status = {
   productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
   protectedBackendProxy: 'MISSING_EXTERNAL_INFRA',
   productionDomainAllowlist: 'CHECK_REQUIRED',
+  spreadsheetParserDependency,
+  spreadsheetParserSpec: String(pkg.dependencies?.xlsx ?? 'MISSING'),
+  spreadsheetParserLockedVersion: lockedXlsxVersion || 'MISSING',
 };
 
 console.log('Production readiness boundary: PASS');
