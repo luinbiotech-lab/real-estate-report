@@ -54,6 +54,9 @@ jobs:
       - name: Validate property readiness center
         run: node scripts/validate-readiness-center.mjs
 
+      - name: Validate company settings policy
+        run: node scripts/validate-company-settings.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
@@ -92,6 +95,9 @@ jobs:
 
       - name: Rendered readiness center QA
         run: node scripts/visual-readiness-smoke.mjs
+
+      - name: Rendered company settings QA
+        run: node scripts/visual-settings-smoke.mjs
 
       - name: Rendered report smoke QA
         run: node scripts/visual-report-smoke.mjs
