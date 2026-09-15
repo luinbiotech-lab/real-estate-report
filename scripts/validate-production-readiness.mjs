@@ -8,6 +8,8 @@ const files = {
   shareProvider: 'src/services/externalShareProviderService.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
+  remoteShareEdge: 'supabase/functions/remote-public-share/index.ts',
+  remoteShareEdgeReadme: 'supabase/functions/remote-public-share/README.md',
   packageJson: 'package.json',
   packageLock: 'package-lock.json',
   excel: 'src/utils/excel.ts',
@@ -30,7 +32,21 @@ if (!text.shareProvider.includes("availability: 'not_configured'") || !text.shar
 
 if (!text.authMigration.includes('Do not apply it to GPS/Sports projects')) throw new Error('Auth migration은 부동산 전용 backend에만 적용해야 합니다.');
 if (!text.authMigration.includes('Do NOT expose service_role credentials to the browser')) throw new Error('service_role browser 노출 금지 경계가 필요합니다.');
-if (!text.shareMigration.includes('token_hash')) throw new Error('Remote share migration은 raw token 대신 hash 저장 설계를 유지해야 합니다.');
+if (!text.shareMigration.includes('token_hash') || !text.shareMigration.includes('snapshot_payload jsonb not null')) throw new Error('Remote share migration은 token hash + immutable snapshot payload 설계를 유지해야 합니다.');
+
+for (const marker of [
+  "Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')",
+  "case 'issue'",
+  "case 'resolve'",
+  "case 'revoke'",
+  "case 'add_review'",
+  "const snapshot = await validateSnapshot(body.snapshot)",
+]) {
+  if (!text.remoteShareEdge.includes(marker)) throw new Error(`Remote public share server code 준비상태 누락: ${marker}`);
+}
+if (!text.remoteShareEdgeReadme.includes('PREPARED ONLY / NOT DEPLOYED') || !text.remoteShareEdgeReadme.includes('--no-verify-jwt')) {
+  throw new Error('Remote public share Edge는 준비됨/미배포 상태와 배포 JWT 경계를 명시해야 합니다.');
+}
 
 for (const marker of ['/api/maps/geocode', '/api/maps/static', '/api/poi/search']) {
   if (!text.proxy.includes(marker)) throw new Error(`production proxy 승격 대상 route 누락: ${marker}`);
@@ -75,7 +91,8 @@ if (spreadsheetParserDependency === 'MISSING' || spreadsheetParserDependency ===
 const status = {
   localDevelopment: 'READY',
   authBackend: 'NOT_CONFIGURED',
-  remotePublicShare: 'NOT_CONFIGURED',
+  remotePublicShareServerCode: 'PREPARED_NOT_DEPLOYED',
+  remotePublicShareBackend: 'NOT_CONFIGURED',
   productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
   protectedBackendProxy: 'MISSING_EXTERNAL_INFRA',
   productionDomainAllowlist: 'CHECK_REQUIRED',
