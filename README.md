@@ -48,6 +48,9 @@ Readiness의 `COMPLETED`는 사용자가 임의 체크하는 값이 아닙니다
 - Property Readiness / Next Action Queue / progress closed loop
 - 회사·브랜드 기본설정
 - 전체 local data backup / MERGE·REPLACE restore
+- Local/Remote Auth Provider boundary 및 Auth/RLS migration draft
+- Local/Remote External Share Provider boundary 및 remote gateway contract
+- Production Readiness CI preflight
 
 보고서 구조는 `DAON_1P_MASTER`, `DAON_DETAIL_7P_MASTER`를 유지합니다. 최종 시각 디자인은 사용자 확정 전 임의 변경하지 않습니다.
 
@@ -139,7 +142,13 @@ CI에서는 실제 Blob을 저장한 뒤 `백업 다운로드 → 파일 Preview
 
 ## 사용자 · 권한
 
-현재 local role/access policy UI는 구축되어 있습니다. 실제 다중 사용자 로그인, 세션, RLS, owner-only administration은 부동산 전용 Auth backend가 연결될 때 활성화합니다.
+- `LOCAL POLICY = READY`
+- `REMOTE AUTH = NOT CONFIGURED`
+- owner / admin / editor / viewer 역할표 유지
+- Remote Auth gateway contract 준비
+- `profiles` / role / owner-only RLS migration draft 준비
+
+실제 다중 사용자 로그인, 세션, RLS, owner-only administration은 부동산 전용 Auth backend가 연결될 때 활성화합니다.
 
 ## 방배동 815-11 정책
 
@@ -157,11 +166,12 @@ GitHub Actions `Validate` workflow에서 다음을 지속 검증합니다.
 - Agent foundation / modularity
 - Digital Twin building flow / geometry mutation
 - Platform workflow
-- Access policy
+- Access policy + Auth Provider/RLS boundary
 - Portfolio hub
 - Property readiness + closed-loop worklog
 - Company settings / report contact policy
 - Local backup / restore
+- Production readiness boundary
 - Typecheck / Lint / Build
 - Playwright rendered QA
 - 기존 report render regression
@@ -177,9 +187,22 @@ npm run validate:pipeline
 npm run validate:agents
 npm run validate:twin-building
 npm run validate:platform
+npm run readiness:prod
 ```
 
 ## 운영 배포 전 남은 외부 조건
+
+현재 준비상태는 다음 명령으로 확인합니다.
+
+```bash
+npm run readiness:prod
+```
+
+현재 외부 인프라가 없으므로 `NOT_CONFIGURED`, `MISSING_EXTERNAL_INFRA`, `CHECK_REQUIRED`가 표시되는 것이 정상입니다.
+
+실제 연결 순서는 [`docs/production-connection-checklist.md`](docs/production-connection-checklist.md)를 따릅니다.
+
+남은 외부 조건:
 
 - 부동산 전용 backend/Auth 프로젝트
 - authenticated session / RLS
