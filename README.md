@@ -1,18 +1,79 @@
-# Real Estate Report
+# DA:ON Real Estate Platform
 
-IndexedDB에 물건 데이터를 저장하고 보고서·제안서·입지브리핑을 만드는 로컬 MVP입니다.
+DA:ON ASSET의 부동산 물건관리, Property Data Room, 검증, 비교거래, 임대·수익 분석, Agent, Digital Twin, Risk, 보고서 Snapshot, 외부검토를 하나의 local-first 운영 흐름으로 연결하는 플랫폼입니다.
+
+현재 구현상태와 남은 외부 의존성은 [`docs/implementation-status.md`](docs/implementation-status.md)를 기준으로 관리합니다. 완료 기능을 반복 개발하지 않고, `완료 / 외부 인프라 의존 / 실데이터 의존 / 사용자 보류`를 분리합니다.
+
+## 핵심 운영 흐름
+
+```text
+물건 목록
+  ↓
+물건 상세 메인 허브
+  ├─ 사진 · 미디어
+  ├─ 문서 · 공적자료
+  ├─ 비교거래
+  ├─ 임대 · 수익 분석
+  ├─ 검토 이력
+  ├─ 보고서 Snapshot
+  ├─ 3D · Digital Twin
+  └─ 입지 브리핑
+
+Portfolio Operations
+  ├─ Property Readiness Center
+  ├─ Next Action Queue
+  ├─ OPENED → IMPROVED → COMPLETED 폐루프
+  ├─ 사용자 · 권한 정책
+  ├─ 외부 공유 감사
+  └─ Data Backup / Restore
+```
+
+Readiness의 `COMPLETED`는 사용자가 임의 체크하는 값이 아닙니다. 실제 저장 데이터에서 해당 stage가 `READY`로 상승한 경우에만 자동 판정됩니다. `imported` 자료는 별도 Verification 없이 `verified` 또는 READY로 승격하지 않습니다.
+
+## 현재 주요 기능
+
+- Property CRUD / Excel 대량등록
+- Property Detail Hub / Data Room 딥링크
+- Data Room: 개요, 사진, 문서, 공적자료, 비교거래, 검증, 보고서, 3D
+- 건축물대장 등 구조화 데이터와 provenance 관리
+- 비교거래 구조화 / 시장 요약
+- 임대·수익 시나리오: EGI, NOI, Cap Rate, Cash-on-Cash
+- 통합 검토 이력
+- A0–A10 modular Agent architecture
+- Interior / Spatial / Room Operations
+- 3D·도면 Intake / Digital Twin Workspace
+- Risk / Compliance
+- Report Snapshot / 버전 이력
+- External Share Center / standalone read-only HTML / 감사 CSV·JSON
+- Property Readiness / Next Action Queue / progress closed loop
+- 회사·브랜드 기본설정
+- 전체 local data backup / MERGE·REPLACE restore
+
+보고서 구조는 `DAON_1P_MASTER`, `DAON_DETAIL_7P_MASTER`를 유지합니다. 최종 시각 디자인은 사용자 확정 전 임의 변경하지 않습니다.
 
 ## 개발 실행
 
 ```bash
+npm install
 npm run dev
 ```
 
-이 명령은 프론트엔드 `http://localhost:5174`와 지도 API proxy `http://localhost:5175`를 함께 실행합니다. 필요하면 `npm run dev:proxy`, `npm run dev:frontend` 순서로 별도 실행할 수 있습니다. Vite는 `/api` 요청만 5175로 전달하며 GPS Tracker의 5173은 사용하지 않습니다.
+기본 포트:
 
-## 지도 API 설정
+- Frontend: `http://localhost:5174`
+- Local map/API proxy: `http://localhost:5175`
+- GPS Tracker의 5173 포트와 분리
 
-프로젝트 루트의 `.env`에 서버 전용 키를 입력합니다.
+필요 시 별도 실행:
+
+```bash
+npm run dev:proxy
+npm run dev:frontend
+```
+
+## 지도 / Roadview Provider
+
+프로젝트 루트 `.env`에 서버 전용 키를 설정합니다.
 
 ```env
 NAVER_MAP_CLIENT_ID=
@@ -21,14 +82,111 @@ KAKAO_REST_API_KEY=
 VITE_KAKAO_JAVASCRIPT_KEY=
 ```
 
-기존 `VITE_` 변수로 키가 들어 있다면 `npm run migrate:env`를 한 번 실행합니다. 이 작업은 변수명만 이전하며 키 값을 출력하지 않습니다. `.env`는 `.gitignore`로 제외됩니다.
+- NAVER: geocoding / static map 우선 Provider
+- Kakao: POI / Roadview 및 fallback
+- NAVER Client Secret과 Kakao REST key는 브라우저에 노출하지 않고 5175 proxy에서 사용
+- Kakao JavaScript key는 Roadview SDK용
 
-브라우저는 NAVER/Kakao REST API를 직접 호출하지 않습니다. Provider들은 기존 인터페이스를 유지하면서 로컬 `/api/maps/geocode`, `/api/maps/static`, `/api/poi/search`만 호출합니다. NAVER는 주소·정적 지도의 우선 Provider이고 Kakao 지도 구현은 fallback으로 유지됩니다.
+기존 `VITE_` REST credential이 있다면:
 
-## 건물 외관 확인
+```bash
+npm run migrate:env
+```
 
-현행 NAVER Maps JavaScript SDK에서 Panorama 생성자가 제공되지 않아 NAVER는 Geocoding과 Static Map 역할만 담당합니다. 외관 확인은 Kakao Roadview가 기본 Provider이며 REST 키와 별개인 브라우저 SDK용 `VITE_KAKAO_JAVASCRIPT_KEY`를 사용합니다. Kakao Developers Web 플랫폼에는 `http://localhost:5174`를 허용 도메인으로 등록해야 합니다. NAVER Client ID·Secret과 Kakao REST 키는 5175 proxy 전용이며 브라우저에 전달되지 않습니다.
+`.env`는 Git 추적 대상이 아닙니다.
 
-거리뷰는 외관 확인용 DOM 뷰어로만 표시합니다. 앱은 거리뷰 이미지 다운로드·스크린샷·캐시·대표사진 자동 복사를 수행하지 않으며, 사용자가 확인을 기록하면 Provider, panoId, 촬영일(제공 시), 확인시각만 Property에 저장합니다.
+### Roadview 안전 원칙
 
-운영 배포에서는 로컬 proxy를 접근 제어가 적용된 backend 또는 serverless API로 교체해야 합니다.
+Roadview는 외관 확인용 DOM viewer입니다. 앱은 Roadview 이미지를 자동 다운로드·스크린샷·대표사진으로 복사하지 않습니다. 사용자가 확인을 기록하면 Provider / panoId / 촬영일(제공 시) / 확인시각 메타데이터만 저장합니다.
+
+## 데이터 저장 / 백업
+
+현재 운영 데이터는 브라우저 IndexedDB `real-estate-report`에 저장됩니다. 문서·미디어·3D 원본 Blob과 Agent/검증/Report/공유 이력도 local-first 구조입니다.
+
+`데이터 백업 · 복원` 화면은:
+
+- 모든 IndexedDB object store
+- key + value
+- Blob / ArrayBuffer
+- `daon:` localStorage 운영 상태
+
+를 하나의 버전된 JSON 백업으로 내보냅니다.
+
+복원 모드:
+
+- `MERGE`: 현재 데이터 유지 + 백업 데이터 추가/갱신
+- `REPLACE`: 현재 로컬 store를 비운 뒤 백업 기준 교체
+
+CI에서는 실제 Blob을 저장한 뒤 `백업 다운로드 → 파일 Preview → MERGE restore → Blob 내용 일치` round-trip까지 검증합니다.
+
+## 외부 공유 경계
+
+### LOCAL / OFFLINE — 현재 사용 가능
+
+- standalone read-only HTML
+- Manifest
+- token / expiry / download policy
+- ACTIVE / EXPIRED / REVOKED 로컬 감사상태
+- 외부 검토 코멘트 기록
+
+### REMOTE / PUBLIC — 아직 미연결
+
+코드에는 Provider boundary, gateway contract, migration draft가 준비돼 있지만 실제 public URL / 서버 만료 / remote revoke / 인증 접근은 부동산 전용 backend가 연결돼야 동작합니다.
+
+**현재 standalone HTML을 상대에게 전달한 뒤 그 복사본 자체를 원격 삭제하거나 차단할 수 있다고 표시하지 않습니다.**
+
+기존 GPS Tracker 또는 Sports-AI Supabase 프로젝트를 이 부동산 플랫폼에 임의 재사용하지 않습니다.
+
+## 사용자 · 권한
+
+현재 local role/access policy UI는 구축되어 있습니다. 실제 다중 사용자 로그인, 세션, RLS, owner-only administration은 부동산 전용 Auth backend가 연결될 때 활성화합니다.
+
+## 방배동 815-11 정책
+
+- 실내사진 사용 금지
+- 외관, 도로, 주변환경, 출입구, facade, 항공/주차 외부맥락만 허용
+- generated/sample image는 실제 현장사진으로 표기하지 않음
+- imported public record/comparable data는 별도 사람 검증 전 verified로 승격하지 않음
+
+## 검증
+
+GitHub Actions `Validate` workflow에서 다음을 지속 검증합니다.
+
+- DAON report master integrity
+- Report pipeline
+- Agent foundation / modularity
+- Digital Twin building flow / geometry mutation
+- Platform workflow
+- Access policy
+- Portfolio hub
+- Property readiness + closed-loop worklog
+- Company settings / report contact policy
+- Local backup / restore
+- Typecheck / Lint / Build
+- Playwright rendered QA
+- 기존 report render regression
+
+대표 로컬 검증 명령:
+
+```bash
+npm run typecheck
+npm run lint
+npm run build
+npm run validate:masters
+npm run validate:pipeline
+npm run validate:agents
+npm run validate:twin-building
+npm run validate:platform
+```
+
+## 운영 배포 전 남은 외부 조건
+
+- 부동산 전용 backend/Auth 프로젝트
+- authenticated session / RLS
+- production map proxy / secret provisioning
+- public share URL host
+- server-side expiry/revoke/review sync
+- production frontend domain 및 Provider allowlist
+- 실제 현장 미디어와 사람 Verification
+
+구체적인 기준선은 [`docs/implementation-status.md`](docs/implementation-status.md)를 참조합니다.
