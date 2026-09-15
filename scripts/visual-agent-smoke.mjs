@@ -32,6 +32,14 @@ async function verifyDigitalTwinIntake(page) {
   console.log('[PASS] Digital Twin intake: DXF upload → asset persistence → Agent queue → Workspace handoff');
 }
 
+async function verifyExternalShareCenter(page) {
+  await page.goto(`${BASE_URL}/external-shares`, { waitUntil: 'domcontentloaded' });
+  for (const text of ['외부 공유 센터', '전체 공유', 'ACTIVE', 'EXPIRED', 'REVOKED', '미해결 검토']) await waitForText(page, text);
+  await page.getByPlaceholder('물건명 · 주소 · 공유대상 · Snapshot 검색').waitFor({ state: 'visible', timeout: 30_000 });
+  await page.screenshot({ path: `${ARTIFACT_DIR}/external-share-center.png`, fullPage: true });
+  console.log('[PASS] /external-shares: global audit KPIs + status filter + share search input');
+}
+
 await mkdir(ARTIFACT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
@@ -46,7 +54,7 @@ try {
   await verifyPage(page, '/spatial', ['Spatial Workspace', '공간 자료 Intake', '공간 모델', '리노베이션 검토', 'Digital Twin 준비 자산'], 'spatial-workspace');
   await verifyDigitalTwinIntake(page);
   await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Multi-floor Building Model', 'Building Production Gate / 다층 Candidate Release', 'Building Release & Collaboration Layer', 'Geometry Readiness · Remote Inspection', 'Remote Inspection HTML'], 'digital-twin-workspace');
-  await verifyPage(page, '/external-shares', ['외부 공유 센터', '전체 공유', 'ACTIVE', 'EXPIRED', 'REVOKED', '미해결 검토', '물건명 · 주소 · 공유대상'], 'external-share-center');
+  await verifyExternalShareCenter(page);
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
   console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + External Share Center + existing domain workspaces smoke QA: PASS');
