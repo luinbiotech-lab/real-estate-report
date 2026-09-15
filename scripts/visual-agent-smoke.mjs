@@ -81,11 +81,12 @@ try {
   await verifyDigitalTwinIntake(page);
   await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Multi-floor Building Model', 'Building Production Gate / 다층 Candidate Release', 'Building Release & Collaboration Layer', 'Geometry Readiness · Remote Inspection', 'Remote Inspection HTML'], 'digital-twin-workspace');
   await verifyPage(page, '/income', ['임대 · 수익 분석', '시나리오 입력', '수익성 결과', 'NOI', 'Cap Rate', 'Cash-on-Cash', '저장된 시나리오'], 'rental-income-workspace');
+  await verifyPage(page, '/review-history', ['검토 이력 통합', '자료 검증', 'Agent Review', '보고서', '외부 검토', 'AUDIT TIMELINE', '시간순 검토 기록'], 'review-history-workspace');
   await verifyExternalShareCenter(page);
   await verifyBangbaeDataRoom(page);
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
-  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + Rental Income Workspace + External Share Center + Bangbae Data Room floor/market provenance + existing domain workspaces smoke QA: PASS');
+  console.log('Rendered A0 readiness + A1-A11 IO/write isolation contracts + Digital Twin intake E2E + Rental Income Workspace + Review History + External Share Center + Bangbae Data Room floor/market provenance + existing domain workspaces smoke QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true });
   console.error('Rendered modular agent contract architecture smoke QA: FAIL');
