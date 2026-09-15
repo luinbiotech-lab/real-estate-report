@@ -10,7 +10,7 @@ async function waitForText(page, text, timeout = 30_000) {
 
 await mkdir(ARTIFACT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
-const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
+const page = await browser.newPage({ viewport: { width: 1440, height: 1300 } });
 
 try {
   await page.goto(`${BASE_URL}/access`, { waitUntil: 'domcontentloaded' });
@@ -18,6 +18,15 @@ try {
     '사용자 · 권한 관리',
     'LOCAL POLICY READY',
     'AUTH NOT CONNECTED',
+    'AUTH PROVIDER',
+    'LOCAL POLICY',
+    'REMOTE AUTH',
+    'NOT CONFIGURED',
+    '인증 세션',
+    '사용자 초대',
+    'RLS 강제',
+    'OWNER 전용 관리',
+    '멀티디바이스 동기화',
     'ROLE MATRIX',
     'OWNER',
     'ADMIN',
@@ -45,7 +54,7 @@ try {
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/external-share-provider-boundary.png`, fullPage: true });
 
-  console.log('Rendered access policy + external share provider boundary QA: PASS');
+  console.log('Rendered access policy + auth/share provider boundary QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/access-share-failure.png`, fullPage: true });
   console.error('Rendered access/share boundary QA: FAIL');
