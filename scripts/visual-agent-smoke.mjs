@@ -34,10 +34,10 @@ async function verifyDigitalTwinIntake(page) {
 
 async function verifyExternalShareCenter(page) {
   await page.goto(`${BASE_URL}/external-shares`, { waitUntil: 'domcontentloaded' });
-  for (const text of ['외부 공유 센터', '전체 공유', 'ACTIVE', 'EXPIRED', 'REVOKED', '미해결 검토']) await waitForText(page, text);
+  for (const text of ['외부 공유 센터', '전체 공유', 'ACTIVE', 'EXPIRED', 'REVOKED', '미해결 검토', '감사대장 CSV', '감사대장 JSON', '이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다']) await waitForText(page, text);
   await page.getByPlaceholder('물건명 · 주소 · 공유대상 · Snapshot 검색').waitFor({ state: 'visible', timeout: 30_000 });
   await page.screenshot({ path: `${ARTIFACT_DIR}/external-share-center.png`, fullPage: true });
-  console.log('[PASS] /external-shares: global audit KPIs + status filter + share search input');
+  console.log('[PASS] /external-shares: audit KPIs + CSV/JSON export + revoke boundary + status filter + search input');
 }
 
 await mkdir(ARTIFACT_DIR, { recursive: true });
