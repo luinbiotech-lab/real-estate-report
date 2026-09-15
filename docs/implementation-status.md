@@ -1,6 +1,7 @@
 # DA:ON Real Estate Platform — Implementation Status
 
 Updated baseline: 2026-09-16
+Verified baseline: `7cedec1e639dc025a20d031561c7c380887ae521` / GitHub Actions #672 PASS
 Branch: `feat/daon-master-code-lock`
 
 이 문서는 완료 기능을 반복 개발하지 않고, 실제 미구축 영역과 외부 의존성을 분리하기 위한 현재 기준선이다.
@@ -61,16 +62,36 @@ Branch: `feat/daon-master-code-lock`
 - external review notes
 - External Share Center
 - CSV / JSON audit export
+- LOCAL / OFFLINE vs REMOTE / PUBLIC Provider boundary
+- Remote gateway contract / secure migration draft
 
-### Access — local policy
+### Access — local policy + remote-ready boundary
 - 사용자·권한 관리 UI
 - local role policy matrix
 - owner/admin/editor/viewer boundary
+- LOCAL POLICY = READY
+- REMOTE AUTH = NOT CONFIGURED
+- Remote Auth gateway contract
+- `profiles` / role / owner-only RLS migration draft
+- 신규 remote 계정 기본 role = viewer
+- anonymous profile access 금지 / service_role browser 노출 금지
+
+### Production readiness automation
+- CI `Validate production readiness boundary`
+- 현재 상태를 다음과 같이 자동 판정
+  - localDevelopment = READY
+  - authBackend = NOT_CONFIGURED
+  - remotePublicShare = NOT_CONFIGURED
+  - productionFrontendHost = MISSING_EXTERNAL_INFRA
+  - protectedBackendProxy = MISSING_EXTERNAL_INFRA
+  - productionDomainAllowlist = CHECK_REQUIRED
+- server-only NAVER/Kakao secret 경계 검증
+- production proxy 승격 대상 API route 검증
 
 ## 2. 부분 구축 — 외부 인프라가 있어야 완료되는 영역
 
 ### A. Remote / Public external share
-현재 코드 준비:
+코드 준비 완료:
 - Local/Remote Provider boundary
 - `RemoteExternalShareGateway` contract
 - remote share migration draft
@@ -87,27 +108,35 @@ Branch: `feat/daon-master-code-lock`
 주의: 현재 standalone HTML을 외부에 전달한 뒤에는 서버 권한으로 그 파일 자체를 원격 삭제할 수 없다.
 
 ### B. Real authentication / multi-user RLS
-현재:
-- local access policy와 화면은 구축
-- 실제 Auth는 연결하지 않음
+코드 준비 완료:
+- local access policy와 화면
+- Local/Remote Auth Provider boundary
+- `RemoteAuthGateway` contract
+- `profiles` / role / RLS migration draft
+- owner-only administration 정책
+- 신규 remote user viewer 기본값
 
 실제 완료에 필요한 외부 조건:
-- 부동산 전용 auth backend
-- user/profile/role storage
-- authenticated session
-- RLS / owner-only administration
+- 부동산 전용 auth backend 프로젝트
+- 실제 Auth user/session 연결
+- migration 적용
+- 최초 OWNER trusted bootstrap
+- 실제 property/data table RLS 확장
 - multi-device data persistence
 
 ### C. Production deployment
-현재:
+현재 준비 완료:
 - front 5174 + local proxy 5175 개발 구조
 - NAVER/Kakao REST secret은 proxy에 유지
+- Production Readiness validator
+- 외부 인프라 미연결 상태 자동 판정
 
 실제 완료에 필요한 외부 조건:
 - production frontend host
 - protected serverless/backend proxy
 - production domain/provider allowlist
 - secret/environment provisioning
+- 실제 배포 URL 기준 E2E
 
 ## 3. 실데이터가 있어야 완료할 수 있는 항목
 
@@ -133,14 +162,17 @@ Branch: `feat/daon-master-code-lock`
 
 1. local-first 내부 핵심 기능은 신규 화면을 반복 생성하지 않고 안정화/회귀검증 위주로 전환
 2. 실제 데이터가 들어오면 Readiness Center의 Next Action Queue를 통해 보완
-3. backend 계정을 별도로 준비하는 시점에 Auth + Remote Public Share를 함께 연결
-4. 사용자가 보고서 디자인을 선택하는 시점에 DAON_DETAIL_7P_MASTER 최종 form 확정
-5. 마지막 단계에서 production deploy / cross-device sync / external delivery E2E 수행
+3. backend 계정을 별도로 준비하는 시점에 준비된 Auth/RLS + Remote Public Share migration/gateway를 실제 provider에 연결
+4. production host/backend가 정해지는 시점에 Production Readiness의 MISSING_EXTERNAL_INFRA 항목을 실제 연결로 전환
+5. 사용자가 보고서 디자인을 선택하는 시점에 DAON_DETAIL_7P_MASTER 최종 form 확정
+6. 마지막 단계에서 production deploy / cross-device sync / external delivery E2E 수행
 
 ## 6. 금지 원칙
 
 - 기존 GPS/Sports Supabase 프로젝트를 부동산 프로젝트용으로 임의 재사용하지 않는다.
 - backend가 없는데 public URL 또는 remote revoke가 가능한 것처럼 표시하지 않는다.
+- Auth backend가 없는데 실제 로그인/RLS가 강제되는 것처럼 표시하지 않는다.
+- service_role 또는 서버전용 지도 credential을 browser bundle에 넣지 않는다.
 - 샘플/생성 이미지를 실제 현장사진 또는 verified data로 표시하지 않는다.
 - imported 자료를 사람 검증 없이 verified로 승격하지 않는다.
 - 방배동 815-11에 실내사진을 사용하지 않는다.
