@@ -13,8 +13,22 @@ Object.assign(columns, { 소재지: 'address', 물건주소: 'address', 도로�
 const numericFields = new Set<keyof Property>(['salePrice', 'deposit', 'monthlyRent', 'landAreaPyeong', 'landAreaSqm', 'totalFloorAreaPyeong', 'totalFloorAreaSqm', 'buildingAreaPyeong', 'basementFloors', 'groundFloors', 'buildingCoverageRate', 'floorAreaRatio', 'parkingSpaces']);
 export interface ImportRow { row: number; data: Property; errors: string[]; duplicate: boolean }
 
+function hasExcelFileSignature(buffer: ArrayBuffer) {
+  if (buffer.byteLength < 8) return false;
+  const bytes = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 8));
+  const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b && (
+    (bytes[2] === 0x03 && bytes[3] === 0x04)
+    || (bytes[2] === 0x05 && bytes[3] === 0x06)
+    || (bytes[2] === 0x07 && bytes[3] === 0x08)
+  );
+  const isOle = bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0
+    && bytes[4] === 0xa1 && bytes[5] === 0xb1 && bytes[6] === 0x1a && bytes[7] === 0xe1;
+  return isZip || isOle;
+}
+
 function readImportWorkbook(buffer: ArrayBuffer) {
   if (buffer.byteLength > MAX_EXCEL_IMPORT_BYTES) throw new Error('Excel 파일은 10MB 이하만 업로드할 수 있습니다.');
+  if (!hasExcelFileSignature(buffer)) throw new Error('지원하지 않는 Excel 파일 형식입니다. .xlsx 또는 .xls 파일을 확인해 주세요.');
   return XLSX.read(buffer, {
     type: 'array',
     cellDates: true,
