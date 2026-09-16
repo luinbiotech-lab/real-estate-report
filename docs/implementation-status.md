@@ -1,7 +1,7 @@
 # DA:ON Real Estate Platform — Implementation Status
 
-Updated baseline: 2026-09-16
-Verified baseline: `0916f23c7dda56a50bca855a60aecdfd87d14c45` / GitHub Actions #725 PASS
+Updated baseline: 2026-09-17
+Verified baseline: `f2e5e914a32d686fde2a4ee366080d8243919d58` / GitHub Actions #753 PASS
 Branch: `feat/daon-master-code-lock`
 
 이 문서는 완료 기능을 반복 개발하지 않고, 실제 미구축 영역과 외부 의존성을 분리하기 위한 현재 기준선이다.
@@ -36,6 +36,7 @@ Branch: `feat/daon-master-code-lock`
 - DAON_1P_MASTER / DAON_DETAIL_7P_MASTER 코드 잠금
 - Report Snapshot / 버전 이력
 - Report Pipeline / renderer QA
+- 보고서 렌더 QA 이미지 로딩·레이아웃 안정화
 - 최종 시각 디자인 선택은 사용자 지시에 따라 후속 단계로 보류
 
 ### Operations
@@ -53,6 +54,20 @@ Branch: `feat/daon-master-code-lock`
   - `daon:` localStorage 운영상태
   - MERGE / REPLACE
   - 다운로드 → Preview → MERGE → Blob round-trip E2E
+
+### Remote migration rehearsal — dry-run only
+- 현재 IndexedDB → remote schema 변환계획 생성
+- 실제 network write = 0 고정
+- Property / modular objects / verification / report snapshot mapping
+- document/media/Digital Twin binary는 private Storage upload plan으로 분리
+- orphan property reference 탐지
+- inline data URL / structured binary / binary 누락 / 50MiB 초과 / unsupported store blocker 탐지
+- Migration Readiness Review 화면
+- Manifest JSON 다운로드
+- Handoff Bundle 다운로드
+- Handoff Bundle은 secrets / raw binary / remote execution을 포함하지 않음
+- productionReady는 외부 E2E 전 항상 false
+- rendered migration QA로 payload blocker / manifest / handoff 계약 검증
 
 ### External share — local/offline
 - standalone read-only HTML package
@@ -74,7 +89,7 @@ Branch: `feat/daon-master-code-lock`
 - 10 MiB import limit / formula·HTML·VBA·embedded parsing hardening
 - SheetJS `0.20.3` pinned + known-advisory floor `>=0.20.2`
 - release 시 vendor/GitHub advisory 재검토 gate
-- Production readiness / runbook / remote share / remote auth / property data RLS CI validators
+- Production readiness / runbook / remote share / remote auth / property data RLS / migration rehearsal CI validators
 - Typecheck / Lint / Build / rendered smoke QA 전체 PASS 기준 유지
 
 ## 2. 서버 연결 준비 완료 — 실제 배포/연결은 아직 하지 않음
@@ -82,6 +97,7 @@ Branch: `feat/daon-master-code-lock`
 ### A. REMOTE AUTH
 상태:
 - server code + migration = PREPARED / NOT DEPLOYED
+- Supabase browser Auth adapter = PREPARED / NOT CONNECTED
 - backend connection = NOT CONFIGURED
 
 준비된 항목:
@@ -95,10 +111,19 @@ Branch: `feat/daon-master-code-lock`
 - active OWNER만 invite / role / status / profile-list 관리
 - 마지막 active OWNER 강등·비활성화 차단
 - exact-origin CORS / service_role browser 노출 금지
+- Supabase Auth REST browser adapter
+  - password sign-in
+  - refresh token
+  - authenticated user 확인
+  - profile role/is_active 조회
+  - owner admin action은 `remote-auth-admin`만 호출
+  - 기본 token store는 memory-only
+  - token persistence는 실제 운영 시 별도 승인된 store를 명시 주입
 
 실제 완료 조건:
 - 부동산 전용 Supabase/Auth 프로젝트
 - migration 실제 적용
+- adapter에 실제 project URL/public anon key/session store 주입
 - 첫 OWNER bootstrap E2E
 - bootstrap secret rotate/remove
 - multi-device session/profile 검증
@@ -107,7 +132,9 @@ Branch: `feat/daon-master-code-lock`
 상태:
 - schema + RLS = PREPARED / NOT APPLIED
 - private asset Storage boundary = PREPARED / NOT APPLIED
-- Remote Data Gateway = PREPARED / NOT CONNECTED
+- Remote Data Gateway contract = PREPARED
+- Supabase REST/Storage adapter = PREPARED / NOT CONNECTED
+- remote provider connection = NOT CONFIGURED
 
 준비된 항목:
 - `properties`: active read, OWNER/ADMIN/EDITOR create/update, OWNER delete
@@ -121,13 +148,23 @@ Branch: `feat/daon-master-code-lock`
 - document/media/Digital Twin binary는 Storage에 저장하고 DB에는 metadata/path만 저장
 - Blob/base64/data URL을 DB metadata에 직접 넣지 못하도록 경계 설정
 - `RemoteDataGateway` contract
+- Supabase REST adapter
+  - authenticated bearer token + public anon key 사용
+  - actor id를 `created_by` / `updated_by`와 RLS에 맞춰 전달
+  - browser service_role 금지
+  - cache `no-store`
+- Supabase private Storage adapter
+  - private bucket upload/download/remove contract
+  - 50 MiB hard cap
+  - path traversal 차단
 
 실제 완료 조건:
 - migrations 실제 적용
-- Remote Data Gateway Supabase adapter 연결
-- local → remote migration rehearsal
+- Auth adapter와 Data/Storage adapter 실제 연결
+- local → remote controlled migration execution
 - second-device persistence E2E
 - 역할별 RLS negative/positive test
+- local/remote record count reconciliation
 
 ### C. REMOTE / PUBLIC external share
 상태:
@@ -184,21 +221,23 @@ Branch: `feat/daon-master-code-lock`
 
 ## 5. 다음 우선순위 원칙
 
-1. local → remote migration dry-run / sync manifest를 먼저 구축해 실제 서버 연결 전 데이터 변환·binary upload·blocker를 검증한다.
-2. 실제 부동산 전용 backend가 준비되면 `docs/production-connection-runbook.md` 순서대로 Auth → Property/Data RLS → Storage → Remote Data → Remote Public Share를 연결한다.
-3. 실제 데이터가 들어오면 Readiness Center의 Next Action Queue를 통해 보완한다.
-4. production host/backend가 정해지는 시점에 MISSING_EXTERNAL_INFRA 항목을 실제 연결로 전환한다.
-5. 사용자가 보고서 디자인을 선택하는 시점에 DAON_DETAIL_7P_MASTER 최종 form을 확정한다.
-6. 마지막 단계에서 production deploy / cross-device sync / external delivery E2E를 수행한다.
+1. 외부 backend가 없는 동안에는 실제 remote write를 만들지 않고 adapter / dry-run / handoff / validator만 준비한다.
+2. 부동산 전용 backend가 준비되면 `docs/production-connection-runbook.md` 순서대로 Auth → Property/Data RLS → Storage → Remote Data → Remote Public Share를 연결한다.
+3. 연결 직전 dry-run Manifest/Handoff를 다시 생성하고 blocker 0을 확인한다.
+4. 실제 데이터가 들어오면 Readiness Center의 Next Action Queue를 통해 보완한다.
+5. production host/backend가 정해지는 시점에 MISSING_EXTERNAL_INFRA 항목을 실제 연결로 전환한다.
+6. 사용자가 보고서 디자인을 선택하는 시점에 DAON_DETAIL_7P_MASTER 최종 form을 확정한다.
+7. 마지막 단계에서 production deploy / cross-device sync / external delivery E2E를 수행한다.
 
 ## 6. 금지 원칙
 
 - 기존 GPS/Sports Supabase 프로젝트를 부동산 프로젝트용으로 임의 재사용하지 않는다.
 - backend가 없는데 public URL 또는 remote revoke가 가능한 것처럼 표시하지 않는다.
 - Auth backend가 없는데 실제 로그인/RLS가 강제되는 것처럼 표시하지 않는다.
-- server code/migration이 준비됐다는 이유만으로 REMOTE 기능을 READY로 표시하지 않는다.
+- server code/migration/adapter가 준비됐다는 이유만으로 REMOTE 기능을 READY로 표시하지 않는다.
 - service_role, OWNER bootstrap secret 또는 서버전용 지도 credential을 browser bundle에 넣지 않는다.
 - binary Blob/base64/data URL을 production DB JSONB에 직접 저장하지 않는다.
+- remote migration rehearsal 화면에서 실제 network write를 수행하지 않는다.
 - 샘플/생성 이미지를 실제 현장사진 또는 verified data로 표시하지 않는다.
 - imported 자료를 사람 검증 없이 verified로 승격하지 않는다.
 - 방배동 815-11에 실내사진을 사용하지 않는다.
