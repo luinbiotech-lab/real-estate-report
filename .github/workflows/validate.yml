@@ -87,6 +87,9 @@ jobs:
       - name: Validate migration readiness review UI boundary
         run: node scripts/validate-remote-migration-readiness-ui.mjs
 
+      - name: Validate prepared Supabase remote data adapter
+        run: node scripts/validate-supabase-remote-data-adapter.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
