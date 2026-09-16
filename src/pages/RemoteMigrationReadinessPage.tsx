@@ -1,8 +1,9 @@
-import { CloudOffRounded, DownloadRounded, FactCheckRounded, PlayArrowRounded, ShieldRounded, WarningAmberRounded } from '@mui/icons-material';
+import { CloudOffRounded, DownloadRounded, FactCheckRounded, Inventory2Rounded, PlayArrowRounded, ShieldRounded, WarningAmberRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useState } from 'react';
 import type { Settings } from '../types';
 import { remoteMigrationDryRunService } from '../services/remoteMigrationDryRunService';
+import { remoteMigrationHandoffService } from '../services/remoteMigrationHandoffService';
 import type { RemoteMigrationPlan } from '../services/remoteMigrationPlanService';
 
 interface Props {
@@ -58,6 +59,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button variant="contained" startIcon={busy ? <CircularProgress size={17} color="inherit" /> : <PlayArrowRounded />} disabled={busy} onClick={() => void runDryRun()}>Dry-Run 실행</Button>
         <Button variant="outlined" startIcon={<DownloadRounded />} disabled={!plan || busy} onClick={() => plan && remoteMigrationDryRunService.download(plan)}>Manifest JSON 다운로드</Button>
+        <Button variant="outlined" startIcon={<Inventory2Rounded />} disabled={!plan || busy} onClick={() => plan && remoteMigrationHandoffService.download(plan)}>Handoff Bundle 다운로드</Button>
       </div>
     </header>
 
