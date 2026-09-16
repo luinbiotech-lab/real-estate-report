@@ -5,6 +5,7 @@ const files = {
   serverEnv: 'server/env.mjs',
   proxy: 'server/proxy.mjs',
   authProvider: 'src/services/authProviderService.ts',
+  supabaseRemoteAuthAdapter: 'src/services/supabaseRemoteAuthGateway.ts',
   shareProvider: 'src/services/externalShareProviderService.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
@@ -35,6 +36,18 @@ if (!text.envExample.includes('Server-only credentials. Never commit real values
 
 if (!text.authProvider.includes("status: 'not_configured'") || !text.authProvider.includes("label: 'REMOTE AUTH'")) throw new Error('실제 Auth backend 미연결 상태를 명시해야 합니다.');
 if (!text.shareProvider.includes("availability: 'not_configured'") || !text.shareProvider.includes("label: 'REMOTE / PUBLIC'")) throw new Error('Remote public share 미연결 상태를 명시해야 합니다.');
+
+for (const marker of [
+  'export class SupabaseRemoteAuthGateway',
+  'createSupabaseRemoteAuthGateway',
+  'createMemoryRemoteAuthTokenStore',
+  "'/auth/v1/token?grant_type=password'",
+  "'/auth/v1/token?grant_type=refresh_token'",
+  "'/functions/v1/${this.adminFunctionName}'",
+]) {
+  if (!text.supabaseRemoteAuthAdapter.includes(marker)) throw new Error(`Supabase Remote Auth adapter 준비상태 누락: ${marker}`);
+}
+if (!text.authProvider.includes('new NotConfiguredRemoteAuthGateway()')) throw new Error('실제 backend 연결 전 기본 RemoteAuthGateway는 미연결 상태를 유지해야 합니다.');
 
 if (!text.authMigration.includes('Do not apply it to GPS/Sports projects')) throw new Error('Auth migration은 부동산 전용 backend에만 적용해야 합니다.');
 if (!text.authMigration.includes('Do NOT expose service_role credentials to the browser')) throw new Error('service_role browser 노출 금지 경계가 필요합니다.');
@@ -151,6 +164,7 @@ if (spreadsheetParserDependency === 'MISSING' || spreadsheetParserDependency ===
 const status = {
   localDevelopment: 'READY',
   remoteAuthServerCode: 'PREPARED_NOT_DEPLOYED',
+  supabaseRemoteAuthAdapter: 'PREPARED_NOT_CONNECTED',
   authBackend: 'NOT_CONFIGURED',
   propertyDataSchemaAndRls: 'PREPARED_NOT_APPLIED',
   propertyAssetStorageBoundary: 'PREPARED_NOT_APPLIED',
