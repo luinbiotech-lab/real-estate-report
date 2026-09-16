@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const files = {
   adapter: 'src/services/supabaseRemoteDataGateway.ts',
+  browserCredential: 'src/services/supabaseBrowserCredential.ts',
   gateway: 'src/services/remoteDataGateway.ts',
   dataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
   assetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
@@ -18,12 +19,12 @@ for (const marker of [
   'export class SupabaseRemoteAssetStorageGateway',
   'createSupabaseRemoteDataGateway',
   'createSupabaseRemoteAssetStorageGateway',
+  'requireBrowserSafeSupabaseKey',
   "Authorization: `Bearer ${token}`",
   'apikey: this.anonKey',
   "cache: 'no-store'",
   "const ASSET_BUCKET = 'daon-property-assets'",
   '50 * 1024 * 1024',
-  "if (/service[_-]?role/i.test(key))",
   "url.protocol !== 'https:'",
   'getAccessToken: () => Promise<string | null>',
   'getActorId: () => Promise<string | null>',
@@ -31,6 +32,18 @@ for (const marker of [
   "updated_by: actorId",
 ]) {
   if (!text.adapter.includes(marker)) throw new Error(`Supabase remote adapter 보안/계약 누락: ${marker}`);
+}
+
+for (const marker of [
+  'export function requireBrowserSafeSupabaseKey',
+  'decodeBase64Url',
+  '/^sb_secret_/i.test(key)',
+  '/service[_-]?role/i.test(key)',
+  '/^sb_publishable_/i.test(key)',
+  "role !== 'anon'",
+  'legacy anon JWT',
+]) {
+  if (!text.browserCredential.includes(marker)) throw new Error(`Supabase browser credential 보안 경계 누락: ${marker}`);
 }
 
 for (const table of [
