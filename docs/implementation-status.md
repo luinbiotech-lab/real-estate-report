@@ -1,7 +1,7 @@
 # DA:ON Real Estate Platform — Implementation Status
 
 Updated baseline: 2026-09-16
-Verified baseline: `6d3087958c21d3779269461923db563b2de9d095` / GitHub Actions #688 PASS
+Verified baseline: `0916f23c7dda56a50bca855a60aecdfd87d14c45` / GitHub Actions #725 PASS
 Branch: `feat/daon-master-code-lock`
 
 이 문서는 완료 기능을 반복 개발하지 않고, 실제 미구축 영역과 외부 의존성을 분리하기 위한 현재 기준선이다.
@@ -43,7 +43,6 @@ Branch: `feat/daon-master-code-lock`
 - Property Readiness Center
 - Next Action Queue
 - Readiness closed loop: OPENED → IMPROVED → COMPLETED
-  - 수동 완료가 아니라 실제 readiness state 상승으로만 판정
 - 회사·브랜드 기본설정
   - 보고서 연락처 정책: 휴대폰 + 이메일만
   - 기존 물건 담당자 자동 덮어쓰기 금지
@@ -63,91 +62,105 @@ Branch: `feat/daon-master-code-lock`
 - External Share Center
 - CSV / JSON audit export
 - LOCAL / OFFLINE vs REMOTE / PUBLIC Provider boundary
-- Remote gateway contract / secure migration draft
 
-### Access — local policy + remote-ready boundary
+### Access — local policy
 - 사용자·권한 관리 UI
 - local role policy matrix
 - owner/admin/editor/viewer boundary
 - LOCAL POLICY = READY
-- REMOTE AUTH = NOT CONFIGURED
-- Remote Auth gateway contract
-- `profiles` / role / owner-only RLS migration draft
-- 신규 remote 계정 기본 role = viewer
-- anonymous profile access 금지 / service_role browser 노출 금지
 
-### Production readiness automation
-- CI `Validate production readiness boundary`
-- CI `Validate production connection runbook`
-- 운영 연결 문서 `docs/production-connection-runbook.md`
-  - 부동산 전용 backend provision 순서
-  - Auth/profile/최초 OWNER bootstrap
-  - Property/Data RLS 확장 원칙
-  - REMOTE/PUBLIC token hash·expiry·revoke 경계
-  - frontend/protected proxy 배포 분리
-  - provider/domain allowlist
-  - production E2E gate
-- 현재 상태를 다음과 같이 자동 판정
-  - localDevelopment = READY
-  - authBackend = NOT_CONFIGURED
-  - remotePublicShare = NOT_CONFIGURED
-  - productionFrontendHost = MISSING_EXTERNAL_INFRA
-  - protectedBackendProxy = MISSING_EXTERNAL_INFRA
-  - productionDomainAllowlist = CHECK_REQUIRED
-- server-only NAVER/Kakao secret 경계 검증
-- production proxy 승격 대상 API route 검증
-- Excel import parser security boundary 검증 및 production dependency review gate
+### Production/security automation
+- Excel XLS/XLSX 실제 file signature 사전검증
+- 10 MiB import limit / formula·HTML·VBA·embedded parsing hardening
+- SheetJS `0.20.3` pinned + known-advisory floor `>=0.20.2`
+- release 시 vendor/GitHub advisory 재검토 gate
+- Production readiness / runbook / remote share / remote auth / property data RLS CI validators
+- Typecheck / Lint / Build / rendered smoke QA 전체 PASS 기준 유지
 
-## 2. 부분 구축 — 외부 인프라가 있어야 완료되는 영역
+## 2. 서버 연결 준비 완료 — 실제 배포/연결은 아직 하지 않음
 
-### A. Remote / Public external share
-코드 준비 완료:
-- Local/Remote Provider boundary
-- `RemoteExternalShareGateway` contract
-- remote share migration draft
-- raw token 비저장 / token hash 설계
-- REMOTE / PUBLIC = NOT CONFIGURED 표시
+### A. REMOTE AUTH
+상태:
+- server code + migration = PREPARED / NOT DEPLOYED
+- backend connection = NOT CONFIGURED
 
-실제 완료에 필요한 외부 조건:
-- 부동산 전용 backend/Supabase 프로젝트
-- public URL host
-- server-side token validation
-- real remote expiry / revoke
-- remote review sync
+준비된 항목:
+- `profiles` / role / owner-only RLS migration
+- 신규 remote user 기본 role = viewer
+- anonymous profile access 금지
+- `remote-auth-admin` Edge Function
+- 최초 OWNER: authenticated user + 별도 server-only bootstrap key 동시 요구
+- 첫 active OWNER 생성 후 bootstrap endpoint 재사용 차단
+- bootstrap key 최소 32자 / 비교 early-exit 방지
+- active OWNER만 invite / role / status / profile-list 관리
+- 마지막 active OWNER 강등·비활성화 차단
+- exact-origin CORS / service_role browser 노출 금지
 
-주의: 현재 standalone HTML을 외부에 전달한 뒤에는 서버 권한으로 그 파일 자체를 원격 삭제할 수 없다.
+실제 완료 조건:
+- 부동산 전용 Supabase/Auth 프로젝트
+- migration 실제 적용
+- 첫 OWNER bootstrap E2E
+- bootstrap secret rotate/remove
+- multi-device session/profile 검증
 
-### B. Real authentication / multi-user RLS
-코드 준비 완료:
-- local access policy와 화면
-- Local/Remote Auth Provider boundary
-- `RemoteAuthGateway` contract
-- `profiles` / role / RLS migration draft
-- owner-only administration 정책
-- 신규 remote user viewer 기본값
+### B. Property/Data persistence + RLS
+상태:
+- schema + RLS = PREPARED / NOT APPLIED
+- private asset Storage boundary = PREPARED / NOT APPLIED
+- Remote Data Gateway = PREPARED / NOT CONNECTED
 
-실제 완료에 필요한 외부 조건:
-- 부동산 전용 auth backend 프로젝트
-- 실제 Auth user/session 연결
-- migration 적용
-- 최초 OWNER trusted bootstrap
-- 실제 property/data table RLS 확장
-- multi-device data persistence
+준비된 항목:
+- `properties`: active read, OWNER/ADMIN/EDITOR create/update, OWNER delete
+- `property_objects`: non-binary modular Data Room/Agent/Spatial/Risk data
+- `property_verification_candidates`: EDITOR+ pending 후보 제출, OWNER/ADMIN 결정
+- `property_verifications`: OWNER/ADMIN append
+- `report_snapshots`: EDITOR draft only, OWNER/ADMIN draft/final, immutable
+- `company_settings`: OWNER write
+- 모든 operational table RLS enable / anon revoke
+- private `daon-property-assets` Storage bucket
+- document/media/Digital Twin binary는 Storage에 저장하고 DB에는 metadata/path만 저장
+- Blob/base64/data URL을 DB metadata에 직접 넣지 못하도록 경계 설정
+- `RemoteDataGateway` contract
 
-### C. Production deployment
-현재 준비 완료:
+실제 완료 조건:
+- migrations 실제 적용
+- Remote Data Gateway Supabase adapter 연결
+- local → remote migration rehearsal
+- second-device persistence E2E
+- 역할별 RLS negative/positive test
+
+### C. REMOTE / PUBLIC external share
+상태:
+- server code + migration = PREPARED / NOT DEPLOYED
+- backend connection = NOT CONFIGURED
+
+준비된 항목:
+- `remote-public-share` Edge Function
+- raw token은 발급 시 1회만 반환
+- DB에는 SHA-256 `token_hash`만 저장
+- audit/list 응답 raw token/public URL 비노출
+- revoke / expiry / allow_download 검사
+- anonymous resolve/review와 authenticated management 분리
+- exact-origin CORS / `Cache-Control: no-store`
+- Release Snapshot 발급 전 canonical package + SHA-256 checksum + ECDSA P-256 signature 서버 검증
+- tampered snapshot 발급 차단
+
+실제 완료 조건:
+- public viewer host
+- Edge Function 실제 배포
+- issue → resolve → review → revoke → blocked resolve E2E
+
+### D. Production deployment
+상태:
+- production frontend host = MISSING EXTERNAL INFRA
+- protected backend proxy = MISSING EXTERNAL INFRA
+- provider/domain allowlist = CHECK REQUIRED
+
+준비된 항목:
 - front 5174 + local proxy 5175 개발 구조
-- NAVER/Kakao REST secret은 proxy에 유지
-- Production Readiness validator
-- Production Connection Runbook + CI integrity validator
-- 외부 인프라 미연결 상태 자동 판정
-
-실제 완료에 필요한 외부 조건:
-- production frontend host
-- protected serverless/backend proxy
-- production domain/provider allowlist
-- secret/environment provisioning
-- 실제 배포 URL 기준 E2E
+- NAVER/Kakao REST secret server-only 경계
+- `/api/maps/geocode`, `/api/maps/static`, `/api/poi/search` production 승격 대상 고정
+- `docs/production-connection-runbook.md`
 
 ## 3. 실데이터가 있어야 완료할 수 있는 항목
 
@@ -171,19 +184,21 @@ Branch: `feat/daon-master-code-lock`
 
 ## 5. 다음 우선순위 원칙
 
-1. local-first 내부 핵심 기능은 신규 화면을 반복 생성하지 않고 안정화/회귀검증 위주로 전환
-2. 실제 데이터가 들어오면 Readiness Center의 Next Action Queue를 통해 보완
-3. backend 계정을 별도로 준비하는 시점에 `docs/production-connection-runbook.md` 순서대로 Auth/RLS + Remote Public Share migration/gateway를 실제 provider에 연결
-4. production host/backend가 정해지는 시점에 Production Readiness의 MISSING_EXTERNAL_INFRA 항목을 실제 연결로 전환
-5. 사용자가 보고서 디자인을 선택하는 시점에 DAON_DETAIL_7P_MASTER 최종 form 확정
-6. 마지막 단계에서 production deploy / cross-device sync / external delivery E2E 수행
+1. local → remote migration dry-run / sync manifest를 먼저 구축해 실제 서버 연결 전 데이터 변환·binary upload·blocker를 검증한다.
+2. 실제 부동산 전용 backend가 준비되면 `docs/production-connection-runbook.md` 순서대로 Auth → Property/Data RLS → Storage → Remote Data → Remote Public Share를 연결한다.
+3. 실제 데이터가 들어오면 Readiness Center의 Next Action Queue를 통해 보완한다.
+4. production host/backend가 정해지는 시점에 MISSING_EXTERNAL_INFRA 항목을 실제 연결로 전환한다.
+5. 사용자가 보고서 디자인을 선택하는 시점에 DAON_DETAIL_7P_MASTER 최종 form을 확정한다.
+6. 마지막 단계에서 production deploy / cross-device sync / external delivery E2E를 수행한다.
 
 ## 6. 금지 원칙
 
 - 기존 GPS/Sports Supabase 프로젝트를 부동산 프로젝트용으로 임의 재사용하지 않는다.
 - backend가 없는데 public URL 또는 remote revoke가 가능한 것처럼 표시하지 않는다.
 - Auth backend가 없는데 실제 로그인/RLS가 강제되는 것처럼 표시하지 않는다.
-- service_role 또는 서버전용 지도 credential을 browser bundle에 넣지 않는다.
+- server code/migration이 준비됐다는 이유만으로 REMOTE 기능을 READY로 표시하지 않는다.
+- service_role, OWNER bootstrap secret 또는 서버전용 지도 credential을 browser bundle에 넣지 않는다.
+- binary Blob/base64/data URL을 production DB JSONB에 직접 저장하지 않는다.
 - 샘플/생성 이미지를 실제 현장사진 또는 verified data로 표시하지 않는다.
 - imported 자료를 사람 검증 없이 verified로 승격하지 않는다.
 - 방배동 815-11에 실내사진을 사용하지 않는다.
