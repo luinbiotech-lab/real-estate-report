@@ -1,8 +1,5 @@
 import type { Property, Settings } from '../types';
 import type {
-  DigitalTwinAsset,
-  PropertyDocument,
-  PropertyMedia,
   PropertyVerification,
   PropertyVerificationCandidate,
   ReportSnapshot,
