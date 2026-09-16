@@ -173,9 +173,6 @@ create table if not exists public.company_settings (
 );
 
 -- updated_at trigger coverage
-for_each_table: begin end;
-
--- PostgreSQL has no statement label loop for DDL here; define triggers explicitly.
 drop trigger if exists properties_touch_updated_at on public.properties;
 create trigger properties_touch_updated_at before update on public.properties
 for each row execute function public.daon_touch_updated_at();
