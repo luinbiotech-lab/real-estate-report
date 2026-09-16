@@ -5,6 +5,9 @@ const files = {
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   authAdminEdge: 'supabase/functions/remote-auth-admin/index.ts',
   authAdminReadme: 'supabase/functions/remote-auth-admin/README.md',
+  propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
+  propertyAssetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
+  remoteDataGateway: 'src/services/remoteDataGateway.ts',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
   remoteShareEdge: 'supabase/functions/remote-public-share/index.ts',
   remoteShareEdgeReadme: 'supabase/functions/remote-public-share/README.md',
@@ -29,7 +32,13 @@ for (const required of [
   '두 번째 bootstrap',
   '마지막 active OWNER',
   '신규 사용자가 기본 `viewer`',
-  'Property/Data RLS expansion',
+  'Property/Data persistence + RLS',
+  '20260916_property_data_rls.sql',
+  '20260916_property_asset_storage.sql',
+  'src/services/remoteDataGateway.ts',
+  'private bucket `daon-property-assets`',
+  'Blob/base64/data URL',
+  'local → remote → second-device',
   '32-byte raw token',
   'SHA-256으로 hash',
   '`revoked_at`, `expires_at`, `read_only`, `allow_download`',
@@ -53,6 +62,9 @@ for (const required of [
   '브라우저 secret scan',
   'REMOTE AUTH server code + migration: PREPARED / NOT DEPLOYED',
   'REMOTE AUTH backend connection: NOT CONFIGURED',
+  'Property/Data schema + RLS: PREPARED / NOT APPLIED',
+  'Property asset private Storage boundary: PREPARED / NOT APPLIED',
+  'REMOTE DATA Gateway: PREPARED / NOT CONNECTED',
   'REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED',
   'REMOTE / PUBLIC backend connection: NOT CONFIGURED',
 ]) {
@@ -72,6 +84,27 @@ for (const required of [
 }
 for (const marker of ["case 'bootstrap_owner'", "case 'invite_user'", "case 'update_role'", "case 'set_active'", "case 'list_profiles'"]) {
   if (!text.authAdminEdge.includes(marker)) throw new Error(`Remote Auth admin handler 누락: ${marker}`);
+}
+
+for (const marker of [
+  'create table if not exists public.properties',
+  'properties_delete_owner_only',
+  'verification_candidates_update_verifier',
+  'report_snapshots_insert_role',
+  'company_settings_update_owner',
+]) {
+  if (!text.propertyDataMigration.includes(marker)) throw new Error(`Property/Data migration 배포 계약 누락: ${marker}`);
+}
+for (const marker of [
+  'create table if not exists public.property_assets',
+  'property_assets_no_inline_binary',
+  "values ('daon-property-assets', 'daon-property-assets', false, 52428800)",
+  'No anon policies are created. Bucket remains private.',
+]) {
+  if (!text.propertyAssetMigration.includes(marker)) throw new Error(`Property asset migration 배포 계약 누락: ${marker}`);
+}
+if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('REMOTE DATA Provider가 아직 연결되지 않았습니다')) {
+  throw new Error('Remote Data Gateway 준비/미연결 계약이 필요합니다.');
 }
 
 for (const required of [
