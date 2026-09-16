@@ -5,7 +5,8 @@
 ## 0. 절대 금지
 
 - 기존 GPS Tracker 또는 Sports AI Supabase 프로젝트를 재사용하지 않는다.
-- `service_role` key, NAVER client secret, KAKAO REST key를 browser bundle에 넣지 않는다.
+- `service_role` key, `sb_secret_` key, NAVER client secret, KAKAO REST key를 browser bundle에 넣지 않는다.
+- legacy Supabase JWT의 `role=service_role` credential을 browser adapter에 사용하지 않는다.
 - Auth backend가 없는데 로그인/RLS가 강제되는 것처럼 표시하지 않는다.
 - REMOTE/PUBLIC backend가 없는데 public URL, remote revoke, server expiry가 가능한 것처럼 표시하지 않는다.
 - raw external-share token을 DB에 저장하지 않는다. 서버에서 hash 후 `token_hash`만 저장한다.
@@ -14,8 +15,8 @@
 ## 1. Dedicated backend provision
 
 1. 부동산 전용 Supabase/backend 프로젝트를 새로 만든다.
-2. project URL / public anon key / server-only service role credential을 분리한다.
-3. service role credential은 server/Edge Function 환경에만 저장한다.
+2. project URL / browser-safe publishable 또는 legacy anon key / server-only service role credential을 분리한다.
+3. service role 및 `sb_secret_` credential은 server/Edge Function 환경에만 저장한다.
 4. production 도메인과 redirect URL을 Auth provider에 등록한다.
 5. GPS/Sports 프로젝트와 project id, DB, storage, secret을 공유하지 않는다.
 
@@ -28,8 +29,10 @@
 - `supabase/migrations/20260916_auth_profiles_rls.sql`
 - `supabase/functions/remote-auth-admin/index.ts`
 - `supabase/functions/remote-auth-admin/README.md`
+- `src/services/supabaseRemoteAuthGateway.ts`
+- `src/services/supabaseBrowserCredential.ts`
 
-현재 상태는 **PREPARED / NOT DEPLOYED**이다. 실제 부동산 전용 Supabase가 준비되기 전에는 `REMOTE AUTH`를 READY로 표시하지 않는다.
+현재 상태는 **SERVER PREPARED / NOT DEPLOYED + BROWSER ADAPTER PREPARED / NOT CONNECTED**이다. 실제 부동산 전용 Supabase가 준비되기 전에는 `REMOTE AUTH`를 READY로 표시하지 않는다.
 
 배포 순서:
 
@@ -37,13 +40,23 @@
 2. `DAON_OWNER_BOOTSTRAP_KEY`를 32자 이상의 server-only secret으로 설정한다.
 3. `AUTH_ADMIN_ALLOWED_ORIGINS`에 production frontend origin만 등록한다.
 4. `supabase functions deploy remote-auth-admin`으로 배포한다. 이 함수에는 `--no-verify-jwt`를 사용하지 않는다.
-5. 첫 Auth 사용자를 생성하고 로그인한다.
-6. 잘못된 bootstrap key가 거부되는지 확인한다.
-7. 올바른 bootstrap key + authenticated session으로 최초 1명만 `owner`로 승격한다.
-8. 두 번째 bootstrap 시도가 `bootstrap_already_completed`로 거부되는지 확인한다.
-9. 최초 OWNER 생성 후 `DAON_OWNER_BOOTSTRAP_KEY`를 즉시 rotate/remove한다.
-10. 신규 사용자가 기본 `viewer`로 생성되는지 확인한다.
-11. anon 사용자가 `public.profiles`를 읽을 수 없는지 확인한다.
+5. frontend에는 Supabase project URL과 browser-safe publishable key 또는 legacy anon JWT만 주입한다.
+6. `SupabaseRemoteAuthGateway`를 명시적으로 생성해 provider에 연결한다. repository 기본 provider는 연결 전까지 `NotConfiguredRemoteAuthGateway`를 유지한다.
+7. token store는 기본 memory-only를 사용한다. persistent session이 필요하면 별도 승인된 `RemoteAuthTokenStore`를 명시적으로 주입하고 token 저장정책을 별도 검토한다.
+8. 첫 Auth 사용자를 생성하고 로그인한다.
+9. 잘못된 bootstrap key가 거부되는지 확인한다.
+10. 올바른 bootstrap key + authenticated session으로 최초 1명만 `owner`로 승격한다.
+11. 두 번째 bootstrap 시도가 `bootstrap_already_completed`로 거부되는지 확인한다.
+12. 최초 OWNER 생성 후 `DAON_OWNER_BOOTSTRAP_KEY`를 즉시 rotate/remove한다.
+13. 신규 사용자가 기본 `viewer`로 생성되는지 확인한다.
+14. anon 사용자가 `public.profiles`를 읽을 수 없는지 확인한다.
+
+Browser credential 규칙:
+
+- `sb_publishable_...` 계열은 browser-safe로 허용한다.
+- legacy JWT는 payload의 `role=anon`일 때만 허용한다.
+- `sb_secret_...`, legacy `role=service_role`, 문자열상 service-role credential은 browser adapter에서 즉시 거부한다.
+- credential 값 자체는 오류 메시지/로그에 출력하지 않는다.
 
 운영 규칙:
 
@@ -62,6 +75,7 @@
 - last-active-owner continuity protection 동작
 - inactive profile 차단 정책 확인
 - multi-device에서 동일 profile/role 확인
+- browser bundle secret scan에서 `service_role`, `sb_secret_`, bootstrap secret 미검출
 
 ## 3. Property/Data persistence + RLS
 
@@ -70,17 +84,25 @@
 - `supabase/migrations/20260916_property_data_rls.sql`
 - `supabase/migrations/20260916_property_asset_storage.sql`
 - `src/services/remoteDataGateway.ts`
+- `src/services/supabaseRemoteDataGateway.ts`
+- `src/services/supabaseBrowserCredential.ts`
+- Remote Migration Readiness / dry-run manifest / handoff bundle
 
-현재 상태는 **PREPARED / NOT APPLIED / NOT CONNECTED**이다. 실제 backend에 적용하기 전까지 local IndexedDB가 authoritative operational store다.
+현재 상태는 **SCHEMA/RLS PREPARED / NOT APPLIED + SUPABASE REST/STORAGE ADAPTER PREPARED / NOT CONNECTED**이다. 실제 backend에 적용하기 전까지 local IndexedDB가 authoritative operational store다.
 
 적용 순서:
 
 1. `20260916_auth_profiles_rls.sql`
 2. `20260916_property_data_rls.sql`
 3. `20260916_property_asset_storage.sql`
-4. frontend Remote Data Gateway 실제 provider 연결
-5. 최소 1개 테스트 물건으로 local → remote migration rehearsal
-6. cross-device read/write E2E 후에만 REMOTE DATA를 READY로 승격
+4. Auth adapter 로그인/profile/RLS 기본 동작을 먼저 검증한다.
+5. Migration Readiness에서 dry-run manifest를 다시 생성하고 blocker = 0인지 확인한다.
+6. `SupabaseRemoteDataGateway`와 `SupabaseRemoteAssetStorageGateway`를 authenticated user token/actor-id callback과 함께 명시적으로 연결한다.
+7. 최소 1개 테스트 물건으로 controlled local → remote migration rehearsal을 수행한다.
+8. remote record count / asset metadata / Storage object를 local manifest와 reconciliation한다.
+9. second-device read/write 및 VIEWER/EDITOR/ADMIN/OWNER RLS positive/negative E2E 후에만 REMOTE DATA를 READY로 승격한다.
+
+중요: migration/RLS 적용 전 또는 dry-run blocker가 남아 있는 상태에서는 remote adapter를 operational provider로 활성화하지 않는다.
 
 서버 데이터 구조:
 
@@ -125,6 +147,7 @@ Binary asset 경계:
 - private asset URL 직접 public 노출 차단
 - Blob/base64/data URL metadata 저장 차단
 - local → remote → second-device round trip E2E
+- dry-run manifest와 remote row/object count reconciliation
 
 ## 4. REMOTE / PUBLIC external share
 
@@ -182,7 +205,7 @@ production에서는 다음을 분리한다.
 ### Browser-safe
 
 - Supabase project URL
-- public anon key
+- Supabase `sb_publishable_...` key 또는 legacy `role=anon` JWT
 - Kakao JavaScript SDK key (도메인 제한 필수)
 
 ### Server-only
@@ -190,7 +213,7 @@ production에서는 다음을 분리한다.
 - `NAVER_MAP_CLIENT_ID`
 - `NAVER_MAP_CLIENT_SECRET`
 - `KAKAO_REST_API_KEY`
-- Supabase `service_role`
+- Supabase `service_role` / `sb_secret_...`
 - `DAON_OWNER_BOOTSTRAP_KEY`
 - external-share token-management server secrets
 
@@ -242,29 +265,32 @@ release 직전 필수:
 
 최종 배포 승인 전 실제 URL에서 아래를 모두 검증한다.
 
-1. 로그인 → role/profile load
-2. wrong bootstrap key 거부 → 최초 OWNER 1명 bootstrap → second bootstrap 거부 → bootstrap secret rotate/remove
-3. OWNER 사용자 초대/role/status 관리
-4. 마지막 active OWNER 강등/비활성화 차단
-5. VIEWER read-only 차단
-6. property CRUD 권한별 차단
-7. Property/Data RLS 역할별 write/delete/verify/finalize 차단 검증
-8. private Storage upload/read/delete 및 anon 직접 접근 차단
-9. Blob/base64/data URL DB metadata 저장 거부 확인
-10. Data Room upload/read/verification
-11. local → remote → second-device persistence round trip
-12. 1P/7P report render/print/PDF
-13. signed Snapshot REMOTE/PUBLIC URL 생성
-14. tampered Snapshot issuance 거부
-15. 익명 recipient read-only resolve
-16. expiry/revoke 후 접근 차단
-17. review-note sync
-18. remote share list에 raw token 비노출
-19. NAVER geocode/static + Kakao POI/Roadview
-20. backup/export 및 최소 1회 restore rehearsal
-21. cross-device 동일 사용자 상태 확인
-22. 브라우저 secret scan
-23. Spreadsheet parser release gate PASS
+1. browser-safe Supabase key 유형 확인 → `sb_secret_` / service-role JWT 거부
+2. 로그인 → role/profile load
+3. wrong bootstrap key 거부 → 최초 OWNER 1명 bootstrap → second bootstrap 거부 → bootstrap secret rotate/remove
+4. OWNER 사용자 초대/role/status 관리
+5. 마지막 active OWNER 강등/비활성화 차단
+6. VIEWER read-only 차단
+7. property CRUD 권한별 차단
+8. Property/Data RLS 역할별 write/delete/verify/finalize 차단 검증
+9. private Storage upload/read/delete 및 anon 직접 접근 차단
+10. Blob/base64/data URL DB metadata 저장 거부 확인
+11. Migration Readiness dry-run blocker = 0 확인
+12. Data Room upload/read/verification
+13. local → remote → second-device persistence round trip
+14. remote/local record count 및 asset metadata reconciliation
+15. 1P/7P report render/print/PDF
+16. signed Snapshot REMOTE/PUBLIC URL 생성
+17. tampered Snapshot issuance 거부
+18. 익명 recipient read-only resolve
+19. expiry/revoke 후 접근 차단
+20. review-note sync
+21. remote share list에 raw token 비노출
+22. NAVER geocode/static + Kakao POI/Roadview
+23. backup/export 및 최소 1회 restore rehearsal
+24. cross-device 동일 사용자 상태 확인
+25. 브라우저 secret scan
+26. Spreadsheet parser release gate PASS
 
 ## 9. 현재 상태
 
@@ -272,10 +298,13 @@ release 직전 필수:
 
 - LOCAL POLICY: READY
 - REMOTE AUTH server code + migration: PREPARED / NOT DEPLOYED
+- Supabase browser Auth adapter: PREPARED / NOT CONNECTED
 - REMOTE AUTH backend connection: NOT CONFIGURED
 - Property/Data schema + RLS: PREPARED / NOT APPLIED
 - Property asset private Storage boundary: PREPARED / NOT APPLIED
-- REMOTE DATA Gateway: PREPARED / NOT CONNECTED
+- Remote Data Gateway contract: PREPARED
+- Supabase REST/Storage adapter: PREPARED / NOT CONNECTED
+- REMOTE DATA provider connection: NOT CONFIGURED
 - LOCAL / OFFLINE share: READY
 - REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED
 - REMOTE / PUBLIC backend connection: NOT CONFIGURED
