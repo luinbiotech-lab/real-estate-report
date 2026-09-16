@@ -63,18 +63,68 @@
 - inactive profile 차단 정책 확인
 - multi-device에서 동일 profile/role 확인
 
-## 3. Property/Data RLS expansion
+## 3. Property/Data persistence + RLS
 
-현재 Auth migration은 `profiles` 경계까지만 준비되어 있다. 실제 운영 전에는 property/data 관련 운영 테이블에 RLS를 확장해야 한다.
+준비된 코드:
 
-최소 정책:
+- `supabase/migrations/20260916_property_data_rls.sql`
+- `supabase/migrations/20260916_property_asset_storage.sql`
+- `src/services/remoteDataGateway.ts`
 
-- OWNER: 전체 관리
-- ADMIN: 운영 데이터 관리, 사용자/회사 소유권 변경 제외
-- EDITOR: 허용된 물건 수정·업로드·분석·draft
-- VIEWER: 허용된 데이터 read-only
+현재 상태는 **PREPARED / NOT APPLIED / NOT CONNECTED**이다. 실제 backend에 적용하기 전까지 local IndexedDB가 authoritative operational store다.
 
-완료 조건: role matrix의 server-side enforcement가 `accessControlService.ts`의 capability 정책과 모순되지 않는다.
+적용 순서:
+
+1. `20260916_auth_profiles_rls.sql`
+2. `20260916_property_data_rls.sql`
+3. `20260916_property_asset_storage.sql`
+4. frontend Remote Data Gateway 실제 provider 연결
+5. 최소 1개 테스트 물건으로 local → remote migration rehearsal
+6. cross-device read/write E2E 후에만 REMOTE DATA를 READY로 승격
+
+서버 데이터 구조:
+
+- `properties`: Property 본체 JSON snapshot + audit actor
+- `property_objects`: 문서/미디어/3D binary를 제외한 모듈형 Data Room / Agent / Spatial / Risk 데이터
+- `property_verification_candidates`: 검증 후보와 승인상태
+- `property_verifications`: 검증 확정 이력
+- `report_snapshots`: immutable draft/final snapshot
+- `company_settings`: 회사/브랜드 설정
+- `property_assets`: 문서/미디어/Digital Twin binary metadata + private Storage path
+- private bucket `daon-property-assets`: 실제 binary object
+
+역할별 서버 강제:
+
+- VIEWER: active profile이면 read-only
+- EDITOR: Property/Data object 수정·업로드, verification candidate 제출, report draft 생성
+- ADMIN: EDITOR 권한 + 검증 확정 + final report 생성
+- OWNER: 전체 권한 + Property 삭제 + company settings 변경
+- verification 확정은 OWNER/ADMIN만 가능
+- report snapshot은 immutable이며 UPDATE policy를 만들지 않는다.
+- 마지막 권한판정은 browser UI가 아니라 RLS가 강제한다.
+
+Binary asset 경계:
+
+- `PropertyDocument`, `PropertyMedia`, `DigitalTwinAsset`의 Blob/base64/data URL은 DB JSONB에 저장하지 않는다.
+- DB에는 metadata + `storage_path`만 저장한다.
+- Storage bucket은 `public=false`로 유지한다.
+- bucket/object SELECT는 active authenticated user만 허용한다.
+- upload/update/delete는 OWNER/ADMIN/EDITOR만 허용한다.
+- server hard cap은 50 MiB이며 현재 browser validation이 더 엄격하면 browser 제한을 우선한다.
+- Storage path는 `<propertyId>/<resourceType>/<resourceId>/<sanitizedFileName>` 계약을 유지한다.
+
+완료 조건:
+
+- VIEWER write/delete 차단
+- EDITOR property/data CRUD 허용, property delete 차단
+- EDITOR verification approval 차단
+- EDITOR final report snapshot 생성 차단
+- ADMIN verification/final report 허용, property delete/company settings write 차단
+- OWNER property delete/company settings write 허용
+- anon operational table access 차단
+- private asset URL 직접 public 노출 차단
+- Blob/base64/data URL metadata 저장 차단
+- local → remote → second-device round trip E2E
 
 ## 4. REMOTE / PUBLIC external share
 
@@ -198,19 +248,23 @@ release 직전 필수:
 4. 마지막 active OWNER 강등/비활성화 차단
 5. VIEWER read-only 차단
 6. property CRUD 권한별 차단
-7. Data Room upload/read/verification
-8. 1P/7P report render/print/PDF
-9. signed Snapshot REMOTE/PUBLIC URL 생성
-10. tampered Snapshot issuance 거부
-11. 익명 recipient read-only resolve
-12. expiry/revoke 후 접근 차단
-13. review-note sync
-14. remote share list에 raw token 비노출
-15. NAVER geocode/static + Kakao POI/Roadview
-16. backup/export 및 최소 1회 restore rehearsal
-17. cross-device 동일 사용자 상태 확인
-18. 브라우저 secret scan
-19. Spreadsheet parser release gate PASS
+7. Property/Data RLS 역할별 write/delete/verify/finalize 차단 검증
+8. private Storage upload/read/delete 및 anon 직접 접근 차단
+9. Blob/base64/data URL DB metadata 저장 거부 확인
+10. Data Room upload/read/verification
+11. local → remote → second-device persistence round trip
+12. 1P/7P report render/print/PDF
+13. signed Snapshot REMOTE/PUBLIC URL 생성
+14. tampered Snapshot issuance 거부
+15. 익명 recipient read-only resolve
+16. expiry/revoke 후 접근 차단
+17. review-note sync
+18. remote share list에 raw token 비노출
+19. NAVER geocode/static + Kakao POI/Roadview
+20. backup/export 및 최소 1회 restore rehearsal
+21. cross-device 동일 사용자 상태 확인
+22. 브라우저 secret scan
+23. Spreadsheet parser release gate PASS
 
 ## 9. 현재 상태
 
@@ -219,6 +273,9 @@ release 직전 필수:
 - LOCAL POLICY: READY
 - REMOTE AUTH server code + migration: PREPARED / NOT DEPLOYED
 - REMOTE AUTH backend connection: NOT CONFIGURED
+- Property/Data schema + RLS: PREPARED / NOT APPLIED
+- Property asset private Storage boundary: PREPARED / NOT APPLIED
+- REMOTE DATA Gateway: PREPARED / NOT CONNECTED
 - LOCAL / OFFLINE share: READY
 - REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED
 - REMOTE / PUBLIC backend connection: NOT CONFIGURED
