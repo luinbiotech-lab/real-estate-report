@@ -153,7 +153,8 @@ function hasInlineDataUrl(value: unknown, seen = new WeakSet<object>()): boolean
 }
 
 function stripBinaryFields(row: Record<string, unknown>) {
-  const { fileData: _fileData, ...rest } = row;
+  const rest = { ...row };
+  delete rest.fileData;
   return rest;
 }
 
