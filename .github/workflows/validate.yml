@@ -84,6 +84,9 @@ jobs:
       - name: Validate remote migration local dry run executor
         run: node scripts/validate-remote-migration-dry-run.mjs
 
+      - name: Validate migration readiness review UI boundary
+        run: node scripts/validate-remote-migration-readiness-ui.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
@@ -128,6 +131,9 @@ jobs:
 
       - name: Rendered local backup center QA
         run: node scripts/visual-backup-smoke.mjs
+
+      - name: Rendered migration readiness dry run QA
+        run: node scripts/visual-migration-readiness-smoke.mjs
 
       - name: Rendered report smoke QA
         run: node scripts/visual-report-smoke.mjs
