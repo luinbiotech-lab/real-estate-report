@@ -43,7 +43,7 @@ for (const marker of [
   'createMemoryRemoteAuthTokenStore',
   "'/auth/v1/token?grant_type=password'",
   "'/auth/v1/token?grant_type=refresh_token'",
-  "'/functions/v1/${this.adminFunctionName}'",
+  '/functions/v1/${this.adminFunctionName}',
 ]) {
   if (!text.supabaseRemoteAuthAdapter.includes(marker)) throw new Error(`Supabase Remote Auth adapter 준비상태 누락: ${marker}`);
 }
