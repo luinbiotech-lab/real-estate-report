@@ -49,6 +49,7 @@ export interface RemoteMigrationBlocker {
     | 'MISSING_PROPERTY_ID'
     | 'ORPHAN_PROPERTY_REFERENCE'
     | 'INLINE_DATA_URL'
+    | 'INLINE_BINARY'
     | 'MISSING_ASSET_BINARY'
     | 'ASSET_TOO_LARGE'
     | 'UNSUPPORTED_STORE'
@@ -152,6 +153,35 @@ function hasInlineDataUrl(value: unknown, seen = new WeakSet<object>()): boolean
   return Object.values(value as Record<string, unknown>).some((item) => hasInlineDataUrl(item, seen));
 }
 
+function hasInlineBinary(value: unknown, seen = new WeakSet<object>()): boolean {
+  if (!value || typeof value !== 'object') return false;
+  if (typeof Blob !== 'undefined' && value instanceof Blob) return true;
+  if (value instanceof ArrayBuffer || ArrayBuffer.isView(value)) return true;
+  if (seen.has(value)) return false;
+  seen.add(value);
+  if (Array.isArray(value)) return value.some((item) => hasInlineBinary(item, seen));
+  return Object.values(value as Record<string, unknown>).some((item) => hasInlineBinary(item, seen));
+}
+
+function structuredPayloadIsSafe(
+  store: string,
+  value: unknown,
+  blockers: RemoteMigrationBlocker[],
+  id?: string,
+  propertyId?: string,
+) {
+  let safe = true;
+  if (hasInlineDataUrl(value)) {
+    blockers.push({ code: 'INLINE_DATA_URL', store, id, propertyId, message: `${store}${id ? `/${id}` : ''} 구조화 payload에 inline data URL이 포함되어 있습니다.` });
+    safe = false;
+  }
+  if (hasInlineBinary(value)) {
+    blockers.push({ code: 'INLINE_BINARY', store, id, propertyId, message: `${store}${id ? `/${id}` : ''} 구조화 payload에 Blob/ArrayBuffer/TypedArray binary가 포함되어 있습니다.` });
+    safe = false;
+  }
+  return safe;
+}
+
 function stripBinaryFields(row: Record<string, unknown>) {
   const rest = { ...row };
   delete rest.fileData;
@@ -171,7 +201,7 @@ function ensurePropertyReference(
     return undefined;
   }
   if (!propertyIds.has(propertyId)) {
-    blockers.push({ code: 'ORPHAN_PROPERTY_REFERENCE', store, id: id || undefined, propertyId, message: `${store} row가 존재하지 않는 Property를 참조합니다.` });
+    blockers.push({ code: 'ORPHAN_PROPERTY_REFERENCE', store, id: id || undefined, propertyId, message: `${store} row가 remote migration 대상에 포함되지 않은 Property를 참조합니다.` });
     return undefined;
   }
   return propertyId;
@@ -218,9 +248,7 @@ function buildAsset(
   delete metadataPayload.url;
   delete metadataPayload.fileUrl;
   delete metadataPayload.storagePath;
-  if (hasInlineDataUrl(metadataPayload)) {
-    blockers.push({ code: 'INLINE_DATA_URL', store, id, propertyId, message: `${store}/${id} metadata 내부에 inline data URL이 있습니다.` });
-  }
+  if (!structuredPayloadIsSafe(store, metadataPayload, blockers, id, propertyId)) return {};
 
   return {
     metadata: {
@@ -253,12 +281,14 @@ function reportStatus(row: ReportSnapshot): 'draft' | 'final' {
 
 export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): RemoteMigrationPlan {
   const blockers: RemoteMigrationBlocker[] = [];
-  const propertyIds = new Set(snapshot.properties.map((property) => property.id).filter(Boolean));
+  const propertyIds = new Set<string>();
   const properties = snapshot.properties.flatMap((property) => {
     if (!property.id) {
       blockers.push({ code: 'INVALID_ROW', store: 'properties', message: 'Property id가 없습니다.' });
       return [];
     }
+    if (!structuredPayloadIsSafe('properties', property, blockers, property.id, property.id)) return [];
+    propertyIds.add(property.id);
     return [{ id: property.id, payload: property }];
   });
 
@@ -272,10 +302,7 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
         if (value && !id) blockers.push({ code: 'INVALID_ROW', store, propertyId, message: `${store} row에 id가 없습니다.` });
         continue;
       }
-      if (hasInlineDataUrl(value)) {
-        blockers.push({ code: 'INLINE_DATA_URL', store, id, propertyId, message: `${store}/${id}에 inline data URL이 포함되어 있습니다.` });
-        continue;
-      }
+      if (!structuredPayloadIsSafe(store, value, blockers, id, propertyId)) continue;
       objects.push({ objectType: store, id, propertyId, payload: value });
     }
   }
@@ -293,24 +320,35 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
   const verificationCandidates = (snapshot.stores.propertyVerificationCandidates ?? []).flatMap((row) => {
     const propertyId = ensurePropertyReference('propertyVerificationCandidates', row, propertyIds, blockers);
     const id = idOf(row);
-    if (!propertyId || !id || !record(row)) return [];
+    const value = record(row);
+    if (!propertyId || !id || !value) return [];
+    if (!structuredPayloadIsSafe('propertyVerificationCandidates', value, blockers, id, propertyId)) return [];
     return [{ candidate: row as PropertyVerificationCandidate }];
   });
 
   const verifications = (snapshot.stores.propertyVerifications ?? []).flatMap((row) => {
     const propertyId = ensurePropertyReference('propertyVerifications', row, propertyIds, blockers);
     const id = idOf(row);
-    if (!propertyId || !id || !record(row)) return [];
+    const value = record(row);
+    if (!propertyId || !id || !value) return [];
+    if (!structuredPayloadIsSafe('propertyVerifications', value, blockers, id, propertyId)) return [];
     return [{ verification: row as PropertyVerification }];
   });
 
   const reportSnapshots = (snapshot.stores.reportSnapshots ?? []).flatMap((row) => {
     const propertyId = ensurePropertyReference('reportSnapshots', row, propertyIds, blockers);
     const id = idOf(row);
-    if (!propertyId || !id || !record(row)) return [];
+    const value = record(row);
+    if (!propertyId || !id || !value) return [];
+    if (!structuredPayloadIsSafe('reportSnapshots', value, blockers, id, propertyId)) return [];
     const typed = row as ReportSnapshot;
     return [{ snapshot: typed, status: reportStatus(typed) }];
   });
+
+  let companySettings: Settings | undefined;
+  if (snapshot.settings) {
+    if (structuredPayloadIsSafe('companySettings', snapshot.settings, blockers, 'main')) companySettings = snapshot.settings;
+  }
 
   const ignoredStores = Object.keys(snapshot.stores)
     .filter((store) => !KNOWN_LOCAL_STORES.has(store))
@@ -333,7 +371,7 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
     verificationCandidates,
     verifications,
     reportSnapshots,
-    companySettings: snapshot.settings,
+    companySettings,
     ignoredStores,
     blockers,
     counts: {
