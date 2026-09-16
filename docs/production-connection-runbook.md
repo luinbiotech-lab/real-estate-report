@@ -23,24 +23,43 @@
 
 ## 2. Auth / profile / role bootstrap
 
-적용 migration:
+준비된 코드:
 
 - `supabase/migrations/20260916_auth_profiles_rls.sql`
+- `supabase/functions/remote-auth-admin/index.ts`
+- `supabase/functions/remote-auth-admin/README.md`
 
-순서:
+현재 상태는 **PREPARED / NOT DEPLOYED**이다. 실제 부동산 전용 Supabase가 준비되기 전에는 `REMOTE AUTH`를 READY로 표시하지 않는다.
 
-1. migration을 부동산 전용 backend에만 적용한다.
-2. 첫 사용자를 Auth에서 생성한다.
-3. trusted admin/server 경로로 최초 1명만 `owner`로 승격한다.
-4. browser에서 자기 role을 임의 변경할 수 없는지 확인한다.
-5. 신규 사용자가 기본 `viewer`로 생성되는지 확인한다.
-6. anon 사용자가 `public.profiles`를 읽을 수 없는지 확인한다.
+배포 순서:
+
+1. Auth/profile migration을 부동산 전용 backend에만 적용한다.
+2. `DAON_OWNER_BOOTSTRAP_KEY`를 32자 이상의 server-only secret으로 설정한다.
+3. `AUTH_ADMIN_ALLOWED_ORIGINS`에 production frontend origin만 등록한다.
+4. `supabase functions deploy remote-auth-admin`으로 배포한다. 이 함수에는 `--no-verify-jwt`를 사용하지 않는다.
+5. 첫 Auth 사용자를 생성하고 로그인한다.
+6. 잘못된 bootstrap key가 거부되는지 확인한다.
+7. 올바른 bootstrap key + authenticated session으로 최초 1명만 `owner`로 승격한다.
+8. 두 번째 bootstrap 시도가 `bootstrap_already_completed`로 거부되는지 확인한다.
+9. 최초 OWNER 생성 후 `DAON_OWNER_BOOTSTRAP_KEY`를 즉시 rotate/remove한다.
+10. 신규 사용자가 기본 `viewer`로 생성되는지 확인한다.
+11. anon 사용자가 `public.profiles`를 읽을 수 없는지 확인한다.
+
+운영 규칙:
+
+- `invite_user`, `update_role`, `set_active`, `list_profiles`는 active OWNER만 실행한다.
+- browser에서 자기 role을 임의 변경할 수 있는 경로를 만들지 않는다.
+- 마지막 active OWNER는 강등하거나 비활성화할 수 없다.
+- `service_role`과 bootstrap secret은 browser bundle/localStorage/sessionStorage에 넣지 않는다.
+- CORS는 `AUTH_ADMIN_ALLOWED_ORIGINS` exact allowlist를 사용하며 wildcard origin을 사용하지 않는다.
 
 완료 조건:
 
 - authenticated session 동작
 - profile persistence 동작
+- one-time OWNER bootstrap 동작
 - owner-only user administration 동작
+- last-active-owner continuity protection 동작
 - inactive profile 차단 정책 확인
 - multi-device에서 동일 profile/role 확인
 
@@ -122,6 +141,7 @@ production에서는 다음을 분리한다.
 - `NAVER_MAP_CLIENT_SECRET`
 - `KAKAO_REST_API_KEY`
 - Supabase `service_role`
+- `DAON_OWNER_BOOTSTRAP_KEY`
 - external-share token-management server secrets
 
 proxy 승격 대상 route:
@@ -173,29 +193,32 @@ release 직전 필수:
 최종 배포 승인 전 실제 URL에서 아래를 모두 검증한다.
 
 1. 로그인 → role/profile load
-2. OWNER 사용자 관리
-3. VIEWER read-only 차단
-4. property CRUD 권한별 차단
-5. Data Room upload/read/verification
-6. 1P/7P report render/print/PDF
-7. signed Snapshot REMOTE/PUBLIC URL 생성
-8. tampered Snapshot issuance 거부
-9. 익명 recipient read-only resolve
-10. expiry/revoke 후 접근 차단
-11. review-note sync
-12. remote share list에 raw token 비노출
-13. NAVER geocode/static + Kakao POI/Roadview
-14. backup/export 및 최소 1회 restore rehearsal
-15. cross-device 동일 사용자 상태 확인
-16. 브라우저 secret scan
-17. Spreadsheet parser release gate PASS
+2. wrong bootstrap key 거부 → 최초 OWNER 1명 bootstrap → second bootstrap 거부 → bootstrap secret rotate/remove
+3. OWNER 사용자 초대/role/status 관리
+4. 마지막 active OWNER 강등/비활성화 차단
+5. VIEWER read-only 차단
+6. property CRUD 권한별 차단
+7. Data Room upload/read/verification
+8. 1P/7P report render/print/PDF
+9. signed Snapshot REMOTE/PUBLIC URL 생성
+10. tampered Snapshot issuance 거부
+11. 익명 recipient read-only resolve
+12. expiry/revoke 후 접근 차단
+13. review-note sync
+14. remote share list에 raw token 비노출
+15. NAVER geocode/static + Kakao POI/Roadview
+16. backup/export 및 최소 1회 restore rehearsal
+17. cross-device 동일 사용자 상태 확인
+18. 브라우저 secret scan
+19. Spreadsheet parser release gate PASS
 
 ## 9. 현재 상태
 
 현재 repository 기준:
 
 - LOCAL POLICY: READY
-- REMOTE AUTH: NOT CONFIGURED
+- REMOTE AUTH server code + migration: PREPARED / NOT DEPLOYED
+- REMOTE AUTH backend connection: NOT CONFIGURED
 - LOCAL / OFFLINE share: READY
 - REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED
 - REMOTE / PUBLIC backend connection: NOT CONFIGURED
