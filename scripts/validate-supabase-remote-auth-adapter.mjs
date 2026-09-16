@@ -21,7 +21,7 @@ for (const marker of [
   "'/auth/v1/token?grant_type=refresh_token'",
   "'/auth/v1/user'",
   "'/auth/v1/logout'",
-  "'/rest/v1/profiles?'",
+  '/rest/v1/profiles?',
   "action: 'invite_user'",
   "action: 'update_role'",
   "action: 'set_active'",
