@@ -81,6 +81,9 @@ jobs:
       - name: Validate remote migration dry run planner
         run: node scripts/validate-remote-migration-plan.mjs
 
+      - name: Validate remote migration local dry run executor
+        run: node scripts/validate-remote-migration-dry-run.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
