@@ -3,6 +3,8 @@ import { existsSync, readFileSync } from 'node:fs';
 const files = {
   runbook: 'docs/production-connection-runbook.md',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
+  authAdminEdge: 'supabase/functions/remote-auth-admin/index.ts',
+  authAdminReadme: 'supabase/functions/remote-auth-admin/README.md',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
   remoteShareEdge: 'supabase/functions/remote-public-share/index.ts',
   remoteShareEdgeReadme: 'supabase/functions/remote-public-share/README.md',
@@ -21,7 +23,11 @@ for (const required of [
   '`service_role` key',
   'raw external-share token',
   '부동산 전용 Supabase/backend 프로젝트',
-  '최초 1명만 `owner`로 승격',
+  'DAON_OWNER_BOOTSTRAP_KEY',
+  'AUTH_ADMIN_ALLOWED_ORIGINS',
+  'supabase functions deploy remote-auth-admin',
+  '두 번째 bootstrap',
+  '마지막 active OWNER',
   '신규 사용자가 기본 `viewer`',
   'Property/Data RLS expansion',
   '32-byte raw token',
@@ -45,11 +51,27 @@ for (const required of [
   'node scripts/validate-excel-security.mjs',
   'Production E2E gate',
   '브라우저 secret scan',
-  'REMOTE AUTH: NOT CONFIGURED',
+  'REMOTE AUTH server code + migration: PREPARED / NOT DEPLOYED',
+  'REMOTE AUTH backend connection: NOT CONFIGURED',
   'REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED',
   'REMOTE / PUBLIC backend connection: NOT CONFIGURED',
 ]) {
   if (!text.runbook.includes(required)) throw new Error(`Production runbook 필수 규칙 누락: ${required}`);
+}
+
+for (const required of [
+  'PREPARED ONLY / NOT DEPLOYED',
+  'supabase functions deploy remote-auth-admin',
+  'Do **not** use `--no-verify-jwt`',
+  'minimum 32 characters',
+  'zero active OWNER profiles',
+  'last active OWNER cannot be demoted',
+  'last active OWNER cannot be deactivated',
+]) {
+  if (!text.authAdminReadme.includes(required)) throw new Error(`Remote Auth admin 배포 계약 누락: ${required}`);
+}
+for (const marker of ["case 'bootstrap_owner'", "case 'invite_user'", "case 'update_role'", "case 'set_active'", "case 'list_profiles'"]) {
+  if (!text.authAdminEdge.includes(marker)) throw new Error(`Remote Auth admin handler 누락: ${marker}`);
 }
 
 for (const required of [
