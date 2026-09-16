@@ -5,9 +5,12 @@ const files = {
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   authAdminEdge: 'supabase/functions/remote-auth-admin/index.ts',
   authAdminReadme: 'supabase/functions/remote-auth-admin/README.md',
+  supabaseAuthAdapter: 'src/services/supabaseRemoteAuthGateway.ts',
+  browserCredential: 'src/services/supabaseBrowserCredential.ts',
   propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
   propertyAssetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
   remoteDataGateway: 'src/services/remoteDataGateway.ts',
+  supabaseDataAdapter: 'src/services/supabaseRemoteDataGateway.ts',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
   remoteShareEdge: 'supabase/functions/remote-public-share/index.ts',
   remoteShareEdgeReadme: 'supabase/functions/remote-public-share/README.md',
@@ -24,11 +27,16 @@ const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key,
 for (const required of [
   'GPS Tracker 또는 Sports AI Supabase 프로젝트를 재사용하지 않는다',
   '`service_role` key',
+  '`sb_secret_` key',
+  'legacy Supabase JWT의 `role=service_role`',
   'raw external-share token',
   '부동산 전용 Supabase/backend 프로젝트',
   'DAON_OWNER_BOOTSTRAP_KEY',
   'AUTH_ADMIN_ALLOWED_ORIGINS',
   'supabase functions deploy remote-auth-admin',
+  'src/services/supabaseRemoteAuthGateway.ts',
+  'src/services/supabaseBrowserCredential.ts',
+  'token store는 기본 memory-only',
   '두 번째 bootstrap',
   '마지막 active OWNER',
   '신규 사용자가 기본 `viewer`',
@@ -36,9 +44,12 @@ for (const required of [
   '20260916_property_data_rls.sql',
   '20260916_property_asset_storage.sql',
   'src/services/remoteDataGateway.ts',
+  'src/services/supabaseRemoteDataGateway.ts',
+  'dry-run manifest를 다시 생성하고 blocker = 0',
   'private bucket `daon-property-assets`',
   'Blob/base64/data URL',
   'local → remote → second-device',
+  'record count / asset metadata / Storage object',
   '32-byte raw token',
   'SHA-256으로 hash',
   '`revoked_at`, `expires_at`, `read_only`, `allow_download`',
@@ -60,11 +71,9 @@ for (const required of [
   'node scripts/validate-excel-security.mjs',
   'Production E2E gate',
   '브라우저 secret scan',
-  'REMOTE AUTH server code + migration: PREPARED / NOT DEPLOYED',
-  'REMOTE AUTH backend connection: NOT CONFIGURED',
-  'Property/Data schema + RLS: PREPARED / NOT APPLIED',
-  'Property asset private Storage boundary: PREPARED / NOT APPLIED',
-  'REMOTE DATA Gateway: PREPARED / NOT CONNECTED',
+  'Supabase browser Auth adapter: PREPARED / NOT CONNECTED',
+  'Supabase REST/Storage adapter: PREPARED / NOT CONNECTED',
+  'REMOTE DATA provider connection: NOT CONFIGURED',
   'REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED',
   'REMOTE / PUBLIC backend connection: NOT CONFIGURED',
 ]) {
@@ -87,6 +96,23 @@ for (const marker of ["case 'bootstrap_owner'", "case 'invite_user'", "case 'upd
 }
 
 for (const marker of [
+  'export class SupabaseRemoteAuthGateway',
+  'createMemoryRemoteAuthTokenStore',
+  'requireBrowserSafeSupabaseKey',
+  '/functions/v1/${this.adminFunctionName}',
+]) {
+  if (!text.supabaseAuthAdapter.includes(marker)) throw new Error(`Supabase Auth adapter runbook 계약 누락: ${marker}`);
+}
+for (const marker of [
+  'export function requireBrowserSafeSupabaseKey',
+  '/^sb_secret_/i.test(key)',
+  "role !== 'anon'",
+  '/^sb_publishable_/i.test(key)',
+]) {
+  if (!text.browserCredential.includes(marker)) throw new Error(`Supabase browser credential runbook 계약 누락: ${marker}`);
+}
+
+for (const marker of [
   'create table if not exists public.properties',
   'properties_delete_owner_only',
   'verification_candidates_update_verifier',
@@ -105,6 +131,14 @@ for (const marker of [
 }
 if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('REMOTE DATA Provider가 아직 연결되지 않았습니다')) {
   throw new Error('Remote Data Gateway 준비/미연결 계약이 필요합니다.');
+}
+for (const marker of [
+  'export class SupabaseRemoteDataGateway',
+  'export class SupabaseRemoteAssetStorageGateway',
+  'requireBrowserSafeSupabaseKey',
+  "const ASSET_BUCKET = 'daon-property-assets'",
+]) {
+  if (!text.supabaseDataAdapter.includes(marker)) throw new Error(`Supabase Data/Storage adapter runbook 계약 누락: ${marker}`);
 }
 
 for (const required of [
