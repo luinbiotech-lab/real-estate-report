@@ -15,13 +15,10 @@ const page = await browser.newPage({ viewport: { width: 1500, height: 1400 } });
 
 try {
   await page.goto(`${BASE_URL}/migration-readiness`, { waitUntil: 'domcontentloaded' });
-  for (const text of ['Migration Readiness Review', 'REMOTE MIGRATION · DRY-RUN ONLY', 'NETWORK WRITES = 0', 'Dry-Run 실행', 'REHEARSAL CHECKLIST']) await waitForText(page, text);
+  for (const text of ['Migration Readiness Review', 'REMOTE MIGRATION · DRY-RUN ONLY', 'NETWORK WRITES = 0', 'Dry-Run 실행']) await waitForText(page, text);
 
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
-  await waitForText(page, 'MIGRATION GATE');
-  await waitForText(page, 'BLOCKER REVIEW');
-  await waitForText(page, 'STORAGE PLAN');
-  await waitForText(page, 'networkWrites=0');
+  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0']) await waitForText(page, text);
 
   const downloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
