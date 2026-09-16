@@ -10,6 +10,7 @@ const files = {
   propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
   propertyAssetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
   remoteDataGateway: 'src/services/remoteDataGateway.ts',
+  supabaseRemoteDataAdapter: 'src/services/supabaseRemoteDataGateway.ts',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
   remoteAuthAdminEdge: 'supabase/functions/remote-auth-admin/index.ts',
   remoteAuthAdminReadme: 'supabase/functions/remote-auth-admin/README.md',
@@ -63,6 +64,18 @@ for (const marker of [
 if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('REMOTE DATA Provider가 아직 연결되지 않았습니다')) {
   throw new Error('Remote Data Gateway contract 또는 미연결 상태 표시가 필요합니다.');
 }
+for (const marker of [
+  'export class SupabaseRemoteDataGateway',
+  'export class SupabaseRemoteAssetStorageGateway',
+  'createSupabaseRemoteDataGateway',
+  'createSupabaseRemoteAssetStorageGateway',
+  "const ASSET_BUCKET = 'daon-property-assets'",
+  'getAccessToken: () => Promise<string | null>',
+  'getActorId: () => Promise<string | null>',
+]) {
+  if (!text.supabaseRemoteDataAdapter.includes(marker)) throw new Error(`Supabase Remote Data adapter 준비상태 누락: ${marker}`);
+}
+if (!text.remoteDataGateway.includes('new NotConfiguredRemoteDataGateway()')) throw new Error('실제 backend 연결 전 기본 RemoteDataGateway는 미연결 상태를 유지해야 합니다.');
 
 for (const marker of [
   "Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')",
@@ -141,7 +154,9 @@ const status = {
   authBackend: 'NOT_CONFIGURED',
   propertyDataSchemaAndRls: 'PREPARED_NOT_APPLIED',
   propertyAssetStorageBoundary: 'PREPARED_NOT_APPLIED',
-  remoteDataGateway: 'PREPARED_NOT_CONNECTED',
+  remoteDataGatewayContract: 'PREPARED',
+  supabaseRemoteDataAdapter: 'PREPARED_NOT_CONNECTED',
+  remoteDataProviderConnection: 'NOT_CONFIGURED',
   remotePublicShareServerCode: 'PREPARED_NOT_DEPLOYED',
   remotePublicShareBackend: 'NOT_CONFIGURED',
   productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
