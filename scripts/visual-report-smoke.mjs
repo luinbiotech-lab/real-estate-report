@@ -25,9 +25,28 @@ await page.route(`**${QA_MAIN_IMAGE}`, (route) => route.fulfill({ status: 200, c
 await page.route(`**${QA_MAP_IMAGE}`, (route) => route.fulfill({ status: 200, contentType: 'image/svg+xml', body: qaSvg('map') }));
 
 try {
-  // Production seed intentionally carries no fake/static Bangbae media. Inject QA-only, policy-valid Data Room exterior media.
+  // Production seed intentionally carries no fake/static Bangbae media. Wait for App's canonical seed to finish,
+  // then inject QA-only, policy-valid Data Room exterior media.
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
   await page.waitForSelector('body', { timeout: 30_000 });
+  await page.waitForFunction(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('real-estate-report', 13);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      return await new Promise((resolve) => {
+        const tx = db.transaction('properties', 'readonly');
+        const request = tx.objectStore('properties').get('daon-bangbae-815-11');
+        request.onsuccess = () => resolve(Boolean(request.result));
+        request.onerror = () => resolve(false);
+      });
+    } finally {
+      db.close();
+    }
+  }, undefined, { timeout: 30_000 });
+
   await page.evaluate(async ({ mainImage, mapImage }) => {
     const db = await new Promise((resolve, reject) => {
       const request = indexedDB.open('real-estate-report', 13);
@@ -41,7 +60,7 @@ try {
         request.onsuccess = () => resolve(request.result);
         request.onerror = () => reject(request.error);
       });
-      if (!property) throw new Error('Bangbae QA property missing');
+      if (!property) throw new Error('Bangbae QA property missing after canonical seed wait');
       property.mainImage = mainImage;
       property.mapImage = mapImage;
       const now = new Date().toISOString();
