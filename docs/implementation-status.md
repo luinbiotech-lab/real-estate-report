@@ -1,7 +1,7 @@
 # DA:ON Real Estate Platform — Implementation Status
 
 Updated baseline: 2026-09-17
-Verified baseline: `f2e5e914a32d686fde2a4ee366080d8243919d58` / GitHub Actions #753 PASS
+Verified baseline: `e3970456d5dd2df7542b2f9bdbf8eade060e29cc` / GitHub Actions #771 PASS
 Branch: `feat/daon-master-code-lock`
 
 이 문서는 완료 기능을 반복 개발하지 않고, 실제 미구축 영역과 외부 의존성을 분리하기 위한 현재 기준선이다.
@@ -90,6 +90,11 @@ Branch: `feat/daon-master-code-lock`
 - SheetJS `0.20.3` pinned + known-advisory floor `>=0.20.2`
 - release 시 vendor/GitHub advisory 재검토 gate
 - Production readiness / runbook / remote share / remote auth / property data RLS / migration rehearsal CI validators
+- Supabase browser credential validator
+  - publishable / legacy anon key만 허용
+  - `sb_secret_` key 차단
+  - legacy JWT payload의 `role=service_role` 차단
+  - malformed JWT 차단
 - Typecheck / Lint / Build / rendered smoke QA 전체 PASS 기준 유지
 
 ## 2. 서버 연결 준비 완료 — 실제 배포/연결은 아직 하지 않음
@@ -149,9 +154,9 @@ Branch: `feat/daon-master-code-lock`
 - Blob/base64/data URL을 DB metadata에 직접 넣지 못하도록 경계 설정
 - `RemoteDataGateway` contract
 - Supabase REST adapter
-  - authenticated bearer token + public anon key 사용
+  - authenticated bearer token + public anon/publishable key 사용
   - actor id를 `created_by` / `updated_by`와 RLS에 맞춰 전달
-  - browser service_role 금지
+  - browser `sb_secret_` / legacy `service_role` 금지
   - cache `no-store`
 - Supabase private Storage adapter
   - private bucket upload/download/remove contract
@@ -198,6 +203,7 @@ Branch: `feat/daon-master-code-lock`
 - NAVER/Kakao REST secret server-only 경계
 - `/api/maps/geocode`, `/api/maps/static`, `/api/poi/search` production 승격 대상 고정
 - `docs/production-connection-runbook.md`
+- `docs/production-connection-checklist.md`
 
 ## 3. 실데이터가 있어야 완료할 수 있는 항목
 
@@ -235,7 +241,7 @@ Branch: `feat/daon-master-code-lock`
 - backend가 없는데 public URL 또는 remote revoke가 가능한 것처럼 표시하지 않는다.
 - Auth backend가 없는데 실제 로그인/RLS가 강제되는 것처럼 표시하지 않는다.
 - server code/migration/adapter가 준비됐다는 이유만으로 REMOTE 기능을 READY로 표시하지 않는다.
-- service_role, OWNER bootstrap secret 또는 서버전용 지도 credential을 browser bundle에 넣지 않는다.
+- service_role, `sb_secret_`, OWNER bootstrap secret 또는 서버전용 지도 credential을 browser bundle에 넣지 않는다.
 - binary Blob/base64/data URL을 production DB JSONB에 직접 저장하지 않는다.
 - remote migration rehearsal 화면에서 실제 network write를 수행하지 않는다.
 - 샘플/생성 이미지를 실제 현장사진 또는 verified data로 표시하지 않는다.
