@@ -6,6 +6,7 @@ const files = {
   page: 'src/pages/RemoteMigrationReadinessPage.tsx',
   dryRun: 'src/services/remoteMigrationDryRunService.ts',
   planner: 'src/services/remoteMigrationPlanService.ts',
+  handoff: 'src/services/remoteMigrationHandoffService.ts',
 };
 for (const file of Object.values(files)) {
   if (!existsSync(file)) throw new Error(`Migration readiness UI 필수 파일 누락: ${file}`);
@@ -28,11 +29,13 @@ for (const marker of [
   'NETWORK WRITES = 0',
   'Dry-Run 실행',
   'Manifest JSON 다운로드',
+  'Handoff Bundle 다운로드',
   'BLOCKER REVIEW',
   'STORAGE PLAN',
   'REHEARSAL CHECKLIST',
   'remoteMigrationDryRunService.run',
   'remoteMigrationDryRunService.download',
+  'remoteMigrationHandoffService.download',
 ]) if (!text.page.includes(marker)) throw new Error(`Migration readiness UI marker 누락: ${marker}`);
 
 for (const forbidden of [
@@ -53,9 +56,30 @@ for (const marker of [
   'dryRun: true',
   'networkWrites: 0',
   'readyForRemoteWrite: blockers.length === 0',
+  "'INLINE_BINARY'",
+  'function structuredPayloadIsSafe(',
 ]) if (!text.planner.includes(marker)) throw new Error(`Dry-run planner safety marker 누락: ${marker}`);
 
-if (!text.dryRun.includes('await db.getAll(\'properties\')')) throw new Error('Dry-run executor는 local properties를 IndexedDB에서 읽어야 합니다.');
-if (text.dryRun.includes("db.get('settings'" ) || text.dryRun.includes("db.getAll('settings'")) throw new Error('settings store 전체를 remote migration collector가 자동 수집하면 안 됩니다.');
+for (const marker of [
+  "REMOTE_MIGRATION_HANDOFF_VERSION = 'daon-remote-migration-handoff-v1'",
+  'dryRunOnly: true',
+  'networkWritesPerformed: 0',
+  'remoteExecutionEnabled: false',
+  'secretsIncluded: false',
+  'binaryPayloadsIncluded: false',
+  'productionReady: false',
+  'Dedicated real-estate Supabase project provisioned; GPS/Sports projects are not reused.',
+  'supabase/migrations/20260916_auth_profiles_rls.sql',
+  'supabase/migrations/20260916_property_data_rls.sql',
+  'supabase/migrations/20260916_property_asset_storage.sql',
+  'docs/production-connection-runbook.md',
+]) if (!text.handoff.includes(marker)) throw new Error(`Migration handoff bundle safety marker 누락: ${marker}`);
 
-console.log('Remote migration readiness review UI boundary: PASS');
+for (const forbidden of ['SUPABASE_SERVICE_ROLE_KEY', 'DAON_OWNER_BOOTSTRAP_KEY=', 'fetch(', '.from(', '.upload(']) {
+  if (text.handoff.includes(forbidden)) throw new Error(`Handoff bundle service에 secret/remote execution 경로 금지: ${forbidden}`);
+}
+
+if (!text.dryRun.includes("await db.getAll('properties')")) throw new Error('Dry-run executor는 local properties를 IndexedDB에서 읽어야 합니다.');
+if (text.dryRun.includes("db.get('settings'") || text.dryRun.includes("db.getAll('settings'")) throw new Error('settings store 전체를 remote migration collector가 자동 수집하면 안 됩니다.');
+
+console.log('Remote migration readiness review + handoff bundle UI boundary: PASS');
