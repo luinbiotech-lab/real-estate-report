@@ -17,6 +17,17 @@ function qaSvg(kind) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100"><defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b8d0df"/><stop offset="1" stop-color="#eef1ed"/></linearGradient></defs><rect width="1600" height="1100" fill="url(#sky)"/><rect x="340" y="190" width="900" height="700" fill="#ddd8cf" stroke="#073a69" stroke-width="18"/><rect x="430" y="300" width="180" height="170" fill="#6b859c"/><rect x="720" y="300" width="180" height="170" fill="#6b859c"/><rect x="1010" y="300" width="140" height="170" fill="#6b859c"/><rect x="430" y="570" width="180" height="170" fill="#6b859c"/><rect x="720" y="570" width="180" height="170" fill="#6b859c"/><rect x="1010" y="570" width="140" height="170" fill="#6b859c"/><rect x="690" y="700" width="230" height="190" fill="#8e765c"/><path d="M0 940H1600" stroke="#9b8d78" stroke-width="120"/><text x="70" y="1030" font-family="Arial,sans-serif" font-size="42" font-weight="700" fill="#073a69">EXTERIOR QA IMAGE</text></svg>`;
 }
 
+async function waitForQaImages(page, selector, minimumImages) {
+  await page.waitForFunction(({ selector, minimumImages }) => {
+    const root = document.querySelector(selector);
+    if (!root) return false;
+    const images = [...root.querySelectorAll('img')];
+    return images.length >= minimumImages
+      && images.every((image) => (image.getAttribute('src') || '').startsWith('/__qa__/'))
+      && images.every((image) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
+  }, { selector, minimumImages }, { timeout: 30_000 });
+}
+
 await mkdir(OUT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1200 }, deviceScaleFactor: 1 });
@@ -95,6 +106,7 @@ try {
 
   await page.goto(`${BASE_URL}/document/proposal/daon-bangbae-815-11`, { waitUntil: 'networkidle' });
   await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+  await waitForQaImages(page, '.d1-sheet', 2);
   const onePage = await page.evaluate(() => {
     const sheet = document.querySelector('.d1-sheet');
     if (!(sheet instanceof HTMLElement)) throw new Error('1P sheet missing');
@@ -142,6 +154,7 @@ try {
 
   await page.goto(`${BASE_URL}/document/report/daon-bangbae-815-11`, { waitUntil: 'networkidle' });
   await page.waitForSelector('.daon-detail-master', { timeout: 30_000 });
+  await waitForQaImages(page, '.daon-detail-master', 1);
   const sevenPage = await page.evaluate(() => {
     const master = document.querySelector('.daon-detail-master');
     const images = [...document.querySelectorAll('.daon-detail-master img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
