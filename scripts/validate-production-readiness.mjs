@@ -7,6 +7,9 @@ const files = {
   authProvider: 'src/services/authProviderService.ts',
   shareProvider: 'src/services/externalShareProviderService.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
+  propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
+  propertyAssetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
+  remoteDataGateway: 'src/services/remoteDataGateway.ts',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
   remoteAuthAdminEdge: 'supabase/functions/remote-auth-admin/index.ts',
   remoteAuthAdminReadme: 'supabase/functions/remote-auth-admin/README.md',
@@ -35,6 +38,31 @@ if (!text.shareProvider.includes("availability: 'not_configured'") || !text.shar
 if (!text.authMigration.includes('Do not apply it to GPS/Sports projects')) throw new Error('Auth migration은 부동산 전용 backend에만 적용해야 합니다.');
 if (!text.authMigration.includes('Do NOT expose service_role credentials to the browser')) throw new Error('service_role browser 노출 금지 경계가 필요합니다.');
 if (!text.shareMigration.includes('token_hash') || !text.shareMigration.includes('snapshot_payload jsonb not null')) throw new Error('Remote share migration은 token hash + immutable snapshot payload 설계를 유지해야 합니다.');
+
+for (const marker of [
+  'create table if not exists public.properties',
+  'create table if not exists public.property_objects',
+  'create table if not exists public.property_verification_candidates',
+  'create table if not exists public.property_verifications',
+  'create table if not exists public.report_snapshots',
+  'create table if not exists public.company_settings',
+  'properties_delete_owner_only',
+  'verification_candidates_update_verifier',
+  'report_snapshots_insert_role',
+]) {
+  if (!text.propertyDataMigration.includes(marker)) throw new Error(`Property/Data persistence 준비상태 누락: ${marker}`);
+}
+for (const marker of [
+  'create table if not exists public.property_assets',
+  'property_assets_no_inline_binary',
+  "values ('daon-property-assets', 'daon-property-assets', false, 52428800)",
+  'No anon policies are created. Bucket remains private.',
+]) {
+  if (!text.propertyAssetMigration.includes(marker)) throw new Error(`Property asset storage 준비상태 누락: ${marker}`);
+}
+if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('REMOTE DATA Provider가 아직 연결되지 않았습니다')) {
+  throw new Error('Remote Data Gateway contract 또는 미연결 상태 표시가 필요합니다.');
+}
 
 for (const marker of [
   "Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')",
@@ -111,6 +139,9 @@ const status = {
   localDevelopment: 'READY',
   remoteAuthServerCode: 'PREPARED_NOT_DEPLOYED',
   authBackend: 'NOT_CONFIGURED',
+  propertyDataSchemaAndRls: 'PREPARED_NOT_APPLIED',
+  propertyAssetStorageBoundary: 'PREPARED_NOT_APPLIED',
+  remoteDataGateway: 'PREPARED_NOT_CONNECTED',
   remotePublicShareServerCode: 'PREPARED_NOT_DEPLOYED',
   remotePublicShareBackend: 'NOT_CONFIGURED',
   productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
