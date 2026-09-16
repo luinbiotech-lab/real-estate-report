@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const files = {
   adapter: 'src/services/supabaseRemoteAuthGateway.ts',
+  browserCredential: 'src/services/supabaseBrowserCredential.ts',
   provider: 'src/services/authProviderService.ts',
   adminEdge: 'supabase/functions/remote-auth-admin/index.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
@@ -17,6 +18,7 @@ for (const marker of [
   'export class SupabaseRemoteAuthGateway',
   'createSupabaseRemoteAuthGateway',
   'createMemoryRemoteAuthTokenStore',
+  'requireBrowserSafeSupabaseKey',
   "'/auth/v1/token?grant_type=password'",
   "'/auth/v1/token?grant_type=refresh_token'",
   "'/auth/v1/user'",
@@ -29,10 +31,21 @@ for (const marker of [
   "action: 'list_profiles'",
   "Authorization', `Bearer ${accessToken}`",
   "cache: 'no-store'",
-  "if (/service[_-]?role/i.test(key))",
   "url.protocol !== 'https:'",
 ]) {
   if (!text.adapter.includes(marker)) throw new Error(`Supabase remote auth adapter 계약 누락: ${marker}`);
+}
+
+for (const marker of [
+  'export function requireBrowserSafeSupabaseKey',
+  'decodeBase64Url',
+  '/^sb_secret_/i.test(key)',
+  '/service[_-]?role/i.test(key)',
+  '/^sb_publishable_/i.test(key)',
+  "role !== 'anon'",
+  'legacy anon JWT',
+]) {
+  if (!text.browserCredential.includes(marker)) throw new Error(`Supabase browser credential 보안 경계 누락: ${marker}`);
 }
 
 for (const forbidden of [
