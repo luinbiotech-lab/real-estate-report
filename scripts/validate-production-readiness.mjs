@@ -8,6 +8,8 @@ const files = {
   shareProvider: 'src/services/externalShareProviderService.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
+  remoteAuthAdminEdge: 'supabase/functions/remote-auth-admin/index.ts',
+  remoteAuthAdminReadme: 'supabase/functions/remote-auth-admin/README.md',
   remoteShareEdge: 'supabase/functions/remote-public-share/index.ts',
   remoteShareEdgeReadme: 'supabase/functions/remote-public-share/README.md',
   packageJson: 'package.json',
@@ -33,6 +35,23 @@ if (!text.shareProvider.includes("availability: 'not_configured'") || !text.shar
 if (!text.authMigration.includes('Do not apply it to GPS/Sports projects')) throw new Error('Auth migration은 부동산 전용 backend에만 적용해야 합니다.');
 if (!text.authMigration.includes('Do NOT expose service_role credentials to the browser')) throw new Error('service_role browser 노출 금지 경계가 필요합니다.');
 if (!text.shareMigration.includes('token_hash') || !text.shareMigration.includes('snapshot_payload jsonb not null')) throw new Error('Remote share migration은 token hash + immutable snapshot payload 설계를 유지해야 합니다.');
+
+for (const marker of [
+  "Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')",
+  "Deno.env.get('DAON_OWNER_BOOTSTRAP_KEY')",
+  "case 'bootstrap_owner'",
+  "case 'invite_user'",
+  "case 'update_role'",
+  "case 'set_active'",
+  "case 'list_profiles'",
+  "throw new Error('bootstrap_already_completed')",
+  "throw new Error('last_active_owner_protected')",
+]) {
+  if (!text.remoteAuthAdminEdge.includes(marker)) throw new Error(`Remote Auth admin server code 준비상태 누락: ${marker}`);
+}
+if (!text.remoteAuthAdminReadme.includes('PREPARED ONLY / NOT DEPLOYED') || !text.remoteAuthAdminReadme.includes('Do **not** use `--no-verify-jwt`')) {
+  throw new Error('Remote Auth admin Edge는 준비됨/미배포 상태와 JWT 경계를 명시해야 합니다.');
+}
 
 for (const marker of [
   "Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')",
@@ -90,6 +109,7 @@ if (spreadsheetParserDependency === 'MISSING' || spreadsheetParserDependency ===
 
 const status = {
   localDevelopment: 'READY',
+  remoteAuthServerCode: 'PREPARED_NOT_DEPLOYED',
   authBackend: 'NOT_CONFIGURED',
   remotePublicShareServerCode: 'PREPARED_NOT_DEPLOYED',
   remotePublicShareBackend: 'NOT_CONFIGURED',
