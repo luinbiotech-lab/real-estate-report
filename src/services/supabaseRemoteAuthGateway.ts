@@ -1,5 +1,6 @@
 import type { AccessRole } from './accessControlService';
 import type { AuthSession, RemoteAuthGateway } from './authProviderService';
+import { requireBrowserSafeSupabaseKey } from './supabaseBrowserCredential';
 
 export interface RemoteAuthTokens {
   accessToken: string;
@@ -50,13 +51,6 @@ function cleanProjectUrl(value: string) {
   return url.origin;
 }
 
-function browserSafeAnonKey(value: string) {
-  const key = value.trim();
-  if (!key) throw new Error('Supabase public anon key가 필요합니다.');
-  if (/service[_-]?role/i.test(key)) throw new Error('service_role credential은 browser Auth adapter에 사용할 수 없습니다.');
-  return key;
-}
-
 function jsonObject(value: unknown): JsonObject {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {};
 }
@@ -100,7 +94,7 @@ export class SupabaseRemoteAuthGateway implements RemoteAuthGateway {
 
   constructor(config: SupabaseRemoteAuthGatewayConfig) {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
-    this.anonKey = browserSafeAnonKey(config.anonKey);
+    this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
     this.tokenStore = config.tokenStore ?? createMemoryRemoteAuthTokenStore();
     this.fetchImpl = config.fetchImpl ?? fetch;
     this.adminFunctionName = config.adminFunctionName?.trim() || 'remote-auth-admin';
