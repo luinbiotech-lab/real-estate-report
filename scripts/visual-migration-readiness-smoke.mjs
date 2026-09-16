@@ -7,24 +7,25 @@ const MANIFEST_PATH = '/tmp/daon-remote-migration-dry-run.json';
 const HANDOFF_PATH = '/tmp/daon-remote-migration-handoff.json';
 const QA_INLINE_PROPERTY_ID = 'qa-inline-property';
 const QA_INLINE_BINARY_ID = 'qa-inline-binary-risk';
+const QA_BINARY_PAYLOAD_SENTINEL = 'DAON_QA_SENSITIVE_BINARY_PAYLOAD_SENTINEL_20260916';
 
 async function waitForText(page, text, timeout = 30_000) {
   await page.waitForFunction((expected) => document.body?.innerText.toLowerCase().includes(String(expected).toLowerCase()), text, { timeout });
 }
 
 async function writeQaRows(page) {
-  await page.evaluate(async ({ propertyId, riskId }) => new Promise((resolve, reject) => {
+  await page.evaluate(async ({ propertyId, riskId, binaryPayload }) => new Promise((resolve, reject) => {
     const request = indexedDB.open('real-estate-report');
     request.onerror = () => reject(request.error);
     request.onsuccess = () => {
       const db = request.result;
       const tx = db.transaction(['properties', 'riskAssessments'], 'readwrite');
       tx.objectStore('properties').put({ id: propertyId, name: 'QA inline property', mainImage: 'data:image/png;base64,UUE=' });
-      tx.objectStore('riskAssessments').put({ id: riskId, propertyId: 'daon-bangbae-815-11', title: 'QA binary risk', payload: new Blob(['qa-inline-binary'], { type: 'text/plain' }) });
+      tx.objectStore('riskAssessments').put({ id: riskId, propertyId: 'daon-bangbae-815-11', title: 'QA binary risk', payload: new Blob([binaryPayload], { type: 'text/plain' }) });
       tx.oncomplete = () => { db.close(); resolve(); };
       tx.onerror = () => { db.close(); reject(tx.error); };
     };
-  }), { propertyId: QA_INLINE_PROPERTY_ID, riskId: QA_INLINE_BINARY_ID });
+  }), { propertyId: QA_INLINE_PROPERTY_ID, riskId: QA_INLINE_BINARY_ID, binaryPayload: QA_BINARY_PAYLOAD_SENTINEL });
 }
 
 async function cleanupQaRows(page) {
@@ -91,7 +92,7 @@ try {
     if (serializedHandoff.includes(forbidden)) throw new Error(`Secret-like marker found in handoff bundle: ${forbidden}`);
   }
   if (serializedHandoff.includes('data:image/png;base64,UUE=')) throw new Error('Blocked inline image leaked into handoff bundle.');
-  if (serializedHandoff.includes('qa-inline-binary')) throw new Error('Blocked structured binary leaked into handoff bundle.');
+  if (serializedHandoff.includes(QA_BINARY_PAYLOAD_SENTINEL)) throw new Error('Blocked structured binary payload leaked into handoff bundle.');
 
   await page.screenshot({ path: `${ARTIFACT_DIR}/remote-migration-readiness.png`, fullPage: true });
   console.log('Rendered remote migration readiness + payload blockers + manifest + handoff bundle QA: PASS');
