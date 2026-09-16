@@ -69,6 +69,9 @@ jobs:
       - name: Validate production connection runbook
         run: node scripts/validate-production-runbook.mjs
 
+      - name: Validate production deployment checklist
+        run: node scripts/validate-production-connection-checklist.mjs
+
       - name: Validate remote public share Edge boundary
         run: node scripts/validate-remote-public-share.mjs
 
