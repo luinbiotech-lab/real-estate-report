@@ -75,6 +75,9 @@ jobs:
       - name: Validate remote auth administration boundary
         run: node scripts/validate-remote-auth-admin.mjs
 
+      - name: Validate property data persistence and RLS boundary
+        run: node scripts/validate-property-data-rls.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
