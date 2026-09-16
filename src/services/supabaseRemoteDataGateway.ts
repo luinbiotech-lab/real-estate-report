@@ -8,6 +8,7 @@ import type {
   RemotePropertyObjectType,
   RemoteReportSnapshotInput,
 } from './remoteDataGateway';
+import { requireBrowserSafeSupabaseKey } from './supabaseBrowserCredential';
 
 export interface SupabaseRemoteDataGatewayConfig {
   projectUrl: string;
@@ -38,13 +39,6 @@ function cleanProjectUrl(value: string) {
   }
   if (url.username || url.password || url.search || url.hash) throw new Error('Supabase project URL에 credential/query/hash를 포함할 수 없습니다.');
   return url.origin;
-}
-
-function requireBrowserSafeAnonKey(value: string) {
-  const key = value.trim();
-  if (!key) throw new Error('Supabase public anon key가 필요합니다.');
-  if (/service[_-]?role/i.test(key)) throw new Error('service_role credential은 browser adapter에 사용할 수 없습니다.');
-  return key;
 }
 
 function encodeEq(value: string) {
@@ -92,7 +86,7 @@ class SupabaseRestClient {
 
   constructor(private readonly config: SupabaseRemoteDataGatewayConfig) {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
-    this.anonKey = requireBrowserSafeAnonKey(config.anonKey);
+    this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
     this.fetchImpl = config.fetchImpl ?? fetch;
   }
 
