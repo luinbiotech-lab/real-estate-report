@@ -1,6 +1,6 @@
 # remote-public-share Edge Function
 
-Status: **PREPARED ONLY / NOT DEPLOYED**
+Status: **DEPLOYED / PRODUCTION CONNECTED**
 
 Deploy this function only to a dedicated DA:ON real-estate Supabase project. Do not deploy it to GPS Tracker or Sports AI projects.
 
@@ -23,14 +23,16 @@ Supabase-provided server environment:
 
 Project-specific server environment:
 
-- `PUBLIC_SHARE_BASE_URL`
-  - public viewer URL, for example `https://share.example.com/view`
+- `PUBLIC_SHARE_BASE_URL` (optional)
+  - 별도 public viewer host가 있으면 해당 URL을 사용
+  - 비어 있으면 Edge Function 자신의 GET URL을 self-hosted viewer로 사용
   - issuance appends the raw token only as a URL fragment: `#token=...`
   - fragments are not sent in the HTTP request line
 - `PUBLIC_SHARE_ALLOWED_ORIGINS`
-  - comma-separated exact browser origins
-  - example: `https://app.example.com,https://share.example.com`
-  - browser origins not in this allowlist are rejected
+  - comma-separated exact cross-origin browser origins
+  - same-origin self-hosted viewer는 자동 허용
+  - example: `https://app.example.com`
+  - 그 외 browser origins not in this allowlist are rejected
 
 Never put `SUPABASE_SERVICE_ROLE_KEY` in frontend environment variables.
 
@@ -49,9 +51,20 @@ supabase functions deploy remote-public-share --no-verify-jwt
 
 Do not omit `--no-verify-jwt`: public token resolve/review requests do not carry a Supabase user JWT. Management actions remain protected by explicit in-function user/profile checks.
 
+## Self-hosted viewer
+
+`GET /functions/v1/remote-public-share`는 read-only HTML viewer를 반환한다.
+
+- `#token=...` fragment를 읽은 뒤 즉시 `history.replaceState`로 주소에서 제거
+- 같은 Edge Function으로 `resolve` POST
+- revoked / expired / not_found 접근 차단
+- `allowDownload=true`일 때만 JSON 저장 버튼 노출
+- `Cache-Control: no-store`, CSP, `X-Content-Type-Options: nosniff`, `Referrer-Policy: no-referrer`
+- Snapshot payload는 `textContent`로만 표시하고 HTML로 삽입하지 않음
+
 ## API contract
 
-All calls are `POST` JSON with `action`.
+Management/token API calls are `POST` JSON with `action`.
 
 ### issue — authenticated OWNER/ADMIN
 
@@ -115,4 +128,4 @@ List responses intentionally contain no raw token and no reconstructable public 
 - snapshot payload is recursively stripped of obvious secret/private-key/token fields before persistence
 - responses use `Cache-Control: no-store`
 
-Before Production READY, exercise valid issue → resolve → review → revoke → blocked resolve, plus tampered-snapshot issuance rejection, against the dedicated backend.
+Production rollout must exercise valid issue → resolve → review → revoke → blocked resolve, plus tampered-snapshot issuance rejection, against the dedicated backend. Self-hosted viewer GET + invalid-token resolve are already part of the production smoke boundary.
