@@ -9,6 +9,7 @@ const files = {
   browserCredential: 'src/services/supabaseBrowserCredential.ts',
   propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
   propertyAssetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
+  hardeningMigration: 'supabase/migrations/20260918_restore_private_rls_hardening.sql',
   remoteDataGateway: 'src/services/remoteDataGateway.ts',
   supabaseDataAdapter: 'src/services/supabaseRemoteDataGateway.ts',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
@@ -71,17 +72,17 @@ for (const required of [
   'node scripts/validate-excel-security.mjs',
   'Production E2E gate',
   '브라우저 secret scan',
-  'Supabase browser Auth adapter: PREPARED / NOT CONNECTED',
-  'Supabase REST/Storage adapter: PREPARED / NOT CONNECTED',
-  'REMOTE DATA provider connection: NOT CONFIGURED',
-  'REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED',
-  'REMOTE / PUBLIC backend connection: NOT CONFIGURED',
+  'Supabase browser Auth adapter: CONNECTED',
+  'Supabase REST/Storage adapter: CONNECTED',
+  'Remote Data Gateway: CONNECTED',
+  'REMOTE / PUBLIC server code + migration: DEPLOYED',
+  'REMOTE / PUBLIC backend: CONNECTED',
 ]) {
   if (!text.runbook.includes(required)) throw new Error(`Production runbook 필수 규칙 누락: ${required}`);
 }
 
 for (const required of [
-  'PREPARED ONLY / NOT DEPLOYED',
+  'DEPLOYED / PRODUCTION CONNECTED',
   'supabase functions deploy remote-auth-admin',
   'Do **not** use `--no-verify-jwt`',
   'minimum 32 characters',
@@ -129,8 +130,8 @@ for (const marker of [
 ]) {
   if (!text.propertyAssetMigration.includes(marker)) throw new Error(`Property asset migration 배포 계약 누락: ${marker}`);
 }
-if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('REMOTE DATA Provider가 아직 연결되지 않았습니다')) {
-  throw new Error('Remote Data Gateway 준비/미연결 계약이 필요합니다.');
+if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('createSupabaseRemoteDataGateway(remoteDataConfig)')) {
+  throw new Error('Remote Data Gateway production 연결 계약이 필요합니다.');
 }
 for (const marker of [
   'export class SupabaseRemoteDataGateway',
@@ -142,13 +143,17 @@ for (const marker of [
 }
 
 for (const required of [
-  'PREPARED ONLY / NOT DEPLOYED',
+  'DEPLOYED / PRODUCTION CONNECTED',
+  'Self-hosted viewer',
   'supabase functions deploy remote-public-share --no-verify-jwt',
   'Release Snapshot canonical/checksum/signature integrity is verified before issuance',
 ]) {
   if (!text.remoteShareEdgeReadme.includes(required)) throw new Error(`Remote share Edge 배포 계약 누락: ${required}`);
 }
 if (!text.remoteShareEdge.includes("const snapshot = await validateSnapshot(body.snapshot)")) throw new Error('Remote share issuance 전에 signed snapshot 검증이 필요합니다.');
+for (const marker of ['private.daon_is_owner()', 'revoke all on public.external_share_sessions from anon, authenticated']) {
+  if (!text.hardeningMigration.includes(marker)) throw new Error(`Production private RLS hardening 누락: ${marker}`);
+}
 
 for (const required of [
   'PATCHED VERSION PINNED / RELEASE ADVISORY REVIEW REQUIRED',
