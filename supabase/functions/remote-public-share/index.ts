@@ -376,12 +376,26 @@ button{border:0;border-radius:8px;padding:10px 14px;background:#082f4f;color:#ff
 <div id="status" class="muted">접근 토큰 확인 중…</div>
 <pre id="payload" hidden></pre>
 <button id="download" hidden>검토자료 JSON 저장</button>
+<div id="reviewBox" hidden style="margin-top:18px;padding-top:16px;border-top:1px solid #e5e8eb">
+  <strong>검토 의견 남기기</strong>
+  <div style="display:grid;gap:8px;margin-top:10px">
+    <input id="author" maxlength="80" placeholder="검토자 이름" style="padding:10px;border:1px solid #d7dce2;border-radius:8px">
+    <textarea id="reviewBody" maxlength="2000" rows="4" placeholder="검토 의견" style="padding:10px;border:1px solid #d7dce2;border-radius:8px;resize:vertical"></textarea>
+    <button id="submitReview">검토 의견 등록</button>
+    <div id="reviewStatus" class="muted"></div>
+  </div>
+</div>
 </section></main>
 <script>
 const endpoint=${endpointJson};
 const statusEl=document.getElementById('status');
 const payloadEl=document.getElementById('payload');
 const downloadBtn=document.getElementById('download');
+const reviewBox=document.getElementById('reviewBox');
+const authorEl=document.getElementById('author');
+const reviewBodyEl=document.getElementById('reviewBody');
+const submitReview=document.getElementById('submitReview');
+const reviewStatus=document.getElementById('reviewStatus');
 const token=new URLSearchParams(location.hash.slice(1)).get('token')||'';
 history.replaceState(null,'',location.pathname);
 (async()=>{
@@ -397,6 +411,21 @@ history.replaceState(null,'',location.pathname);
     statusEl.textContent='서버 검증 완료 · Snapshot '+(data.snapshotId||'');
     payloadEl.hidden=false;
     payloadEl.textContent=JSON.stringify(data.payload,null,2);
+    reviewBox.hidden=false;
+    submitReview.onclick=async()=>{
+      const author=authorEl.value.trim();
+      const body=reviewBodyEl.value.trim();
+      if(!author||!body){reviewStatus.className='err';reviewStatus.textContent='검토자 이름과 의견을 입력하세요.';return;}
+      submitReview.disabled=true;reviewStatus.className='muted';reviewStatus.textContent='등록 중…';
+      try{
+        const reviewResponse=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'add_review',rawToken:token,author,body}),cache:'no-store'});
+        const reviewData=await reviewResponse.json();
+        if(!reviewResponse.ok) throw new Error(reviewData.status||reviewData.error||'review_failed');
+        reviewBodyEl.value='';reviewStatus.className='muted';reviewStatus.textContent='검토 의견이 서버에 등록되었습니다.';
+      }catch{
+        reviewStatus.className='err';reviewStatus.textContent='검토 의견을 등록하지 못했습니다. 링크 상태를 확인하세요.';
+      }finally{submitReview.disabled=false;}
+    };
     if(data.allowDownload){
       downloadBtn.hidden=false;
       downloadBtn.onclick=()=>{
