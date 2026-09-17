@@ -1,3 +1,5 @@
+import { createSupabaseRemoteAuthGateway } from './supabaseRemoteAuthGateway';
+import { DAON_REMOTE_AUTH_FUNCTION, DAON_SUPABASE_PROJECT_URL, DAON_SUPABASE_PUBLISHABLE_KEY } from './supabaseProductionConfig';
 import type { AccessRole } from './accessControlService';
 
 export type AuthProviderKind = 'local_policy' | 'remote_auth';
@@ -65,23 +67,14 @@ export const AUTH_PROVIDER_SUMMARIES: readonly AuthProviderSummary[] = [
   {
     kind: 'remote_auth',
     label: 'REMOTE AUTH',
-    status: 'not_configured',
-    description: '부동산 전용 Auth backend 연결 후 실제 로그인·RLS·owner-only 관리를 담당합니다.',
+    status: 'ready',
+    description: '부동산 전용 Supabase Auth/RLS production backend에 연결되어 실제 로그인·서버 프로필·owner-only 관리를 담당합니다.',
     capabilities: REMOTE_REQUIRED_CAPABILITIES,
   },
 ] as const;
 
-class NotConfiguredRemoteAuthGateway implements RemoteAuthGateway {
-  private unavailable(): never {
-    throw new Error('REMOTE AUTH Provider가 아직 연결되지 않았습니다. 부동산 전용 Auth backend가 필요합니다.');
-  }
-
-  async getSession(): Promise<AuthSession | null> { return null; }
-  async signIn(): Promise<AuthSession> { return this.unavailable(); }
-  async signOut(): Promise<void> { this.unavailable(); }
-  async inviteUser(): Promise<void> { this.unavailable(); }
-  async updateRole(): Promise<void> { this.unavailable(); }
-  async setActive(): Promise<void> { this.unavailable(); }
-}
-
-export const remoteAuthGateway: RemoteAuthGateway = new NotConfiguredRemoteAuthGateway();
+export const remoteAuthGateway = createSupabaseRemoteAuthGateway({
+  projectUrl: DAON_SUPABASE_PROJECT_URL,
+  anonKey: DAON_SUPABASE_PUBLISHABLE_KEY,
+  adminFunctionName: DAON_REMOTE_AUTH_FUNCTION,
+});
