@@ -25,7 +25,7 @@ export interface AccessProfile {
   updatedAt: string;
 }
 
-export const AUTH_BACKEND_CONNECTED = false;
+export const AUTH_BACKEND_CONNECTED = true;
 export const ACCESS_STORAGE_KEY = 'daon:access-profiles:v1';
 
 export const ROLE_LABELS: Record<AccessRole, string> = {
