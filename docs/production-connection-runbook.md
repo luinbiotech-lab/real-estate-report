@@ -32,7 +32,7 @@
 - `src/services/supabaseRemoteAuthGateway.ts`
 - `src/services/supabaseBrowserCredential.ts`
 
-현재 상태는 **SERVER PREPARED / NOT DEPLOYED + BROWSER ADAPTER PREPARED / NOT CONNECTED**이다. 실제 부동산 전용 Supabase가 준비되기 전에는 `REMOTE AUTH`를 READY로 표시하지 않는다.
+현재 상태는 **SERVER DEPLOYED + BROWSER ADAPTER CONNECTED**이다. 실제 운영 OWNER 계정으로 로그인하기 전까지 QA OWNER와 실제 운영 사용자를 구분한다.
 
 배포 순서:
 
@@ -41,7 +41,7 @@
 3. `AUTH_ADMIN_ALLOWED_ORIGINS`에 production frontend origin만 등록한다.
 4. `supabase functions deploy remote-auth-admin`으로 배포한다. 이 함수에는 `--no-verify-jwt`를 사용하지 않는다.
 5. frontend에는 Supabase project URL과 browser-safe publishable key 또는 legacy anon JWT만 주입한다.
-6. `SupabaseRemoteAuthGateway`를 명시적으로 생성해 provider에 연결한다. repository 기본 provider는 연결 전까지 `NotConfiguredRemoteAuthGateway`를 유지한다.
+6. `SupabaseRemoteAuthGateway`를 production provider로 연결한다. browser credential은 publishable key만 사용한다.
 7. token store는 기본 memory-only를 사용한다. persistent session이 필요하면 별도 승인된 `RemoteAuthTokenStore`를 명시적으로 주입하고 token 저장정책을 별도 검토한다.
 8. 첫 Auth 사용자를 생성하고 로그인한다.
 9. 잘못된 bootstrap key가 거부되는지 확인한다.
@@ -88,7 +88,7 @@ Browser credential 규칙:
 - `src/services/supabaseBrowserCredential.ts`
 - Remote Migration Readiness / dry-run manifest / handoff bundle
 
-현재 상태는 **SCHEMA/RLS PREPARED / NOT APPLIED + SUPABASE REST/STORAGE ADAPTER PREPARED / NOT CONNECTED**이다. 실제 backend에 적용하기 전까지 local IndexedDB가 authoritative operational store다.
+현재 상태는 **SCHEMA/RLS APPLIED + PRIVATE STORAGE APPLIED + SUPABASE REST/STORAGE ADAPTER CONNECTED**이다. 자동 migration은 금지하며 controlled migration만 수행한다.
 
 적용 순서:
 
@@ -157,13 +157,13 @@ Binary asset 경계:
 - `supabase/functions/remote-public-share/index.ts`
 - `supabase/functions/remote-public-share/README.md`
 
-현재 상태는 **PREPARED / NOT DEPLOYED**이다. 실제 부동산 전용 Supabase가 준비되기 전에는 `REMOTE / PUBLIC`을 READY로 표시하지 않는다.
+현재 상태는 **DEPLOYED / PRODUCTION CONNECTED**이다. Edge Function 자체가 self-hosted read-only viewer를 제공하므로 별도 public viewer host는 선택사항이다.
 
 배포 순서:
 
 1. Auth/profile migration을 먼저 적용한다.
 2. external-share migration을 적용한다.
-3. `PUBLIC_SHARE_BASE_URL`, `PUBLIC_SHARE_ALLOWED_ORIGINS`를 서버 secret/environment로 설정한다.
+3. 별도 viewer host를 쓰면 `PUBLIC_SHARE_BASE_URL`을 설정한다. 미설정 시 Edge Function 자체 URL을 사용한다. Cross-origin frontend는 `PUBLIC_SHARE_ALLOWED_ORIGINS` exact allowlist에 등록한다.
 4. `supabase functions deploy remote-public-share --no-verify-jwt`로 배포한다.
 5. 관리 action(`issue`, `revoke`, `list`)이 함수 내부 `auth.getUser()` + active `owner/admin` 검증을 통과하는지 확인한다.
 6. 익명 action(`resolve`, `add_review`)은 raw token 검증으로만 접근되며 table 직접 anon access는 계속 금지한다.
@@ -180,7 +180,7 @@ Binary asset 경계:
 8. review-note write도 동일 token validation을 통과한 경우에만 허용한다.
 9. Release Snapshot 발급 전 `schemaVersion`, `immutable`, canonical package, SHA-256 checksum, ECDSA P-256/SHA-256 signature를 서버에서 검증한다.
 10. tampered snapshot, checksum mismatch, invalid signature는 issuance 전에 거부한다.
-11. browser CORS는 `PUBLIC_SHARE_ALLOWED_ORIGINS` exact allowlist를 사용하고 wildcard origin을 사용하지 않는다.
+11. same-origin self-hosted viewer는 허용하고, cross-origin browser CORS는 `PUBLIC_SHARE_ALLOWED_ORIGINS` exact allowlist를 사용하며 wildcard origin을 사용하지 않는다.
 
 완료 조건:
 
@@ -294,24 +294,28 @@ release 직전 필수:
 
 ## 9. 현재 상태
 
-현재 repository 기준:
+현재 repository / production Supabase 기준:
 
 - LOCAL POLICY: READY
-- REMOTE AUTH server code + migration: PREPARED / NOT DEPLOYED
-- Supabase browser Auth adapter: PREPARED / NOT CONNECTED
-- REMOTE AUTH backend connection: NOT CONFIGURED
-- Property/Data schema + RLS: PREPARED / NOT APPLIED
-- Property asset private Storage boundary: PREPARED / NOT APPLIED
-- Remote Data Gateway contract: PREPARED
-- Supabase REST/Storage adapter: PREPARED / NOT CONNECTED
-- REMOTE DATA provider connection: NOT CONFIGURED
+- REMOTE AUTH server code + migration: DEPLOYED
+- Supabase browser Auth adapter: CONNECTED
+- REMOTE AUTH backend connection: CONNECTED
+- Property/Data schema + RLS: APPLIED
+- Property asset private Storage boundary: APPLIED
+- Remote Data Gateway: CONNECTED
+- Supabase REST/Storage adapter: CONNECTED
 - LOCAL / OFFLINE share: READY
-- REMOTE / PUBLIC server code + migration: PREPARED / NOT DEPLOYED
-- REMOTE / PUBLIC backend connection: NOT CONFIGURED
+- REMOTE / PUBLIC server code + migration: DEPLOYED
+- REMOTE / PUBLIC backend: CONNECTED
+- self-hosted public viewer: ACTIVE
+- QA OWNER / EDITOR / VIEWER RLS E2E: PASS
+- real operator OWNER Auth account: REQUIRED
+- actual second-device browser E2E: REQUIRED
 - production frontend host: MISSING EXTERNAL INFRA
 - protected backend proxy: MISSING EXTERNAL INFRA
 - production provider/domain allowlist: CHECK REQUIRED
+- Supabase Auth leaked-password protection: MANUAL ENABLE REQUIRED
 - spreadsheet parser known-advisory baseline: PATCHED/PINNED
 - spreadsheet parser release advisory review: REQUIRED
 
-외부 인프라가 준비되기 전에는 위 상태를 임의로 READY로 바꾸지 않는다.
+서버가 연결되었다는 이유만으로 실사용 계정·도메인·second-device E2E까지 완료된 것으로 표시하지 않는다.
