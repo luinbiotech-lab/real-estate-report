@@ -1,3 +1,6 @@
+import { remoteAuthGateway } from './authProviderService';
+import { createSupabaseRemoteAssetStorageGateway, createSupabaseRemoteDataGateway } from './supabaseRemoteDataGateway';
+import { DAON_SUPABASE_PROJECT_URL, DAON_SUPABASE_PUBLISHABLE_KEY } from './supabaseProductionConfig';
 import type { Property, Settings } from '../types';
 import type { PropertyVerification, PropertyVerificationCandidate, ReportSnapshot } from '../domain/propertyDataRoom/types';
 
@@ -75,28 +78,12 @@ export interface RemoteDataGateway {
   saveCompanySettings(settings: Settings): Promise<Settings>;
 }
 
-class NotConfiguredRemoteDataGateway implements RemoteDataGateway {
-  private unavailable(): never {
-    throw new Error('REMOTE DATA Provider가 아직 연결되지 않았습니다. 부동산 전용 backend가 필요합니다.');
-  }
+const remoteDataConfig = {
+  projectUrl: DAON_SUPABASE_PROJECT_URL,
+  anonKey: DAON_SUPABASE_PUBLISHABLE_KEY,
+  getAccessToken: () => remoteAuthGateway.getAccessToken(),
+  getActorId: () => remoteAuthGateway.getActorId(),
+};
 
-  async listProperties(): Promise<Property[]> { return this.unavailable(); }
-  async getProperty(): Promise<Property | undefined> { return this.unavailable(); }
-  async upsertProperty(): Promise<Property> { return this.unavailable(); }
-  async deleteProperty(): Promise<void> { this.unavailable(); }
-  async listObjects(): Promise<RemotePropertyObject[]> { return this.unavailable(); }
-  async upsertObject(): Promise<RemotePropertyObject> { return this.unavailable(); }
-  async deleteObject(): Promise<void> { this.unavailable(); }
-  async listAssets(): Promise<RemoteAssetMetadata[]> { return this.unavailable(); }
-  async upsertAssetMetadata(): Promise<RemoteAssetMetadata> { return this.unavailable(); }
-  async deleteAssetMetadata(): Promise<void> { this.unavailable(); }
-  async submitVerificationCandidate(): Promise<PropertyVerificationCandidate> { return this.unavailable(); }
-  async decideVerificationCandidate(): Promise<void> { this.unavailable(); }
-  async appendVerification(): Promise<PropertyVerification> { return this.unavailable(); }
-  async createReportSnapshot(): Promise<ReportSnapshot> { return this.unavailable(); }
-  async listReportSnapshots(): Promise<ReportSnapshot[]> { return this.unavailable(); }
-  async getCompanySettings(): Promise<Settings | undefined> { return this.unavailable(); }
-  async saveCompanySettings(): Promise<Settings> { return this.unavailable(); }
-}
-
-export const remoteDataGateway: RemoteDataGateway = new NotConfiguredRemoteDataGateway();
+export const remoteDataGateway: RemoteDataGateway = createSupabaseRemoteDataGateway(remoteDataConfig);
+export const remoteAssetStorageGateway = createSupabaseRemoteAssetStorageGateway(remoteDataConfig);
