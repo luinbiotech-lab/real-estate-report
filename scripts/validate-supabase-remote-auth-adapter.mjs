@@ -4,6 +4,7 @@ const files = {
   adapter: 'src/services/supabaseRemoteAuthGateway.ts',
   browserCredential: 'src/services/supabaseBrowserCredential.ts',
   provider: 'src/services/authProviderService.ts',
+  productionConfig: 'src/services/supabaseProductionConfig.ts',
   adminEdge: 'supabase/functions/remote-auth-admin/index.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
 };
@@ -57,11 +58,17 @@ for (const forbidden of [
   if (text.adapter.includes(forbidden)) throw new Error(`Supabase remote auth adapter 금지 패턴 검출: ${forbidden}`);
 }
 
-if (!text.provider.includes('new NotConfiguredRemoteAuthGateway()')) {
-  throw new Error('실제 backend 연결 전 기본 RemoteAuthGateway는 NotConfigured 상태를 유지해야 합니다.');
+if (!text.provider.includes('createSupabaseRemoteAuthGateway({')) {
+  throw new Error('Production RemoteAuthGateway는 Supabase adapter에 연결되어야 합니다.');
 }
-if (text.provider.includes('createSupabaseRemoteAuthGateway(')) {
-  throw new Error('Supabase Auth adapter를 기본 provider에 자동 연결하면 안 됩니다.');
+for (const marker of ['DAON_SUPABASE_PROJECT_URL', 'DAON_SUPABASE_PUBLISHABLE_KEY', 'DAON_REMOTE_AUTH_FUNCTION']) {
+  if (!text.provider.includes(marker)) throw new Error(`Production Auth provider binding 누락: ${marker}`);
+}
+for (const marker of ['neeqcfxjwotyiodrlzvq.supabase.co', 'sb_publishable_', 'VITE_SUPABASE_URL', 'VITE_SUPABASE_PUBLISHABLE_KEY']) {
+  if (!text.productionConfig.includes(marker)) throw new Error(`Production Supabase public config 누락: ${marker}`);
+}
+if (/service[_-]?role/i.test(text.productionConfig) || /sb_secret_/i.test(text.productionConfig)) {
+  throw new Error('Production browser config에 server credential을 포함하면 안 됩니다.');
 }
 
 for (const marker of [
@@ -79,4 +86,4 @@ for (const marker of ["default 'viewer'", 'daon_is_owner()', 'enable row level s
   if (!text.authMigration.includes(marker)) throw new Error(`Auth profile/RLS migration 경계 누락: ${marker}`);
 }
 
-console.log('Prepared Supabase remote Auth adapter boundary: PASS');
+console.log('Connected Supabase remote Auth adapter boundary: PASS');
