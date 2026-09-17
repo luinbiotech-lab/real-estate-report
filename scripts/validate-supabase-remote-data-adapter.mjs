@@ -4,6 +4,8 @@ const files = {
   adapter: 'src/services/supabaseRemoteDataGateway.ts',
   browserCredential: 'src/services/supabaseBrowserCredential.ts',
   gateway: 'src/services/remoteDataGateway.ts',
+  productionConfig: 'src/services/supabaseProductionConfig.ts',
+  authProvider: 'src/services/authProviderService.ts',
   dataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
   assetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
 };
@@ -67,11 +69,17 @@ for (const forbidden of [
   if (text.adapter.includes(forbidden)) throw new Error(`Supabase remote adapter 금지 패턴 검출: ${forbidden}`);
 }
 
-if (!text.gateway.includes('new NotConfiguredRemoteDataGateway()')) {
-  throw new Error('실제 backend 연결 전 기본 RemoteDataGateway는 NotConfigured 상태를 유지해야 합니다.');
+if (!text.gateway.includes('createSupabaseRemoteDataGateway(remoteDataConfig)')) {
+  throw new Error('Production RemoteDataGateway는 Supabase adapter에 연결되어야 합니다.');
 }
-if (text.gateway.includes('createSupabaseRemoteDataGateway(')) {
-  throw new Error('Supabase adapter를 기본 gateway에 자동 연결하면 안 됩니다.');
+if (!text.gateway.includes('createSupabaseRemoteAssetStorageGateway(remoteDataConfig)')) {
+  throw new Error('Production Remote Asset Storage gateway 연결이 필요합니다.');
+}
+for (const marker of ['DAON_SUPABASE_PROJECT_URL', 'DAON_SUPABASE_PUBLISHABLE_KEY', 'remoteAuthGateway.getAccessToken()', 'remoteAuthGateway.getActorId()']) {
+  if (!text.gateway.includes(marker)) throw new Error(`Production Remote Data binding 누락: ${marker}`);
+}
+if (!text.productionConfig.includes('sb_publishable_') || /service[_-]?role/i.test(text.productionConfig) || /sb_secret_/i.test(text.productionConfig)) {
+  throw new Error('Production Data browser config는 publishable key만 사용해야 합니다.');
 }
 
 for (const marker of ['created_by = auth.uid()', 'updated_by = auth.uid()', 'enable row level security']) {
@@ -81,4 +89,4 @@ if (!text.assetMigration.includes("values ('daon-property-assets', 'daon-propert
   throw new Error('Private asset bucket / 50MiB hard cap migration 경계가 유지되어야 합니다.');
 }
 
-console.log('Prepared Supabase remote data + private Storage adapter boundary: PASS');
+console.log('Connected Supabase remote data + private Storage adapter boundary: PASS');
