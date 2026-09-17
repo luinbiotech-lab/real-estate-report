@@ -5,6 +5,7 @@ import type { BuildingReleaseSnapshot } from '../services/buildingReleaseSnapsho
 import { buildingReleaseCollaborationService, type BuildingReleaseReviewNote, type BuildingReleaseShare, type ReleaseLifecycleStatus } from '../services/buildingReleaseCollaborationService';
 import { externalShareProviderService } from '../services/externalShareProviderService';
 import { releaseSharePackageService } from '../services/releaseSharePackageService';
+import { remoteExternalShareGateway, type RemoteShareRecord } from '../services/remoteExternalShareGateway';
 
 function downloadText(content: string, fileName: string, mime = 'application/json;charset=utf-8') {
   const blob = new Blob([content], { type: mime });
@@ -39,6 +40,8 @@ export default function ReleaseShareWorkspace({ snapshot, lifecycleStatus, integ
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState(false);
+  const [remoteShares, setRemoteShares] = useState<RemoteShareRecord[]>([]);
+  const [issuedPublicUrl, setIssuedPublicUrl] = useState('');
 
   const localProvider = useMemo(() => externalShareProviderService.getLocal(), []);
   const remoteProvider = useMemo(() => externalShareProviderService.getRemote(), []);
@@ -48,6 +51,52 @@ export default function ReleaseShareWorkspace({ snapshot, lifecycleStatus, integ
 
   const refreshShares = async () => onSharesChanged(await buildingReleaseCollaborationService.listShares(snapshot.id));
   const refreshNotes = async () => onNotesChanged(await buildingReleaseCollaborationService.listReviewNotes(snapshot.id));
+  const refreshRemoteShares = async () => {
+    const rows = await remoteExternalShareGateway.listForSnapshot(snapshot.id);
+    setRemoteShares(rows);
+    return rows;
+  };
+
+  const createRemoteShare = async () => {
+    setBusy(true); setError(''); setNotice(''); setIssuedPublicUrl('');
+    try {
+      if (!canShare) throw new Error('CURRENT 상태이며 무결성 검증을 통과한 Snapshot만 공유할 수 있습니다.');
+      const days = Number(shareDays);
+      const expiresAt = Number.isFinite(days) && days > 0 ? new Date(Date.now() + days * 86400000).toISOString() : undefined;
+      const issued = await remoteExternalShareGateway.issue({
+        snapshot,
+        expiresAt,
+        allowDownload,
+        recipientNote: shareNote.trim() || undefined,
+      });
+      setIssuedPublicUrl(issued.publicUrl);
+      await refreshRemoteShares();
+      setNotice('REMOTE / PUBLIC URL을 발급했습니다. 서버 만료와 원격 회수가 적용됩니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE / PUBLIC URL을 발급하지 못했습니다.');
+    } finally { setBusy(false); }
+  };
+
+  const revokeRemoteShare = async (share: RemoteShareRecord) => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await remoteExternalShareGateway.revoke(share.remoteShareId);
+      await refreshRemoteShares();
+      setNotice('REMOTE / PUBLIC 공유를 서버에서 회수했습니다. 이후 token resolve가 차단됩니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE / PUBLIC 공유를 회수하지 못했습니다.');
+    } finally { setBusy(false); }
+  };
+
+  const copyPublicUrl = async () => {
+    if (!issuedPublicUrl) return;
+    try {
+      await navigator.clipboard.writeText(issuedPublicUrl);
+      setNotice('Public URL을 복사했습니다.');
+    } catch {
+      setError('브라우저에서 Public URL 복사를 허용하지 않았습니다.');
+    }
+  };
 
   const createShare = async () => {
     setBusy(true); setError(''); setNotice('');
@@ -133,7 +182,7 @@ export default function ReleaseShareWorkspace({ snapshot, lifecycleStatus, integ
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 8 }}>
         <div style={{ border: '1px solid #b7d8c2', borderRadius: 10, padding: 12, background: '#fff' }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{localProvider.label}</strong><Chip size="small" color="success" label="READY" /></div><p style={{ margin: '6px 0 0', color: '#667085', fontSize: 12 }}>Standalone HTML · Manifest · 로컬 감사이력. 실제 public URL과 remote revoke는 제공하지 않습니다.</p></div>
-        <div style={{ border: '1px solid #e4d7b8', borderRadius: 10, padding: 12, background: '#fff' }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{remoteProvider.label}</strong><Chip size="small" color="warning" label="NOT CONFIGURED" /></div><p style={{ margin: '6px 0 8px', color: '#667085', fontSize: 12 }}>{remoteProvider.reason}</p><Button size="small" variant="outlined" disabled>Public URL 발급 대기</Button></div>
+        <div style={{ border: '1px solid #b7d8c2', borderRadius: 10, padding: 12, background: '#fff' }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{remoteProvider.label}</strong><Chip size="small" color="success" label="READY" /></div><p style={{ margin: '6px 0 8px', color: '#667085', fontSize: 12 }}>{remoteProvider.reason}</p><Button size="small" variant="contained" disabled={busy || !canShare} onClick={() => void createRemoteShare()}>Public URL 발급</Button></div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8 }}>
@@ -160,6 +209,14 @@ export default function ReleaseShareWorkspace({ snapshot, lifecycleStatus, integ
             <Chip size="small" variant="outlined" label={allowDownload ? 'DOWNLOAD ON' : 'DOWNLOAD OFF'} />
           </div>
           {!canShare && <Alert severity="warning" sx={{ mt: 1.2 }}>CURRENT Snapshot + checksum/signature 검증이 완료되어야 새 공유를 만들 수 있습니다.</Alert>}
+          {issuedPublicUrl && <Alert severity="success" sx={{ mt: 1.2 }}>
+            <strong>REMOTE Public URL 발급 완료</strong>
+            <div style={{ overflowWrap: 'anywhere', marginTop: 5, fontSize: 12 }}>{issuedPublicUrl}</div>
+            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+              <Button size="small" variant="outlined" onClick={() => void copyPublicUrl()}>URL 복사</Button>
+              <Button size="small" variant="outlined" href={issuedPublicUrl} target="_blank" rel="noreferrer">열기</Button>
+            </div>
+          </Alert>}
         </div>
 
         <div style={{ border: '1px solid #e4e9ef', borderRadius: 10, padding: 14, background: '#fff' }}>
@@ -173,13 +230,25 @@ export default function ReleaseShareWorkspace({ snapshot, lifecycleStatus, integ
         </div>
       </div>
 
+      <div style={{ border: '1px solid #d5e7da', borderRadius: 10, padding: 14, background: '#fff' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div><strong>REMOTE SHARE HISTORY</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>서버에서 발급된 공유만 표시합니다. raw token은 목록에 저장·반환하지 않습니다.</p></div>
+          <Button size="small" variant="outlined" disabled={busy} onClick={() => void refreshRemoteShares().catch((reason) => setError(reason instanceof Error ? reason.message : '원격 공유 목록을 불러오지 못했습니다.'))}>원격 목록 새로고침</Button>
+        </div>
+        {!remoteShares.length && <div style={{ marginTop: 10, padding: 12, background: '#f7f9fb', borderRadius: 8, color: '#667085', fontSize: 12 }}>로그인 후 새로고침하면 이 Snapshot의 REMOTE 공유 이력이 표시됩니다.</div>}
+        <div style={{ display: 'grid', gap: 7, marginTop: 10 }}>{remoteShares.slice(0, 8).map((share) => <div key={share.remoteShareId} style={{ border: '1px solid #edf0f4', borderRadius: 8, padding: 10, display: 'grid', gridTemplateColumns: '1fr auto', gap: 8, alignItems: 'center' }}>
+          <div><Chip size="small" color={share.status === 'active' ? 'success' : share.status === 'expired' ? 'warning' : 'default'} label={share.status.toUpperCase()} /><small style={{ display: 'block', color: '#667085', marginTop: 5 }}>created {new Date(share.createdAt).toLocaleString('ko-KR')} · expires {share.expiresAt ? new Date(share.expiresAt).toLocaleString('ko-KR') : '없음'} · download {share.allowDownload ? '허용' : '차단'}</small></div>
+          {share.status === 'active' && <Button size="small" color="warning" disabled={busy} onClick={() => void revokeRemoteShare(share)}>REMOTE 회수</Button>}
+        </div>)}</div>
+      </div>
+
       <div style={{ border: '1px solid #e4e9ef', borderRadius: 10, padding: 14, background: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}><div><strong>REVIEW LOOP</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>외부 검토 의견을 Snapshot 버전에 묶어 보관합니다.</p></div><Chip size="small" variant="outlined" label={`${openNotes.length} OPEN`} /></div>
         <div style={{ display: 'grid', gridTemplateColumns: '180px 1fr auto', gap: 8, marginTop: 10 }}><TextField size="small" label="검토자" value={reviewer} onChange={(event) => setReviewer(event.target.value)} /><TextField size="small" label="검토 코멘트" value={reviewBody} onChange={(event) => setReviewBody(event.target.value)} /><Button size="small" variant="outlined" disabled={busy} onClick={() => void addNote()}>등록</Button></div>
         <div style={{ display: 'grid', gap: 7, marginTop: 10 }}>{notes.slice(0, 6).map((note) => <div key={note.id} style={{ padding: 9, background: note.status === 'open' ? '#fffaf0' : '#f7f9fb', border: '1px solid #eceff3', borderRadius: 8, display: 'grid', gridTemplateColumns: '1fr auto', gap: 8 }}><div><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}><Chip size="small" color={note.status === 'open' ? 'warning' : 'success'} variant="outlined" label={note.status.toUpperCase()} /><strong style={{ fontSize: 12 }}>{note.author}</strong><small style={{ color: '#98a2b3' }}>{new Date(note.createdAt).toLocaleString('ko-KR')}</small></div><div style={{ marginTop: 5, fontSize: 13 }}>{note.body}</div></div>{note.status === 'open' && <Button size="small" startIcon={<TaskAltRounded />} disabled={busy} onClick={() => void resolveNote(note)}>해결</Button>}</div>)}</div>
       </div>
 
-      <Alert severity="info"><strong>REMOTE / PUBLIC은 NOT CONFIGURED 상태입니다.</strong> 현재는 LOCAL / OFFLINE 패키지만 실제 생성됩니다. 부동산 전용 서버 Provider 연결 후 public URL, 서버 만료, 인증 접근, 실제 remote revoke, 검토 동기화를 활성화합니다.</Alert>
+      <Alert severity="info"><strong>REMOTE / PUBLIC Provider는 production Supabase에 연결되어 있습니다.</strong> Public URL 발급·서버 만료·remote revoke는 REMOTE AUTH 로그인 후 사용할 수 있습니다. LOCAL standalone HTML은 별도 파일이므로 기존처럼 원격 차단되지 않습니다.</Alert>
     </div>
   </section>;
 }
