@@ -5,11 +5,13 @@ const files = {
   serverEnv: 'server/env.mjs',
   proxy: 'server/proxy.mjs',
   authProvider: 'src/services/authProviderService.ts',
+  productionConfig: 'src/services/supabaseProductionConfig.ts',
   supabaseRemoteAuthAdapter: 'src/services/supabaseRemoteAuthGateway.ts',
   shareProvider: 'src/services/externalShareProviderService.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
   propertyAssetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
+  rlsHardeningMigration: 'supabase/migrations/20260918_restore_private_rls_hardening.sql',
   remoteDataGateway: 'src/services/remoteDataGateway.ts',
   supabaseRemoteDataAdapter: 'src/services/supabaseRemoteDataGateway.ts',
   shareMigration: 'supabase/migrations/20260915_external_public_share.sql',
@@ -34,8 +36,8 @@ for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_RE
 }
 if (!text.envExample.includes('Server-only credentials. Never commit real values.')) throw new Error('서버 전용 지도 credential 보안 경계를 명시해야 합니다.');
 
-if (!text.authProvider.includes("status: 'not_configured'") || !text.authProvider.includes("label: 'REMOTE AUTH'")) throw new Error('실제 Auth backend 미연결 상태를 명시해야 합니다.');
-if (!text.shareProvider.includes("availability: 'not_configured'") || !text.shareProvider.includes("label: 'REMOTE / PUBLIC'")) throw new Error('Remote public share 미연결 상태를 명시해야 합니다.');
+if (!text.authProvider.includes("status: 'ready'") || !text.authProvider.includes("label: 'REMOTE AUTH'")) throw new Error('Production Auth backend 연결 상태를 명시해야 합니다.');
+if ((text.shareProvider.match(/availability: 'ready'/g) ?? []).length < 2 || !text.shareProvider.includes("label: 'REMOTE / PUBLIC'")) throw new Error('Remote public share production 연결 상태를 명시해야 합니다.');
 
 for (const marker of [
   'export class SupabaseRemoteAuthGateway',
@@ -47,7 +49,8 @@ for (const marker of [
 ]) {
   if (!text.supabaseRemoteAuthAdapter.includes(marker)) throw new Error(`Supabase Remote Auth adapter 준비상태 누락: ${marker}`);
 }
-if (!text.authProvider.includes('new NotConfiguredRemoteAuthGateway()')) throw new Error('실제 backend 연결 전 기본 RemoteAuthGateway는 미연결 상태를 유지해야 합니다.');
+if (!text.authProvider.includes('createSupabaseRemoteAuthGateway({')) throw new Error('Production RemoteAuthGateway는 Supabase adapter에 연결되어야 합니다.');
+if (!text.productionConfig.includes('sb_publishable_') || /service[_-]?role/i.test(text.productionConfig) || /sb_secret_/i.test(text.productionConfig)) throw new Error('Production browser config는 publishable key만 사용해야 합니다.');
 
 if (!text.authMigration.includes('Do not apply it to GPS/Sports projects')) throw new Error('Auth migration은 부동산 전용 backend에만 적용해야 합니다.');
 if (!text.authMigration.includes('Do NOT expose service_role credentials to the browser')) throw new Error('service_role browser 노출 금지 경계가 필요합니다.');
@@ -74,8 +77,8 @@ for (const marker of [
 ]) {
   if (!text.propertyAssetMigration.includes(marker)) throw new Error(`Property asset storage 준비상태 누락: ${marker}`);
 }
-if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('REMOTE DATA Provider가 아직 연결되지 않았습니다')) {
-  throw new Error('Remote Data Gateway contract 또는 미연결 상태 표시가 필요합니다.');
+if (!text.remoteDataGateway.includes('export interface RemoteDataGateway') || !text.remoteDataGateway.includes('createSupabaseRemoteDataGateway(remoteDataConfig)')) {
+  throw new Error('Remote Data Gateway contract와 production Supabase 연결이 필요합니다.');
 }
 for (const marker of [
   'export class SupabaseRemoteDataGateway',
@@ -88,7 +91,7 @@ for (const marker of [
 ]) {
   if (!text.supabaseRemoteDataAdapter.includes(marker)) throw new Error(`Supabase Remote Data adapter 준비상태 누락: ${marker}`);
 }
-if (!text.remoteDataGateway.includes('new NotConfiguredRemoteDataGateway()')) throw new Error('실제 backend 연결 전 기본 RemoteDataGateway는 미연결 상태를 유지해야 합니다.');
+if (!text.remoteDataGateway.includes('createSupabaseRemoteAssetStorageGateway(remoteDataConfig)')) throw new Error('Production private Storage gateway 연결이 필요합니다.');
 
 for (const marker of [
   "Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')",
@@ -103,8 +106,8 @@ for (const marker of [
 ]) {
   if (!text.remoteAuthAdminEdge.includes(marker)) throw new Error(`Remote Auth admin server code 준비상태 누락: ${marker}`);
 }
-if (!text.remoteAuthAdminReadme.includes('PREPARED ONLY / NOT DEPLOYED') || !text.remoteAuthAdminReadme.includes('Do **not** use `--no-verify-jwt`')) {
-  throw new Error('Remote Auth admin Edge는 준비됨/미배포 상태와 JWT 경계를 명시해야 합니다.');
+if (!text.remoteAuthAdminReadme.includes('DEPLOYED / PRODUCTION CONNECTED') || !text.remoteAuthAdminReadme.includes('Do **not** use `--no-verify-jwt`')) {
+  throw new Error('Remote Auth admin Edge의 production 배포상태와 JWT 경계를 명시해야 합니다.');
 }
 
 for (const marker of [
@@ -117,8 +120,12 @@ for (const marker of [
 ]) {
   if (!text.remoteShareEdge.includes(marker)) throw new Error(`Remote public share server code 준비상태 누락: ${marker}`);
 }
-if (!text.remoteShareEdgeReadme.includes('PREPARED ONLY / NOT DEPLOYED') || !text.remoteShareEdgeReadme.includes('--no-verify-jwt')) {
-  throw new Error('Remote public share Edge는 준비됨/미배포 상태와 배포 JWT 경계를 명시해야 합니다.');
+if (!text.remoteShareEdgeReadme.includes('DEPLOYED / PRODUCTION CONNECTED') || !text.remoteShareEdgeReadme.includes('--no-verify-jwt') || !text.remoteShareEdgeReadme.includes('Self-hosted viewer')) {
+  throw new Error('Remote public share Edge의 production 배포상태, JWT 경계, self-hosted viewer를 명시해야 합니다.');
+}
+
+for (const marker of ['grant usage on schema private to authenticated', 'private.daon_is_owner()', 'revoke all on public.external_share_sessions from anon, authenticated']) {
+  if (!text.rlsHardeningMigration.includes(marker)) throw new Error(`Production RLS hardening 누락: ${marker}`);
 }
 
 for (const marker of ['/api/maps/geocode', '/api/maps/static', '/api/poi/search']) {
@@ -163,17 +170,19 @@ if (spreadsheetParserDependency === 'MISSING' || spreadsheetParserDependency ===
 
 const status = {
   localDevelopment: 'READY',
-  remoteAuthServerCode: 'PREPARED_NOT_DEPLOYED',
-  supabaseRemoteAuthAdapter: 'PREPARED_NOT_CONNECTED',
-  authBackend: 'NOT_CONFIGURED',
-  propertyDataSchemaAndRls: 'PREPARED_NOT_APPLIED',
-  propertyAssetStorageBoundary: 'PREPARED_NOT_APPLIED',
-  remoteDataGatewayContract: 'PREPARED',
-  supabaseRemoteDataAdapter: 'PREPARED_NOT_CONNECTED',
-  remoteDataProviderConnection: 'NOT_CONFIGURED',
-  remotePublicShareServerCode: 'PREPARED_NOT_DEPLOYED',
-  remotePublicShareBackend: 'NOT_CONFIGURED',
+  remoteAuthServerCode: 'DEPLOYED',
+  supabaseRemoteAuthAdapter: 'CONNECTED',
+  authBackend: 'CONNECTED',
+  propertyDataSchemaAndRls: 'APPLIED',
+  propertyAssetStorageBoundary: 'APPLIED',
+  remoteDataGatewayContract: 'CONNECTED',
+  supabaseRemoteDataAdapter: 'CONNECTED',
+  remoteDataProviderConnection: 'CONNECTED',
+  remotePublicShareServerCode: 'DEPLOYED',
+  remotePublicShareBackend: 'CONNECTED_SELF_HOSTED_VIEWER',
   productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
+  realOperatorAuthAccount: 'REQUIRED',
+  secondDeviceBrowserE2E: 'REQUIRED',
   protectedBackendProxy: 'MISSING_EXTERNAL_INFRA',
   productionDomainAllowlist: 'CHECK_REQUIRED',
   spreadsheetParserDependency,
