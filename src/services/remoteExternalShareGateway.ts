@@ -1,3 +1,5 @@
+import { remoteAuthGateway } from './authProviderService';
+import { DAON_REMOTE_SHARE_FUNCTION, DAON_SUPABASE_PROJECT_URL, DAON_SUPABASE_PUBLISHABLE_KEY } from './supabaseProductionConfig';
 import type { BuildingReleaseReviewNote, BuildingReleaseShare } from './buildingReleaseCollaborationService';
 import type { BuildingReleaseSnapshot } from './buildingReleaseSnapshotService';
 
@@ -55,26 +57,69 @@ export interface RemoteExternalShareGateway {
   addReviewNote(rawToken: string, author: string, body: string): Promise<BuildingReleaseReviewNote>;
 }
 
-class NotConfiguredRemoteExternalShareGateway implements RemoteExternalShareGateway {
-  private unavailable(): never {
-    throw new Error('REMOTE / PUBLIC Provider가 아직 연결되지 않았습니다. 부동산 전용 서버 프로젝트가 필요합니다.');
+
+function parseJsonObject(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+async function callRemoteShare(body: Record<string, unknown>, authenticated: boolean) {
+  const headers = new Headers({ 'Content-Type': 'application/json', apikey: DAON_SUPABASE_PUBLISHABLE_KEY });
+  if (authenticated) {
+    const token = await remoteAuthGateway.getAccessToken();
+    if (!token) throw new Error('REMOTE / PUBLIC 관리 작업은 REMOTE AUTH 로그인이 필요합니다.');
+    headers.set('Authorization', `Bearer ${token}`);
+  }
+  const response = await fetch(`${DAON_SUPABASE_PROJECT_URL}/functions/v1/${DAON_REMOTE_SHARE_FUNCTION}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  const raw = await response.text();
+  let payload: unknown = undefined;
+  if (raw) {
+    try { payload = JSON.parse(raw); } catch { payload = raw; }
+  }
+  if (!response.ok) {
+    const row = parseJsonObject(payload);
+    const detail = typeof row.error === 'string' ? row.error : typeof row.message === 'string' ? row.message : '';
+    throw new Error(`REMOTE / PUBLIC 요청 실패 (${response.status})${detail ? `: ${detail}` : ''}`);
+  }
+  return payload;
+}
+
+class SupabaseRemoteExternalShareGateway implements RemoteExternalShareGateway {
+  async issue(request: RemoteShareIssueRequest): Promise<RemoteShareIssuedSession> {
+    return parseJsonObject(await callRemoteShare({ action: 'issue', ...request }, true)) as unknown as RemoteShareIssuedSession;
   }
 
-  async issue(): Promise<RemoteShareIssuedSession> { return this.unavailable(); }
-  async revoke(): Promise<void> { this.unavailable(); }
-  async resolve(): Promise<RemoteShareAccessResult> { return this.unavailable(); }
-  async listForSnapshot(): Promise<RemoteShareRecord[]> { return this.unavailable(); }
-  async addReviewNote(): Promise<BuildingReleaseReviewNote> { return this.unavailable(); }
+  async revoke(remoteShareId: string): Promise<void> {
+    await callRemoteShare({ action: 'revoke', remoteShareId }, true);
+  }
+
+  async resolve(rawToken: string): Promise<RemoteShareAccessResult> {
+    try {
+      return parseJsonObject(await callRemoteShare({ action: 'resolve', rawToken }, false)) as unknown as RemoteShareAccessResult;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.includes('(404)')) return { status: 'not_found' };
+      if (message.includes('(410)')) {
+        if (message.includes('revoked')) return { status: 'revoked' };
+        if (message.includes('expired')) return { status: 'expired' };
+      }
+      throw error;
+    }
+  }
+
+  async listForSnapshot(snapshotId: string): Promise<RemoteShareRecord[]> {
+    const payload = parseJsonObject(await callRemoteShare({ action: 'list', snapshotId }, true));
+    return Array.isArray(payload.shares) ? payload.shares as RemoteShareRecord[] : [];
+  }
+
+  async addReviewNote(rawToken: string, author: string, body: string): Promise<BuildingReleaseReviewNote> {
+    return parseJsonObject(await callRemoteShare({ action: 'add_review', rawToken, author, body }, false)) as unknown as BuildingReleaseReviewNote;
+  }
 }
 
-export const remoteExternalShareGateway: RemoteExternalShareGateway = new NotConfiguredRemoteExternalShareGateway();
+export const remoteExternalShareGateway: RemoteExternalShareGateway = new SupabaseRemoteExternalShareGateway();
 
-export function localShareToRemoteCandidate(share: BuildingReleaseShare) {
-  return {
-    snapshotId: share.snapshotId,
-    propertyId: share.propertyId,
-    expiresAt: share.expiresAt,
-    allowDownload: share.allowDownload,
-    recipientNote: share.note,
-  };
-}
