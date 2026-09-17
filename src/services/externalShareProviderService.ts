@@ -45,7 +45,7 @@ const providers: ExternalShareProviderDescriptor[] = [
     id: 'remote_public',
     label: 'REMOTE / PUBLIC',
     mode: 'remote',
-    availability: 'not_configured',
+    availability: 'ready',
     capabilities: {
       publicUrl: true,
       remoteRevoke: true,
@@ -53,7 +53,7 @@ const providers: ExternalShareProviderDescriptor[] = [
       authenticatedAccess: true,
       syncedReview: true,
     },
-    reason: '부동산 전용 서버 프로젝트가 연결되지 않았습니다.',
+    reason: 'Supabase REMOTE / PUBLIC server와 self-hosted read-only viewer가 연결되어 있습니다.',
   },
 ];
 
