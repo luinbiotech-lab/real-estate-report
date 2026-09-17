@@ -1,6 +1,6 @@
 import { AdminPanelSettingsRounded, LockPersonRounded, PersonAddAltRounded, ShieldRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, MenuItem, TextField } from '@mui/material';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   ACCESS_STORAGE_KEY,
   CAPABILITY_LABELS,
@@ -10,7 +10,7 @@ import {
   type AccessProfile,
   type AccessRole,
 } from '../services/accessControlService';
-import { AUTH_PROVIDER_SUMMARIES } from '../services/authProviderService';
+import { AUTH_PROVIDER_SUMMARIES, remoteAuthGateway, type AuthSession } from '../services/authProviderService';
 
 const ROLES: AccessRole[] = ['owner', 'admin', 'editor', 'viewer'];
 const AUTH_CAPABILITY_LABELS = [
@@ -28,6 +28,41 @@ export default function AccessManagementPage() {
   const [newRole, setNewRole] = useState<AccessRole>('viewer');
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [remoteEmail, setRemoteEmail] = useState('');
+  const [remotePassword, setRemotePassword] = useState('');
+  const [remoteSession, setRemoteSession] = useState<AuthSession | null>(null);
+  const [remoteBusy, setRemoteBusy] = useState(false);
+
+  useEffect(() => {
+    void remoteAuthGateway.getSession().then(setRemoteSession).catch(() => setRemoteSession(null));
+  }, []);
+
+  const signInRemote = async () => {
+    setError(''); setNotice(''); setRemoteBusy(true);
+    try {
+      const session = await remoteAuthGateway.signIn(remoteEmail, remotePassword);
+      setRemoteSession(session);
+      setRemotePassword('');
+      setNotice('REMOTE AUTH 로그인과 서버 profile/RLS 확인이 완료되었습니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE AUTH 로그인에 실패했습니다.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
+
+  const signOutRemote = async () => {
+    setError(''); setNotice(''); setRemoteBusy(true);
+    try {
+      await remoteAuthGateway.signOut();
+      setRemoteSession(null);
+      setNotice('REMOTE AUTH 세션을 종료했습니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE AUTH 로그아웃에 실패했습니다.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
 
   const activeCount = useMemo(() => profiles.filter((item) => item.status === 'active').length, [profiles]);
   const ownerCount = useMemo(() => profiles.filter((item) => item.role === 'owner' && item.status === 'active').length, [profiles]);
@@ -69,17 +104,17 @@ export default function AccessManagementPage() {
       <div>
         <p className="eyebrow">USER · ROLE · ACCESS POLICY</p>
         <h1 style={{ margin: '5px 0' }}>사용자 · 권한 관리</h1>
-        <p style={{ margin: 0, color: '#667085' }}>인증 서버 연결 전 권한정책을 먼저 고정합니다. Auth/RLS 연결 후 동일 역할표를 서버 권한으로 승격합니다.</p>
+        <p style={{ margin: 0, color: '#667085' }}>로컬 역할정책과 production Supabase Auth/RLS를 함께 관리합니다. 실제 원격 권한은 서버 RLS가 최종 강제합니다.</p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Chip color="success" icon={<ShieldRounded />} label="LOCAL POLICY READY" />
-        <Chip color="warning" icon={<LockPersonRounded />} label="AUTH NOT CONNECTED" />
+        <Chip color="success" icon={<LockPersonRounded />} label="REMOTE AUTH READY" />
       </div>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
-    <Alert severity="info" sx={{ mb: 1.5 }}>현재 프로필은 `{ACCESS_STORAGE_KEY}`에 저장되는 로컬 권한정책입니다. 이메일 초대, 비밀번호, 로그인 세션, 서버 RLS는 아직 연결하지 않았습니다.</Alert>
+    <Alert severity="info" sx={{ mb: 1.5 }}>로컬 정책 프로필은 `{ACCESS_STORAGE_KEY}`에 별도 유지됩니다. REMOTE AUTH는 production Supabase에 연결됐으며 로그인 후 서버 profile과 RLS가 적용됩니다. 비밀번호와 access token은 이 화면에서 영구 저장하지 않습니다.</Alert>
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(320px,1fr))', gap: 12, marginBottom: 16 }}>
       {AUTH_PROVIDER_SUMMARIES.map((provider) => <div key={provider.kind} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}>
@@ -92,6 +127,25 @@ export default function AccessManagementPage() {
           {AUTH_CAPABILITY_LABELS.map(([key, label]) => <Chip key={key} size="small" variant="outlined" color={provider.status === 'ready' && provider.capabilities[key] ? 'success' : 'default'} label={`${label} ${provider.capabilities[key] ? '✓' : '—'}`} />)}
         </div>
       </div>)}
+    </section>
+
+    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div>
+          <strong>REMOTE AUTH SESSION</strong>
+          <p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>Production Supabase 로그인 · memory-only token store</p>
+        </div>
+        <Chip size="small" color={remoteSession ? 'success' : 'default'} label={remoteSession ? `SIGNED IN · ${remoteSession.role.toUpperCase()}` : 'SIGNED OUT'} />
+      </div>
+      {remoteSession ? <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span><strong>{remoteSession.displayName || remoteSession.email || remoteSession.userId}</strong></span>
+        <span style={{ color: '#667085', fontSize: 12 }}>{remoteSession.email}</span>
+        <Button variant="outlined" disabled={remoteBusy} onClick={signOutRemote}>로그아웃</Button>
+      </div> : <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'minmax(220px,1fr) minmax(220px,1fr) auto', gap: 10 }}>
+        <TextField size="small" label="이메일" type="email" autoComplete="username" value={remoteEmail} onChange={(event) => setRemoteEmail(event.target.value)} />
+        <TextField size="small" label="비밀번호" type="password" autoComplete="current-password" value={remotePassword} onChange={(event) => setRemotePassword(event.target.value)} />
+        <Button variant="contained" disabled={remoteBusy || !remoteEmail || !remotePassword} onClick={signInRemote}>REMOTE 로그인</Button>
+      </div>}
     </section>
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(160px,1fr))', gap: 10, marginBottom: 16 }}>
@@ -137,6 +191,6 @@ export default function AccessManagementPage() {
       </div>
     </section>
 
-    <Alert severity="warning" sx={{ mt: 1.5 }}>이 화면은 권한정책 관리 단계입니다. 실제 보안 경계는 부동산 전용 Auth + 서버 RLS 연결 후 강제됩니다. 현재 브라우저 로컬 프로필만으로 민감 데이터 접근을 보호한다고 간주하면 안 됩니다.</Alert>
+    <Alert severity="warning" sx={{ mt: 1.5 }}>LOCAL POLICY 프로필은 UI 정책 테스트용이며 실제 원격 보안 권한이 아닙니다. REMOTE 데이터 접근은 production Auth 세션과 서버 RLS가 강제합니다.</Alert>
   </main>;
 }
