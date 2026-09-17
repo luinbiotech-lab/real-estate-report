@@ -49,7 +49,8 @@ function corsHeaders(origin: string | null) {
 function allowedOrigin(req: Request) {
   const origin = req.headers.get('origin');
   if (!origin) return null;
-  if (!PUBLIC_SHARE_ALLOWED_ORIGINS.includes(origin)) {
+  const sameOrigin = origin === new URL(req.url).origin;
+  if (!sameOrigin && !PUBLIC_SHARE_ALLOWED_ORIGINS.includes(origin)) {
     throw new Response(JSON.stringify({ error: 'origin_not_allowed' }), {
       status: 403,
       headers: { 'content-type': 'application/json; charset=utf-8', 'Vary': 'Origin' },
@@ -209,7 +210,8 @@ async function resolveShare(rawToken: string): Promise<{ row?: ShareRow; status:
 }
 
 async function issue(body: Json, req: Request, origin: string | null) {
-  if (!PUBLIC_SHARE_BASE_URL) throw new Error('PUBLIC_SHARE_BASE_URL is required before issuing public URLs.');
+  const requestUrl = new URL(req.url);
+  const shareBaseUrl = PUBLIC_SHARE_BASE_URL || `${requestUrl.origin}${requestUrl.pathname}`;
   const user = await requireShareManager(req);
   const snapshot = await validateSnapshot(body.snapshot);
   const expiresAt = optionalFutureIso(body.expiresAt);
@@ -234,7 +236,7 @@ async function issue(body: Json, req: Request, origin: string | null) {
     .single();
   if (error || !data) throw new Error('share_issue_failed');
 
-  const publicUrl = `${PUBLIC_SHARE_BASE_URL.replace(/\/$/, '')}#token=${encodeURIComponent(rawToken)}`;
+  const publicUrl = `${shareBaseUrl.replace(/\/$/, '')}#token=${encodeURIComponent(rawToken)}`;
   return json({
     remoteShareId: data.id,
     publicUrl,
@@ -340,9 +342,89 @@ async function addReview(body: Json, origin: string | null) {
   }, 201, origin);
 }
 
+
+function viewerHtml(req: Request) {
+  const endpoint = new URL(req.url);
+  endpoint.search = '';
+  endpoint.hash = '';
+  const endpointJson = JSON.stringify(endpoint.toString());
+  const html = `<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive">
+<title>DA:ON ASSET | External Review</title>
+<style>
+:root{font-family:Inter,Pretendard,"Noto Sans KR",system-ui,sans-serif;color:#162230;background:#f5f3ed}
+body{margin:0}.top{background:#082f4f;color:#fff;padding:22px 24px}.top b{letter-spacing:.08em}.wrap{max-width:980px;margin:0 auto;padding:24px}
+.card{background:#fff;border:1px solid #ddd8cb;border-radius:14px;padding:20px;box-shadow:0 8px 24px #0000000a}
+.badge{display:inline-block;border:1px solid #b99655;color:#806328;border-radius:999px;padding:4px 9px;font-size:12px;font-weight:700}
+.notice{margin:12px 0;color:#59636e;font-size:13px;line-height:1.6}
+pre{white-space:pre-wrap;word-break:break-word;background:#f7f8fa;border:1px solid #e5e8eb;border-radius:10px;padding:14px;max-height:62vh;overflow:auto}
+button{border:0;border-radius:8px;padding:10px 14px;background:#082f4f;color:#fff;font-weight:700;cursor:pointer}
+.err{color:#a32424}.muted{color:#6e7781}
+</style>
+</head>
+<body>
+<header class="top"><b>DA:ON ASSET</b><div style="margin-top:6px;font-size:13px;opacity:.82">READ-ONLY EXTERNAL REVIEW</div></header>
+<main class="wrap"><section class="card">
+<span class="badge">READ ONLY</span>
+<h1 style="font-size:22px;margin:12px 0 4px">외부 검토 자료</h1>
+<p class="notice">이 화면은 서버가 유효성을 확인한 Snapshot만 표시합니다. 만료되거나 회수된 링크는 열리지 않습니다.</p>
+<div id="status" class="muted">접근 토큰 확인 중…</div>
+<pre id="payload" hidden></pre>
+<button id="download" hidden>검토자료 JSON 저장</button>
+</section></main>
+<script>
+const endpoint=${endpointJson};
+const statusEl=document.getElementById('status');
+const payloadEl=document.getElementById('payload');
+const downloadBtn=document.getElementById('download');
+const token=new URLSearchParams(location.hash.slice(1)).get('token')||'';
+history.replaceState(null,'',location.pathname);
+(async()=>{
+  if(!token){statusEl.className='err';statusEl.textContent='유효한 접근 토큰이 없습니다.';return;}
+  try{
+    const response=await fetch(endpoint,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({action:'resolve',rawToken:token}),cache:'no-store'});
+    const data=await response.json();
+    if(!response.ok||data.status!=='active'){
+      statusEl.className='err';
+      statusEl.textContent=data.status==='revoked'?'회수된 링크입니다.':data.status==='expired'?'만료된 링크입니다.':'유효하지 않은 링크입니다.';
+      return;
+    }
+    statusEl.textContent='서버 검증 완료 · Snapshot '+(data.snapshotId||'');
+    payloadEl.hidden=false;
+    payloadEl.textContent=JSON.stringify(data.payload,null,2);
+    if(data.allowDownload){
+      downloadBtn.hidden=false;
+      downloadBtn.onclick=()=>{
+        const blob=new Blob([JSON.stringify(data.payload,null,2)],{type:'application/json'});
+        const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='daon-external-review.json';a.click();URL.revokeObjectURL(a.href);
+      };
+    }
+  }catch{
+    statusEl.className='err';statusEl.textContent='검토자료를 불러오지 못했습니다.';
+  }
+})();
+</script>
+</body></html>`;
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'content-type': 'text/html; charset=utf-8',
+      'cache-control': 'no-store',
+      'content-security-policy': "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; img-src 'self' data:; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
+      'x-content-type-options': 'nosniff',
+      'referrer-policy': 'no-referrer',
+    },
+  });
+}
+
 Deno.serve(async (req) => {
   let origin: string | null = null;
   try {
+    if (req.method === 'GET') return viewerHtml(req);
     origin = allowedOrigin(req);
     if (req.method === 'OPTIONS') return new Response(null, { status: 204, headers: corsHeaders(origin) });
     if (req.method !== 'POST') return json({ error: 'method_not_allowed' }, 405, origin);
