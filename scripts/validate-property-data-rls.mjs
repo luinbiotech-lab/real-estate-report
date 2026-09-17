@@ -4,6 +4,7 @@ const files = {
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   dataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
   assetMigration: 'supabase/migrations/20260916_property_asset_storage.sql',
+  hardeningMigration: 'supabase/migrations/20260918_restore_private_rls_hardening.sql',
   gateway: 'src/services/remoteDataGateway.ts',
   access: 'src/services/accessControlService.ts',
   database: 'src/repositories/database.ts',
@@ -18,6 +19,7 @@ const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key,
 if (/for_each_table\s*:/i.test(text.dataMigration)) throw new Error('Property/Data migration에 실행 불가능한 placeholder SQL이 남아 있습니다.');
 if (!text.dataMigration.trim().endsWith('commit;')) throw new Error('Property/Data migration은 transaction commit으로 종료되어야 합니다.');
 if (!text.assetMigration.trim().endsWith('commit;')) throw new Error('Property asset migration은 transaction commit으로 종료되어야 합니다.');
+if (!text.hardeningMigration.trim().endsWith('commit;')) throw new Error('Private RLS hardening migration은 transaction commit으로 종료되어야 합니다.');
 
 for (const marker of [
   'create table if not exists public.properties',
@@ -116,5 +118,20 @@ for (const marker of [
 
 if (!text.authMigration.includes("default 'viewer'")) throw new Error('Remote user 기본 role은 viewer여야 합니다.');
 if (!text.authMigration.includes('daon_is_owner()')) throw new Error('Owner RLS helper가 선행 migration에 필요합니다.');
+
+for (const marker of [
+  'grant usage on schema private to authenticated',
+  'private.daon_is_owner()',
+  'private.daon_is_active_user()',
+  'private.daon_can_edit_data()',
+  'private.daon_can_verify_data()',
+  'revoke all on public.external_share_sessions from anon, authenticated',
+  'revoke all on public.external_share_review_notes from anon, authenticated',
+  'drop function if exists public.daon_is_owner()',
+  'drop function if exists public.daon_current_role()',
+  'revoke all on function public.daon_touch_updated_at() from public, anon, authenticated',
+]) {
+  if (!text.hardeningMigration.includes(marker)) throw new Error(`Private RLS hardening 규칙 누락: ${marker}`);
+}
 
 console.log('Property/Data persistence + RLS boundary: PASS');
