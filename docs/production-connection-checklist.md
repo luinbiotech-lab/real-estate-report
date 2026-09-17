@@ -1,8 +1,8 @@
 # DA:ON Production Connection Checklist
 
-이 문서는 local-first 구현 완료 후 실제 외부 인프라를 연결할 때의 **Deployment Readiness Package**다. 실제 Supabase/backend를 생성·연결하기 전까지 모든 remote 기능은 PREPARED / NOT CONNECTED 상태를 유지한다.
+이 문서는 local-first 구현 완료 후 실제 외부 인프라를 연결할 때의 **Deployment Readiness Package**다. production Supabase/backend가 연결된 이후의 실제 배포·운영 마감 상태를 추적한다.
 
-Verified preparation baseline: `e3970456d5dd2df7542b2f9bdbf8eade060e29cc` / GitHub Actions #771 PASS
+Last fully verified pre-production baseline: `da7aa931e4eedde9669a11a39942fbca7fb9980f` / GitHub Actions #775 PASS
 Branch: `feat/daon-master-code-lock`
 
 ## 0. 사전 원칙
@@ -20,13 +20,13 @@ Branch: `feat/daon-master-code-lock`
 
 ## 1. 신규 Backend 프로젝트 준비
 
-- [ ] 부동산 전용 Supabase 프로젝트 생성
-- [ ] 프로젝트 URL 확보
-- [ ] browser-safe public anon/publishable key 확보
+- [x] 부동산 전용 Supabase 프로젝트 생성
+- [x] 프로젝트 URL 확보
+- [x] browser-safe public anon/publishable key 확보
 - [ ] server-only service role/secret은 protected environment에만 저장
 - [ ] production / preview 환경 분리 여부 결정
-- [ ] 비용/쿼터 확인
-- [ ] GPS/Sports 프로젝트 ID·DB·Storage·secret과 완전 분리 확인
+- [x] 비용/쿼터 확인
+- [x] GPS/Sports 프로젝트 ID·DB·Storage·secret과 완전 분리 확인
 
 **Gate:** 이 단계 전에는 어떤 migration도 기존 운영 프로젝트에 적용하지 않는다.
 
@@ -59,15 +59,15 @@ Branch: `feat/daon-master-code-lock`
 
 브라우저 adapter 주입 규칙:
 
-- 기본 provider는 계속 `NotConfiguredRemoteAuthGateway`다.
-- 실제 project URL + browser-safe key를 명시 주입할 때만 `SupabaseRemoteAuthGateway`를 사용한다.
+- production provider는 `SupabaseRemoteAuthGateway`에 연결되어 있다.
+- project URL + browser-safe publishable key만 브라우저에 주입한다.
 - 기본 token store는 memory-only다.
 - persistent session store는 별도 검토 후 명시적으로 주입한다.
 - owner 관리 action은 browser가 DB를 직접 수정하지 않고 `remote-auth-admin` Edge Function만 호출한다.
 
 완료 조건:
 
-- [ ] `REMOTE AUTH = CONNECTED`
+- [x] `REMOTE AUTH = CONNECTED`
 - [ ] 실제 로그인 session 존재
 - [ ] profile role/is_active 서버 조회 동작
 - [ ] OWNER-only user administration 강제
@@ -169,8 +169,8 @@ Storage 필수 테스트:
 배포 조건:
 
 - Auth/profile migration 선행
-- `PUBLIC_SHARE_BASE_URL` 설정
-- `PUBLIC_SHARE_ALLOWED_ORIGINS` exact allowlist 설정
+- `PUBLIC_SHARE_BASE_URL`은 선택사항이며 미설정 시 Edge Function self-hosted viewer 사용
+- cross-origin production frontend 사용 시 `PUBLIC_SHARE_ALLOWED_ORIGINS` exact allowlist 설정
 - management action은 authenticated OWNER/ADMIN만 허용
 - anonymous resolve/review는 raw token server validation만 허용
 - table direct anon access 금지
@@ -296,11 +296,11 @@ Server-only:
 
 - [ ] Dedicated real-estate backend confirmed
 - [ ] REMOTE AUTH CONNECTED
-- [ ] Property/Data RLS 실제 적용 및 role test PASS
-- [ ] Private Storage PASS
+- [x] Property/Data RLS 실제 적용 및 role test PASS
+- [x] Private Storage schema/policy PASS
 - [ ] Controlled migration + reconciliation PASS
 - [ ] Second-device persistence PASS
-- [ ] REMOTE / PUBLIC CONNECTED
+- [x] REMOTE / PUBLIC CONNECTED
 - [ ] Production frontend host LIVE
 - [ ] Protected backend proxy LIVE
 - [ ] Provider/domain allowlist 완료
@@ -319,16 +319,20 @@ Server-only:
 npm run readiness:prod
 ```
 
-현재 정상 상태:
+현재 상태:
 
 - LOCAL POLICY = READY
-- REMOTE AUTH server code + adapter = PREPARED / NOT CONNECTED
-- Property/Data schema + RLS = PREPARED / NOT APPLIED
-- Private Storage boundary = PREPARED / NOT APPLIED
-- REMOTE DATA adapter = PREPARED / NOT CONNECTED
-- REMOTE / PUBLIC server code = PREPARED / NOT DEPLOYED
+- REMOTE AUTH server + browser adapter = CONNECTED
+- Property/Data schema + RLS = APPLIED
+- Private Storage boundary = APPLIED
+- REMOTE DATA adapter = CONNECTED
+- REMOTE / PUBLIC server + self-hosted viewer = CONNECTED
+- QA OWNER/EDITOR/VIEWER RLS E2E = PASS
+- real operator OWNER account = REQUIRED
+- actual second-device browser E2E = REQUIRED
 - production frontend/proxy = MISSING EXTERNAL INFRA
 - provider/domain allowlist = CHECK REQUIRED
+- Supabase Auth leaked-password protection = MANUAL ENABLE REQUIRED
 - spreadsheet parser = PATCHED_PINNED_REVIEW_AT_RELEASE
 
-외부 리소스와 실제 E2E가 검증된 이후에만 READY로 승격한다.
+서버 연결 완료와 실사용 운영 마감은 구분한다. 운영 계정·second-device·도메인·proxy 검증 후 최종 Production READY로 승격한다.
