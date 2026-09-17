@@ -167,7 +167,7 @@ export default function ExternalShareCenterPage() {
 
   return <main style={{ padding: 28, maxWidth: 1380, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 22 }}>
-      <div><p className="eyebrow">EXTERNAL SHARE · ACCESS POLICY · REVIEW AUDIT</p><h1 style={{ margin: '5px 0' }}>외부 공유 센터</h1><p style={{ margin: 0, color: '#667085' }}>로컬 패키지와 향후 서버 기반 공개 URL 공유를 Provider 단위로 분리해 관리합니다.</p></div>
+      <div><p className="eyebrow">EXTERNAL SHARE · ACCESS POLICY · REVIEW AUDIT</p><h1 style={{ margin: '5px 0' }}>외부 공유 센터</h1><p style={{ margin: 0, color: '#667085' }}>로컬 standalone 패키지와 production 서버 기반 Public URL 공유를 Provider 단위로 분리해 관리합니다.</p></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Button startIcon={<DownloadRounded />} onClick={exportAuditCsv}>감사대장 CSV</Button><Button startIcon={<DownloadRounded />} onClick={exportAuditJson}>감사대장 JSON</Button><Button startIcon={<RefreshRounded />} onClick={() => void load()}>새로고침</Button></div>
     </header>
 
@@ -191,7 +191,7 @@ export default function ExternalShareCenterPage() {
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
     </section>
 
-    <Alert severity="warning" sx={{ mb: 1.5 }}><strong>현재 실제 remote revoke는 사용할 수 없습니다.</strong> `회수(REVOKED)`는 LOCAL / OFFLINE 감사상태 변경이며, 이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다. REMOTE / PUBLIC Provider가 연결된 뒤 실제 접근 차단이 가능합니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 1.5 }}><strong>LOCAL / OFFLINE 회수와 REMOTE 회수는 다릅니다.</strong> 이 화면의 기존 LOCAL `REVOKED`는 감사상태 변경이며 이미 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다. REMOTE / PUBLIC으로 발급한 URL은 서버에서 실제 revoke할 수 있습니다.</Alert>
 
     <section style={{ background: '#10243f', color: '#fff', borderRadius: 12, padding: 16, marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10 }}>
       <TextField size="small" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="물건명 · 주소 · 공유대상 · Snapshot 검색" sx={{ background: '#fff', borderRadius: 1 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded /></InputAdornment> }} />
@@ -216,6 +216,6 @@ export default function ExternalShareCenterPage() {
       })}
     </section>
 
-    <Alert severity="info" icon={<ShareRounded />} sx={{ mt: 1.5 }}><strong>REMOTE / PUBLIC은 NOT CONFIGURED 상태입니다.</strong> 부동산 전용 서버 Provider를 연결하면 public URL, 서버 만료, 인증 접근, 실제 remote revoke, 외부 검토 동기화를 이 화면에 그대로 결합합니다.</Alert>
+    <Alert severity="info" icon={<ShareRounded />} sx={{ mt: 1.5 }}><strong>REMOTE / PUBLIC Provider는 READY입니다.</strong> Public URL 발급·서버 만료·remote revoke는 Snapshot의 외부 공유 Workspace에서 REMOTE AUTH 로그인 후 사용할 수 있습니다. 이 감사대장은 기존 LOCAL 공유 이력을 계속 분리해 보존합니다.</Alert>
   </main>;
 }
