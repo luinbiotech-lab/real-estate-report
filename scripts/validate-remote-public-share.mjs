@@ -63,6 +63,8 @@ for (const marker of [
   'const sameOrigin = origin === new URL(req.url).origin',
   'const shareBaseUrl = PUBLIC_SHARE_BASE_URL ||',
   "history.replaceState(null,'',location.pathname)",
+  "action:'add_review'",
+  '검토 의견이 서버에 등록되었습니다.',
   "'content-security-policy'",
   "schemaVersion !== 'daon-building-release-snapshot-v1'",
   'row.immutable !== true',
