@@ -28,6 +28,11 @@ for (const required of [
   'browser bundle/source map secret scan',
   'Production E2E',
   'GitHub Actions 전체 PASS',
+  'REMOTE AUTH server + browser adapter = CONNECTED',
+  'Property/Data schema + RLS = APPLIED',
+  'REMOTE DATA adapter = CONNECTED',
+  'REMOTE / PUBLIC server + self-hosted viewer = CONNECTED',
+  'real operator OWNER account = REQUIRED',
 ]) {
   if (!text.includes(required)) throw new Error(`Production connection checklist 필수 규칙 누락: ${required}`);
 }
