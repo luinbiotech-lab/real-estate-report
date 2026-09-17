@@ -1,7 +1,7 @@
 # DA:ON Real Estate Platform — Implementation Status
 
 Updated baseline: 2026-09-17
-Verified baseline: `e3970456d5dd2df7542b2f9bdbf8eade060e29cc` / GitHub Actions #771 PASS
+Verified baseline: `da7aa931e4eedde9669a11a39942fbca7fb9980f` / GitHub Actions #775 PASS
 Branch: `feat/daon-master-code-lock`
 
 이 문서는 완료 기능을 반복 개발하지 않고, 실제 미구축 영역과 외부 의존성을 분리하기 위한 현재 기준선이다.
@@ -101,9 +101,10 @@ Branch: `feat/daon-master-code-lock`
 
 ### A. REMOTE AUTH
 상태:
-- server code + migration = PREPARED / NOT DEPLOYED
+- server code + migration = DEPLOYED
 - Supabase browser Auth adapter = PREPARED / NOT CONNECTED
-- backend connection = NOT CONFIGURED
+- backend server connection = CONNECTED
+- production OWNER bootstrap = QA OWNER E2E COMPLETE / real operator account pending
 
 준비된 항목:
 - `profiles` / role / owner-only RLS migration
@@ -135,11 +136,12 @@ Branch: `feat/daon-master-code-lock`
 
 ### B. Property/Data persistence + RLS
 상태:
-- schema + RLS = PREPARED / NOT APPLIED
-- private asset Storage boundary = PREPARED / NOT APPLIED
+- schema + RLS = APPLIED
+- private asset Storage boundary = APPLIED
 - Remote Data Gateway contract = PREPARED
 - Supabase REST/Storage adapter = PREPARED / NOT CONNECTED
-- remote provider connection = NOT CONFIGURED
+- server persistence boundary = CONNECTED
+- frontend remote provider binding = NOT CONNECTED
 
 준비된 항목:
 - `properties`: active read, OWNER/ADMIN/EDITOR create/update, OWNER delete
@@ -173,8 +175,10 @@ Branch: `feat/daon-master-code-lock`
 
 ### C. REMOTE / PUBLIC external share
 상태:
-- server code + migration = PREPARED / NOT DEPLOYED
-- backend connection = NOT CONFIGURED
+- server code + migration = DEPLOYED
+- Edge Function = ACTIVE
+- anonymous invalid-token resolve E2E = PASS
+- authenticated issue/revoke/list E2E = PENDING real Auth session + public viewer host
 
 준비된 항목:
 - `remote-public-share` Edge Function
@@ -204,6 +208,31 @@ Branch: `feat/daon-master-code-lock`
 - `/api/maps/geocode`, `/api/maps/static`, `/api/poi/search` production 승격 대상 고정
 - `docs/production-connection-runbook.md`
 - `docs/production-connection-checklist.md`
+
+### E. 실제 production 연결 검증 완료 항목
+- production project: `real-estate-report-production` / Seoul region / ACTIVE_HEALTHY
+- Auth/Profile migration 적용
+- Property/Data RLS 적용
+- private `daon-property-assets` Storage 적용
+- REMOTE/PUBLIC share schema 적용
+- `remote-auth-admin` Edge Function ACTIVE / JWT verification ON
+- `remote-public-share` Edge Function ACTIVE / custom token validation / JWT verification OFF
+- QA roles: OWNER / EDITOR / VIEWER
+- RLS E2E PASS: VIEWER read / VIEWER write deny / EDITOR create / EDITOR property delete deny / EDITOR final report deny / OWNER delete
+- controlled migration QA records 유지 및 provenance `imported` 보존
+- remote-public-share invalid-token resolve HTTP = 404 `not_found`
+- private RLS helper hardening 복구
+- anon direct table/function privilege 제거
+- temporary `pg_net` E2E extension 제거
+
+### F. 외부 설정/실사용 계정이 있어야 마감되는 항목
+- 실제 운영 OWNER Auth 계정 생성/로그인
+- frontend Auth/Data provider 실제 주입
+- production frontend/public viewer host
+- `AUTH_ADMIN_ALLOWED_ORIGINS`, `PUBLIC_SHARE_ALLOWED_ORIGINS`, `PUBLIC_SHARE_BASE_URL` 실제 운영값
+- authenticated issue → resolve → review → revoke → blocked resolve E2E
+- second-device 실제 browser session E2E
+- Supabase Auth Leaked Password Protection 활성화(대시보드 설정)
 
 ## 3. 실데이터가 있어야 완료할 수 있는 항목
 
