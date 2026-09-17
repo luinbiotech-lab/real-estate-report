@@ -1,6 +1,6 @@
 # remote-auth-admin Edge Function
 
-Status: **PREPARED ONLY / NOT DEPLOYED**
+Status: **DEPLOYED / PRODUCTION CONNECTED**
 
 Deploy only to a dedicated DA:ON real-estate Supabase project. Never deploy to GPS Tracker or Sports AI projects.
 
