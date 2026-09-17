@@ -62,6 +62,12 @@ function parseJsonObject(value: unknown): Record<string, unknown> {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 }
 
+class RemoteShareHttpError extends Error {
+  constructor(readonly statusCode: number, readonly payload: Record<string, unknown>) {
+    super(`REMOTE / PUBLIC 요청 실패 (${statusCode})${typeof payload.error === 'string' ? `: ${payload.error}` : ''}`);
+  }
+}
+
 async function callRemoteShare(body: Record<string, unknown>, authenticated: boolean) {
   const headers = new Headers({ 'Content-Type': 'application/json', apikey: DAON_SUPABASE_PUBLISHABLE_KEY });
   if (authenticated) {
@@ -81,9 +87,7 @@ async function callRemoteShare(body: Record<string, unknown>, authenticated: boo
     try { payload = JSON.parse(raw); } catch { payload = raw; }
   }
   if (!response.ok) {
-    const row = parseJsonObject(payload);
-    const detail = typeof row.error === 'string' ? row.error : typeof row.message === 'string' ? row.message : '';
-    throw new Error(`REMOTE / PUBLIC 요청 실패 (${response.status})${detail ? `: ${detail}` : ''}`);
+    throw new RemoteShareHttpError(response.status, parseJsonObject(payload));
   }
   return payload;
 }
@@ -101,11 +105,19 @@ class SupabaseRemoteExternalShareGateway implements RemoteExternalShareGateway {
     try {
       return parseJsonObject(await callRemoteShare({ action: 'resolve', rawToken }, false)) as unknown as RemoteShareAccessResult;
     } catch (error) {
-      const message = error instanceof Error ? error.message : '';
-      if (message.includes('(404)')) return { status: 'not_found' };
-      if (message.includes('(410)')) {
-        if (message.includes('revoked')) return { status: 'revoked' };
-        if (message.includes('expired')) return { status: 'expired' };
+      if (error instanceof RemoteShareHttpError) {
+        if (error.statusCode === 404) return { status: 'not_found' };
+        if (error.statusCode === 410) {
+          const status = error.payload.status;
+          if (status === 'revoked' || status === 'expired') {
+            return {
+              status,
+              snapshotId: typeof error.payload.snapshotId === 'string' ? error.payload.snapshotId : undefined,
+              propertyId: typeof error.payload.propertyId === 'string' ? error.payload.propertyId : undefined,
+              expiresAt: typeof error.payload.expiresAt === 'string' ? error.payload.expiresAt : undefined,
+            };
+          }
+        }
       }
       throw error;
     }
