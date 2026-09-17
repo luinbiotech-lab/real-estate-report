@@ -333,6 +333,7 @@ async function addReview(body: Json, origin: string | null) {
   if (error || !data) throw new Error('review_note_write_failed');
   return json({
     id: data.id,
+    propertyId: result.row.property_id,
     snapshotId: data.snapshot_id,
     author: data.author_label,
     body: data.body,
