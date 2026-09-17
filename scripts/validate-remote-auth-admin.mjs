@@ -63,7 +63,7 @@ if (!ownerContinuityBlock.includes("target.role === 'owner'")) throw new Error('
 if (!ownerContinuityBlock.includes('activeOwnerCount() <= 1')) throw new Error('마지막 active OWNER count 검증이 필요합니다.');
 
 for (const marker of [
-  'PREPARED ONLY / NOT DEPLOYED',
+  'DEPLOYED / PRODUCTION CONNECTED',
   'supabase functions deploy remote-auth-admin',
   'Do **not** use `--no-verify-jwt`',
   'minimum 32 characters',
@@ -77,6 +77,6 @@ for (const marker of [
 }
 
 if (!text.provider.includes("label: 'REMOTE AUTH'")) throw new Error('Auth provider REMOTE AUTH 경계가 유지되어야 합니다.');
-if (!text.provider.includes("status: 'not_configured'")) throw new Error('실제 backend 미배포 상태는 not_configured로 유지되어야 합니다.');
+if (!text.provider.includes("status: 'ready'")) throw new Error('Production REMOTE AUTH provider는 ready 상태여야 합니다.');
 
 console.log('REMOTE AUTH administration boundary: PASS');
