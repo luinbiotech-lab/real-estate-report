@@ -17,11 +17,11 @@ try {
   for (const text of [
     '사용자 · 권한 관리',
     'LOCAL POLICY READY',
-    'AUTH NOT CONNECTED',
+    'REMOTE AUTH READY',
     'AUTH PROVIDER',
     'LOCAL POLICY',
     'REMOTE AUTH',
-    'NOT CONFIGURED',
+    'READY',
     '인증 세션',
     '사용자 초대',
     'RLS 강제',
@@ -34,7 +34,7 @@ try {
     'VIEWER',
     'ACCESS PROFILES',
     '로컬 소유자',
-    '실제 보안 경계는 부동산 전용 Auth + 서버 RLS 연결 후 강제됩니다',
+    'production Auth 세션과 서버 RLS가 강제합니다',
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/access-management.png`, fullPage: true });
 
@@ -50,7 +50,7 @@ try {
     'SERVER EXPIRY',
     'AUTH ACCESS',
     'SYNCED REVIEW',
-    '현재 실제 remote revoke는 사용할 수 없습니다.',
+    'REMOTE / PUBLIC으로 발급한 URL은 서버에서 실제 revoke할 수 있습니다.',
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/external-share-provider-boundary.png`, fullPage: true });
 
