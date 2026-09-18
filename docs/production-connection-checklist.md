@@ -2,7 +2,7 @@
 
 이 문서는 local-first 구현 완료 후 실제 외부 인프라를 연결할 때의 **Deployment Readiness Package**다. production Supabase/backend가 연결된 이후의 실제 배포·운영 마감 상태를 추적한다.
 
-Last fully verified pre-production baseline: `da7aa931e4eedde9669a11a39942fbca7fb9980f` / GitHub Actions #775 PASS
+Latest automated validation baseline: `9e1d8717bef59a29c150ce905349e6876138b424` / GitHub Actions #818 PASS
 Branch: `feat/daon-master-code-lock`
 
 ## 0. 사전 원칙
@@ -227,14 +227,14 @@ Storage 필수 테스트:
 
 Production release 직전 필수:
 
-- [ ] `package-lock.json` 실제 locked version 확인
-- [ ] SheetJS/vendor/GitHub advisory 재검토
-- [ ] `node scripts/validate-excel-security.mjs` PASS
+- [x] `package-lock.json` 실제 locked version 확인 — `0.20.3`
+- [x] SheetJS/vendor/GitHub advisory 재검토 — 2026-09-18
+- [x] `node scripts/validate-excel-security.mjs` PASS — GitHub Actions #818
 - [ ] 정상 `.xlsx` import 회귀검증
 - [ ] legacy `.xls` import 회귀검증
 - [ ] 비스프레드시트 rename 공격이 parser 전에 거부되는지 확인
 - [ ] 중복/검증후보/숫자/날짜 파싱 회귀검증
-- [ ] `npm audit` 결과와 별개로 CDN tarball advisory 수동 확인
+- [x] `npm audit` 결과와 별개로 CDN tarball advisory 수동 확인 — 2026-09-18
 
 현재 readiness 상태는 `PATCHED_PINNED_REVIEW_AT_RELEASE`가 정상이다. 새 advisory가 locked version에 영향을 주면 Production READY를 중단한다.
 
@@ -310,8 +310,8 @@ Server-only:
 
 다음이 모두 충족되어야 Production READY로 본다.
 
-- [ ] Dedicated real-estate backend confirmed
-- [ ] REMOTE AUTH CONNECTED
+- [x] Dedicated real-estate backend confirmed
+- [x] REMOTE AUTH CONNECTED
 - [x] Property/Data RLS 실제 적용 및 role test PASS
 - [x] Private Storage schema/policy PASS
 - [x] Controlled migration + reconciliation PASS (production QA controlled migration)
@@ -320,13 +320,13 @@ Server-only:
 - [ ] Production frontend host LIVE
 - [ ] Protected backend proxy LIVE
 - [ ] Provider/domain allowlist 완료
-- [ ] Spreadsheet release advisory review PASS
+- [x] Spreadsheet release advisory review PASS — 2026-09-18: SheetJS CE 0.20.3 current recommended; known CVE-2023-30533/CVE-2024-22363 fix floors satisfied
 - [ ] Excel import regression PASS
 - [ ] server secret browser 미노출 확인
-- [ ] Typecheck PASS
-- [ ] Lint PASS
-- [ ] Build PASS
-- [ ] GitHub Actions 전체 PASS
+- [x] Typecheck PASS — GitHub Actions #818
+- [x] Lint PASS — GitHub Actions #818
+- [x] Build PASS — GitHub Actions #818
+- [x] GitHub Actions 전체 PASS — #818 (`9e1d8717bef59a29c150ce905349e6876138b424`)
 - [ ] Production E2E PASS
 
 ## 현재 상태 확인
