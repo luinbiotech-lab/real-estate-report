@@ -1,6 +1,6 @@
 import { remoteAuthGateway } from './authProviderService';
 import { DAON_REMOTE_SHARE_FUNCTION, DAON_SUPABASE_PROJECT_URL, DAON_SUPABASE_PUBLISHABLE_KEY } from './supabaseProductionConfig';
-import type { BuildingReleaseReviewNote, BuildingReleaseShare } from './buildingReleaseCollaborationService';
+import type { BuildingReleaseReviewNote } from './buildingReleaseCollaborationService';
 import type { BuildingReleaseSnapshot } from './buildingReleaseSnapshotService';
 
 export interface RemoteShareIssueRequest {
