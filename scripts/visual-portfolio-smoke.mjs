@@ -29,8 +29,8 @@ try {
     '3D · 도면',
     '사용자 · 권한',
     '엑셀 대량 등록',
-    'AUTH NOT CONNECTED',
-    'REMOTE SHARE NOT CONFIGURED',
+    'AUTH CONNECTED',
+    'REMOTE SHARE READY',
     '물건 관리',
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-operations-hub.png`, fullPage: true });
