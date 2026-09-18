@@ -132,9 +132,9 @@ CI에서는 실제 Blob을 저장한 뒤 `백업 다운로드 → 파일 Preview
 - ACTIVE / EXPIRED / REVOKED 로컬 감사상태
 - 외부 검토 코멘트 기록
 
-### REMOTE / PUBLIC — 아직 미연결
+### REMOTE / PUBLIC — production backend 연결 완료
 
-코드에는 Provider boundary, gateway contract, migration draft가 준비돼 있지만 실제 public URL / 서버 만료 / remote revoke / 인증 접근은 부동산 전용 backend가 연결돼야 동작합니다.
+부동산 전용 `real-estate-report-production` Supabase에 REMOTE / PUBLIC backend와 self-hosted read-only viewer가 연결되어 있습니다. 서버 만료 / remote revoke / review sync 경계가 배포되어 있으며, 실제 운영 OWNER 계정과 signed Snapshot 기반 최종 E2E는 아직 남아 있습니다.
 
 **현재 standalone HTML을 상대에게 전달한 뒤 그 복사본 자체를 원격 삭제하거나 차단할 수 있다고 표시하지 않습니다.**
 
@@ -143,12 +143,12 @@ CI에서는 실제 Blob을 저장한 뒤 `백업 다운로드 → 파일 Preview
 ## 사용자 · 권한
 
 - `LOCAL POLICY = READY`
-- `REMOTE AUTH = NOT CONFIGURED`
+- `REMOTE AUTH = CONNECTED`
 - owner / admin / editor / viewer 역할표 유지
-- Remote Auth gateway contract 준비
+- Remote Auth gateway + production Supabase 연결 완료
 - `profiles` / role / owner-only RLS migration draft 준비
 
-실제 다중 사용자 로그인, 세션, RLS, owner-only administration은 부동산 전용 Auth backend가 연결될 때 활성화합니다.
+부동산 전용 Auth backend와 RLS는 연결되어 QA OWNER / EDITOR / VIEWER 역할 검증을 통과했습니다. 실제 운영 OWNER 로그인, owner-only administration, second-device browser session 검증은 최종 운영 E2E에서 마감합니다.
 
 ## 방배동 815-11 정책
 
@@ -204,11 +204,11 @@ npm run readiness:prod
 
 남은 외부 조건:
 
-- 부동산 전용 backend/Auth 프로젝트
-- authenticated session / RLS
+- 실제 운영 OWNER Auth 계정 / authenticated session
+- actual second-device browser E2E
 - production map proxy / secret provisioning
-- public share URL host
-- server-side expiry/revoke/review sync
+- production frontend domain 및 Provider allowlist
+- signed Snapshot REMOTE/PUBLIC issue → resolve → review → revoke E2E
 - production frontend domain 및 Provider allowlist
 - 실제 현장 미디어와 사람 Verification
 
