@@ -44,7 +44,7 @@ try {
     'LOCAL / OFFLINE',
     'READY',
     'REMOTE / PUBLIC',
-    'NOT CONFIGURED',
+    'REMOTE / PUBLIC Provider는 READY입니다.',
     'PUBLIC URL',
     'REMOTE REVOKE',
     'SERVER EXPIRY',
