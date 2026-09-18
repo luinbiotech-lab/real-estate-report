@@ -98,7 +98,8 @@ for (const marker of [
   'createReportSnapshot',
   'getCompanySettings',
   'saveCompanySettings',
-  'REMOTE DATA Provider가 아직 연결되지 않았습니다',
+  'createSupabaseRemoteDataGateway(remoteDataConfig)',
+  'createSupabaseRemoteAssetStorageGateway(remoteDataConfig)',
 ]) {
   if (!text.gateway.includes(marker)) throw new Error(`Remote Data Gateway contract 누락: ${marker}`);
 }
