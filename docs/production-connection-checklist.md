@@ -139,7 +139,7 @@ Storage 필수 테스트:
 - [ ] inline binary/data URL blocker = 0
 - [ ] Auth CONNECTED
 - [ ] RLS/Storage 실제 적용 완료
-- [ ] 테스트 사용자 role matrix PASS
+- [x] 테스트 사용자 role matrix PASS
 
 실행 정책:
 
@@ -155,6 +155,14 @@ Storage 필수 테스트:
 10. second-device 확인
 
 위 순서가 PASS하기 전 전체 물건 migration을 실행하지 않는다.
+
+2026-09-18 production QA controlled migration E2E:
+- [x] 테스트 Property 1건 write/read-back
+- [x] modular object 1건 write/read-back
+- [x] imported provenance 유지 / verified 자동승격 없음
+- [x] remote count reconciliation PASS
+- [x] 독립 DB session A → B → A persistence round trip PASS
+- [x] 검증 후 QA migration 데이터 전량 삭제 및 baseline count 복구
 
 ## 5. Remote / Public External Share
 
@@ -191,11 +199,19 @@ Storage 필수 테스트:
 - [ ] 실제 public URL 발급
 - [ ] valid signed snapshot resolve
 - [ ] tampered snapshot issue 차단
-- [ ] expiry 후 접근 차단
-- [ ] revoke 즉시 외부 접근 차단
-- [ ] download policy 강제
-- [ ] review note 서버 동기화
-- [ ] raw token DB/audit 비노출
+- [x] expiry 후 접근 차단 — production HTTP 410 `expired`
+- [x] revoke 즉시 외부 접근 차단 — production HTTP 410 `revoked`
+- [x] download policy 강제 — resolve 응답 `allowDownload=false` 확인
+- [x] review note 서버 동기화 — production HTTP 201 + DB row 1 확인
+- [x] raw token DB/audit 비노출 — raw match 0 / SHA-256 hash match 1
+
+추가 acceptance:
+- [x] anonymous invalid token 404
+- [x] unauthenticated revoke 401 `authentication_required`
+- [x] revoked token review write 410 차단
+- [x] self-hosted viewer HTTP 200 + READ ONLY + noindex 확인
+- [ ] real OWNER JWT로 `issue/list/revoke` management path 최종 acceptance
+- [ ] real OWNER JWT로 signed snapshot issue / tampered snapshot rejection 네트워크 acceptance
 
 ## 6. Spreadsheet Import Security
 
@@ -298,8 +314,8 @@ Server-only:
 - [ ] REMOTE AUTH CONNECTED
 - [x] Property/Data RLS 실제 적용 및 role test PASS
 - [x] Private Storage schema/policy PASS
-- [ ] Controlled migration + reconciliation PASS
-- [ ] Second-device persistence PASS
+- [x] Controlled migration + reconciliation PASS (production QA controlled migration)
+- [x] Independent-session persistence PASS (DB-session equivalent; physical second-device browser acceptance remains)
 - [x] REMOTE / PUBLIC CONNECTED
 - [ ] Production frontend host LIVE
 - [ ] Protected backend proxy LIVE
@@ -329,7 +345,8 @@ npm run readiness:prod
 - REMOTE / PUBLIC server + self-hosted viewer = CONNECTED
 - QA OWNER/EDITOR/VIEWER RLS E2E = PASS
 - real operator OWNER account = REQUIRED
-- actual second-device browser E2E = REQUIRED
+- independent-session persistence E2E = PASS
+- actual second-device browser acceptance = REQUIRED
 - production frontend/proxy = MISSING EXTERNAL INFRA
 - provider/domain allowlist = CHECK REQUIRED
 - Supabase Auth leaked-password protection = MANUAL ENABLE REQUIRED
