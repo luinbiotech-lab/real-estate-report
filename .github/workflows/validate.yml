@@ -1,0 +1,158 @@
+name: Validate
+
+on:
+  push:
+    branches:
+      - feat/daon-master-code-lock
+  workflow_dispatch:
+
+concurrency:
+  group: validate-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Validate DAON report masters
+        run: npm run validate:masters
+
+      - name: Validate report pipeline
+        run: npm run validate:pipeline
+
+      - name: Validate Agent Foundation
+        run: npm run validate:agents
+
+      - name: Validate modular Agent architecture
+        run: node scripts/validate-agent-modularity.mjs
+
+      - name: Validate Digital Twin building flow
+        run: npm run validate:twin-building
+
+      - name: Validate platform workflows
+        run: npm run validate:platform
+
+      - name: Validate access control policy
+        run: node scripts/validate-access-control.mjs
+
+      - name: Validate portfolio operations hub
+        run: node scripts/validate-portfolio-hub.mjs
+
+      - name: Validate property readiness center
+        run: node scripts/validate-readiness-center.mjs
+
+      - name: Validate company settings policy
+        run: node scripts/validate-company-settings.mjs
+
+      - name: Validate local backup and restore
+        run: node scripts/validate-local-backup.mjs
+
+      - name: Validate Excel import security boundary
+        run: node scripts/validate-excel-security.mjs
+
+      - name: Validate production readiness boundary
+        run: node scripts/validate-production-readiness.mjs
+
+      - name: Validate production connection runbook
+        run: node scripts/validate-production-runbook.mjs
+
+      - name: Validate production deployment checklist
+        run: node scripts/validate-production-connection-checklist.mjs
+
+      - name: Validate remote public share Edge boundary
+        run: node scripts/validate-remote-public-share.mjs
+
+      - name: Validate remote auth administration boundary
+        run: node scripts/validate-remote-auth-admin.mjs
+
+      - name: Validate property data persistence and RLS boundary
+        run: node scripts/validate-property-data-rls.mjs
+
+      - name: Validate remote migration dry run planner
+        run: node scripts/validate-remote-migration-plan.mjs
+
+      - name: Validate remote migration local dry run executor
+        run: node scripts/validate-remote-migration-dry-run.mjs
+
+      - name: Validate migration readiness review UI boundary
+        run: node scripts/validate-remote-migration-readiness-ui.mjs
+
+      - name: Validate prepared Supabase remote data adapter
+        run: node scripts/validate-supabase-remote-data-adapter.mjs
+
+      - name: Validate prepared Supabase remote auth adapter
+        run: node scripts/validate-supabase-remote-auth-adapter.mjs
+
+      - name: Validate actual geometry mutation flow
+        run: node scripts/validate-geometry-mutation.mjs
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Build
+        run: npm run build
+
+      - name: Install Playwright for rendered QA
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Start Vite QA server
+        run: |
+          npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-vite.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4174/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/daon-vite.log
+          exit 1
+
+      - name: Rendered Agent and Spatial smoke QA
+        run: node scripts/visual-agent-smoke.mjs
+
+      - name: Rendered access and share boundary QA
+        run: node scripts/visual-access-smoke.mjs
+
+      - name: Rendered portfolio hub QA
+        run: node scripts/visual-portfolio-smoke.mjs
+
+      - name: Rendered readiness center QA
+        run: node scripts/visual-readiness-smoke.mjs
+
+      - name: Rendered company settings QA
+        run: node scripts/visual-settings-smoke.mjs
+
+      - name: Rendered local backup center QA
+        run: node scripts/visual-backup-smoke.mjs
+
+      - name: Rendered migration readiness dry run QA
+        run: node scripts/visual-migration-readiness-smoke.mjs
+
+      - name: Rendered report smoke QA
+        run: node scripts/visual-report-smoke.mjs
+
+      - name: Upload QA screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: daon-qa-${{ github.run_number }}
+          path: |
+            artifacts/report-qa
+            artifacts/agent-qa
+          if-no-files-found: ignore
