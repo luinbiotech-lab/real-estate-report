@@ -23,9 +23,9 @@ for (const label of ['Intake · Verification', '임대 · 수익', '검토 이�
 for (const path of ['/bulk-intake', '/income', '/review-history', '/external-shares', '/report-history', '/digital-twin-intake', '/access', '/import']) {
   if (!text.hub.includes(`path: '${path}'`)) throw new Error(`Portfolio Hub route 누락: ${path}`);
 }
-if (!text.hub.includes('AUTH NOT CONNECTED') || !text.hub.includes('REMOTE SHARE NOT CONFIGURED')) throw new Error('첫 화면은 Auth/Remote Share 미연결 경계를 명확히 표시해야 합니다.');
+if (!text.hub.includes('AUTH CONNECTED') || !text.hub.includes('REMOTE SHARE READY')) throw new Error('첫 화면은 Auth/Remote Share production 연결 상태를 명확히 표시해야 합니다.');
 if (!text.hub.includes('property.address?.trim()') || !text.hub.includes('property.landAreaSqm > 0') || !text.hub.includes('property.totalFloorAreaSqm > 0') || !text.hub.includes('property.managerName?.trim()')) throw new Error('기본정보 입력완료 KPI는 실제 Property 필드 기준이어야 합니다.');
-if (!text.access.includes('AUTH_BACKEND_CONNECTED = false')) throw new Error('Auth 상태 기준이 access service에서 제공되어야 합니다.');
-if (!text.shareProvider.includes("availability: 'not_configured'")) throw new Error('Remote Share 상태 기준이 provider service에서 제공되어야 합니다.');
+if (!text.access.includes('AUTH_BACKEND_CONNECTED = true')) throw new Error('Auth 상태 기준이 production connected 상태여야 합니다.');
+if (!text.shareProvider.includes("availability: 'ready'")) throw new Error('Remote Share 상태 기준이 production ready 상태여야 합니다.');
 
 console.log('Portfolio operations hub integrity: PASS');
