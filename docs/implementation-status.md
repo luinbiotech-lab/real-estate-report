@@ -1,6 +1,6 @@
 # DA:ON Real Estate Platform — Implementation Status
 
-Updated baseline: 2026-09-17
+Updated baseline: 2026-09-18
 Verified baseline: `da7aa931e4eedde9669a11a39942fbca7fb9980f` / GitHub Actions #775 PASS
 Branch: `feat/daon-master-code-lock`
 
@@ -220,13 +220,20 @@ Branch: `feat/daon-master-code-lock`
 - QA roles: OWNER / EDITOR / VIEWER
 - RLS E2E PASS: VIEWER read / VIEWER write deny / EDITOR create / EDITOR property delete deny / EDITOR final report deny / OWNER delete
 - controlled migration QA records 유지 및 provenance `imported` 보존
+- `production_rls_and_share_hardening` migration 적용
+- RLS auth init-plan 성능 경고 13건 해소
+- FK covering index 14건 보완
+- external-share direct anon/authenticated access restrictive deny 정책 추가
 - remote-public-share invalid-token resolve HTTP = 404 `not_found`
 - private RLS helper hardening 복구
 - anon direct table/function privilege 제거
+- private Storage `public=false` + object policy 4개 재검증 PASS
+- OWNER / EDITOR / VIEWER DB role matrix 재검증 PASS
 - temporary `pg_net` E2E extension 제거
 
 ### F. 외부 설정/실사용 계정이 있어야 마감되는 항목
 - 실제 운영 OWNER Auth 계정 생성/로그인
+- Local Backup / Migration Manifest / Handoff Bundle 확보 후 실데이터 controlled migration
 - frontend Auth/Data provider 실제 주입
 - production frontend/public viewer host
 - `AUTH_ADMIN_ALLOWED_ORIGINS`, `PUBLIC_SHARE_ALLOWED_ORIGINS`, `PUBLIC_SHARE_BASE_URL` 실제 운영값
