@@ -220,11 +220,16 @@ Branch: `feat/daon-master-code-lock`
 - QA roles: OWNER / EDITOR / VIEWER
 - RLS E2E PASS: VIEWER read / VIEWER write deny / EDITOR create / EDITOR property delete deny / EDITOR final report deny / OWNER delete
 - controlled migration QA records 유지 및 provenance `imported` 보존
+- production QA controlled migration 재검증 PASS: Property 1 + modular object 1 write/read-back/reconciliation, 검증 후 QA 데이터 삭제
+- independent authenticated DB-session round trip PASS: session A write → session B read/update → session A read-back
 - `production_rls_and_share_hardening` migration 적용
 - RLS auth init-plan 성능 경고 13건 해소
 - FK covering index 14건 보완
 - external-share direct anon/authenticated access restrictive deny 정책 추가
 - remote-public-share invalid-token resolve HTTP = 404 `not_found`
+- remote-public-share public-path production HTTP E2E PASS: active resolve 200 / review 201 / unauthenticated revoke 401 / revoked resolve+review 410 / expired resolve 410
+- self-hosted public viewer HTTP 200 + READ-ONLY marker + noindex/nofollow/noarchive 확인
+- remote share raw token DB 미저장 확인: raw token match 0 / SHA-256 token_hash match 1 / anon direct grant 0
 - private RLS helper hardening 복구
 - anon direct table/function privilege 제거
 - private Storage `public=false` + object policy 4개 재검증 PASS
@@ -237,8 +242,9 @@ Branch: `feat/daon-master-code-lock`
 - frontend Auth/Data provider 실제 주입
 - production frontend/public viewer host
 - `AUTH_ADMIN_ALLOWED_ORIGINS`, `PUBLIC_SHARE_ALLOWED_ORIGINS`, `PUBLIC_SHARE_BASE_URL` 실제 운영값
-- authenticated issue → resolve → review → revoke → blocked resolve E2E
-- second-device 실제 browser session E2E
+- real OWNER JWT 기반 authenticated issue/list/revoke acceptance E2E
+- signed Snapshot issue/tamper rejection의 real OWNER JWT 네트워크 acceptance
+- second-device 실제 browser session E2E (server-side independent-session round trip은 PASS)
 - Supabase Auth Leaked Password Protection 활성화(대시보드 설정)
 
 ## 3. 실데이터가 있어야 완료할 수 있는 항목
