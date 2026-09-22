@@ -1,5 +1,5 @@
 import { CloudOffRounded, DownloadRounded, FactCheckRounded, Inventory2Rounded, PlayArrowRounded, ShieldRounded, WarningAmberRounded } from '@mui/icons-material';
-import { Alert, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
+import { Alert, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import type { Property, Settings } from '../types';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -109,8 +109,8 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <TextField select size="small" label="이관 대상 물건" value={targetPropertyId} onChange={(event) => selectTargetProperty(event.target.value)} sx={{ minWidth: 300 }} disabled={busy || executing}>
-          <option value="" disabled>대상 선택</option>
-          {properties.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.address}</option>)}
+          <MenuItem value="" disabled>대상 선택</MenuItem>
+          {properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}
         </TextField>
         <Button variant="contained" startIcon={busy ? <CircularProgress size={17} color="inherit" /> : <PlayArrowRounded />} disabled={busy || executing || !targetPropertyId} onClick={() => void runDryRun()}>Dry-Run 실행</Button>
         <Button variant="outlined" startIcon={<DownloadRounded />} disabled={!plan || busy} onClick={() => plan && remoteMigrationDryRunService.download(plan)}>Manifest JSON 다운로드</Button>
