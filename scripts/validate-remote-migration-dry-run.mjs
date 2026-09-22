@@ -20,7 +20,6 @@ for (const marker of [
   'serializeRemoteMigrationPlan',
   'downloadRemoteMigrationPlan',
   'daon-remote-migration-dry-run-',
-  'settings: options.companySettings',
   'options.propertyIds',
   'options.includeCompanySettings',
   'settings: options.includeCompanySettings ? options.companySettings : undefined',
