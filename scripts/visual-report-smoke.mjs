@@ -154,14 +154,15 @@ try {
   await page.screenshot({ path: `${OUT_DIR}/daon-1p.png`, fullPage: true });
 
   await page.goto(`${BASE_URL}/document/report/daon-bangbae-815-11`, { waitUntil: 'networkidle' });
-  await page.waitForSelector('.daon-detail-master', { timeout: 30_000 });
-  await waitForQaImages(page, '.daon-detail-master', 1);
-  const sevenPage = await page.evaluate(() => {
-    const master = document.querySelector('.daon-detail-master');
-    const images = [...document.querySelectorAll('.daon-detail-master img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
-    const pages = [...document.querySelectorAll('.daon-detail-page')].map((node) => {
+  await page.waitForSelector('.daon-professional-report-master', { timeout: 30_000 });
+  await waitForQaImages(page, '.daon-professional-report-master', 2);
+  const professional = await page.evaluate(() => {
+    const master = document.querySelector('.daon-professional-report-master');
+    const images = [...master.querySelectorAll('img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
+    const pages = [...master.querySelectorAll('.daon-frame-page, .daon-core-page')].map((node) => {
       const el = node;
       return {
+        masterPage: el.getAttribute('data-master-page') || '',
         className: el.className,
         scrollWidth: el.scrollWidth,
         scrollHeight: el.scrollHeight,
@@ -173,27 +174,32 @@ try {
     return {
       templateId: master?.getAttribute('data-template-id'),
       templateVersion: master?.getAttribute('data-template-version'),
+      visualMaster: master?.getAttribute('data-visual-master'),
       pages,
       images,
       text: master?.textContent || '',
     };
   });
 
-  assert(sevenPage.templateId === 'DAON_DETAIL_7P_MASTER', `7P template id mismatch: ${sevenPage.templateId}`);
-  assert(sevenPage.templateVersion === 'daon-detail-7p-v2', `7P template version mismatch: ${sevenPage.templateVersion}`);
-  assert(sevenPage.pages.length === 7, `7P expected 7 pages, got ${sevenPage.pages.length}`);
-  for (const [index, item] of sevenPage.pages.entries()) {
-    assert(item.scrollHeight <= item.clientHeight + 2, `7P page ${index + 1} vertical overflow: ${item.scrollHeight}/${item.clientHeight}`);
-    assert(item.scrollWidth <= item.clientWidth + 2, `7P page ${index + 1} horizontal overflow: ${item.scrollWidth}/${item.clientWidth}`);
+  assert(professional.templateId === 'DAON_DETAIL_7P_MASTER', `Professional template id mismatch: ${professional.templateId}`);
+  assert(professional.templateVersion === 'daon-professional-master-v3', `Professional template version mismatch: ${professional.templateVersion}`);
+  assert(professional.visualMaster === 'DAON_VISUAL_MASTER_2026_09_22', `Visual master mismatch: ${professional.visualMaster}`);
+  const pageNames = professional.pages.map((item) => item.masterPage);
+  assert(pageNames[0] === 'opening', `Opening page missing: ${pageNames.join(',')}`);
+  assert(pageNames.includes('property-summary'), `Property summary page missing: ${pageNames.join(',')}`);
+  assert(pageNames.includes('investment-analysis'), `Investment analysis page missing: ${pageNames.join(',')}`);
+  assert(pageNames.at(-1) === 'closing', `Closing page missing: ${pageNames.join(',')}`);
+  for (const [index, item] of professional.pages.entries()) {
+    assert(item.scrollHeight <= item.clientHeight + 2, `Professional page ${index + 1} vertical overflow: ${item.scrollHeight}/${item.clientHeight}`);
+    assert(item.scrollWidth <= item.clientWidth + 2, `Professional page ${index + 1} horizontal overflow: ${item.scrollWidth}/${item.clientWidth}`);
   }
-  assert(sevenPage.images.length > 0 && sevenPage.images.every((image) => image.width > 0 && image.height > 0), '7P QA fixture image slots contain broken images');
-  assert(sevenPage.images.every((image) => image.src.startsWith('/__qa__/')), '7P unexpected production media dependency in rendered QA');
-  assert(sevenPage.text.includes('공부상 주차'), '7P 공부상 주차 semantics missing');
-  assert(sevenPage.text.includes('현장 주차'), '7P 현장 주차 semantics missing');
-  assert(!sevenPage.text.includes('BANGBAE-DONG PREMIUM ASSET'), '7P forbidden Bangbae-only legacy copy visible');
-  await page.screenshot({ path: `${OUT_DIR}/daon-7p.png`, fullPage: true });
+  assert(professional.images.length > 0 && professional.images.every((image) => image.width > 0 && image.height > 0), 'Professional MASTER contains broken images');
+  assert(professional.images.every((image) => image.src.startsWith('/__qa__/')), 'Professional MASTER has unexpected production media dependency in rendered QA');
+  assert(professional.text.includes('DAON 소개'), 'Professional MASTER closing content missing');
+  assert(!professional.text.includes('확인 필요'), 'Professional MASTER must omit empty-value placeholders');
+  await page.screenshot({ path: `${OUT_DIR}/daon-professional-master.png`, fullPage: true });
 
-  console.log('Rendered DA:ON report smoke QA: PASS');
+  console.log('Rendered DA:ON professional report smoke QA: PASS');
 } finally {
   await browser.close();
 }
