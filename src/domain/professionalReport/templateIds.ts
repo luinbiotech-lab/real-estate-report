@@ -3,11 +3,12 @@ export const DAON_DETAIL_MASTER_TEMPLATE_ID = 'DAON_DETAIL_7P_MASTER' as const;
 export const LEGACY_PROFESSIONAL_TEMPLATE_ID = 'professional-v1' as const;
 
 export const DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION = 'daon-1p-v2' as const;
-export const DAON_DETAIL_MASTER_TEMPLATE_VERSION = 'daon-detail-7p-v2' as const;
+export const DAON_DETAIL_MASTER_TEMPLATE_VERSION = 'daon-professional-master-v3' as const;
 export const LEGACY_PROFESSIONAL_TEMPLATE_VERSION = 'professional-v1' as const;
 
 const COMPATIBLE_DAON_DETAIL_VERSIONS = new Set([
   'daon-detail-7p-v1',
+  'daon-detail-7p-v2',
   DAON_DETAIL_MASTER_TEMPLATE_VERSION,
   DAON_DETAIL_MASTER_TEMPLATE_ID,
 ]);
