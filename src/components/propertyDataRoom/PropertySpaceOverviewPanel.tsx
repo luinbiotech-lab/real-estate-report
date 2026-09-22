@@ -38,7 +38,7 @@ export default function PropertySpaceOverviewPanel({ spaces, sources }: { spaces
         <span style={{ fontSize: 13 }}>{formatArea(space.areaSqm)}</span>
         <Chip size="small" color={space.verificationStatus === 'verified' || space.verificationStatus === 'confirmed' ? 'success' : space.verificationStatus === 'imported' ? 'info' : 'warning'} variant="outlined" label={VERIFICATION_LABELS[space.verificationStatus]} />
       </div>)}
-      <div style={{ marginTop: 10, padding: '10px 12px', background: '#fbfcfe', borderRadius: 8, color: '#667085', fontSize: 12, display: 'flex', gap: 8, alignItems: 'flex-start' }}><DescriptionOutlined fontSize="small" /> <span><strong style={{ color: '#344054' }}>출처</strong> {sourceNames.length ? sourceNames.join(' · ') : '출처 연결 대기'}<br />공부상 용도와 현장 실제 이용상태는 별도 provenance로 관리하며, imported 상태를 임의로 verified로 승격하지 않습니다.</span></div>
+      <div style={{ marginTop: 10, padding: '10px 12px', background: '#fbfcfe', borderRadius: 8, color: '#667085', fontSize: 12, display: 'flex', gap: 8, alignItems: 'flex-start' }}><DescriptionOutlined fontSize="small" /> <span><strong style={{ color: '#344054' }}>출처</strong> {sourceNames.length ? sourceNames.join(' · ') : '출처 연결 대기'}<br />공부상 용도와 현장 실제 이용상태는 별도 provenance로 관리하며, 원본 문서 대조가 완료된 항목만 verified로 관리합니다.</span></div>
     </div>}
   </section>;
 }
