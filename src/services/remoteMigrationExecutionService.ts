@@ -37,8 +37,12 @@ export interface RemoteMigrationExecutionResult {
     remoteObjectsPresent: number;
     expectedAssets: number;
     remoteAssetsPresent: number;
+    expectedVerificationCandidates: number;
+    remoteVerificationCandidatesPresent: number;
     expectedVerifications: number;
     remoteVerificationsPresent: number;
+    expectedReportSnapshots: number;
+    remoteReportSnapshotsPresent: number;
     passed: boolean;
   };
 }
@@ -171,7 +175,9 @@ export async function executeRemoteMigration(
   const remoteProperties = await remoteDataGateway.listProperties();
   let remoteObjectCount = 0;
   let remoteAssetCount = 0;
+  let remoteVerificationCandidateCount = 0;
   let remoteVerificationCount = 0;
+  let remoteReportSnapshotCount = 0;
   for (const propertyId of propertyIds) {
     remoteObjectCount += (await remoteDataGateway.listObjects(propertyId)).filter((item) =>
       plan.objects.some((expected) => expected.objectType === item.objectType && expected.id === item.id)
@@ -179,8 +185,14 @@ export async function executeRemoteMigration(
     remoteAssetCount += (await remoteDataGateway.listAssets(propertyId)).filter((item) =>
       plan.assets.some((expected) => expected.resourceType === item.resourceType && expected.id === item.id)
     ).length;
+    remoteVerificationCandidateCount += (await remoteDataGateway.listVerificationCandidates(propertyId)).filter((item) =>
+      plan.verificationCandidates.some((expected) => expected.candidate.id === item.id)
+    ).length;
     remoteVerificationCount += (await remoteDataGateway.listVerifications(propertyId)).filter((item) =>
       plan.verifications.some((expected) => expected.verification.id === item.id)
+    ).length;
+    remoteReportSnapshotCount += (await remoteDataGateway.listReportSnapshots(propertyId)).filter((item) =>
+      plan.reportSnapshots.some((expected) => expected.snapshot.id === item.id)
     ).length;
   }
   const remotePropertyIds = new Set(remoteProperties.map((property) => property.id));
@@ -192,13 +204,19 @@ export async function executeRemoteMigration(
     remoteObjectsPresent: remoteObjectCount,
     expectedAssets: plan.assets.length,
     remoteAssetsPresent: remoteAssetCount,
+    expectedVerificationCandidates: plan.verificationCandidates.length,
+    remoteVerificationCandidatesPresent: remoteVerificationCandidateCount,
     expectedVerifications: plan.verifications.length,
     remoteVerificationsPresent: remoteVerificationCount,
+    expectedReportSnapshots: plan.reportSnapshots.length,
+    remoteReportSnapshotsPresent: remoteReportSnapshotCount,
     passed:
       remotePropertiesPresent === plan.properties.length &&
       remoteObjectCount === plan.objects.length &&
       remoteAssetCount === plan.assets.length &&
-      remoteVerificationCount === plan.verifications.length,
+      remoteVerificationCandidateCount === plan.verificationCandidates.length &&
+      remoteVerificationCount === plan.verifications.length &&
+      remoteReportSnapshotCount === plan.reportSnapshots.length,
   };
 
   if (!reconciliation.passed) {
