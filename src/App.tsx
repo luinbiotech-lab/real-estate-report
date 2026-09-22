@@ -32,6 +32,7 @@ import PropertyDataRoomPage from './pages/PropertyDataRoomPage';
 import ProfessionalReportSnapshotPage from './pages/ProfessionalReportSnapshotPage';
 import ReportHistoryPage from './pages/ReportHistoryPage';
 import { bangbae81511DataSeedService } from './services/bangbae81511DataSeedService';
+import { streetViewProvenanceService } from './services/streetViewProvenanceService';
 
 const DAON_MANAGER = '김은미 대표 / 공인중개사';
 const DAON_PHONE = '010 9953 1270';
@@ -91,6 +92,8 @@ export default function App() {
       if (JSON.stringify(normalizedBangbae) !== JSON.stringify(existingBangbae)) await propertyRepository.update({ ...normalizedBangbae, updatedAt: new Date().toISOString() });
     }
     await bangbae81511DataSeedService.ensure();
+    const currentBangbae = await propertyRepository.getById(bangbae81511.id);
+    if (currentBangbae) await streetViewProvenanceService.ensure(currentBangbae);
     const stored = await settingsRepository.get();
     const normalizedSettings: Settings = stored?.companyName === '에셋브리프 부동산중개'
       ? defaults
