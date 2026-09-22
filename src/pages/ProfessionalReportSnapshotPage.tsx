@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
-import { DaonDetail7PageMaster } from '../components/professionalReport/DaonDetail7PageMaster';
+import { DaonProfessionalReportMaster } from '../components/professionalReport/DaonProfessionalReportMaster';
 import { reportMediaCategoryAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
@@ -12,6 +12,7 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { reportSnapshotService } from '../services/reportEngine';
 import '../professional-report.css';
 import '../daon-detail-master.css';
+import '../daon-report-frame.css';
 import '../daon-master-refinement.css';
 
 function isViewModel(value: unknown): value is ProfessionalReportViewModel {
@@ -42,7 +43,7 @@ export default function ProfessionalReportSnapshotPage() {
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
-  const print = useReactToPrint({ contentRef, documentTitle: snapshot ? `DAON_Professional_Report_v${snapshot.reportVersion}` : 'DAON_Professional_Report' });
+  const print = useReactToPrint({ contentRef, documentTitle: snapshot ? `DAON_Professional_Report_MASTER_v${snapshot.reportVersion}` : 'DAON_Professional_Report_MASTER' });
 
   useEffect(() => {
     propertyDataRoomRepository.getReportSnapshot(snapshotId).then((value) => {
@@ -99,11 +100,11 @@ export default function ProfessionalReportSnapshotPage() {
     },
   });
   const reportReady = model.dataQuality.reportReady;
-  const report = <DaonDetail7PageMaster snapshot={snapshot} model={model} />;
+  const report = <DaonProfessionalReportMaster snapshot={snapshot} model={model} />;
 
   return <main className="professional-report-shell">
     <nav className="professional-report-toolbar" aria-label="Professional Report 작업">
-      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON_DETAIL_7P_MASTER · 동적 Snapshot</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : reportReady ? '확정 가능' : '검증 필요'} color={snapshot.status === 'ready' ? 'success' : reportReady ? 'primary' : 'warning'} /></div>
+      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON PROFESSIONAL MASTER · OPENING + DETAIL + CLOSING</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : reportReady ? '확정 가능' : '검증 필요'} color={snapshot.status === 'ready' ? 'success' : reportReady ? 'primary' : 'warning'} /></div>
       <div>
         {snapshot.status === 'draft' && <Button startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? '재생성 중…' : '최신 데이터로 다시 생성'}</Button>}
         {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !reportReady} onClick={markReady}>보고서 확정</Button>}
