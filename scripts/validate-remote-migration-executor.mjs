@@ -26,6 +26,8 @@ for (const marker of [
   'existingCandidates.has',
   'existingVerifications.has',
   'existingSnapshots.has',
+  'remoteVerificationCandidatesPresent',
+  'remoteReportSnapshotsPresent',
   'reconciliation.passed',
 ]) {
   if (!text.executor.includes(marker)) throw new Error(`Controlled migration execution gate 누락: ${marker}`);
