@@ -8,12 +8,18 @@ const BUILDING_SOURCE_NAME = '방배동 815-11 건축물대장';
 const BUILDING_SOURCE_REFERENCE = '방배동 815-11 건축물대장.pdf';
 const COMPARABLE_SOURCE_ID = `market-comparables:${PROPERTY_ID}`;
 
+const BUILDING_SOURCE_DATE = '2026-09-02';
+const BUILDING_ID = '2120041230002444';
+const BUILDING_UNIQUE_NO = '1165010100-1-08150011';
+const BUILDING_ROAD_ADDRESS = '서울특별시 서초구 동광로18길 7 (방배동)';
+
 const floorSeed = [
-  { floor: '3F', name: '주택', spaceType: 'residential' as const, areaSqm: 81.98 },
-  { floor: '2F', name: '주택', spaceType: 'residential' as const, areaSqm: 81.98 },
-  { floor: '1F', name: '제2종근린생활시설(부동산중개업소) + 점포', spaceType: 'retail' as const, areaSqm: 81.98 },
-  { floor: 'B1', name: '다가구용단독주택(1가구)', spaceType: 'residential' as const, areaSqm: 103.14 },
-] satisfies Array<Pick<PropertySpace, 'floor' | 'name' | 'spaceType' | 'areaSqm'>>;
+  { key: '3f', floor: '3F', name: '주택', spaceType: 'residential' as const, areaSqm: 81.98 },
+  { key: '2f', floor: '2F', name: '주택', spaceType: 'residential' as const, areaSqm: 81.98 },
+  { key: '1f', floor: '1F', name: '제2종근린생활시설(부동산중개업소)', spaceType: 'retail' as const, areaSqm: 40.99 },
+  { key: '1f-shop', floor: '1F', name: '점포', spaceType: 'retail' as const, areaSqm: 40.99 },
+  { key: 'b1', floor: 'B1', name: '다가구용단독주택(1가구)', spaceType: 'residential' as const, areaSqm: 103.14 },
+] satisfies Array<Pick<PropertySpace, 'floor' | 'name' | 'spaceType' | 'areaSqm'> & { key: string }>;
 
 const comparableSeed: ComparableTransactionInput[] = [
   { label: '방배동 811-20', salePrice: 4_500_000_000, landAreaPyeong: 56.29, landUnitPrice: 79_050_000, approvalYear: 1986, tradeDate: '2025-11-25' },
@@ -24,8 +30,8 @@ const comparableSeed: ComparableTransactionInput[] = [
   { label: '방배동 448-37', salePrice: 5_800_000_000, landAreaPyeong: 66, landUnitPrice: 87_880_000, approvalYear: 1987, tradeDate: '2026-02-13' },
 ];
 
-function spaceId(floor: string) {
-  return `bangbae-815-11-space-${floor.toLowerCase()}`;
+function spaceId(key: string) {
+  return `bangbae-815-11-space-${key}`;
 }
 
 function floorFieldKey(id: string) {
@@ -42,63 +48,76 @@ export const bangbae81511DataSeedService = {
     const now = new Date().toISOString();
 
     for (const seed of floorSeed) {
-      const existingFloor = spaces.some((space) => String(space.floor || '').toUpperCase() === seed.floor);
-      if (existingFloor) continue;
-
-      const id = spaceId(seed.floor);
+      const id = spaceId(seed.key);
       const fieldKey = floorFieldKey(id);
+      const existingSpace = spaces.find((space) => space.id === id);
+      const existingSource = sources.find((item) => item.id === `${BUILDING_SOURCE_ID}-${seed.key}`);
+      const existingVerification = verifications.find((item) => item.id === `verification:${id}`);
       const space: PropertySpace = {
+        ...existingSpace,
         id,
         propertyId: PROPERTY_ID,
         name: seed.name,
         spaceType: seed.spaceType,
         floor: seed.floor,
         areaSqm: seed.areaSqm,
-        currentCondition: '',
-        recommendedUse: seed.name,
+        currentCondition: existingSpace?.currentCondition ?? '',
+        recommendedUse: existingSpace?.recommendedUse || seed.name,
         sourceType: 'manual',
-        verificationStatus: 'imported',
-        createdAt: now,
+        verificationStatus: 'verified',
+        createdAt: existingSpace?.createdAt ?? now,
         updatedAt: now,
       };
       const source: PropertyDataSource = {
-        id: `${BUILDING_SOURCE_ID}-${seed.floor.toLowerCase()}`,
+        id: `${BUILDING_SOURCE_ID}-${seed.key}`,
         propertyId: PROPERTY_ID,
         fieldKey,
         resourceType: 'property_space',
         sourceType: 'official_document',
         sourceName: BUILDING_SOURCE_NAME,
         sourceReference: BUILDING_SOURCE_REFERENCE,
-        collectedAt: now,
-        verificationStatus: 'imported',
+        collectedAt: existingSource?.collectedAt ?? now,
+        sourceDate: BUILDING_SOURCE_DATE,
+        verificationStatus: 'verified',
         metadata: {
           spaceId: id,
           floor: seed.floor,
           officialUse: seed.name,
           areaSqm: seed.areaSqm,
+          buildingId: BUILDING_ID,
+          uniqueNumber: BUILDING_UNIQUE_NO,
+          roadAddress: BUILDING_ROAD_ADDRESS,
+          issueDate: BUILDING_SOURCE_DATE,
           bootstrap: true,
+          sourceVerified: true,
         },
-        createdAt: now,
+        createdAt: existingSource?.createdAt ?? now,
       };
       const verification: PropertyVerification = {
         id: `verification:${id}`,
         propertyId: PROPERTY_ID,
         fieldKey,
-        status: 'imported',
-        note: `${BUILDING_SOURCE_NAME} 기재사항 초기 연결. 원본 문서 검증 시 verified/confirmed로 승격합니다.`,
-        createdAt: now,
+        status: 'verified',
+        note: `${BUILDING_SOURCE_NAME} 원본(${BUILDING_SOURCE_DATE} 발급) 대조 완료 · 건물ID ${BUILDING_ID}`,
+        verifiedBy: 'source_document_review',
+        verifiedAt: existingVerification?.verifiedAt ?? now,
+        createdAt: existingVerification?.createdAt ?? now,
         updatedAt: now,
       };
       await propertyDataRoomRepository.saveSpace(space);
-      if (!sources.some((item) => item.id === source.id)) await propertyDataRoomRepository.saveDataSource(source);
-      if (!verifications.some((item) => item.id === verification.id)) await propertyDataRoomRepository.saveVerification(verification);
+      await propertyDataRoomRepository.saveDataSource(source);
+      await propertyDataRoomRepository.saveVerification(verification);
     }
 
-    if (!sources.some((item) => item.id === COMPARABLE_SOURCE_ID)) {
+    const comparableSource = sources.find((item) => item.id === COMPARABLE_SOURCE_ID);
+    if (!comparableSource || (
+      comparableSource.sourceReference === '방배동 실거래사례1년간.pdf' &&
+      comparableSource.verificationStatus !== 'verified'
+    )) {
       await comparableTransactionService.replace(PROPERTY_ID, comparableSeed, {
         sourceName: '방배동 실거래사례 1년간',
         sourceReference: '방배동 실거래사례1년간.pdf',
-        verificationStatus: 'imported',
+        verificationStatus: 'verified',
       });
     }
   },
