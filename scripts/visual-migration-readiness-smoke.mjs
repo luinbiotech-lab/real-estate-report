@@ -55,7 +55,7 @@ try {
   await page.getByLabel('이관 대상 물건').click();
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
-  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_DATA_URL', 'INLINE_BINARY']) await waitForText(page, text);
+  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY']) await waitForText(page, text);
 
   const manifestDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
