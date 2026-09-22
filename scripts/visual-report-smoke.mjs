@@ -139,7 +139,8 @@ try {
 
   assert(onePage.templateId === 'DAON_1P_MASTER', `1P template id mismatch: ${onePage.templateId}`);
   assert(onePage.templateVersion === 'daon-1p-v2', `1P template version mismatch: ${onePage.templateVersion}`);
-  assert(onePage.facts.length === 12, `1P facts expected 12, got ${onePage.facts.length}`);
+  assert(onePage.facts.length > 0 && onePage.facts.length <= 12, `1P visible facts expected 1..12 after empty-value omission, got ${onePage.facts.length}`);
+  assert(!onePage.facts.some((value) => value.includes('확인 필요')), '1P empty-value placeholder should be omitted');
   assert(onePage.facts.some((value) => value.includes('공부상 주차')), '1P 공부상 주차 fact missing');
   assert(onePage.facts.some((value) => value.includes('현장 주차')), '1P 현장 주차 fact missing');
   assert(!onePage.text.includes('용적률 참고 계산'), '1P deprecated FAR calculated fact is visible');
