@@ -39,3 +39,88 @@
 .daon-detail-master .dd-insight,.daon-detail-master .dd-acquisition{border:.3mm solid #d9c493;border-left:1.2mm solid #c6943b;border-bottom:.3mm solid #d9c493;background:#fbf7ef;box-shadow:none}.daon-detail-master .dd-profile-grid{grid-template-columns:1.02fr 1fr;gap:4mm}.daon-detail-master .dd-info-row b{background:#eef3f7;font-size:8.2px}.daon-detail-master .dd-info-row span{font-size:8.6px}.daon-detail-master .dd-gold-card{border:.3mm solid #d8dee5;border-left:1mm solid #c6943b;border-top:.3mm solid #d8dee5;background:#fff}.daon-detail-master .dd-comparables{border:.3mm solid #d8dee5;border-top:.8mm solid #c6943b;background:#fff}.daon-detail-master .dd-analysis-box{border:.3mm solid #d8c494;border-left:1mm solid #c6943b;background:#fbf7ef}.daon-detail-master .dd-scenarios h3{background:#062f55}
 
 .daon-one-page-master .d1-right.d1-right-no-map{grid-template-rows:minmax(0,1fr)}
+
+
+/* MASTER TYPOGRAPHY / SPACING QA 2026-09-22
+   Approved sample A/B: strong heading hierarchy, regular body, equal card padding. */
+.daon-one-page-master,.daon-detail-master{
+  font-family:Pretendard,"Noto Sans KR","NanumBarunGothic","Malgun Gothic",sans-serif;
+  font-synthesis:none;
+}
+.daon-one-page-master .d1-head-copy h1,
+.daon-one-page-master .d1-section-title b,
+.daon-detail-master .dd-head h1,
+.daon-detail-master .dd-section-bar b{
+  font-weight:800;
+  color:#102f54;
+}
+.daon-one-page-master .d1-points li b,
+.daon-one-page-master .d1-fact b,
+.daon-detail-master .dd-number-card b,
+.daon-detail-master .dd-gold-card b,
+.daon-detail-master .dd-key-list b,
+.daon-detail-master .dd-info-row b,
+.daon-detail-master .dd-insight b,
+.daon-detail-master .dd-acquisition b{
+  font-weight:800;
+}
+.daon-one-page-master .d1-fact>span.d1-fact-value,
+.daon-detail-master .dd-number-card p,
+.daon-detail-master .dd-gold-card p,
+.daon-detail-master .dd-key-list p,
+.daon-detail-master .dd-info-row span,
+.daon-detail-master .dd-insight p,
+.daon-detail-master .dd-acquisition p{
+  font-weight:400;
+  color:#34495e;
+}
+.daon-detail-master .dd-section-bar{height:9mm;padding:0 0 0 4.2mm}
+.daon-detail-master .dd-section-bar b{font-size:14px}
+.daon-detail-master .dd-number-card{
+  align-items:center;
+  padding:4mm 4.2mm;
+  grid-template-columns:11mm 1fr;
+  gap:3mm;
+}
+.daon-detail-master .dd-number-card>div{
+  align-self:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-height:100%;
+}
+.daon-detail-master .dd-number-card b{font-size:11.2px;line-height:1.25}
+.daon-detail-master .dd-number-card p{font-size:8.6px;line-height:1.48;margin:1.3mm 0 0}
+.daon-detail-master .dd-gold-card{
+  align-items:center;
+  padding:4mm 4.2mm;
+  grid-template-columns:7mm 1fr;
+  gap:2.5mm;
+}
+.daon-detail-master .dd-gold-card>div{
+  align-self:center;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-height:100%;
+}
+.daon-detail-master .dd-gold-card b{font-size:10.6px;line-height:1.25}
+.daon-detail-master .dd-gold-card p{font-size:8.3px;line-height:1.48;margin:1.2mm 0 0}
+.daon-detail-master .dd-info-row{min-height:11mm}
+.daon-detail-master .dd-info-row b,
+.daon-detail-master .dd-info-row span{
+  display:flex;
+  align-items:center;
+  height:100%;
+  box-sizing:border-box;
+  padding-top:0;
+  padding-bottom:0;
+}
+.daon-detail-master .dd-key-list>div{min-height:11mm;padding-top:1mm;padding-bottom:1mm}
+.daon-detail-master .dd-key-list p{line-height:1.35}
+.daon-detail-master .dd-insight,
+.daon-detail-master .dd-acquisition{padding:4.2mm 4.8mm}
+.daon-detail-master .dd-insight b,
+.daon-detail-master .dd-acquisition b{font-size:12.5px}
+.daon-detail-master .dd-insight p,
+.daon-detail-master .dd-acquisition p{font-size:8.8px;line-height:1.5}
