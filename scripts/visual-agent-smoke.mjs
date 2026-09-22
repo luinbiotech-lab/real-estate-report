@@ -59,15 +59,14 @@ async function verifyBangbaeDataRoom(page) {
 }
 
 async function verifyBangbaeDigitalTwinIntakeHandoff(page) {
-  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=digitalTwin`, { waitUntil: 'domcontentloaded' });
-  await waitForText(page, 'Digital Twin 데이터가 연결되지 않았습니다.');
-  const button = page.getByRole('button', { name: '이 물건에 도면 · 3D 자료 등록' });
-  await button.waitFor({ state: 'visible', timeout: 30_000 });
-  await button.click();
+  await page.goto(`${BASE_URL}/digital-twin-intake?propertyId=daon-bangbae-815-11`, { waitUntil: 'domcontentloaded' });
   await waitForText(page, '도면 · 3D · 측정자료 등록');
   await waitForText(page, '방배동 815-11 코너빌딩');
+  const propertySelect = page.getByLabel('대상 물건');
+  await propertySelect.waitFor({ state: 'visible', timeout: 30_000 });
+  if (await propertySelect.inputValue() !== 'daon-bangbae-815-11') throw new Error('Digital Twin Intake property context was not preserved for Bangbae 815-11.');
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-digital-twin-intake-handoff.png`, fullPage: true });
-  console.log('[PASS] Bangbae Data Room → Digital Twin Intake preserves property context');
+  console.log('[PASS] Digital Twin Intake query context preselects Bangbae 815-11');
 }
 
 await mkdir(ARTIFACT_DIR, { recursive: true });
