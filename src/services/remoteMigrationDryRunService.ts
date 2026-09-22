@@ -31,6 +31,7 @@ export const REMOTE_MIGRATION_LOCAL_STORES = [
 
 export interface RemoteMigrationDryRunOptions {
   companySettings?: Settings;
+  includeCompanySettings?: boolean;
   propertyIds?: string[];
 }
 
@@ -66,7 +67,7 @@ export async function collectRemoteMigrationSnapshot(options: RemoteMigrationDry
 
   return {
     properties,
-    settings: options.companySettings,
+    settings: options.includeCompanySettings ? options.companySettings : undefined,
     stores,
   };
 }
