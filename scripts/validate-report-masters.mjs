@@ -3,9 +3,13 @@ import { existsSync, readFileSync } from 'node:fs';
 const requiredFiles = [
   'src/components/professionalReport/DaonOnePageMaster.tsx',
   'src/components/professionalReport/DaonDetail7PageMaster.tsx',
+  'src/components/professionalReport/DaonProfessionalReportMaster.tsx',
+  'src/components/professionalReport/DaonReportOpeningPage.tsx',
+  'src/components/professionalReport/DaonReportClosingPage.tsx',
   'src/daon-one-page-master.css',
   'src/daon-detail-master.css',
   'src/daon-master-refinement.css',
+  'src/daon-report-frame.css',
   'src/pages/DocumentPreview.tsx',
   'src/pages/ProfessionalReportSnapshotPage.tsx',
   'src/domain/professionalReport/templateIds.ts',
@@ -33,16 +37,20 @@ for (const file of forbiddenFiles) {
   if (existsSync(file)) throw new Error(`폐기된 MASTER 파일 재도입 금지: ${file}`);
 }
 
-const onePage = readFileSync(requiredFiles[0], 'utf8');
-const detail = readFileSync(requiredFiles[1], 'utf8');
-const onePageCss = readFileSync(requiredFiles[2], 'utf8');
-const detailCss = readFileSync(requiredFiles[3], 'utf8');
-const refinementCss = readFileSync(requiredFiles[4], 'utf8');
-const documentPreview = readFileSync(requiredFiles[5], 'utf8');
-const snapshotPage = readFileSync(requiredFiles[6], 'utf8');
-const templateIds = readFileSync(requiredFiles[7], 'utf8');
-const snapshotService = readFileSync(requiredFiles[8], 'utf8');
-const accessPolicy = readFileSync(requiredFiles[9], 'utf8');
+const onePage = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
+const detail = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+const professionalMaster = readFileSync('src/components/professionalReport/DaonProfessionalReportMaster.tsx', 'utf8');
+const openingPage = readFileSync('src/components/professionalReport/DaonReportOpeningPage.tsx', 'utf8');
+const closingPage = readFileSync('src/components/professionalReport/DaonReportClosingPage.tsx', 'utf8');
+const onePageCss = readFileSync('src/daon-one-page-master.css', 'utf8');
+const detailCss = readFileSync('src/daon-detail-master.css', 'utf8');
+const refinementCss = readFileSync('src/daon-master-refinement.css', 'utf8');
+const frameCss = readFileSync('src/daon-report-frame.css', 'utf8');
+const documentPreview = readFileSync('src/pages/DocumentPreview.tsx', 'utf8');
+const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+const templateIds = readFileSync('src/domain/professionalReport/templateIds.ts', 'utf8');
+const snapshotService = readFileSync('src/services/reportEngine/reportSnapshotService.ts', 'utf8');
+const accessPolicy = readFileSync('src/domain/professionalReport/reportAccessPolicy.ts', 'utf8');
 
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
@@ -59,8 +67,8 @@ if (!detail.includes('DAON_DETAIL_MASTER_TEMPLATE_ID')) {
 if (!templateIds.includes("DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION = 'daon-1p-v2'")) {
   throw new Error('복원된 1P MASTER 버전은 daon-1p-v2를 유지해야 합니다.');
 }
-if (!templateIds.includes("DAON_DETAIL_MASTER_TEMPLATE_VERSION = 'daon-detail-7p-v2'")) {
-  throw new Error('복원된 7P MASTER 버전은 daon-detail-7p-v2를 유지해야 합니다.');
+if (!templateIds.includes("DAON_DETAIL_MASTER_TEMPLATE_VERSION = 'daon-professional-master-v3'")) {
+  throw new Error('현재 DAON PROFESSIONAL MASTER 버전은 daon-professional-master-v3여야 합니다.');
 }
 if (!templateIds.includes("'daon-detail-7p-v1'")) {
   throw new Error('기존 7P immutable Snapshot 호환성을 유지해야 합니다.');
@@ -124,8 +132,17 @@ if (!documentPreview.includes('DaonOnePageMaster') || documentPreview.includes('
 if (!documentPreview.includes('propertyDataRoomRepository.getBundle(id)') || !documentPreview.includes('reportMediaCategoryAllowed(item.category, allowInternal)')) {
   throw new Error('1P 미리보기는 Data Room 미디어와 중앙 내부사진 제외 정책을 사용해야 합니다.');
 }
-if (!snapshotPage.includes('DaonDetail7PageMaster') || snapshotPage.includes("import { ProfessionalReportV1")) {
-  throw new Error('현재 7P 미리보기는 DAON_DETAIL_7P_MASTER만 사용해야 합니다.');
+if (!snapshotPage.includes('DaonProfessionalReportMaster') || snapshotPage.includes("import { ProfessionalReportV1")) {
+  throw new Error('현재 전문 보고서 미리보기는 DAON PROFESSIONAL MASTER를 사용해야 합니다.');
+}
+if (!professionalMaster.includes('DaonReportOpeningPage') || !professionalMaster.includes('DaonReportClosingPage') || !professionalMaster.includes('DaonDetail7PageMaster')) {
+  throw new Error('DAON PROFESSIONAL MASTER는 OPENING + DETAIL + CLOSING 구조를 유지해야 합니다.');
+}
+if (!openingPage.includes('data-master-page="opening"') || !closingPage.includes('data-master-page="closing"')) {
+  throw new Error('DAON OPENING/CLOSING MASTER 식별자가 누락되었습니다.');
+}
+if (!frameCss.includes('.daon-opening-page') || !frameCss.includes('.daon-closing-page')) {
+  throw new Error('DAON OPENING/CLOSING MASTER 스타일이 누락되었습니다.');
 }
 if (!snapshotPage.includes('현재 DA:ON MASTER로 다시 생성')) {
   throw new Error('구형 Snapshot은 현재 MASTER 재생성 경로를 제공해야 합니다.');
