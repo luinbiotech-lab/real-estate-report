@@ -31,6 +31,7 @@ export const REMOTE_MIGRATION_LOCAL_STORES = [
 
 export interface RemoteMigrationDryRunOptions {
   companySettings?: Settings;
+  propertyIds?: string[];
 }
 
 export interface RemoteMigrationDryRunResult {
@@ -40,11 +41,27 @@ export interface RemoteMigrationDryRunResult {
 
 export async function collectRemoteMigrationSnapshot(options: RemoteMigrationDryRunOptions = {}): Promise<LocalMigrationSnapshot> {
   const db = await database;
-  const properties = await db.getAll('properties');
+  const requestedIds = new Set((options.propertyIds ?? []).map((value) => value.trim()).filter(Boolean));
+  const allProperties = await db.getAll('properties');
+  const properties = requestedIds.size ? allProperties.filter((property) => requestedIds.has(property.id)) : allProperties;
+  if (requestedIds.size && properties.length !== requestedIds.size) {
+    const found = new Set(properties.map((property) => property.id));
+    const missing = [...requestedIds].filter((id) => !found.has(id));
+    throw new Error(`Remote migration 대상 물건을 찾을 수 없습니다: ${missing.join(', ')}`);
+  }
   const stores: Record<string, unknown[]> = {};
 
   for (const storeName of REMOTE_MIGRATION_LOCAL_STORES) {
-    stores[storeName] = await db.getAll(storeName);
+    const values = await db.getAll(storeName);
+    stores[storeName] = requestedIds.size
+      ? values.filter((row) => {
+          if (!row || typeof row !== 'object' || Array.isArray(row)) return true;
+          const propertyId = typeof (row as { propertyId?: unknown }).propertyId === 'string'
+            ? (row as { propertyId: string }).propertyId
+            : '';
+          return !propertyId || requestedIds.has(propertyId);
+        })
+      : values;
   }
 
   return {
