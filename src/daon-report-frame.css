@@ -1,0 +1,158 @@
+.daon-professional-report-master{
+  display:grid;
+  gap:20px;
+  font-family:Pretendard,"Noto Sans KR","NanumBarunGothic","Malgun Gothic",sans-serif;
+  color:#102f54;
+  -webkit-print-color-adjust:exact;
+  print-color-adjust:exact;
+}
+.daon-frame-page{
+  width:210mm;
+  height:297mm;
+  margin:0 auto;
+  box-sizing:border-box;
+  background:#fff;
+  overflow:hidden;
+  break-after:page;
+  page-break-after:always;
+  box-shadow:0 7px 28px #10243c16;
+  position:relative;
+}
+.df-brand-head{
+  height:34mm;
+  display:grid;
+  grid-template-columns:34mm 1fr 35mm;
+  align-items:start;
+  gap:5mm;
+  padding:7mm 9mm 0;
+  box-sizing:border-box;
+}
+.df-side-copy{
+  border-left:.4mm solid #c6943b;
+  padding-left:5mm;
+  font-family:Georgia,"NanumMyeongjo",serif;
+  color:#a86f20;
+  font-size:9px;
+  line-height:1.55;
+}
+.df-side-copy i{display:block;width:10mm;height:.35mm;background:#c6943b;margin-top:3mm}
+.df-brand-center{text-align:center}
+.df-brand-center strong{display:block;font-family:Georgia,"Times New Roman",serif;font-size:32px;line-height:1;color:#062f55;letter-spacing:.5px}
+.df-brand-center span{display:block;margin-top:1.5mm;font-size:7px;letter-spacing:2.1px;color:#163c61}
+.df-brand-center p{margin:2mm 0 0;font-family:Georgia,"NanumMyeongjo",serif;font-size:10px;color:#163c61}
+.df-trust{
+  border-left:.4mm solid #c6943b;
+  padding-left:5mm;
+  font-size:7.2px;
+  line-height:1.55;
+  letter-spacing:1.8px;
+  color:#163c61;
+}
+.df-trust small{display:block;letter-spacing:0;line-height:1.45;margin-top:2mm;font-size:7px}
+.df-opening-hero{
+  margin:0 7mm;
+  height:142mm;
+  position:relative;
+  overflow:hidden;
+  background:linear-gradient(135deg,#dce8f2,#f8f3e9);
+}
+.df-opening-hero img{width:100%;height:100%;object-fit:cover;display:block}
+.df-opening-hero:after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(255,255,255,.88) 0%,rgba(255,255,255,.42) 36%,rgba(255,255,255,0) 62%)}
+.df-opening-copy{position:absolute;z-index:2;left:11mm;top:12mm;width:95mm}
+.df-opening-copy small{display:block;color:#a86f20;font-weight:800;font-size:9px;margin-bottom:6mm}
+.df-opening-copy h1{font-family:Georgia,"NanumMyeongjo",serif;font-size:27px;line-height:1.35;letter-spacing:-1px;color:#0f3156;margin:0 0 6mm}
+.df-opening-copy p{font-size:11px;line-height:1.65;color:#26435f;margin:0}
+.df-opening-intro{padding:6mm 9mm 0}
+.df-opening-intro h2{margin:0 0 2mm;font-size:17px;color:#0f3156}
+.df-opening-intro>p{margin:0;font-size:8.6px;line-height:1.65;color:#3d5369}
+.df-opening-pillars{display:grid;grid-template-columns:repeat(3,1fr);gap:0;margin-top:5mm;border-top:.35mm solid #c6943b;border-bottom:.35mm solid #c6943b}
+.df-opening-pillars article{min-height:29mm;padding:5mm 6mm;box-sizing:border-box;border-right:.25mm solid #d9c59a}
+.df-opening-pillars article:last-child{border-right:0}
+.df-opening-pillars b{display:block;font-size:10px;color:#0f3156;margin-bottom:1.5mm}
+.df-opening-pillars span{display:block;font-size:7.6px;line-height:1.45;color:#52677a}
+.df-opening-quote{
+  margin:6mm 9mm 0;
+  text-align:center;
+  font-family:Georgia,"NanumMyeongjo",serif;
+  font-size:13px;
+  color:#9d6c25;
+}
+.df-closing-lead{
+  margin:0 9mm;
+  min-height:65mm;
+  padding:10mm 5mm 6mm;
+  box-sizing:border-box;
+  border-top:.35mm solid #c6943b;
+  border-bottom:.35mm solid #c6943b;
+}
+.df-closing-lead h1{font-family:Georgia,"NanumMyeongjo",serif;font-size:27px;color:#0f3156;margin:0 0 2mm}
+.df-closing-lead h2{font-size:13px;color:#0f3156;margin:0 0 4mm}
+.df-closing-lead p{font-size:8.7px;line-height:1.65;color:#42586d;margin:0}
+.df-service-section,.df-contact-section{padding:6mm 9mm 0}
+.df-section-heading{height:10mm;border-left:1.2mm solid #c6943b;border-bottom:.3mm solid #d7c08e;padding-left:4mm;display:flex;align-items:center;justify-content:space-between;box-sizing:border-box}
+.df-section-heading b{font-size:15px;color:#0f3156}
+.df-section-heading span{font-size:6.6px;color:#74808c}
+.df-service-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:3mm;margin-top:4mm}
+.df-service-grid article{
+  min-height:61mm;
+  background:#fbfaf7;
+  border:.25mm solid #ece6d8;
+  padding:5mm;
+  text-align:center;
+  box-sizing:border-box;
+}
+.df-service-grid article>span{
+  width:13mm;height:13mm;border-radius:50%;background:#062f55;color:#e7c378;
+  display:grid;place-items:center;margin:0 auto 4mm;font-weight:800;font-size:7px;
+}
+.df-service-grid b{display:block;font-size:11px;color:#0f3156;margin-bottom:3mm}
+.df-service-grid p{margin:0;font-size:7.5px;line-height:1.5;color:#52677a}
+.df-contact-card{
+  margin-top:4mm;
+  min-height:41mm;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:0;
+  background:#fbfaf7;
+  border:.25mm solid #ece6d8;
+}
+.df-contact-card>div{padding:6mm 10mm;border-right:.35mm solid #d1ae69}
+.df-contact-card small,.df-contact-card strong,.df-contact-card b{display:block}
+.df-contact-card small{font-size:8.5px;color:#244561}
+.df-contact-card strong{font-size:10px;margin-top:1mm;color:#244561}
+.df-contact-card b{font-family:Georgia,"Times New Roman",serif;font-size:22px;color:#0f3156;margin-top:1mm}
+.df-contact-card p{padding:6mm 10mm;margin:0;font-size:8px;line-height:1.55;color:#3f556b}
+.df-contact-card em{display:block;font-style:normal;font-size:6px;letter-spacing:1.5px;color:#8a6b32;margin-bottom:2mm}
+.df-closing-quote{
+  text-align:center;
+  margin:7mm 9mm 0;
+  font-family:Georgia,"NanumMyeongjo",serif;
+  font-size:17px;
+  font-weight:800;
+  color:#0f3156;
+}
+.df-frame-footer{
+  position:absolute;
+  left:0;right:0;bottom:0;
+  height:15mm;
+  background:#062f55;
+  color:#fff;
+  display:grid;
+  grid-template-columns:34mm 1fr 70mm;
+  align-items:center;
+  padding:0 10mm;
+  box-sizing:border-box;
+}
+.df-frame-footer b{font-family:Georgia,"Times New Roman",serif;font-size:16px;color:#e7c378}
+.df-frame-footer span{font-size:5.4px;letter-spacing:1.1px;color:#e7c378}
+.df-frame-footer em{font-style:normal;font-size:6px;text-align:right;color:#e7edf3}
+@page daon-professional-master{size:A4 portrait;margin:0}
+@media print{
+  .daon-professional-report-master{display:block;gap:0}
+  .daon-frame-page{page:daon-professional-master;margin:0;box-shadow:none}
+  .daon-frame-page:last-child{break-after:auto;page-break-after:auto}
+}
+@media(max-width:860px){
+  .daon-professional-report-master{width:210mm;margin:0 12px}
+  .daon-frame-page{margin:0}
+}
