@@ -21,6 +21,9 @@ for (const marker of [
   'downloadRemoteMigrationPlan',
   'daon-remote-migration-dry-run-',
   'settings: options.companySettings',
+  'options.propertyIds',
+  'requestedIds.size',
+  'requestedIds.has(property.id)',
 ]) {
   if (!text.dryRun.includes(marker)) throw new Error(`Remote migration dry-run executor 계약 누락: ${marker}`);
 }
