@@ -34,6 +34,7 @@ function DaonLogo() {
 }
 
 function Fact({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+  if (!value || value === '확인 필요') return null;
   return <div className="d1-fact">
     <b><span className="d1-fact-icon">{icon}</span><span className="d1-fact-label">{label}</span></b>
     <span className="d1-fact-value" title={value}>{value}</span>
@@ -123,15 +124,15 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
           </div>
         </div>
 
-        <div className="d1-right">
+        <div className={`d1-right ${p.mapImage ? '' : 'd1-right-no-map'}`}>
           <section className="d1-points">
             <div className="d1-section-title"><b>핵심 포인트</b><small>KEY INVESTMENT HIGHLIGHTS</small></div>
             <ol>{(points.length ? points : ['핵심 투자포인트 확인 필요']).map((point, index) => <li key={`${point}-${index}`}><span>✓</span><b title={point}>{point}</b></li>)}</ol>
           </section>
-          <section className="d1-map">
-            {p.mapImage ? <img src={p.mapImage} alt={`${p.name} 위치 지도`} /> : <div className="d1-empty">위치지도<br/><small>데이터 미연결</small></div>}
+          {p.mapImage && <section className="d1-map">
+            <img src={p.mapImage} alt={`${p.name} 위치 지도`} />
             <div className="d1-map-caption">{locationCaption}</div>
-          </section>
+          </section>}
         </div>
       </section>
 
