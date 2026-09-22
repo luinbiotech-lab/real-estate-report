@@ -87,6 +87,9 @@ jobs:
       - name: Validate remote migration local dry run executor
         run: node scripts/validate-remote-migration-dry-run.mjs
 
+      - name: Validate controlled production migration executor
+        run: node scripts/validate-remote-migration-executor.mjs
+
       - name: Validate migration readiness review UI boundary
         run: node scripts/validate-remote-migration-readiness-ui.mjs
 
