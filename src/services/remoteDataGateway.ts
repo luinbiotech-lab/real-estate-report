@@ -68,8 +68,10 @@ export interface RemoteDataGateway {
   deleteAssetMetadata(resourceType: RemoteAssetResourceType, id: string): Promise<void>;
 
   submitVerificationCandidate(candidate: PropertyVerificationCandidate): Promise<PropertyVerificationCandidate>;
+  listVerificationCandidates(propertyId: string): Promise<PropertyVerificationCandidate[]>;
   decideVerificationCandidate(candidateId: string, decision: 'approved' | 'held' | 'rejected', note?: string): Promise<void>;
   appendVerification(verification: PropertyVerification): Promise<PropertyVerification>;
+  listVerifications(propertyId: string): Promise<PropertyVerification[]>;
 
   createReportSnapshot(input: RemoteReportSnapshotInput): Promise<ReportSnapshot>;
   listReportSnapshots(propertyId: string): Promise<ReportSnapshot[]>;
