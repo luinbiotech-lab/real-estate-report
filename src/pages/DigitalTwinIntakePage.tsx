@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { CloudUploadOutlined, OpenInNewRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import type { DigitalTwinAsset, DigitalTwinAssetType } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -18,6 +18,8 @@ const STATUS_LABELS: Record<DigitalTwinAsset['processingStatus'], string> = {
 
 export default function DigitalTwinIntakePage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const requestedPropertyId = searchParams.get('propertyId') || '';
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
   const [assets, setAssets] = useState<DigitalTwinAsset[]>([]);
@@ -41,7 +43,8 @@ export default function DigitalTwinIntakePage() {
     try {
       const list = await propertyRepository.getAll();
       setProperties(list);
-      const nextId = propertyId || list[0]?.id || '';
+      const requestedExists = requestedPropertyId && list.some((item) => item.id === requestedPropertyId);
+      const nextId = propertyId || (requestedExists ? requestedPropertyId : '') || list[0]?.id || '';
       setPropertyId(nextId);
       await loadAssets(nextId);
     } catch (reason) {
