@@ -1,7 +1,8 @@
 import { CloudOffRounded, DownloadRounded, FactCheckRounded, Inventory2Rounded, PlayArrowRounded, ShieldRounded, WarningAmberRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, TextField } from '@mui/material';
-import { useState } from 'react';
-import type { Settings } from '../types';
+import { useEffect, useMemo, useState } from 'react';
+import type { Property, Settings } from '../types';
+import { propertyRepository } from '../repositories/propertyRepository';
 import { remoteMigrationDryRunService } from '../services/remoteMigrationDryRunService';
 import { remoteMigrationHandoffService } from '../services/remoteMigrationHandoffService';
 import type { LocalMigrationSnapshot, RemoteMigrationPlan } from '../services/remoteMigrationPlanService';
@@ -33,6 +34,8 @@ const rehearsal = [
 ];
 
 export default function RemoteMigrationReadinessPage({ settings }: Props) {
+  const [properties, setProperties] = useState<Property[]>([]);
+  const [targetPropertyId, setTargetPropertyId] = useState('');
   const [plan, setPlan] = useState<RemoteMigrationPlan>();
   const [snapshot, setSnapshot] = useState<LocalMigrationSnapshot>();
   const [busy, setBusy] = useState(false);
@@ -41,11 +44,28 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [executionResult, setExecutionResult] = useState<RemoteMigrationExecutionResult>();
   const [error, setError] = useState('');
+  const targetProperty = useMemo(() => properties.find((item) => item.id === targetPropertyId), [properties, targetPropertyId]);
+
+  useEffect(() => {
+    void propertyRepository.getAll().then((items) => setProperties(items)).catch((reason) => {
+      setError(reason instanceof Error ? reason.message : 'Migration 대상 물건 목록을 불러오지 못했습니다.');
+    });
+  }, []);
+
+  const selectTargetProperty = (propertyId: string) => {
+    setTargetPropertyId(propertyId);
+    setPlan(undefined);
+    setSnapshot(undefined);
+    setExecutionResult(undefined);
+    setConfirmationText('');
+    setConfirmOpen(false);
+  };
 
   const runDryRun = async () => {
+    if (!targetPropertyId) { setError('Production 이관 대상을 먼저 선택해 주세요.'); return; }
     setBusy(true); setError('');
     try {
-      const result = await remoteMigrationDryRunService.run({ companySettings: settings });
+      const result = await remoteMigrationDryRunService.run({ companySettings: settings, propertyIds: [targetPropertyId] });
       setPlan(result.plan);
       setSnapshot(result.snapshot);
       setExecutionResult(undefined);
@@ -87,8 +107,12 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
         <h1 style={{ margin: '5px 0' }}>Migration Readiness Review</h1>
         <p style={{ margin: 0, color: '#667085', maxWidth: 760 }}>먼저 IndexedDB 기준 dry-run 계획을 생성하고 검토합니다. 실제 Production 이관은 blocker 0, 동일 plan, 정확한 승인 문구, 최종 확인을 모두 통과한 경우에만 실행됩니다.</p>
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Button variant="contained" startIcon={busy ? <CircularProgress size={17} color="inherit" /> : <PlayArrowRounded />} disabled={busy} onClick={() => void runDryRun()}>Dry-Run 실행</Button>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <TextField select size="small" label="이관 대상 물건" value={targetPropertyId} onChange={(event) => selectTargetProperty(event.target.value)} sx={{ minWidth: 300 }} disabled={busy || executing}>
+          <option value="" disabled>대상 선택</option>
+          {properties.map((item) => <option key={item.id} value={item.id}>{item.name} · {item.address}</option>)}
+        </TextField>
+        <Button variant="contained" startIcon={busy ? <CircularProgress size={17} color="inherit" /> : <PlayArrowRounded />} disabled={busy || executing || !targetPropertyId} onClick={() => void runDryRun()}>Dry-Run 실행</Button>
         <Button variant="outlined" startIcon={<DownloadRounded />} disabled={!plan || busy} onClick={() => plan && remoteMigrationDryRunService.download(plan)}>Manifest JSON 다운로드</Button>
         <Button variant="outlined" startIcon={<Inventory2Rounded />} disabled={!plan || busy} onClick={() => plan && remoteMigrationHandoffService.download(plan)}>Handoff Bundle 다운로드</Button>
       </div>
@@ -117,7 +141,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
               <div><p className="eyebrow">MIGRATION GATE</p><h2 style={{ margin: '4px 0' }}>{plan.readyForRemoteWrite ? 'READY FOR REMOTE WRITE REVIEW' : 'BLOCKED BEFORE REMOTE WRITE'}</h2></div>
               <Chip color={plan.readyForRemoteWrite ? 'success' : 'error'} label={plan.readyForRemoteWrite ? 'BLOCKER 0' : `BLOCKER ${plan.blockers.length}`} />
             </div>
-            <p style={{ color: '#667085', marginBottom: 0 }}>schema {plan.schemaVersion} · 생성 {new Date(plan.generatedAt).toLocaleString('ko-KR')} · dryRun={String(plan.dryRun)} · networkWrites={plan.networkWrites}</p>
+            <p style={{ color: '#667085', marginBottom: 0 }}>대상 {targetProperty?.name || targetPropertyId} · schema {plan.schemaVersion} · 생성 {new Date(plan.generatedAt).toLocaleString('ko-KR')} · dryRun={String(plan.dryRun)} · networkWrites={plan.networkWrites}</p>
           </section>
 
           <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
@@ -167,6 +191,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
       <DialogContent>
         <Alert severity="warning" sx={{ mb: 1.5 }}>원격 Property/Data/Storage가 변경됩니다. 실행 후 자동 reconciliation이 실패하면 성공으로 처리하지 않습니다.</Alert>
         <div style={{ display: 'grid', gap: 7, fontSize: 13 }}>
+          <div>대상 물건 <strong style={{ float: 'right' }}>{targetProperty?.name || targetPropertyId || '-'}</strong></div>
           <div>Plan 생성시각 <strong style={{ float: 'right' }}>{plan?.generatedAt ?? '-'}</strong></div>
           <div>Properties <strong style={{ float: 'right' }}>{plan?.counts.properties ?? 0}</strong></div>
           <div>Objects <strong style={{ float: 'right' }}>{plan?.counts.objects ?? 0}</strong></div>
