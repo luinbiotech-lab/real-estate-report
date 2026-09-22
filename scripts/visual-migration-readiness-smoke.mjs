@@ -68,6 +68,7 @@ try {
   if (manifest.networkWrites !== 0) throw new Error(`Migration dry-run performed writes: ${manifest.networkWrites}`);
   if (!Array.isArray(manifest.properties) || manifest.properties.length !== 1 || manifest.properties[0]?.id !== 'daon-bangbae-815-11') throw new Error('Property-scoped migration manifest must contain only Bangbae 815-11.');
   if (!manifest.counts || manifest.counts.properties !== manifest.properties.length) throw new Error('Migration manifest property counts are inconsistent.');
+  if (manifest.companySettings !== undefined) throw new Error('Property-scoped migration must not include global company settings by default.');
   if (manifest.properties.some((row) => row?.id === QA_INLINE_PROPERTY_ID)) throw new Error('Out-of-scope QA Property must be excluded from the property-scoped migration manifest.');
   if (manifest.objects.some((row) => row?.id === QA_INLINE_BINARY_ID)) throw new Error('Structured Blob object must be excluded from migration writes.');
   const blockerCodes = new Set((manifest.blockers ?? []).map((row) => row?.code));
