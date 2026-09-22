@@ -34,6 +34,8 @@ for (const marker of [
   'STORAGE PLAN',
   'REHEARSAL CHECKLIST',
   'remoteMigrationDryRunService.run',
+  'propertyIds: [targetPropertyId]',
+  '이관 대상 물건',
   'remoteMigrationDryRunService.download',
   'remoteMigrationHandoffService.download',
   'CONTROLLED PRODUCTION RELEASE',
