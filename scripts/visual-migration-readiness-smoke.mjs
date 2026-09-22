@@ -49,9 +49,11 @@ const page = await browser.newPage({ viewport: { width: 1500, height: 1400 } });
 
 try {
   await page.goto(`${BASE_URL}/migration-readiness`, { waitUntil: 'domcontentloaded' });
-  for (const text of ['Migration Readiness Review', 'REMOTE MIGRATION · DRY-RUN ONLY', 'NETWORK WRITES = 0', 'Dry-Run 실행']) await waitForText(page, text);
+  for (const text of ['Migration Readiness Review', 'REMOTE MIGRATION · CONTROLLED RELEASE', 'DRY-RUN NETWORK WRITES = 0', '이관 대상 물건', 'Dry-Run 실행']) await waitForText(page, text);
 
   await writeQaRows(page);
+  await page.getByLabel('이관 대상 물건').click();
+  await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
   for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_DATA_URL', 'INLINE_BINARY']) await waitForText(page, text);
 
@@ -64,12 +66,13 @@ try {
   if (manifest.schemaVersion !== 'daon-remote-migration-plan-v1') throw new Error(`Unexpected migration schema: ${manifest.schemaVersion}`);
   if (manifest.dryRun !== true) throw new Error('Migration manifest must remain dryRun=true.');
   if (manifest.networkWrites !== 0) throw new Error(`Migration dry-run performed writes: ${manifest.networkWrites}`);
-  if (!Array.isArray(manifest.properties) || manifest.properties.length < 1) throw new Error('Expected seeded local properties in migration manifest.');
+  if (!Array.isArray(manifest.properties) || manifest.properties.length !== 1 || manifest.properties[0]?.id !== 'daon-bangbae-815-11') throw new Error('Property-scoped migration manifest must contain only Bangbae 815-11.');
   if (!manifest.counts || manifest.counts.properties !== manifest.properties.length) throw new Error('Migration manifest property counts are inconsistent.');
-  if (manifest.properties.some((row) => row?.id === QA_INLINE_PROPERTY_ID)) throw new Error('Inline data URL Property must be excluded from migration writes.');
+  if (manifest.properties.some((row) => row?.id === QA_INLINE_PROPERTY_ID)) throw new Error('Out-of-scope QA Property must be excluded from the property-scoped migration manifest.');
   if (manifest.objects.some((row) => row?.id === QA_INLINE_BINARY_ID)) throw new Error('Structured Blob object must be excluded from migration writes.');
   const blockerCodes = new Set((manifest.blockers ?? []).map((row) => row?.code));
-  if (!blockerCodes.has('INLINE_DATA_URL') || !blockerCodes.has('INLINE_BINARY')) throw new Error('Expected inline payload blockers were not produced.');
+  if (blockerCodes.has('INLINE_DATA_URL')) throw new Error('Out-of-scope inline Property blocker must not leak into a property-scoped plan.');
+  if (!blockerCodes.has('INLINE_BINARY')) throw new Error('Expected in-scope structured binary blocker was not produced.');
   if (manifest.readyForRemoteWrite !== false) throw new Error('Manifest with inline payload blockers cannot be ready for remote write.');
 
   const handoffDownloadPromise = page.waitForEvent('download');
