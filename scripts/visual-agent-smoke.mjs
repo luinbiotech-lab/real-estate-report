@@ -58,6 +58,18 @@ async function verifyBangbaeDataRoom(page) {
   console.log('[PASS] Bangbae Data Room: floor provenance + 6 comparable transactions + market summary rendered');
 }
 
+async function verifyBangbaeDigitalTwinIntakeHandoff(page) {
+  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=digitalTwin`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, 'Digital Twin 데이터가 연결되지 않았습니다.');
+  const button = page.getByRole('button', { name: '이 물건에 도면 · 3D 자료 등록' });
+  await button.waitFor({ state: 'visible', timeout: 30_000 });
+  await button.click();
+  await waitForText(page, '도면 · 3D · 측정자료 등록');
+  await waitForText(page, '방배동 815-11 코너빌딩');
+  await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-digital-twin-intake-handoff.png`, fullPage: true });
+  console.log('[PASS] Bangbae Data Room → Digital Twin Intake preserves property context');
+}
+
 await mkdir(ARTIFACT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true }); const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 try {
@@ -76,6 +88,7 @@ try {
   await verifyPropertyHub(page);
   await verifyDataRoomDeepLinks(page);
   await verifyBangbaeDataRoom(page);
+  await verifyBangbaeDigitalTwinIntakeHandoff(page);
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
   console.log('Rendered core platform + property hub deep links + Data Room + financial/review workspaces smoke QA: PASS');
