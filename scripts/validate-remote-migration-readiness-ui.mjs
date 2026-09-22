@@ -25,8 +25,8 @@ for (const marker of [
 
 for (const marker of [
   'Migration Readiness Review',
-  'REMOTE MIGRATION · DRY-RUN ONLY',
-  'NETWORK WRITES = 0',
+  'REMOTE MIGRATION · CONTROLLED RELEASE',
+  'DRY-RUN NETWORK WRITES = 0',
   'Dry-Run 실행',
   'Manifest JSON 다운로드',
   'Handoff Bundle 다운로드',
@@ -36,6 +36,12 @@ for (const marker of [
   'remoteMigrationDryRunService.run',
   'remoteMigrationDryRunService.download',
   'remoteMigrationHandoffService.download',
+  'CONTROLLED PRODUCTION RELEASE',
+  'Production 이관 최종 확인',
+  'REMOTE_MIGRATION_CONFIRMATION',
+  'confirmationText !== REMOTE_MIGRATION_CONFIRMATION',
+  'remoteMigrationExecutionService.execute',
+  'executionResult.reconciliation.passed',
 ]) if (!text.page.includes(marker)) throw new Error(`Migration readiness UI marker 누락: ${marker}`);
 
 for (const forbidden of [
@@ -48,8 +54,10 @@ for (const forbidden of [
   'fetch(',
   'axios',
   'SUPABASE_SERVICE_ROLE_KEY',
+  'sb_secret_',
+  'service_role',
 ]) {
-  if (text.page.includes(forbidden)) throw new Error(`Migration readiness page에서 remote write/network 호출 금지: ${forbidden}`);
+  if (text.page.includes(forbidden)) throw new Error(`Migration readiness page에서 direct backend/secret 사용 금지: ${forbidden}`);
 }
 
 for (const marker of [
