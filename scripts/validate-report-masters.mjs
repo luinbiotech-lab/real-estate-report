@@ -135,8 +135,8 @@ if (!documentPreview.includes('propertyDataRoomRepository.getBundle(id)') || !do
 if (!snapshotPage.includes('DaonProfessionalReportMaster') || snapshotPage.includes("import { ProfessionalReportV1")) {
   throw new Error('현재 전문 보고서 미리보기는 DAON PROFESSIONAL MASTER를 사용해야 합니다.');
 }
-if (!professionalMaster.includes('DaonReportOpeningPage') || !professionalMaster.includes('DaonReportClosingPage') || !professionalMaster.includes('DaonDetail7PageMaster')) {
-  throw new Error('DAON PROFESSIONAL MASTER는 OPENING + DETAIL + CLOSING 구조를 유지해야 합니다.');
+if (!professionalMaster.includes('DaonReportOpeningPage') || !professionalMaster.includes('DaonPropertySummaryMasterPage') || !professionalMaster.includes('DaonInvestmentAnalysisMasterPage') || !professionalMaster.includes('DaonDevelopmentDeepDiveMasterPage') || !professionalMaster.includes('DaonReportClosingPage')) {
+  throw new Error('DAON PROFESSIONAL MASTER는 OPENING + SUMMARY + ANALYSIS + DEVELOPMENT + CLOSING 구조를 유지해야 합니다.');
 }
 if (!openingPage.includes('data-master-page="opening"') || !closingPage.includes('data-master-page="closing"')) {
   throw new Error('DAON OPENING/CLOSING MASTER 식별자가 누락되었습니다.');
