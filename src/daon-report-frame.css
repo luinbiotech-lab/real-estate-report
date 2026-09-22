@@ -157,3 +157,91 @@
   .daon-professional-report-master{width:210mm;margin:0 12px}
   .daon-frame-page{margin:0}
 }
+
+
+.daon-core-page{
+  width:210mm;height:297mm;margin:0 auto;box-sizing:border-box;background:#fff;overflow:hidden;
+  break-after:page;page-break-after:always;box-shadow:0 7px 28px #10243c16;position:relative;color:#102f54;
+}
+.dc-head{height:31mm;display:grid;grid-template-columns:24mm 1fr 52mm;gap:8mm;align-items:start;padding:6mm 8mm 0;box-sizing:border-box}
+.dc-page-no{width:24mm;height:24mm;background:#062f55;color:#e7c378;display:grid;place-items:center;font-family:Georgia,"Times New Roman",serif;font-size:25px}
+.dc-head-title{border-bottom:.35mm solid #c6943b;padding-bottom:4mm}
+.dc-head-title h1{font-family:Georgia,"NanumMyeongjo",serif;font-size:23px;line-height:1;margin:1mm 0;color:#102f54}
+.dc-head-title span{font-size:5.8px;letter-spacing:2px;color:#728091}
+.dc-head-brand{text-align:right;border-bottom:.35mm solid #c6943b;padding-bottom:4mm}
+.dc-head-brand strong{display:block;font-family:Georgia,"Times New Roman",serif;font-size:19px;color:#102f54}
+.dc-head-brand small{display:block;margin-top:1.2mm;font-size:6px;line-height:1.3;color:#56697b}
+.dc-foot{position:absolute;left:0;right:0;bottom:0;height:14mm;background:#062f55;color:#fff;display:grid;grid-template-columns:32mm 1fr 74mm;align-items:center;padding:0 9mm;box-sizing:border-box}
+.dc-foot b{font-family:Georgia,"Times New Roman",serif;font-size:16px;color:#e7c378}
+.dc-foot span{font-size:5.4px;letter-spacing:1px;color:#e7c378}
+.dc-foot em{font-style:normal;font-size:5.8px;text-align:right;color:#e7edf3}
+.dc-section-title{height:10mm;display:flex;align-items:center;justify-content:space-between;border-left:1.2mm solid #c6943b;border-bottom:.3mm solid #d7c08e;padding-left:4mm;margin-bottom:4mm}
+.dc-section-title b{font-size:15px;color:#102f54}
+.dc-section-title span{font-size:6.3px;color:#758391}
+.dc-summary-brand{height:34mm;display:grid;grid-template-columns:34mm 1fr 35mm;gap:5mm;padding:7mm 9mm 0;box-sizing:border-box}
+.dc-side-copy{border-left:.4mm solid #c6943b;padding-left:5mm;font-family:Georgia,"NanumMyeongjo",serif;color:#a86f20;font-size:9px;line-height:1.55}
+.dc-side-copy i{display:block;width:10mm;height:.35mm;background:#c6943b;margin-top:3mm}
+.dc-brand-center{text-align:center}
+.dc-brand-center strong{display:block;font-family:Georgia,"Times New Roman",serif;font-size:32px;line-height:1;color:#062f55}
+.dc-brand-center span{display:block;margin-top:1.5mm;font-size:7px;letter-spacing:2.1px;color:#163c61}
+.dc-brand-center p{margin:2mm 0 0;font-family:Georgia,"NanumMyeongjo",serif;font-size:10px;color:#163c61}
+.dc-trust{border-left:.4mm solid #c6943b;padding-left:5mm;font-size:7.2px;line-height:1.55;letter-spacing:1.8px;color:#163c61}
+.dc-trust small{display:block;letter-spacing:0;line-height:1.45;margin-top:2mm;font-size:7px}
+.dc-summary-hero{height:111mm;margin:0 7mm;position:relative;overflow:hidden;background:#edf2f6}
+.dc-summary-hero img{width:100%;height:100%;object-fit:cover}
+.dc-summary-copy{position:absolute;left:10mm;top:13mm;width:75mm;color:#102f54}
+.dc-summary-copy h2{font-family:Georgia,"NanumMyeongjo",serif;font-size:25px;line-height:1.35;margin:0}
+.dc-summary-copy i{display:block;width:12mm;height:.5mm;background:#c6943b;margin:6mm 0}
+.dc-summary-copy p{font-size:10px;line-height:1.55;margin:0}
+.dc-summary-title{height:28mm;display:grid;grid-template-columns:22mm 1fr;gap:7mm;align-items:center;margin:0 7mm;border-bottom:.3mm solid #d9c18d}
+.dc-summary-title>b{font-family:Georgia,"NanumMyeongjo",serif;font-size:15px;color:#a86f20;border-right:.4mm solid #c6943b;height:16mm;display:flex;align-items:center}
+.dc-summary-title h1{font-family:Georgia,"NanumMyeongjo",serif;font-size:22px;line-height:1;margin:0 0 2mm;color:#102f54}
+.dc-summary-title p{font-size:8.5px;margin:0;color:#3d556a}
+.dc-summary-grid{display:grid;grid-template-columns:1.05fr .8fr .83fr;gap:6mm;padding:4mm 7mm 0;height:87mm;box-sizing:border-box}
+.dc-fact-table{border-top:.25mm solid #c9d0d7}
+.dc-fact-table>div{display:grid;grid-template-columns:27mm 1fr;min-height:5.2mm;border-bottom:.2mm solid #d8dee5;align-items:center}
+.dc-fact-table b{background:#062f55;color:#fff;height:100%;display:flex;align-items:center;padding-left:3mm;font-size:6.6px}
+.dc-fact-table span{font-size:7px;padding-left:3mm;color:#263f58;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.dc-feature-list{overflow:hidden}
+.dc-feature{display:grid;grid-template-columns:10mm 1fr;gap:2mm;align-items:center;min-height:10.5mm;border-bottom:.2mm solid #e0e4e8}
+.dc-feature span{width:8mm;height:8mm;border-radius:50%;background:#b38331;color:#fff;display:grid;place-items:center;font-size:6.6px;font-weight:800}
+.dc-feature p{margin:0;font-size:7.4px;line-height:1.35;color:#263f58}
+.dc-map-column img{width:100%;height:45mm;object-fit:contain;background:#fff;display:block}
+.dc-map-column h3{font-size:9.2px;margin:3mm 0 1mm;color:#102f54}
+.dc-map-column p{font-size:7.2px;line-height:1.4;margin:0;color:#3d556a}
+.dc-summary-highlights{padding:3mm 7mm 18mm}
+.dc-summary-highlights>div:last-child{display:grid;grid-template-columns:repeat(3,1fr);background:#faf8f3}
+.dc-summary-highlights article{min-height:26mm;padding:5mm 6mm;box-sizing:border-box;border-right:.25mm solid #d9c69b}
+.dc-summary-highlights article:last-child{border-right:0}
+.dc-summary-highlights b{display:block;font-size:9.5px;color:#102f54;margin-bottom:1.5mm}
+.dc-summary-highlights span{display:block;font-size:7.2px;line-height:1.4;color:#455c70}
+.dc-property-line{margin:0 8mm 4mm;padding:0 0 4mm;border-left:1.1mm solid #c6943b;border-bottom:.3mm solid #d7c08e;padding-left:4mm}
+.dc-property-line h2{font-family:Georgia,"NanumMyeongjo",serif;font-size:17px;margin:0 0 1mm;color:#102f54}
+.dc-property-line p{font-size:8px;line-height:1.45;margin:0;color:#43596d}
+.dc-analysis-page,.dc-development-page{padding-bottom:18mm}
+.dc-analysis-page>section,.dc-development-page>section{margin:0 8mm 4.5mm}
+.dc-analysis-top{display:grid;grid-template-columns:1.45fr .7fr;gap:4mm}
+.dc-analysis-images{display:grid;grid-template-rows:1fr 1fr;gap:2mm;height:86mm}
+.dc-analysis-images img{width:100%;height:100%;object-fit:cover}
+.dc-number-item{display:grid;grid-template-columns:11mm 1fr;gap:3mm;align-items:center;min-height:19mm;border-bottom:.2mm solid #d9dee4}
+.dc-number-item>span{width:8mm;height:8mm;border-radius:50%;background:#062f55;color:#e7c378;display:grid;place-items:center;font-size:7.5px;font-weight:800}
+.dc-number-item b{display:block;font-size:10px;color:#102f54;margin-bottom:1mm}
+.dc-number-item p{margin:0;font-size:7.5px;line-height:1.45;color:#42586c}
+.dc-card-four{display:grid;grid-template-columns:repeat(4,1fr);gap:0}
+.dc-card-four article{min-height:47mm;padding:4mm;box-sizing:border-box;border-right:.25mm solid #d9c69b;background:#fff}
+.dc-card-four article:last-child{border-right:0}
+.dc-card-four span{display:block;width:8mm;height:8mm;border-radius:50%;background:#062f55;color:#e7c378;display:grid;place-items:center;font-size:7px;margin-bottom:3mm}
+.dc-card-four b{display:block;font-size:8.4px;line-height:1.35;color:#102f54;margin-bottom:2mm}
+.dc-card-four p{font-size:7px;line-height:1.45;margin:0;color:#445b70}
+.dc-card-four.compact article{min-height:34mm}
+.dc-risk-three{display:grid;grid-template-columns:repeat(3,1fr);gap:3mm}
+.dc-risk-three article{display:grid;grid-template-columns:10mm 1fr;gap:2mm;min-height:27mm;padding:4mm;border:.25mm solid #e0e4e8;box-sizing:border-box}
+.dc-risk-three span{width:7.5mm;height:7.5mm;border-radius:50%;background:#062f55;color:#e7c378;display:grid;place-items:center;font-size:6.7px}
+.dc-risk-three p{margin:0;font-size:7px;line-height:1.45;color:#445b70}
+.dc-opinion{margin:4mm 8mm 18mm;background:#eaf3fa;padding:4.5mm 5mm;border-radius:2mm}
+.dc-opinion b{display:block;font-size:11px;color:#102f54;margin-bottom:1.5mm}
+.dc-opinion p{font-size:7.8px;line-height:1.45;margin:0;color:#203f5a;font-weight:700}
+.dc-development-list{display:grid}
+@media print{
+  .daon-core-page{page:daon-professional-master;margin:0;box-shadow:none}
+}
