@@ -13,7 +13,7 @@ const value = (item: { value: unknown; display: string }, fallback = '') =>
 const mediaFor = (model: ProfessionalReportViewModel) =>
   model.media.items.filter((item) => item.url && reportMediaCategoryAllowed(item.category, model.media.internalPhotoAllowed));
 
-function CoreHeader({ page, title, model }: { page: number; title: string; model: ProfessionalReportViewModel }) {
+function CoreHeader({ page, title }: { page: number; title: string }) {
   return <header className="dc-head">
     <div className="dc-page-no">{String(page).padStart(2, '0')}</div>
     <div className="dc-head-title"><h1>{title}</h1><span>REAL ESTATE PROFESSIONAL REPORT</span></div>
@@ -85,7 +85,7 @@ export function DaonInvestmentAnalysisMasterPage({ model }: { model: Professiona
   const future = split(model.investment.recommendedUse.value || '',4);
   const risks = split(model.risks.risks.value || '',3);
   return <article className="daon-core-page dc-analysis-page" data-master-page="investment-analysis">
-    <CoreHeader page={2} title="투자 분석 및 개발 호재" model={model}/>
+    <CoreHeader page={2} title="투자 분석 및 개발 호재"/>
     <div className="dc-property-line"><h2>{value(model.identity.name)}</h2><p>{value(model.investment.overallOpinion, value(model.location.locationAnalysis))}</p></div>
     <section className="dc-analysis-top">
       <div><SectionTitle note="가치 있는 오늘, 더 큰 내일을 만듭니다.">투자 포인트</SectionTitle>{points.map((p,i)=><NumberItem key={i} index={i+1} title={['입지 경쟁력','리포지셔닝 기회','브랜드 수요','중장기 가치'][i] || '핵심 가치'} copy={p}/>)}</div>
@@ -107,7 +107,7 @@ export function DaonDevelopmentDeepDiveMasterPage({ model }: { model: Profession
   const location = split(model.location.locationAnalysis.value || '',4);
   const points = split(model.investment.investmentPoints.value || '',3);
   return <article className="daon-core-page dc-development-page" data-master-page="development-deep-dive">
-    <CoreHeader page={3} title="개발 호재 심화 분석" model={model}/>
+    <CoreHeader page={3} title="개발 호재 심화 분석"/>
     <div className="dc-property-line"><h2>{value(model.identity.name)}</h2><p>산업·업무·상권·보행·주거 변화가 자산가치에 전달되는 경로를 분석합니다.</p></div>
     <section><SectionTitle note="도시의 변화가 만드는, 더 큰 가치를 만납니다.">핵심 개발축</SectionTitle><div className="dc-development-list">{top.map((item,i)=><NumberItem key={i} index={i+1} title={['산업개발진흥지구','미래업무복합단지','정비·재개발','보행·교통·녹지축'][i]} copy={item}/>)}</div></section>
     {rest.length > 0 && <section><SectionTitle>추가 개발 모멘텀</SectionTitle><div className="dc-card-four">{rest.map((item,i)=><article key={i}><span>{i+1}</span><b>개발 모멘텀 {i+1}</b><p>{item}</p></article>)}</div></section>}
