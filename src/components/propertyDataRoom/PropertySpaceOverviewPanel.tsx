@@ -23,11 +23,12 @@ export default function PropertySpaceOverviewPanel({ spaces, sources }: { spaces
   const sourceRows = sources.filter((source) => source.resourceType === 'property_space');
   const sourceNames = [...new Set(sourceRows.map((source) => source.sourceReference || source.sourceName).filter(Boolean))];
   const totalArea = rows.reduce((sum, row) => sum + (row.areaSqm || 0), 0);
+  const distinctFloorCount = new Set(rows.map((row) => String(row.floor || '').trim().toUpperCase()).filter(Boolean)).size;
 
   return <section style={{ gridColumn: '1 / -1', border: '1px solid #dfe5ec', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
     <div style={{ padding: '15px 18px', background: '#f7f9fb', borderBottom: '1px solid #e5eaf0', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><ApartmentRounded color="primary" /><div><p className="eyebrow" style={{ margin: 0 }}>OFFICIAL FLOOR STRUCTURE</p><h2 style={{ margin: '3px 0 0' }}>층별 구성 · Data Room</h2></div></div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" variant="outlined" label={`${rows.length}개 층`} />{totalArea > 0 && <Chip size="small" variant="outlined" label={`합계 ${totalArea.toFixed(2)}㎡`} />}</div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" variant="outlined" label={`${distinctFloorCount}개 층 · ${rows.length}개 공간`} />{totalArea > 0 && <Chip size="small" variant="outlined" label={`합계 ${totalArea.toFixed(2)}㎡`} />}</div>
     </div>
 
     {!rows.length ? <Alert severity="info" sx={{ m: 2 }}>연결된 층별 공간정보가 없습니다. 건축물대장 추출 또는 공간자료 검토 후 이 영역에 층별 구성이 표시됩니다.</Alert> : <div style={{ padding: 14 }}>
