@@ -249,6 +249,25 @@ export class SupabaseRemoteDataGateway implements RemoteDataGateway {
     return candidate;
   }
 
+  async listVerificationCandidates(propertyId: string) {
+    const params = new URLSearchParams({ select: '*', property_id: encodeEq(propertyId), order: 'created_at.desc' });
+    return (await this.client.getRows('property_verification_candidates', params)).map((row) => ({
+      id: String(row.id ?? ''),
+      propertyId: String(row.property_id ?? ''),
+      fieldKey: String(row.field_key ?? ''),
+      currentValue: undefined,
+      candidateValue: row.candidate_value,
+      sourceType: String(row.source_type ?? 'manual') as PropertyVerificationCandidate['sourceType'],
+      sourceName: typeof row.source_name === 'string' ? row.source_name : '',
+      sourceReference: typeof row.source_reference === 'string' ? row.source_reference : undefined,
+      decisionStatus: String(row.decision_status ?? 'pending') as PropertyVerificationCandidate['decisionStatus'],
+      note: typeof row.note === 'string' ? row.note : '',
+      createdAt: String(row.created_at ?? ''),
+      reviewedAt: typeof row.decided_at === 'string' ? row.decided_at : undefined,
+      reviewedBy: typeof row.decided_by === 'string' ? row.decided_by : undefined,
+    }));
+  }
+
   async decideVerificationCandidate(candidateId: string, decision: 'approved' | 'held' | 'rejected', note?: string) {
     const actorId = await this.client.actorId();
     const body: JsonRow = { decision_status: decision, decision_note: note ?? '' };
@@ -266,6 +285,11 @@ export class SupabaseRemoteDataGateway implements RemoteDataGateway {
     const actorId = await this.client.actorId();
     await this.client.insertRows('property_verifications', { id: verification.id, property_id: verification.propertyId, payload: verification, created_by: actorId });
     return verification;
+  }
+
+  async listVerifications(propertyId: string) {
+    const params = new URLSearchParams({ select: 'payload', property_id: encodeEq(propertyId), order: 'created_at.desc' });
+    return (await this.client.getRows('property_verifications', params)).flatMap((row) => rowPayload<PropertyVerification>(row) ?? []);
   }
 
   async createReportSnapshot(input: RemoteReportSnapshotInput) {
