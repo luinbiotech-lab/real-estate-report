@@ -62,9 +62,10 @@ async function verifyBangbaeDigitalTwinIntakeHandoff(page) {
   await page.goto(`${BASE_URL}/digital-twin-intake?propertyId=daon-bangbae-815-11`, { waitUntil: 'domcontentloaded' });
   await waitForText(page, '도면 · 3D · 측정자료 등록');
   await waitForText(page, '방배동 815-11 코너빌딩');
-  const propertySelect = page.getByLabel('대상 물건');
+  const propertySelect = page.getByRole('combobox', { name: '대상 물건' });
   await propertySelect.waitFor({ state: 'visible', timeout: 30_000 });
-  if (await propertySelect.inputValue() !== 'daon-bangbae-815-11') throw new Error('Digital Twin Intake property context was not preserved for Bangbae 815-11.');
+  const selectedPropertyText = (await propertySelect.textContent()) || '';
+  if (!selectedPropertyText.includes('방배동 815-11 코너빌딩')) throw new Error('Digital Twin Intake property context was not preserved for Bangbae 815-11.');
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-digital-twin-intake-handoff.png`, fullPage: true });
   console.log('[PASS] Digital Twin Intake query context preselects Bangbae 815-11');
 }
