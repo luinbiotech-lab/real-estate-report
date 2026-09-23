@@ -238,8 +238,8 @@ function buildAsset(
   const hasLocalBinary = typeof Blob !== 'undefined' && fileData instanceof Blob;
   const existingUrl = text(value.fileUrl) || text(value.url);
 
-  if (existingUrl.startsWith('data:')) {
-    blockers.push({ code: 'INLINE_DATA_URL', store, id, propertyId, message: `${store}/${id}에 inline data URL이 남아 있습니다.` });
+  if (existingUrl.startsWith('data:') && !hasLocalBinary) {
+    blockers.push({ code: 'INLINE_DATA_URL', store, id, propertyId, message: `${store}/${id}에 local binary 없이 inline data URL만 남아 있습니다.` });
   }
   if (rawSize != null && rawSize > MAX_REMOTE_ASSET_BYTES) {
     blockers.push({ code: 'ASSET_TOO_LARGE', store, id, propertyId, message: `${store}/${id}가 server hard cap 50 MiB를 초과합니다.` });
