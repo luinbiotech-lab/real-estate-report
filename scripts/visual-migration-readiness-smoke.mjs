@@ -38,9 +38,8 @@ async function uploadBangbaeSourceDocuments(page) {
     ['방배동 815-11 토지이용계획확인서', '방배동 815-11 토지이용계획확인서.pdf'],
   ];
   for (const [sourceName, fileName] of uploads) {
-    const sourceCard = page.locator('article').filter({ hasText: sourceName }).last();
-    await sourceCard.waitFor({ state: 'visible', timeout: 30_000 });
-    const input = sourceCard.locator('input[type="file"]');
+    const input = page.locator('article').filter({ hasText: sourceName }).locator('input[type="file"]').first();
+    await input.waitFor({ state: 'attached', timeout: 30_000 });
     await input.setInputFiles({
       name: fileName,
       mimeType: 'application/pdf',
