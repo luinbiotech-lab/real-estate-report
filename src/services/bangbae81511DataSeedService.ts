@@ -48,12 +48,12 @@ const floorSeed = [
 ] satisfies Array<Pick<PropertySpace, 'floor' | 'name' | 'spaceType' | 'areaSqm'> & { key: string }>;
 
 const comparableSeed: ComparableTransactionInput[] = [
-  { label: '방배동 811-20', salePrice: 4_500_000_000, landAreaPyeong: 56.29, landUnitPrice: 79_050_000, approvalYear: 1986, tradeDate: '2025-11-25' },
-  { label: '방배동 2112', salePrice: 5_100_000_000, landAreaPyeong: 59.89, landUnitPrice: 85_160_000, approvalYear: 1989, tradeDate: '2025-10-24' },
-  { label: '방배동 811-19', salePrice: 4_100_000_000, landAreaPyeong: 69.09, landUnitPrice: 58_620_000, approvalYear: 1985, tradeDate: '2025-11-25' },
-  { label: '유한빌딩 882-25', salePrice: 4_200_000_000, landAreaPyeong: 58.89, landUnitPrice: 70_810_000, approvalYear: 1992, tradeDate: '2026-06-02' },
-  { label: '더코너스톤 456-30', salePrice: 3_500_000_000, landAreaPyeong: 50.76, landUnitPrice: 68_950_000, approvalYear: 2022, tradeDate: '2025-11-18' },
-  { label: '방배동 448-37', salePrice: 5_800_000_000, landAreaPyeong: 66, landUnitPrice: 87_880_000, approvalYear: 1987, tradeDate: '2026-02-13' },
+  { label: '방배동 811-20', sourceRow: 11, sourceRecordLabel: '방배동 811-20', salePrice: 4_500_000_000, landAreaPyeong: 56.29, landUnitPrice: 79_050_000, approvalYear: 1986, tradeDate: '2025-11-25' },
+  { label: '방배동 2112', sourceRow: 10, sourceRecordLabel: '방배동 2112', salePrice: 5_100_000_000, landAreaPyeong: 59.89, landUnitPrice: 85_160_000, approvalYear: 1989, tradeDate: '2025-10-24' },
+  { label: '방배동 811-19', sourceRow: 13, sourceRecordLabel: '방배동 811-19', salePrice: 4_100_000_000, landAreaPyeong: 69.09, landUnitPrice: 58_620_000, approvalYear: 1985, tradeDate: '2025-11-25' },
+  { label: '유한빌딩 882-25', sourceRow: 12, sourceRecordLabel: '유한빌딩', salePrice: 4_200_000_000, landAreaPyeong: 58.89, landUnitPrice: 70_810_000, approvalYear: 1992, tradeDate: '2026-06-02' },
+  { label: '더코너스톤 456-30', sourceRow: 14, sourceRecordLabel: '주식회사더코너스톤', salePrice: 3_500_000_000, landAreaPyeong: 50.76, landUnitPrice: 68_950_000, approvalYear: 2022, tradeDate: '2025-11-18' },
+  { label: '방배동 448-37', sourceRow: 9, sourceRecordLabel: '방배동 448-37', salePrice: 5_800_000_000, landAreaPyeong: 66, landUnitPrice: 87_880_000, approvalYear: 1987, tradeDate: '2026-02-13' },
 ];
 
 function spaceId(key: string) {
