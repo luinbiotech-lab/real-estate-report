@@ -26,6 +26,12 @@ if (!text.app.includes('path="digital-twin-intake"') || !text.layout.includes('t
 if (!text.twinIntakeService.includes('MAX_ASSET_BYTES = 50 * 1024 * 1024') || !text.twinIntakeService.includes("dxf: 'dxf'") || !text.twinIntakeService.includes("dwg: 'dwg'") || !text.twinIntakeService.includes("glb: 'glb'")) throw new Error('Digital Twin Intake는 Production Storage 50MiB 한도와 핵심 형식 매핑을 유지해야 합니다.');
 if (!text.twinIntakePage.includes('최대 50MiB') || !text.twinIntakePage.includes('Production private Storage와 동일 기준')) throw new Error('Digital Twin Intake UI는 Production과 동일한 50MiB 한도를 명시해야 합니다.');
 if (!text.twinIntakeService.includes('saveDigitalTwinAsset(asset)') || !text.twinIntakeService.includes("resourceType: 'digital_twin_asset'")) throw new Error('Digital Twin 원본과 DataSource provenance를 함께 저장해야 합니다.');
+for (const marker of ['uploadFromDocument', "document.documentType !== 'floor_plan'", 'document.fileData instanceof Blob', 'sourceDocumentId: document.id']) {
+  if (!text.twinIntakeService.includes(marker)) throw new Error(`Data Room 평면도 → Digital Twin provenance 재사용 계약 누락: ${marker}`);
+}
+for (const marker of ['Data Room 평면도 재사용', 'getDocuments(id)', "document.documentType === 'floor_plan'", 'asset.sourceDocumentId === document.id', 'Digital Twin 연결']) {
+  if (!text.twinIntakePage.includes(marker)) throw new Error(`Digital Twin Intake Data Room 재사용 UI 누락: ${marker}`);
+}
 if (!text.twinIntakeService.includes("queueDigitalTwin(saved, 'upload')") || !text.orchestrator.includes('async queueDigitalTwin')) throw new Error('Digital Twin 업로드는 Agent Human Review 흐름에 연결되어야 합니다.');
 if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntakePage.includes("navigate('/digital-twin')")) throw new Error('Digital Twin Intake 화면은 업로드와 Workspace handoff를 제공해야 합니다.');
 if (!text.repository.includes('getDigitalTwinAssets') || !text.repository.includes('saveDigitalTwinAsset')) throw new Error('Digital Twin asset repository read/write 경로를 유지해야 합니다.');
