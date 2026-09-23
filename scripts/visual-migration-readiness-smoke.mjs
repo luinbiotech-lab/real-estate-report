@@ -51,6 +51,19 @@ async function uploadBangbaeSourceDocuments(page) {
   if (readyCount < 3) throw new Error(`Expected 3 migration-ready source documents, got ${readyCount}.`);
 }
 
+async function uploadBangbaeExteriorMedia(page) {
+  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=media`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '보고서 미디어 연결');
+  await page.getByLabel('캡션').fill('QA 방배동 코너 외관');
+  const input = page.locator('input[type="file"][accept="image/jpeg,image/png,image/webp"]');
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
+  await input.setInputFiles({ name: 'bangbae-815-11-exterior.png', mimeType: 'image/png', buffer: png });
+  await waitForText(page, 'QA 방배동 코너 외관');
+  const mediaCard = page.locator('article').filter({ hasText: 'QA 방배동 코너 외관' }).last();
+  await mediaCard.getByRole('button', { name: '대표 지정', exact: true }).click();
+  await waitForText(page, '대표 지정됨');
+}
+
 async function cleanupQaRows(page) {
   await page.evaluate(async ({ propertyId, riskId }) => new Promise((resolve, reject) => {
     const request = indexedDB.open('real-estate-report');
@@ -103,6 +116,7 @@ try {
   if (manifest.readyForRemoteWrite !== false) throw new Error('Manifest with inline/source-document blockers cannot be ready for remote write.');
 
   await uploadBangbaeSourceDocuments(page);
+  await uploadBangbaeExteriorMedia(page);
   await page.goto(`${BASE_URL}/migration-readiness`, { waitUntil: 'domcontentloaded' });
   await page.getByLabel('이관 대상 물건').click();
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
@@ -117,6 +131,15 @@ try {
   const preparedBlockerCodes = new Set((preparedManifest.blockers ?? []).map((row) => row?.code));
   if (preparedBlockerCodes.has('SOURCE_DOCUMENT_BINARY_NOT_CONNECTED')) throw new Error('Source-document blocker remained after all 3 PDFs were prepared.');
   if (!preparedBlockerCodes.has('INLINE_BINARY')) throw new Error('Independent INLINE_BINARY safety blocker must remain after source PDFs are prepared.');
+  if (preparedBlockerCodes.has('INLINE_DATA_URL')) throw new Error('Blob-backed exterior media preview data URL must not block migration.');
+  const exteriorMediaUploads = (preparedManifest.assetUploads ?? []).filter((asset) =>
+    asset?.resourceType === 'media' &&
+    asset?.propertyId === 'daon-bangbae-815-11' &&
+    asset?.fileName === 'bangbae-815-11-exterior.png'
+  );
+  if (exteriorMediaUploads.length !== 1 || exteriorMediaUploads[0]?.binarySource !== 'blob') {
+    throw new Error('Bangbae exterior media was not mapped to a Blob-backed Storage upload.');
+  }
   const sourceDocumentUploads = (preparedManifest.assetUploads ?? []).filter((asset) =>
     asset?.resourceType === 'document' &&
     asset?.propertyId === 'daon-bangbae-815-11' &&
