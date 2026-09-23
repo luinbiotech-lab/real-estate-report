@@ -145,6 +145,10 @@ function sanitizedFileName(value: string) {
   return (value || 'asset').replace(/[^A-Za-z0-9._-]+/g, '_');
 }
 
+function normalizedSourceFileName(value: string) {
+  return value.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+}
+
 function hasInlineDataUrl(value: unknown, seen = new WeakSet<object>()): boolean {
   if (typeof value === 'string') return value.startsWith('data:');
   if (!value || typeof value !== 'object') return false;
@@ -337,7 +341,7 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
       asset.resourceType === 'document' &&
       asset.propertyId === inventory.propertyId &&
       !!inventory.sourceReference &&
-      asset.fileName === inventory.sourceReference &&
+      normalizedSourceFileName(asset.fileName) === normalizedSourceFileName(inventory.sourceReference) &&
       asset.binarySource !== 'missing'
     );
     if (!scheduledDocumentUpload) {
