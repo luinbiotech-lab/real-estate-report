@@ -90,10 +90,26 @@ export default function PropertyDataRoomPage() {
     setDocumentType(resolvedType);
     setUploading(true); setError('');
     try {
-      await propertyDataRoomService.uploadDocument(id, file, {
+      const savedDocument = await propertyDataRoomService.uploadDocument(id, file, {
         documentType: resolvedType,
         title: source.sourceName || file.name.replace(/\.[^.]+$/, ''),
         sourceName: source.sourceName || '사용자 업로드',
+      });
+      await propertyDataRoomRepository.saveDataSource({
+        ...source,
+        sourceReference: savedDocument.originalFileName,
+        verificationStatus: 'confirmed',
+        metadata: {
+          ...source.metadata,
+          originalSourcePresence: 'confirmed',
+          binaryStorageStatus: source.metadata?.binaryStorageStatus === 'connected' ? 'connected' : 'not_connected',
+          storagePath: source.metadata?.storagePath ?? null,
+          sourceReviewed: source.metadata?.sourceReviewed === true,
+          matchedDocumentId: savedDocument.id,
+          note: source.metadata?.sourceReviewed === true
+            ? '확인된 원본과 등록 파일을 연결했습니다. private Storage 연결은 Production migration에서 수행합니다.'
+            : '원본 파일 등록으로 존재를 확인했습니다. 문서 내용은 별도 검증이 필요하며 private Storage 연결은 Production migration에서 수행합니다.',
+        },
       });
       await load();
       setTab('official');
@@ -179,8 +195,11 @@ function OfficialPanel({ documents, sources, uploading, onUploadSource }: { docu
     const binaryStorageStatus = source.metadata?.binaryStorageStatus;
     const originalSourcePresence = source.metadata?.originalSourcePresence;
     const sourceReference = typeof source.sourceReference === 'string' ? source.sourceReference : '';
-    const matchingDocument = isSourceInventory && sourceReference
-      ? documents.find((document) => normalizedSourceFileName(document.originalFileName) === normalizedSourceFileName(sourceReference))
+    const expectedDocumentType = propertyDataRoomService.classifyDocument(sourceReference || source.sourceName);
+    const matchingDocument = isSourceInventory
+      ? documents.find((document) =>
+          (sourceReference && normalizedSourceFileName(document.originalFileName) === normalizedSourceFileName(sourceReference)) ||
+          (!sourceReference && expectedDocumentType !== 'other' && document.documentType === expectedDocumentType))
       : undefined;
     const migrationUploadReady = Boolean(matchingDocument && (matchingDocument.fileData || matchingDocument.fileUrl));
     return <article key={source.id}>
