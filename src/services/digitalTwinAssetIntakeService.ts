@@ -2,7 +2,7 @@ import type { DigitalTwinAsset, DigitalTwinAssetType } from '../domain/propertyD
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 
-const MAX_ASSET_BYTES = 80 * 1024 * 1024;
+const MAX_ASSET_BYTES = 50 * 1024 * 1024;
 
 const EXTENSION_ASSET_TYPE: Record<string, DigitalTwinAssetType> = {
   dxf: 'dxf',
@@ -54,7 +54,7 @@ export const digitalTwinAssetIntakeService = {
       return `지원하지 않는 3D/도면 파일입니다. 지원 형식: ${[...SUPPORTED_EXTENSIONS].map((item) => `.${item}`).join(', ')}`;
     }
     if (file.size <= 0) return '빈 파일은 등록할 수 없습니다.';
-    if (file.size > MAX_ASSET_BYTES) return 'Digital Twin 자산은 80MB 이하만 등록할 수 있습니다.';
+    if (file.size > MAX_ASSET_BYTES) return 'Digital Twin 자산은 Production Storage 기준 50MiB 이하만 등록할 수 있습니다.';
     return '';
   },
 
