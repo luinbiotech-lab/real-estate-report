@@ -147,7 +147,20 @@ function DocumentPanel({ documents, documentType, setDocumentType, upload, uploa
 }
 
 function OfficialPanel({ documents, sources }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources'] }) {
-  return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => <article key={source.id}><b>{source.sourceName}</b><span>{SOURCE_TYPE_LABELS[source.sourceType]} · {source.sourceDate || source.collectedAt.slice(0, 10)}</span><VerificationBadge status={source.verificationStatus} /></article>)}</div> : <EmptyState title="등록된 공적자료가 없습니다." detail="문서 탭에서 공적자료를 등록하면 출처와 검증 상태가 함께 표시됩니다." />}</div>;
+  return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다. 원본 존재 확인과 private Storage 파일 연결은 별도 상태로 관리합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => {
+    const isSourceInventory = source.resourceType === 'source_document_inventory';
+    const binaryStorageStatus = source.metadata?.binaryStorageStatus;
+    const originalSourcePresence = source.metadata?.originalSourcePresence;
+    return <article key={source.id}>
+      <b>{source.sourceName}</b>
+      <span>{SOURCE_TYPE_LABELS[source.sourceType]} · {source.sourceDate || source.collectedAt.slice(0, 10)}</span>
+      <VerificationBadge status={source.verificationStatus} />
+      {isSourceInventory && <div className="source-inventory-status">
+        <Chip size="small" label={originalSourcePresence === 'confirmed' ? '원본 확인' : '원본 상태 미확인'} color={originalSourcePresence === 'confirmed' ? 'success' : 'default'} />
+        <Chip size="small" label={binaryStorageStatus === 'connected' ? 'Storage 연결' : 'Storage 미연결'} color={binaryStorageStatus === 'connected' ? 'success' : 'warning'} />
+      </div>}
+    </article>;
+  })}</div> : <EmptyState title="등록된 공적자료가 없습니다." detail="문서 탭에서 공적자료를 등록하면 출처와 검증 상태가 함께 표시됩니다." />}</div>;
 }
 
 function VerificationPanel({ candidates, reviewingId, onDecision }: { candidates: PropertyVerificationCandidate[]; reviewingId: string; onDecision: (candidate: PropertyVerificationCandidate, status: VerificationDecisionStatus) => void }) {
