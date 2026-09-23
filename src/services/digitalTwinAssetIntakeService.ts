@@ -1,4 +1,4 @@
-import type { DigitalTwinAsset, DigitalTwinAssetType } from '../domain/propertyDataRoom/types';
+import type { DigitalTwinAsset, DigitalTwinAssetType, PropertyDocument } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 
@@ -56,6 +56,22 @@ export const digitalTwinAssetIntakeService = {
     if (file.size <= 0) return '빈 파일은 등록할 수 없습니다.';
     if (file.size > MAX_ASSET_BYTES) return 'Digital Twin 자산은 Production Storage 기준 50MiB 이하만 등록할 수 있습니다.';
     return '';
+  },
+
+  async uploadFromDocument(propertyId: string, document: PropertyDocument, input: { assetType?: DigitalTwinAssetType; floor?: string; queueAgent?: boolean } = {}): Promise<{ asset: DigitalTwinAsset; jobId?: string }> {
+    if (document.propertyId !== propertyId) throw new Error('다른 물건의 Data Room 문서는 Digital Twin 자산으로 연결할 수 없습니다.');
+    if (document.documentType !== 'floor_plan') throw new Error('평면도 문서만 Digital Twin 도면 자산으로 재사용할 수 있습니다.');
+    if (!(document.fileData instanceof Blob)) throw new Error('Data Room 문서의 local binary가 없어 Digital Twin 자산으로 재사용할 수 없습니다.');
+    const fileName = document.originalFileName || `${document.id}.pdf`;
+    const file = document.fileData instanceof File
+      ? document.fileData
+      : new File([document.fileData], fileName, { type: document.mimeType || 'application/octet-stream' });
+    return this.upload(propertyId, file, {
+      assetType: input.assetType || this.detectAssetType(fileName) || 'floor_plan',
+      floor: input.floor,
+      sourceDocumentId: document.id,
+      queueAgent: input.queueAgent,
+    });
   },
 
   async upload(propertyId: string, file: File, input: { assetType?: DigitalTwinAssetType; floor?: string; sourceDocumentId?: string; queueAgent?: boolean } = {}): Promise<{ asset: DigitalTwinAsset; jobId?: string }> {
