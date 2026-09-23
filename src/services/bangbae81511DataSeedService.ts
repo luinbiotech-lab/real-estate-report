@@ -34,6 +34,9 @@ const SOURCE_DOCUMENT_INVENTORY = [
   },
 ] as const;
 
+const EXTERIOR_MEDIA_EVIDENCE_ID = 'bangbae-815-11-exterior-report-evidence';
+const EXTERIOR_MEDIA_EVIDENCE_REFERENCE = '방배동_815-11_DAON_ASSET_세부보고서_전면재작성.pdf';
+
 const BUILDING_SOURCE_DATE = '2026-09-02';
 const BUILDING_ID = '2120041230002444';
 const BUILDING_UNIQUE_NO = '1165010100-1-08150011';
@@ -160,6 +163,29 @@ export const bangbae81511DataSeedService = {
       };
       await propertyDataRoomRepository.saveDataSource(source);
     }
+
+    const exteriorEvidence = sources.find((item) => item.id === EXTERIOR_MEDIA_EVIDENCE_ID);
+    await propertyDataRoomRepository.saveDataSource({
+      id: EXTERIOR_MEDIA_EVIDENCE_ID,
+      propertyId: PROPERTY_ID,
+      fieldKey: 'exteriorMediaEvidence',
+      resourceType: 'exterior_photo_embedded_report_evidence',
+      sourceType: 'external',
+      sourceName: '기존 DA:ON 상세보고서 외관 사진 증거',
+      sourceReference: EXTERIOR_MEDIA_EVIDENCE_REFERENCE,
+      collectedAt: exteriorEvidence?.collectedAt ?? now,
+      verificationStatus: 'confirmed',
+      metadata: {
+        sourcePages: [1, 3],
+        evidenceType: 'embedded_exterior_photo',
+        directMediaAssetConnected: false,
+        privateStorageStatus: 'not_connected',
+        sellerPolicy: 'exterior_only',
+        interiorMediaExcluded: true,
+        note: '기존 보고서 1·3페이지에서 방배동 815-11 외관 사진을 확인했으나 원본/파생 이미지 asset은 아직 private Storage에 연결되지 않았습니다.',
+      },
+      createdAt: exteriorEvidence?.createdAt ?? now,
+    });
 
     const comparableSource = sources.find((item) => item.id === COMPARABLE_SOURCE_ID);
     if (!comparableSource || (
