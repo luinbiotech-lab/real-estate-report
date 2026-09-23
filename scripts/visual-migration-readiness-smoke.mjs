@@ -35,6 +35,7 @@ async function uploadBangbaeSourceDocuments(page) {
     ['방배동 815-11 건축물대장', '방배동 815-11 건축물대장.pdf'],
     ['방배동 815-11 토지등기부', '방배동 815-11 토지등기부.pdf'],
     ['방배동 815-11 건물등기부', '방배동 815-11 건물등기부.pdf'],
+    ['방배동 815-11 토지이용계획확인서', '방배동 815-11 토지이용계획확인서.pdf'],
   ];
   for (const [sourceName, fileName] of uploads) {
     const sourceCard = page.locator('article').filter({ hasText: sourceName }).last();
@@ -48,7 +49,7 @@ async function uploadBangbaeSourceDocuments(page) {
     await waitForText(page, '이관 파일 준비');
   }
   const readyCount = await page.getByText('이관 파일 준비', { exact: true }).count();
-  if (readyCount < 3) throw new Error(`Expected 3 migration-ready source documents, got ${readyCount}.`);
+  if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents, got ${readyCount}.`);
 }
 
 async function uploadBangbaeExteriorMedia(page) {
@@ -143,10 +144,10 @@ try {
   const sourceDocumentUploads = (preparedManifest.assetUploads ?? []).filter((asset) =>
     asset?.resourceType === 'document' &&
     asset?.propertyId === 'daon-bangbae-815-11' &&
-    ['방배동 815-11 건축물대장.pdf', '방배동 815-11 토지등기부.pdf', '방배동 815-11 건물등기부.pdf'].includes(asset?.fileName)
+    ['방배동 815-11 건축물대장.pdf', '방배동 815-11 토지등기부.pdf', '방배동 815-11 건물등기부.pdf', '방배동 815-11 토지이용계획확인서.pdf'].includes(asset?.fileName)
   );
-  if (sourceDocumentUploads.length !== 3 || sourceDocumentUploads.some((asset) => asset.binarySource !== 'blob')) {
-    throw new Error('Prepared Bangbae source documents were not mapped to 3 local-binary Storage uploads.');
+  if (sourceDocumentUploads.length !== 4 || sourceDocumentUploads.some((asset) => asset.binarySource !== 'blob')) {
+    throw new Error('Prepared Bangbae source documents were not mapped to 4 local-binary Storage uploads.');
   }
   if (preparedManifest.readyForRemoteWrite !== false) throw new Error('Independent inline-binary blocker must keep prepared manifest blocked.');
 
