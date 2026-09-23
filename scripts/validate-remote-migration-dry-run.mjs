@@ -56,6 +56,10 @@ for (const marker of [
   "value.resourceType === 'source_document_inventory'",
   "originalSourcePresence === 'confirmed'",
   "binaryStorageStatus !== 'connected'",
+  'pendingSourceInventories',
+  "asset.resourceType === 'document'",
+  'asset.fileName === inventory.sourceReference',
+  "asset.binarySource !== 'missing'",
 ]) {
   if (!text.planner.includes(marker)) throw new Error(`Source inventory binary 연결 gate 누락: ${marker}`);
 }
