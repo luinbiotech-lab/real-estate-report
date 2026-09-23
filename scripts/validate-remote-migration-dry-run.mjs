@@ -58,7 +58,8 @@ for (const marker of [
   "binaryStorageStatus !== 'connected'",
   'pendingSourceInventories',
   "asset.resourceType === 'document'",
-  'asset.fileName === inventory.sourceReference',
+  'normalizedSourceFileName(asset.fileName) === normalizedSourceFileName(inventory.sourceReference)',
+  "value.normalize('NFKC').toLowerCase().replace(/\\s+/g, '')",
   "asset.binarySource !== 'missing'",
 ]) {
   if (!text.planner.includes(marker)) throw new Error(`Source inventory binary 연결 gate 누락: ${marker}`);
