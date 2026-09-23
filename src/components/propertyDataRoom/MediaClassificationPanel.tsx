@@ -37,6 +37,26 @@ export default function MediaClassificationPanel({ propertyId, media, internalPh
     } finally { setSavingId(''); }
   };
 
+  const setPrimary = async (item: PropertyMedia) => {
+    if (!internalPhotoAllowed && isInternalMediaCategory(item.category)) {
+      setError('내부사진 제외 물건의 실내 미디어는 대표사진으로 지정할 수 없습니다.');
+      return;
+    }
+    setSavingId(item.id); setError(''); setMessage('');
+    try {
+      const now = new Date().toISOString();
+      for (const current of media) {
+        const shouldBePrimary = current.id === item.id;
+        if (current.isPrimary === shouldBePrimary) continue;
+        await propertyDataRoomRepository.updateMedia({ ...current, isPrimary: shouldBePrimary, updatedAt: now });
+      }
+      setMessage(`${item.caption || item.fileName}을 보고서 대표 외관 미디어로 지정했습니다.`);
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '대표 미디어를 저장하지 못했습니다.');
+    } finally { setSavingId(''); }
+  };
+
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; if (!file) return;
     setUploading(true); setError(''); setMessage('');
@@ -63,8 +83,9 @@ export default function MediaClassificationPanel({ propertyId, media, internalPh
       const lockedInternal = !internalPhotoAllowed && isInternalMediaCategory(item.category);
       return <article key={item.id}>
         <div className="file-icon">{item.url ? <img src={item.url} alt={item.caption || item.fileName} style={{ width: 48, height: 48, objectFit: 'cover', borderRadius: 6 }} /> : null}</div>
-        <div><b>{item.caption || item.fileName}</b><span>{labels[item.category]} · {item.verificationStatus}{lockedInternal ? ' · 보고서 제외 고정' : ''}</span><small>{item.floor ? `${item.floor} · ` : ''}{item.captureDate || item.createdAt.slice(0, 10)}</small></div>
+        <div><b>{item.caption || item.fileName}{item.isPrimary ? ' · 대표' : ''}</b><span>{labels[item.category]} · {item.verificationStatus}{lockedInternal ? ' · 보고서 제외 고정' : ''}</span><small>{item.floor ? `${item.floor} · ` : ''}{item.captureDate || item.createdAt.slice(0, 10)}</small></div>
         <TextField select size="small" label={lockedInternal ? '보고서 제외' : '보고서 분류'} value={reportCategories.includes(item.category) ? item.category : 'other'} disabled={savingId === item.id || lockedInternal} onChange={(event) => update(item, event.target.value as MediaCategory)}>{reportCategories.map((value) => <MenuItem key={value} value={value}>{labels[value]}</MenuItem>)}</TextField>
+        {!lockedInternal && <Button size="small" variant={item.isPrimary ? 'contained' : 'outlined'} disabled={savingId === item.id} onClick={() => setPrimary(item)}>{item.isPrimary ? '대표 지정됨' : '대표 지정'}</Button>}
       </article>;
     })}</div> : <Alert severity="info">등록된 Data Room 미디어가 없습니다. 외관·도로·주변환경 이미지를 위에서 등록하세요.</Alert>}
   </section>;
