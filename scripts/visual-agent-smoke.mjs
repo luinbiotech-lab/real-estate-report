@@ -66,8 +66,12 @@ async function verifyBangbaeDigitalTwinIntakeHandoff(page) {
   await propertySelect.waitFor({ state: 'visible', timeout: 30_000 });
   const selectedPropertyText = (await propertySelect.textContent()) || '';
   if (!selectedPropertyText.includes('방배동 815-11 코너빌딩')) throw new Error('Digital Twin Intake property context was not preserved for Bangbae 815-11.');
+  const floorSelect = page.getByRole('combobox', { name: '층(선택)' });
+  await floorSelect.click();
+  for (const floor of ['B1', '1F', '2F', '3F']) await page.getByRole('option', { name: floor, exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  await page.keyboard.press('Escape');
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-digital-twin-intake-handoff.png`, fullPage: true });
-  console.log('[PASS] Digital Twin Intake query context preselects Bangbae 815-11');
+  console.log('[PASS] Digital Twin Intake query context + verified B1/1F/2F/3F floor options for Bangbae 815-11');
 }
 
 await mkdir(ARTIFACT_DIR, { recursive: true });
