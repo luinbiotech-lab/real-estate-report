@@ -28,6 +28,29 @@ async function writeQaRows(page) {
   }), { propertyId: QA_INLINE_PROPERTY_ID, riskId: QA_INLINE_BINARY_ID, binaryPayload: QA_BINARY_PAYLOAD_SENTINEL });
 }
 
+async function uploadBangbaeSourceDocuments(page) {
+  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=official`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '공적자료 및 데이터 출처');
+  const uploads = [
+    ['방배동 815-11 건축물대장', '방배동 815-11 건축물대장.pdf'],
+    ['방배동 815-11 토지등기부', '방배동 815-11 토지등기부.pdf'],
+    ['방배동 815-11 건물등기부', '방배동 815-11 건물등기부.pdf'],
+  ];
+  for (const [sourceName, fileName] of uploads) {
+    const sourceCard = page.locator('article').filter({ hasText: sourceName }).last();
+    await sourceCard.waitFor({ state: 'visible', timeout: 30_000 });
+    const input = sourceCard.locator('input[type="file"]');
+    await input.setInputFiles({
+      name: fileName,
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n% DAON migration QA source document\n%%EOF\n', 'utf8'),
+    });
+    await waitForText(page, '이관 파일 준비');
+  }
+  const readyCount = await page.getByText('이관 파일 준비', { exact: true }).count();
+  if (readyCount < 3) throw new Error(`Expected 3 migration-ready source documents, got ${readyCount}.`);
+}
+
 async function cleanupQaRows(page) {
   await page.evaluate(async ({ propertyId, riskId }) => new Promise((resolve, reject) => {
     const request = indexedDB.open('real-estate-report');
@@ -79,6 +102,31 @@ try {
   if (sourceBinaryBlockers.length < 3) throw new Error(`Expected at least 3 Bangbae source-document blockers, got ${sourceBinaryBlockers.length}.`);
   if (manifest.readyForRemoteWrite !== false) throw new Error('Manifest with inline/source-document blockers cannot be ready for remote write.');
 
+  await uploadBangbaeSourceDocuments(page);
+  await page.goto(`${BASE_URL}/migration-readiness`, { waitUntil: 'domcontentloaded' });
+  await page.getByLabel('이관 대상 물건').click();
+  await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
+  await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
+  await waitForText(page, 'INLINE_BINARY');
+
+  const preparedManifestDownloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
+  const preparedManifestDownload = await preparedManifestDownloadPromise;
+  await preparedManifestDownload.saveAs(MANIFEST_PATH);
+  const preparedManifest = JSON.parse(await readFile(MANIFEST_PATH, 'utf8'));
+  const preparedBlockerCodes = new Set((preparedManifest.blockers ?? []).map((row) => row?.code));
+  if (preparedBlockerCodes.has('SOURCE_DOCUMENT_BINARY_NOT_CONNECTED')) throw new Error('Source-document blocker remained after all 3 PDFs were prepared.');
+  if (!preparedBlockerCodes.has('INLINE_BINARY')) throw new Error('Independent INLINE_BINARY safety blocker must remain after source PDFs are prepared.');
+  const sourceDocumentUploads = (preparedManifest.assetUploads ?? []).filter((asset) =>
+    asset?.resourceType === 'document' &&
+    asset?.propertyId === 'daon-bangbae-815-11' &&
+    ['방배동 815-11 건축물대장.pdf', '방배동 815-11 토지등기부.pdf', '방배동 815-11 건물등기부.pdf'].includes(asset?.fileName)
+  );
+  if (sourceDocumentUploads.length !== 3 || sourceDocumentUploads.some((asset) => asset.binarySource !== 'blob')) {
+    throw new Error('Prepared Bangbae source documents were not mapped to 3 local-binary Storage uploads.');
+  }
+  if (preparedManifest.readyForRemoteWrite !== false) throw new Error('Independent inline-binary blocker must keep prepared manifest blocked.');
+
   const handoffDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Handoff Bundle 다운로드' }).click();
   const handoffDownload = await handoffDownloadPromise;
@@ -89,7 +137,7 @@ try {
   if (handoff.safety?.dryRunOnly !== true || handoff.safety?.networkWritesPerformed !== 0) throw new Error('Handoff safety boundary is invalid.');
   if (handoff.safety?.remoteExecutionEnabled !== false || handoff.safety?.secretsIncluded !== false || handoff.safety?.binaryPayloadsIncluded !== false) throw new Error('Handoff must exclude remote execution, secrets, and binary payloads.');
   if (handoff.readiness?.productionReady !== false || handoff.readiness?.localPlanReady !== false) throw new Error('Blocked handoff cannot be marked locally or production ready.');
-  if (handoff.readiness?.blockerCount !== manifest.blockers.length) throw new Error('Handoff blocker count must reconcile with manifest.');
+  if (handoff.readiness?.blockerCount !== preparedManifest.blockers.length) throw new Error('Handoff blocker count must reconcile with prepared manifest.');
   if (!Array.isArray(handoff.deploymentOrder) || handoff.deploymentOrder.length < 8) throw new Error('Handoff deployment order is incomplete.');
   if (!Array.isArray(handoff.verificationChecklist) || handoff.verificationChecklist.length < 10) throw new Error('Handoff verification checklist is incomplete.');
   if (handoff.manifest?.networkWrites !== 0 || handoff.manifest?.dryRun !== true) throw new Error('Embedded migration manifest safety boundary changed.');
