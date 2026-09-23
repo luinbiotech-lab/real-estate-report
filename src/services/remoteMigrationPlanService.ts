@@ -51,6 +51,7 @@ export interface RemoteMigrationBlocker {
     | 'INLINE_DATA_URL'
     | 'INLINE_BINARY'
     | 'MISSING_ASSET_BINARY'
+    | 'SOURCE_DOCUMENT_BINARY_NOT_CONNECTED'
     | 'ASSET_TOO_LARGE'
     | 'UNSUPPORTED_STORE'
     | 'INVALID_ROW';
@@ -303,6 +304,20 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
         continue;
       }
       if (!structuredPayloadIsSafe(store, value, blockers, id, propertyId)) continue;
+      if (
+        store === 'propertyDataSources' &&
+        value.resourceType === 'source_document_inventory' &&
+        record(value.metadata)?.originalSourcePresence === 'confirmed' &&
+        record(value.metadata)?.binaryStorageStatus !== 'connected'
+      ) {
+        blockers.push({
+          code: 'SOURCE_DOCUMENT_BINARY_NOT_CONNECTED',
+          store,
+          id,
+          propertyId,
+          message: `${text(value.sourceName) || id} 원본 존재는 확인됐지만 private Storage binary가 아직 연결되지 않았습니다.`,
+        });
+      }
       objects.push({ objectType: store, id, propertyId, payload: value });
     }
   }
