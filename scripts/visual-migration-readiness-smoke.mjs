@@ -74,7 +74,10 @@ try {
   const blockerCodes = new Set((manifest.blockers ?? []).map((row) => row?.code));
   if (blockerCodes.has('INLINE_DATA_URL')) throw new Error('Out-of-scope inline Property blocker must not leak into a property-scoped plan.');
   if (!blockerCodes.has('INLINE_BINARY')) throw new Error('Expected in-scope structured binary blocker was not produced.');
-  if (manifest.readyForRemoteWrite !== false) throw new Error('Manifest with inline payload blockers cannot be ready for remote write.');
+  if (!blockerCodes.has('SOURCE_DOCUMENT_BINARY_NOT_CONNECTED')) throw new Error('Expected Bangbae source-document binary blocker was not produced.');
+  const sourceBinaryBlockers = (manifest.blockers ?? []).filter((row) => row?.code === 'SOURCE_DOCUMENT_BINARY_NOT_CONNECTED');
+  if (sourceBinaryBlockers.length < 3) throw new Error(`Expected at least 3 Bangbae source-document blockers, got ${sourceBinaryBlockers.length}.`);
+  if (manifest.readyForRemoteWrite !== false) throw new Error('Manifest with inline/source-document blockers cannot be ready for remote write.');
 
   const handoffDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Handoff Bundle 다운로드' }).click();
