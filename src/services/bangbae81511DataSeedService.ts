@@ -7,6 +7,32 @@ const BUILDING_SOURCE_ID = 'bangbae-815-11-building-register-source';
 const BUILDING_SOURCE_NAME = '방배동 815-11 건축물대장';
 const BUILDING_SOURCE_REFERENCE = '방배동 815-11 건축물대장.pdf';
 const COMPARABLE_SOURCE_ID = `market-comparables:${PROPERTY_ID}`;
+const SOURCE_DOCUMENT_INVENTORY = [
+  {
+    id: 'bangbae-815-11-building-register-inventory',
+    sourceName: '방배동 815-11 건축물대장',
+    sourceReference: '방배동 815-11 건축물대장.pdf',
+    resourceType: 'source_document_inventory',
+    documentType: 'building_register',
+    sourceDate: '2026-09-02',
+  },
+  {
+    id: 'bangbae-815-11-land-registry-inventory',
+    sourceName: '방배동 815-11 토지등기부',
+    sourceReference: '방배동815-11 토지등기부.pdf',
+    resourceType: 'source_document_inventory',
+    documentType: 'registry_land',
+    sourceDate: '2026-09-02',
+  },
+  {
+    id: 'bangbae-815-11-building-registry-inventory',
+    sourceName: '방배동 815-11 건물등기부',
+    sourceReference: '방배동 815-11 건물등기부.pdf',
+    resourceType: 'source_document_inventory',
+    documentType: 'registry_building',
+    sourceDate: '2026-09-02',
+  },
+] as const;
 
 const BUILDING_SOURCE_DATE = '2026-09-02';
 const BUILDING_ID = '2120041230002444';
@@ -107,6 +133,32 @@ export const bangbae81511DataSeedService = {
       await propertyDataRoomRepository.saveSpace(space);
       await propertyDataRoomRepository.saveDataSource(source);
       await propertyDataRoomRepository.saveVerification(verification);
+    }
+
+    for (const inventory of SOURCE_DOCUMENT_INVENTORY) {
+      const existing = sources.find((item) => item.id === inventory.id);
+      const source: PropertyDataSource = {
+        id: inventory.id,
+        propertyId: PROPERTY_ID,
+        fieldKey: `source_inventory:${inventory.documentType}`,
+        resourceType: inventory.resourceType,
+        sourceType: 'official_document',
+        sourceName: inventory.sourceName,
+        sourceReference: inventory.sourceReference,
+        collectedAt: existing?.collectedAt ?? now,
+        sourceDate: inventory.sourceDate,
+        verificationStatus: 'confirmed',
+        metadata: {
+          documentType: inventory.documentType,
+          originalSourcePresence: 'confirmed',
+          binaryStorageStatus: 'not_connected',
+          storagePath: null,
+          sourceReviewed: true,
+          note: '원본 파일 존재는 확인했으나 private Storage 문서 asset으로는 아직 연결하지 않았습니다.',
+        },
+        createdAt: existing?.createdAt ?? now,
+      };
+      await propertyDataRoomRepository.saveDataSource(source);
     }
 
     const comparableSource = sources.find((item) => item.id === COMPARABLE_SOURCE_ID);
