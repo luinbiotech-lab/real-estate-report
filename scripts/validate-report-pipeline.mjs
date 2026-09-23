@@ -65,9 +65,23 @@ for (const marker of ['const setPrimary = async', 'isPrimary: shouldBePrimary', 
 }
 if (!text.dataRoomRepository.includes('REPORT_MEDIA_PRIORITY') || !text.dataRoomRepository.includes('exterior: 0') || !text.dataRoomRepository.includes('road: 1') || !text.dataRoomRepository.includes('surroundings: 2') || !text.dataRoomRepository.includes('sortReportMedia')) throw new Error('Professional Report 미디어는 외관 → 도로 → 주변환경 우선순위를 유지해야 합니다.');
 if (!text.streetViewProvenance.includes("resourceType: 'exterior_streetview_verification'") || !text.streetViewProvenance.includes("sourceType: 'map_provider'") || !text.streetViewProvenance.includes("verificationStatus: 'confirmed'") || !text.streetViewProvenance.includes("reportImageAsset: false")) throw new Error('거리뷰 외관 확인은 직접 촬영 asset과 분리된 map-provider provenance로 보존해야 합니다.');
-if (!text.bangbaeSeed.includes("originalSourcePresence: 'confirmed'") || !text.bangbaeSeed.includes("binaryStorageStatus: 'not_connected'") || !text.bangbaeSeed.includes("sourceReviewed: true")) throw new Error('방배동 원본 존재 확인과 private Storage binary 연결 상태는 분리해서 보존해야 합니다.');
-for (const marker of ["sourceName: '방배동 815-11 토지대장'", "sourceName: '방배동 815-11 토지이용계획확인서'", "sourceName: '방배동 815-11 지적도'", "originalSourcePresence: 'unconfirmed'", "sourceReviewed: false", "verificationStatus: inventory.originalSourcePresence === 'confirmed' ? 'confirmed' : 'missing'"]) {
+if (!text.bangbaeSeed.includes("originalSourcePresence: 'confirmed'") || !text.bangbaeSeed.includes("sourceReviewed: true")) throw new Error('방배동 원본 존재 확인과 검토 상태를 분리해서 보존해야 합니다.');
+for (const marker of ["sourceName: '방배동 815-11 토지대장'", "sourceName: '방배동 815-11 토지이용계획확인서'", "sourceName: '방배동 815-11 지적도'", "originalSourcePresence: 'unconfirmed'", "sourceReviewed: false"]) {
   if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 미확인 필수 공적자료 inventory 계약 누락: ${marker}`);
+}
+for (const marker of [
+  "inventory.originalSourcePresence === 'confirmed' || existingPresence === 'confirmed'",
+  "existingMetadata.binaryStorageStatus === 'connected' ? 'connected' : 'not_connected'",
+  "inventory.sourceReviewed || existingMetadata.sourceReviewed === true",
+  "sourceReference: existing?.sourceReference || inventory.sourceReference",
+  "sourceDate: existing?.sourceDate ?? inventory.sourceDate",
+  "existing?.verificationStatus === 'verified'",
+  "...existingMetadata",
+  "storagePath: existingMetadata.storagePath ?? null",
+  "directMediaAssetConnected: exteriorMetadata.directMediaAssetConnected === true",
+  "privateStorageStatus: exteriorMetadata.privateStorageStatus === 'connected' ? 'connected' : 'not_connected'",
+]) {
+  if (!text.bangbaeSeed.includes(marker)) throw new Error(`Bangbae bootstrap은 운영 승격 상태를 하향 덮어쓰면 안 됩니다: ${marker}`);
 }
 if (!text.app.includes('bangbae81511DataSeedService.ensure()') || !text.bangbaeSeed.includes("const PROPERTY_ID = 'daon-bangbae-815-11'")) throw new Error('방배동 샘플 Data Room 실데이터 bootstrap 경로를 유지해야 합니다.');
 if (!text.bangbaeSeed.includes("verificationStatus: 'verified'") || !text.bangbaeSeed.includes("sourceDate: BUILDING_SOURCE_DATE") || !text.bangbaeSeed.includes("sourceVerified: true") || !text.bangbaeSeed.includes("comparableSource.sourceReference === '방배동 실거래사례1년간.pdf'")) throw new Error('방배동 bootstrap은 원본 대조가 끝난 건축물대장·비교거래 provenance만 verified로 승격해야 합니다.');
