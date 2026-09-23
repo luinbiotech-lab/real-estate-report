@@ -73,7 +73,7 @@ if (!text.dataRoom.includes("import PropertySpaceOverviewPanel from '../componen
 if (!text.spaceOverviewPanel.includes('OFFICIAL FLOOR STRUCTURE') || !text.spaceOverviewPanel.includes('층별 구성 · Data Room') || !text.spaceOverviewPanel.includes('원본 문서 대조가 완료된 항목만 verified로 관리합니다.')) throw new Error('층별 구성 패널은 공부상 층·면적·검증상태·출처와 원본 대조 기준을 명확히 표시해야 합니다.');
 if (!text.dataRoom.includes("import ComparableTransactionOverviewPanel from '../components/propertyDataRoom/ComparableTransactionOverviewPanel'") || !text.dataRoom.includes("<ComparableTransactionOverviewPanel sources={bundle.dataSources} onOpenMarket={() => onTab('market')} />")) throw new Error('Data Room 개요에서 구조화 비교거래 요약을 직접 확인하고 전체 비교거래로 이동할 수 있어야 합니다.');
 if (!text.comparableOverviewPanel.includes('MARKET COMPARABLES') || !text.comparableOverviewPanel.includes('비교거래 요약') || !text.comparableOverviewPanel.includes('토지 평당가 범위') || !text.comparableOverviewPanel.includes('source?.sourceReference')) throw new Error('비교거래 요약은 거래건수·평당가 범위·최근 거래일·원문 출처를 표시해야 합니다.');
-for (const marker of ['이관 파일 준비', '이관 파일 미등록', 'Storage 미연결', "normalizedSourceFileName(document.originalFileName) === normalizedSourceFileName(sourceReference)"]) {
+for (const marker of ['이관 파일 준비', '이관 파일 미등록', 'Storage 미연결', '원본 파일 등록', 'uploadSourceDocument', 'propertyDataRoomService.uploadDocument', "setTab('official')", "normalizedSourceFileName(document.originalFileName) === normalizedSourceFileName(sourceReference)"]) {
   if (!text.dataRoom.includes(marker)) throw new Error(`공적자료 원본→migration upload→Storage 상태 분리 UI 누락: ${marker}`);
 }
 
