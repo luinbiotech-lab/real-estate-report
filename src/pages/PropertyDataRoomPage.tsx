@@ -81,6 +81,29 @@ export default function PropertyDataRoomPage() {
     catch (reason) { setError(reason instanceof Error ? reason.message : '문서를 등록하지 못했습니다.'); }
     finally { setUploading(false); event.target.value = ''; }
   };
+  const uploadSourceDocument = async (source: DataRoomBundle['dataSources'][number], event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]; if (!file) return;
+    const referenceForClassification = source.sourceReference || source.sourceName || file.name;
+    const classifiedFromSource = propertyDataRoomService.classifyDocument(referenceForClassification);
+    const classifiedFromFile = propertyDataRoomService.classifyDocument(file.name);
+    const resolvedType = classifiedFromSource !== 'other' ? classifiedFromSource : classifiedFromFile !== 'other' ? classifiedFromFile : documentType;
+    setDocumentType(resolvedType);
+    setUploading(true); setError('');
+    try {
+      await propertyDataRoomService.uploadDocument(id, file, {
+        documentType: resolvedType,
+        title: source.sourceName || file.name.replace(/\.[^.]+$/, ''),
+        sourceName: source.sourceName || '사용자 업로드',
+      });
+      await load();
+      setTab('official');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '원본 문서를 등록하지 못했습니다.');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
   const removeDocument = async (document: PropertyDocument) => {
     if (!confirm(`“${document.title}” 문서를 삭제할까요? 파일 본문은 복구되지 않습니다.`)) return;
     await propertyDataRoomRepository.deleteDocument(document.id); await load();
@@ -128,7 +151,7 @@ export default function PropertyDataRoomPage() {
       {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} onTab={setTab} />}
       {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진이 없습니다." detail="물건 수정 화면에서 직접 촬영하거나 보유한 사진을 등록하세요." />}</div><MediaClassificationPanel propertyId={property.id} media={bundle.media} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} onQueued={async () => { await load(); setTab('verification'); }} />}
-      {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} />}
+      {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} />}
       {tab === 'market' && <ComparableTransactionPanel propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
       {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
       {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
@@ -150,7 +173,7 @@ function normalizedSourceFileName(value: string) {
   return value.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
 }
 
-function OfficialPanel({ documents, sources }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources'] }) {
+function OfficialPanel({ documents, sources, uploading, onUploadSource }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources']; uploading: boolean; onUploadSource: (source: DataRoomBundle['dataSources'][number], event: ChangeEvent<HTMLInputElement>) => void }) {
   return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다. 원본 확인, migration upload 준비, private Storage 연결을 각각 분리해 관리합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => {
     const isSourceInventory = source.resourceType === 'source_document_inventory';
     const binaryStorageStatus = source.metadata?.binaryStorageStatus;
@@ -169,6 +192,10 @@ function OfficialPanel({ documents, sources }: { documents: PropertyDocument[]; 
         <Chip size="small" label={migrationUploadReady ? '이관 파일 준비' : '이관 파일 미등록'} color={migrationUploadReady ? 'success' : 'warning'} />
         <Chip size="small" label={binaryStorageStatus === 'connected' ? 'Storage 연결' : 'Storage 미연결'} color={binaryStorageStatus === 'connected' ? 'success' : 'warning'} />
         {matchingDocument && <small>{matchingDocument.originalFileName} · {(matchingDocument.fileSize / 1024 / 1024).toFixed(1)} MiB</small>}
+        {!migrationUploadReady && binaryStorageStatus !== 'connected' && <Button component="label" size="small" variant="outlined" startIcon={<CloudUploadOutlined />} disabled={uploading}>
+          {uploading ? '등록 중…' : '원본 파일 등록'}
+          <input hidden type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={(event) => onUploadSource(source, event)} />
+        </Button>}
       </div>}
     </article>;
   })}</div> : <EmptyState title="등록된 공적자료가 없습니다." detail="문서 탭에서 공적자료를 등록하면 출처와 검증 상태가 함께 표시됩니다." />}</div>;
