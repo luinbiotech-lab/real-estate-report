@@ -7,7 +7,16 @@ const BUILDING_SOURCE_ID = 'bangbae-815-11-building-register-source';
 const BUILDING_SOURCE_NAME = '방배동 815-11 건축물대장';
 const BUILDING_SOURCE_REFERENCE = '방배동 815-11 건축물대장.pdf';
 const COMPARABLE_SOURCE_ID = `market-comparables:${PROPERTY_ID}`;
-const SOURCE_DOCUMENT_INVENTORY = [
+const SOURCE_DOCUMENT_INVENTORY: Array<{
+  id: string;
+  sourceName: string;
+  sourceReference?: string;
+  resourceType: 'source_document_inventory';
+  documentType: string;
+  sourceDate?: string;
+  originalSourcePresence: 'confirmed' | 'unconfirmed';
+  sourceReviewed: boolean;
+}> = [
   {
     id: 'bangbae-815-11-building-register-inventory',
     sourceName: '방배동 815-11 건축물대장',
@@ -15,6 +24,8 @@ const SOURCE_DOCUMENT_INVENTORY = [
     resourceType: 'source_document_inventory',
     documentType: 'building_register',
     sourceDate: '2026-09-02',
+    originalSourcePresence: 'confirmed',
+    sourceReviewed: true,
   },
   {
     id: 'bangbae-815-11-land-registry-inventory',
@@ -23,6 +34,8 @@ const SOURCE_DOCUMENT_INVENTORY = [
     resourceType: 'source_document_inventory',
     documentType: 'registry_land',
     sourceDate: '2026-09-02',
+    originalSourcePresence: 'confirmed',
+    sourceReviewed: true,
   },
   {
     id: 'bangbae-815-11-building-registry-inventory',
@@ -31,8 +44,34 @@ const SOURCE_DOCUMENT_INVENTORY = [
     resourceType: 'source_document_inventory',
     documentType: 'registry_building',
     sourceDate: '2026-09-02',
+    originalSourcePresence: 'confirmed',
+    sourceReviewed: true,
   },
-] as const;
+  {
+    id: 'bangbae-815-11-land-register-inventory',
+    sourceName: '방배동 815-11 토지대장',
+    resourceType: 'source_document_inventory',
+    documentType: 'land_register',
+    originalSourcePresence: 'unconfirmed',
+    sourceReviewed: false,
+  },
+  {
+    id: 'bangbae-815-11-land-use-plan-inventory',
+    sourceName: '방배동 815-11 토지이용계획확인서',
+    resourceType: 'source_document_inventory',
+    documentType: 'land_use_plan',
+    originalSourcePresence: 'unconfirmed',
+    sourceReviewed: false,
+  },
+  {
+    id: 'bangbae-815-11-cadastral-map-inventory',
+    sourceName: '방배동 815-11 지적도',
+    resourceType: 'source_document_inventory',
+    documentType: 'cadastral_map',
+    originalSourcePresence: 'unconfirmed',
+    sourceReviewed: false,
+  },
+];
 
 const EXTERIOR_MEDIA_EVIDENCE_ID = 'bangbae-815-11-exterior-report-evidence';
 const EXTERIOR_MEDIA_EVIDENCE_REFERENCE = '방배동_815-11_DAON_ASSET_세부보고서_전면재작성.pdf';
@@ -150,14 +189,16 @@ export const bangbae81511DataSeedService = {
         sourceReference: inventory.sourceReference,
         collectedAt: existing?.collectedAt ?? now,
         sourceDate: inventory.sourceDate,
-        verificationStatus: 'confirmed',
+        verificationStatus: inventory.originalSourcePresence === 'confirmed' ? 'confirmed' : 'missing',
         metadata: {
           documentType: inventory.documentType,
-          originalSourcePresence: 'confirmed',
+          originalSourcePresence: inventory.originalSourcePresence,
           binaryStorageStatus: 'not_connected',
           storagePath: null,
-          sourceReviewed: true,
-          note: '원본 파일 존재는 확인했으나 private Storage 문서 asset으로는 아직 연결하지 않았습니다.',
+          sourceReviewed: inventory.sourceReviewed,
+          note: inventory.originalSourcePresence === 'confirmed'
+            ? '원본 파일 존재는 확인했으나 private Storage 문서 asset으로는 아직 연결하지 않았습니다.'
+            : '현재 Project/Library에서 원본 존재를 확인하지 못했습니다. 부재로 단정하지 않고 최신 공식 원본 확보가 필요합니다.',
         },
         createdAt: existing?.createdAt ?? now,
       };
