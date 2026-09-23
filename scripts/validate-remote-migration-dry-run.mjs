@@ -51,6 +51,7 @@ for (const store of [
 
 if (!text.planner.includes('networkWrites: 0')) throw new Error('Migration plan은 networkWrites=0을 보장해야 합니다.');
 if (!text.planner.includes('readyForRemoteWrite: blockers.length === 0')) throw new Error('Migration plan blocker gate가 필요합니다.');
+if (!text.planner.includes("existingUrl.startsWith('data:') && !hasLocalBinary")) throw new Error('Blob-backed media preview data URL은 migration blocker가 되면 안 됩니다.');
 for (const marker of [
   "'SOURCE_DOCUMENT_BINARY_NOT_CONNECTED'",
   "value.resourceType === 'source_document_inventory'",
