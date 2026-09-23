@@ -179,6 +179,18 @@ export const bangbae81511DataSeedService = {
 
     for (const inventory of SOURCE_DOCUMENT_INVENTORY) {
       const existing = sources.find((item) => item.id === inventory.id);
+      const existingMetadata = existing?.metadata ?? {};
+      const existingPresence = existingMetadata.originalSourcePresence === 'confirmed'
+        ? 'confirmed'
+        : existingMetadata.originalSourcePresence === 'unconfirmed'
+          ? 'unconfirmed'
+          : undefined;
+      const originalSourcePresence = inventory.originalSourcePresence === 'confirmed' || existingPresence === 'confirmed'
+        ? 'confirmed'
+        : 'unconfirmed';
+      const binaryStorageStatus = existingMetadata.binaryStorageStatus === 'connected' ? 'connected' : 'not_connected';
+      const sourceReviewed = inventory.sourceReviewed || existingMetadata.sourceReviewed === true;
+      const existingNote = typeof existingMetadata.note === 'string' ? existingMetadata.note : '';
       const source: PropertyDataSource = {
         id: inventory.id,
         propertyId: PROPERTY_ID,
@@ -186,19 +198,24 @@ export const bangbae81511DataSeedService = {
         resourceType: inventory.resourceType,
         sourceType: 'official_document',
         sourceName: inventory.sourceName,
-        sourceReference: inventory.sourceReference,
+        sourceReference: existing?.sourceReference || inventory.sourceReference,
         collectedAt: existing?.collectedAt ?? now,
-        sourceDate: inventory.sourceDate,
-        verificationStatus: inventory.originalSourcePresence === 'confirmed' ? 'confirmed' : 'missing',
+        sourceDate: existing?.sourceDate ?? inventory.sourceDate,
+        verificationStatus: existing?.verificationStatus === 'verified'
+          ? 'verified'
+          : originalSourcePresence === 'confirmed'
+            ? 'confirmed'
+            : 'missing',
         metadata: {
+          ...existingMetadata,
           documentType: inventory.documentType,
-          originalSourcePresence: inventory.originalSourcePresence,
-          binaryStorageStatus: 'not_connected',
-          storagePath: null,
-          sourceReviewed: inventory.sourceReviewed,
-          note: inventory.originalSourcePresence === 'confirmed'
+          originalSourcePresence,
+          binaryStorageStatus,
+          storagePath: existingMetadata.storagePath ?? null,
+          sourceReviewed,
+          note: existingNote || (originalSourcePresence === 'confirmed'
             ? '원본 파일 존재는 확인했으나 private Storage 문서 asset으로는 아직 연결하지 않았습니다.'
-            : '현재 Project/Library에서 원본 존재를 확인하지 못했습니다. 부재로 단정하지 않고 최신 공식 원본 확보가 필요합니다.',
+            : '현재 Project/Library에서 원본 존재를 확인하지 못했습니다. 부재로 단정하지 않고 최신 공식 원본 확보가 필요합니다.'),
         },
         createdAt: existing?.createdAt ?? now,
       };
@@ -206,6 +223,7 @@ export const bangbae81511DataSeedService = {
     }
 
     const exteriorEvidence = sources.find((item) => item.id === EXTERIOR_MEDIA_EVIDENCE_ID);
+    const exteriorMetadata = exteriorEvidence?.metadata ?? {};
     await propertyDataRoomRepository.saveDataSource({
       id: EXTERIOR_MEDIA_EVIDENCE_ID,
       propertyId: PROPERTY_ID,
@@ -213,17 +231,20 @@ export const bangbae81511DataSeedService = {
       resourceType: 'exterior_photo_embedded_report_evidence',
       sourceType: 'external',
       sourceName: '기존 DA:ON 상세보고서 외관 사진 증거',
-      sourceReference: EXTERIOR_MEDIA_EVIDENCE_REFERENCE,
+      sourceReference: exteriorEvidence?.sourceReference || EXTERIOR_MEDIA_EVIDENCE_REFERENCE,
       collectedAt: exteriorEvidence?.collectedAt ?? now,
-      verificationStatus: 'confirmed',
+      verificationStatus: exteriorEvidence?.verificationStatus === 'verified' ? 'verified' : 'confirmed',
       metadata: {
+        ...exteriorMetadata,
         sourcePages: [1, 3],
         evidenceType: 'embedded_exterior_photo',
-        directMediaAssetConnected: false,
-        privateStorageStatus: 'not_connected',
+        directMediaAssetConnected: exteriorMetadata.directMediaAssetConnected === true,
+        privateStorageStatus: exteriorMetadata.privateStorageStatus === 'connected' ? 'connected' : 'not_connected',
         sellerPolicy: 'exterior_only',
         interiorMediaExcluded: true,
-        note: '기존 보고서 1·3페이지에서 방배동 815-11 외관 사진을 확인했으나 원본/파생 이미지 asset은 아직 private Storage에 연결되지 않았습니다.',
+        note: typeof exteriorMetadata.note === 'string' && exteriorMetadata.note
+          ? exteriorMetadata.note
+          : '기존 보고서 1·3페이지에서 방배동 815-11 외관 사진을 확인했으나 원본/파생 이미지 asset은 아직 private Storage에 연결되지 않았습니다.',
       },
       createdAt: exteriorEvidence?.createdAt ?? now,
     });
