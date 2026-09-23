@@ -114,7 +114,7 @@ export default function DigitalTwinIntakePage() {
           </Button>
         </Stack>
         <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 1.5 }}>
-          최대 80MB · DXF는 브라우저 geometry 후보 추출 가능 · DWG는 별도 변환기 연결 필요 · 자동 결과는 승인 전 원본/공식값을 변경하지 않습니다.
+          최대 50MiB · Production private Storage와 동일 기준 · DXF는 브라우저 geometry 후보 추출 가능 · DWG는 별도 변환기 연결 필요 · 자동 결과는 승인 전 원본/공식값을 변경하지 않습니다.
         </Typography>
       </CardContent>
     </Card>
