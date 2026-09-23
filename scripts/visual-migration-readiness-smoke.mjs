@@ -53,6 +53,15 @@ async function uploadBangbaeSourceDocuments(page) {
   if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents, got ${readyCount}.`);
 }
 
+async function verifyBangbaeSourceReadinessAfterReload(page) {
+  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=official`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '공적자료 및 데이터 출처');
+  const readyCount = await page.getByText('이관 파일 준비', { exact: true }).count();
+  if (readyCount < 4) throw new Error(`Bangbae source readiness was downgraded after app reload: expected 4 ready documents, got ${readyCount}.`);
+  const promotedCard = page.locator('article').filter({ hasText: '방배동 815-11 토지이용계획확인서' }).filter({ hasText: 'Storage 미연결' }).last();
+  await promotedCard.getByText('원본 확인', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+}
+
 async function uploadBangbaeExteriorMedia(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=media`, { waitUntil: 'domcontentloaded' });
   await waitForText(page, '보고서 미디어 연결');
@@ -119,6 +128,7 @@ try {
 
   await uploadBangbaeSourceDocuments(page);
   await uploadBangbaeExteriorMedia(page);
+  await verifyBangbaeSourceReadinessAfterReload(page);
   await page.goto(`${BASE_URL}/migration-readiness`, { waitUntil: 'domcontentloaded' });
   await page.getByLabel('이관 대상 물건').click();
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
