@@ -85,7 +85,7 @@ for (const marker of [
 }
 if (!text.app.includes('bangbae81511DataSeedService.ensure()') || !text.bangbaeSeed.includes("const PROPERTY_ID = 'daon-bangbae-815-11'")) throw new Error('방배동 샘플 Data Room 실데이터 bootstrap 경로를 유지해야 합니다.');
 if (!text.bangbaeSeed.includes("verificationStatus: 'verified'") || !text.bangbaeSeed.includes("sourceDate: BUILDING_SOURCE_DATE") || !text.bangbaeSeed.includes("sourceVerified: true") || !text.bangbaeSeed.includes("comparableSource.sourceReference === '방배동 실거래사례1년간.pdf'")) throw new Error('방배동 bootstrap은 원본 대조가 끝난 건축물대장·비교거래 provenance만 verified로 승격해야 합니다.');
-for (const marker of ["resourceType: 'exterior_photo_embedded_report_evidence'", "directMediaAssetConnected: false", "privateStorageStatus: 'not_connected'", "sellerPolicy: 'exterior_only'", "interiorMediaExcluded: true"]) {
+for (const marker of ["resourceType: 'exterior_photo_embedded_report_evidence'", "directMediaAssetConnected: exteriorMetadata.directMediaAssetConnected === true", "privateStorageStatus: exteriorMetadata.privateStorageStatus === 'connected' ? 'connected' : 'not_connected'", "sellerPolicy: 'exterior_only'", "interiorMediaExcluded: true"]) {
   if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 외관 사진 evidence와 direct media asset 경계를 보존해야 합니다: ${marker}`);
 }
 if (!text.bangbaeSeed.includes("key: '3f', floor: '3F'") || !text.bangbaeSeed.includes("key: '1f', floor: '1F'") || !text.bangbaeSeed.includes("key: '1f-shop', floor: '1F'") || !text.bangbaeSeed.includes("key: 'b1', floor: 'B1'") || !text.bangbaeSeed.includes("areaSqm: 40.99") || !text.bangbaeSeed.includes("label: '방배동 448-37'")) throw new Error('방배동 건축물대장 원본 기준 공간 5행(1층 2용도 분리)과 비교거래 6건 seed 데이터가 누락되었습니다.');
