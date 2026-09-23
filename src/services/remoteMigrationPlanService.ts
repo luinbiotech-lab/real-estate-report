@@ -294,6 +294,7 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
   });
 
   const objects: RemotePropertyObject[] = [];
+  const pendingSourceInventories: Array<{ id: string; propertyId: string; sourceName: string; sourceReference: string }> = [];
   for (const store of OBJECT_STORES) {
     for (const row of snapshot.stores[store] ?? []) {
       const value = record(row);
@@ -310,12 +311,11 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
         record(value.metadata)?.originalSourcePresence === 'confirmed' &&
         record(value.metadata)?.binaryStorageStatus !== 'connected'
       ) {
-        blockers.push({
-          code: 'SOURCE_DOCUMENT_BINARY_NOT_CONNECTED',
-          store,
+        pendingSourceInventories.push({
           id,
           propertyId,
-          message: `${text(value.sourceName) || id} 원본 존재는 확인됐지만 private Storage binary가 아직 연결되지 않았습니다.`,
+          sourceName: text(value.sourceName) || id,
+          sourceReference: text(value.sourceReference),
         });
       }
       objects.push({ objectType: store, id, propertyId, payload: value });
@@ -329,6 +329,25 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
       const built = buildAsset(store, row, propertyIds, blockers);
       if (built.metadata) assets.push(built.metadata);
       if (built.upload) assetUploads.push(built.upload);
+    }
+  }
+
+  for (const inventory of pendingSourceInventories) {
+    const scheduledDocumentUpload = assetUploads.find((asset) =>
+      asset.resourceType === 'document' &&
+      asset.propertyId === inventory.propertyId &&
+      !!inventory.sourceReference &&
+      asset.fileName === inventory.sourceReference &&
+      asset.binarySource !== 'missing'
+    );
+    if (!scheduledDocumentUpload) {
+      blockers.push({
+        code: 'SOURCE_DOCUMENT_BINARY_NOT_CONNECTED',
+        store: 'propertyDataSources',
+        id: inventory.id,
+        propertyId: inventory.propertyId,
+        message: `${inventory.sourceName} 원본 존재는 확인됐지만 private Storage binary 연결 또는 이번 migration의 document upload 준비가 확인되지 않았습니다.`,
+      });
     }
   }
 
