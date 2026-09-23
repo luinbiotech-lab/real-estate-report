@@ -38,14 +38,16 @@ async function uploadBangbaeSourceDocuments(page) {
     ['방배동 815-11 토지이용계획확인서', '방배동 815-11 토지이용계획확인서.pdf'],
   ];
   for (const [sourceName, fileName] of uploads) {
-    const input = page.locator('article').filter({ hasText: sourceName }).locator('input[type="file"]').first();
+    const sourceCard = page.locator('article').filter({ hasText: sourceName }).filter({ hasText: 'Storage 미연결' }).last();
+    await sourceCard.waitFor({ state: 'visible', timeout: 30_000 });
+    const input = sourceCard.locator('input[type="file"]');
     await input.waitFor({ state: 'attached', timeout: 30_000 });
     await input.setInputFiles({
       name: fileName,
       mimeType: 'application/pdf',
       buffer: Buffer.from('%PDF-1.4\n% DAON migration QA source document\n%%EOF\n', 'utf8'),
     });
-    await waitForText(page, '이관 파일 준비');
+    await sourceCard.getByText('이관 파일 준비', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
   }
   const readyCount = await page.getByText('이관 파일 준비', { exact: true }).count();
   if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents, got ${readyCount}.`);
