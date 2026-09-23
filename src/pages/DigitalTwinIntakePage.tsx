@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { CloudUploadOutlined, OpenInNewRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import type { DigitalTwinAsset, DigitalTwinAssetType } from '../domain/propertyDataRoom/types';
+import type { DigitalTwinAsset, DigitalTwinAssetType, PropertyDocument } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { digitalTwinAssetIntakeService } from '../services/digitalTwinAssetIntakeService';
@@ -23,6 +23,8 @@ export default function DigitalTwinIntakePage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
   const [assets, setAssets] = useState<DigitalTwinAsset[]>([]);
+  const [sourceDocuments, setSourceDocuments] = useState<PropertyDocument[]>([]);
+  const [linkingDocumentId, setLinkingDocumentId] = useState('');
   const [assetType, setAssetType] = useState<DigitalTwinAssetType>('dxf');
   const [floor, setFloor] = useState('');
   const [uploading, setUploading] = useState(false);
@@ -33,9 +35,13 @@ export default function DigitalTwinIntakePage() {
   const selectedProperty = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
 
   const loadAssets = async (id: string) => {
-    if (!id) { setAssets([]); return; }
-    const rows = await propertyDataRoomRepository.getDigitalTwinAssets(id);
+    if (!id) { setAssets([]); setSourceDocuments([]); return; }
+    const [rows, documents] = await Promise.all([
+      propertyDataRoomRepository.getDigitalTwinAssets(id),
+      propertyDataRoomRepository.getDocuments(id),
+    ]);
     setAssets([...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+    setSourceDocuments(documents.filter((document) => document.documentType === 'floor_plan'));
   };
 
   const load = async () => {
@@ -73,6 +79,20 @@ export default function DigitalTwinIntakePage() {
       setError(reason instanceof Error ? reason.message : 'Digital Twin 자산을 등록하지 못했습니다.');
     } finally {
       setUploading(false); event.target.value = '';
+    }
+  };
+
+  const reuseSourceDocument = async (document: PropertyDocument) => {
+    if (!propertyId) return;
+    setLinkingDocumentId(document.id); setError(''); setNotice('');
+    try {
+      const result = await digitalTwinAssetIntakeService.uploadFromDocument(propertyId, document, { floor, queueAgent: true });
+      setNotice(`${document.originalFileName} Data Room 원본 재사용 완료 · ${ASSET_LABELS[result.asset.assetType]} v${result.asset.version}${result.jobId ? ' · Agent 검토 큐 연결' : ''}`);
+      await loadAssets(propertyId);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'Data Room 도면을 Digital Twin 자산으로 연결하지 못했습니다.');
+    } finally {
+      setLinkingDocumentId('');
     }
   };
 
@@ -118,6 +138,29 @@ export default function DigitalTwinIntakePage() {
         </Typography>
       </CardContent>
     </Card>
+
+    {sourceDocuments.length > 0 && <Card variant="outlined" sx={{ mb: 3 }}>
+      <CardContent>
+        <Typography variant="h6" sx={{ mb: 0.5 }}>Data Room 평면도 재사용</Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>이미 등록한 평면도 원본을 다시 선택하지 않고 provenance를 유지한 채 Digital Twin 자산으로 연결합니다.</Typography>
+        <Stack spacing={1}>
+          {sourceDocuments.map((document) => {
+            const linked = assets.some((asset) => asset.sourceDocumentId === document.id);
+            const binaryReady = document.fileData instanceof Blob;
+            return <Box key={document.id} sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr auto auto' }, gap: 1.5, alignItems: 'center', p: 1.25, border: '1px solid #e3e8ef', borderRadius: 2 }}>
+              <Box>
+                <Typography fontWeight={700}>{document.title}</Typography>
+                <Typography variant="body2" color="text.secondary">{document.originalFileName} · {(document.fileSize / 1024 / 1024).toFixed(1)} MiB</Typography>
+              </Box>
+              <Chip size="small" label={linked ? 'Digital Twin 연결됨' : binaryReady ? 'Local binary 준비' : 'Local binary 필요'} color={linked ? 'success' : binaryReady ? 'info' : 'warning'} />
+              <Button size="small" variant="outlined" disabled={linked || !binaryReady || Boolean(linkingDocumentId) || uploading} onClick={() => void reuseSourceDocument(document)}>
+                {linkingDocumentId === document.id ? '연결 중…' : linked ? '연결 완료' : 'Digital Twin 연결'}
+              </Button>
+            </Box>;
+          })}
+        </Stack>
+      </CardContent>
+    </Card>}
 
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ md: 'center' }} sx={{ mb: 1.5 }}>
       <Box>
