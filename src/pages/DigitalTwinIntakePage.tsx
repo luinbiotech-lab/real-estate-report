@@ -24,6 +24,7 @@ export default function DigitalTwinIntakePage() {
   const [propertyId, setPropertyId] = useState('');
   const [assets, setAssets] = useState<DigitalTwinAsset[]>([]);
   const [sourceDocuments, setSourceDocuments] = useState<PropertyDocument[]>([]);
+  const [floorOptions, setFloorOptions] = useState<string[]>([]);
   const [linkingDocumentId, setLinkingDocumentId] = useState('');
   const [assetType, setAssetType] = useState<DigitalTwinAssetType>('dxf');
   const [floor, setFloor] = useState('');
@@ -35,13 +36,26 @@ export default function DigitalTwinIntakePage() {
   const selectedProperty = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
 
   const loadAssets = async (id: string) => {
-    if (!id) { setAssets([]); setSourceDocuments([]); return; }
-    const [rows, documents] = await Promise.all([
+    if (!id) { setAssets([]); setSourceDocuments([]); setFloorOptions([]); return; }
+    const [rows, documents, spaces] = await Promise.all([
       propertyDataRoomRepository.getDigitalTwinAssets(id),
       propertyDataRoomRepository.getDocuments(id),
+      propertyDataRoomRepository.getSpaces(id),
     ]);
     setAssets([...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setSourceDocuments(documents.filter((document) => document.documentType === 'floor_plan'));
+    const floors = [...new Set(spaces.map((space) => space.floor?.trim().toUpperCase()).filter((value): value is string => Boolean(value)))];
+    floors.sort((left, right) => {
+      const rank = (value: string) => {
+        const basement = value.match(/^B(\d+)$/);
+        if (basement) return -Number(basement[1]);
+        const ground = value.match(/^(\d+)(?:F|층)?$/);
+        return ground ? Number(ground[1]) : Number.POSITIVE_INFINITY;
+      };
+      return rank(left) - rank(right) || left.localeCompare(right);
+    });
+    setFloorOptions(floors);
+    if (floor && !floors.includes(floor)) setFloor('');
   };
 
   const load = async () => {
@@ -127,7 +141,10 @@ export default function DigitalTwinIntakePage() {
           <TextField select size="small" label="자산 유형" value={assetType} onChange={(event) => setAssetType(event.target.value as DigitalTwinAssetType)} sx={{ minWidth: 180 }}>
             {Object.entries(ASSET_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}
           </TextField>
-          <TextField size="small" label="층(선택)" placeholder="예: B1, 1F, 2F" value={floor} onChange={(event) => setFloor(event.target.value)} sx={{ width: 150 }} />
+          <TextField select size="small" label="층(선택)" value={floor} onChange={(event) => setFloor(event.target.value)} sx={{ minWidth: 150 }}>
+            <MenuItem value="">층 미지정</MenuItem>
+            {floorOptions.map((value) => <MenuItem key={value} value={value}>{value}</MenuItem>)}
+          </TextField>
           <Button component="label" variant="contained" startIcon={<CloudUploadOutlined />} disabled={!propertyId || uploading}>
             {uploading ? '등록 중…' : '파일 선택 및 등록'}
             <input hidden type="file" accept=".dxf,.dwg,.glb,.gltf,.obj,.stl,.las,.laz,.ply,.pcd,.jpg,.jpeg,.png,.webp,.pdf,.json,.csv" onChange={upload} />
