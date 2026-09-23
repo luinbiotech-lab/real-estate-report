@@ -23,7 +23,8 @@ if (!text.reportHistoryService.includes("snapshot.status === 'ready'") || !text.
 if (!text.reportHistoryPage.includes('최신 확정본') || !text.reportHistoryPage.includes('/professional-report/snapshot/')) throw new Error('보고서 이력 화면은 최신 확정본 표시와 Snapshot 미리보기를 제공해야 합니다.');
 
 if (!text.app.includes('path="digital-twin-intake"') || !text.layout.includes('to="/digital-twin-intake"')) throw new Error('Digital Twin Intake route/navigation 연결이 필요합니다.');
-if (!text.twinIntakeService.includes('MAX_ASSET_BYTES = 80 * 1024 * 1024') || !text.twinIntakeService.includes("dxf: 'dxf'") || !text.twinIntakeService.includes("dwg: 'dwg'") || !text.twinIntakeService.includes("glb: 'glb'")) throw new Error('Digital Twin Intake의 파일 제한과 핵심 형식 매핑을 유지해야 합니다.');
+if (!text.twinIntakeService.includes('MAX_ASSET_BYTES = 50 * 1024 * 1024') || !text.twinIntakeService.includes("dxf: 'dxf'") || !text.twinIntakeService.includes("dwg: 'dwg'") || !text.twinIntakeService.includes("glb: 'glb'")) throw new Error('Digital Twin Intake는 Production Storage 50MiB 한도와 핵심 형식 매핑을 유지해야 합니다.');
+if (!text.twinIntakePage.includes('최대 50MiB') || !text.twinIntakePage.includes('Production private Storage와 동일 기준')) throw new Error('Digital Twin Intake UI는 Production과 동일한 50MiB 한도를 명시해야 합니다.');
 if (!text.twinIntakeService.includes('saveDigitalTwinAsset(asset)') || !text.twinIntakeService.includes("resourceType: 'digital_twin_asset'")) throw new Error('Digital Twin 원본과 DataSource provenance를 함께 저장해야 합니다.');
 if (!text.twinIntakeService.includes("queueDigitalTwin(saved, 'upload')") || !text.orchestrator.includes('async queueDigitalTwin')) throw new Error('Digital Twin 업로드는 Agent Human Review 흐름에 연결되어야 합니다.');
 if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntakePage.includes("navigate('/digital-twin')")) throw new Error('Digital Twin Intake 화면은 업로드와 Workspace handoff를 제공해야 합니다.');
