@@ -6,6 +6,8 @@ import { formatWon } from '../utils/format';
 export interface ComparableTransactionInput {
   label: string;
   address?: string;
+  sourceRow?: number;
+  sourceRecordLabel?: string;
   salePrice: number;
   landAreaPyeong: number;
   landUnitPrice: number;
