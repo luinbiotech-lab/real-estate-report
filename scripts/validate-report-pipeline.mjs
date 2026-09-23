@@ -14,6 +14,7 @@ const files = {
   comparablePanel: 'src/components/propertyDataRoom/ComparableTransactionPanel.tsx',
   comparableOverviewPanel: 'src/components/propertyDataRoom/ComparableTransactionOverviewPanel.tsx',
   streetViewProvenance: 'src/services/streetViewProvenanceService.ts',
+  bangbaeSeed: 'src/services/bangbae81511DataSeedService.ts',
   mediaPanel: 'src/components/propertyDataRoom/MediaClassificationPanel.tsx',
   extractionPanel: 'src/components/propertyDataRoom/DocumentExtractionPanel.tsx',
   spaceOverviewPanel: 'src/components/propertyDataRoom/PropertySpaceOverviewPanel.tsx',
@@ -57,6 +58,7 @@ if (!text.dataBuilder.includes('reportMediaCategoryAllowed(media.category, allow
 if (!text.mediaPanel.includes('lockedInternal') || !text.mediaPanel.includes('보고서 제외 고정') || !text.mediaPanel.includes('isInternalMediaCategory(item.category)')) throw new Error('내부사진 제외 물건의 기존 실내 미디어는 Data Room UI에서 외부 카테고리로 우회 변경할 수 없어야 합니다.');
 if (!text.dataRoomRepository.includes('REPORT_MEDIA_PRIORITY') || !text.dataRoomRepository.includes('exterior: 0') || !text.dataRoomRepository.includes('road: 1') || !text.dataRoomRepository.includes('surroundings: 2') || !text.dataRoomRepository.includes('sortReportMedia')) throw new Error('Professional Report 미디어는 외관 → 도로 → 주변환경 우선순위를 유지해야 합니다.');
 if (!text.streetViewProvenance.includes("resourceType: 'exterior_streetview_verification'") || !text.streetViewProvenance.includes("sourceType: 'map_provider'") || !text.streetViewProvenance.includes("verificationStatus: 'confirmed'") || !text.streetViewProvenance.includes("reportImageAsset: false")) throw new Error('거리뷰 외관 확인은 직접 촬영 asset과 분리된 map-provider provenance로 보존해야 합니다.');
+if (!text.bangbaeSeed.includes("originalSourcePresence: 'confirmed'") || !text.bangbaeSeed.includes("binaryStorageStatus: 'not_connected'") || !text.bangbaeSeed.includes("sourceReviewed: true")) throw new Error('방배동 원본 존재 확인과 private Storage binary 연결 상태는 분리해서 보존해야 합니다.');
 if (!text.app.includes('bangbae81511DataSeedService.ensure()') || !text.bangbaeSeed.includes("const PROPERTY_ID = 'daon-bangbae-815-11'")) throw new Error('방배동 샘플 Data Room 실데이터 bootstrap 경로를 유지해야 합니다.');
 if (!text.bangbaeSeed.includes("verificationStatus: 'verified'") || !text.bangbaeSeed.includes("sourceDate: BUILDING_SOURCE_DATE") || !text.bangbaeSeed.includes("sourceVerified: true") || !text.bangbaeSeed.includes("comparableSource.sourceReference === '방배동 실거래사례1년간.pdf'")) throw new Error('방배동 bootstrap은 원본 대조가 끝난 건축물대장·비교거래 provenance만 verified로 승격해야 합니다.');
 if (!text.bangbaeSeed.includes("key: '3f', floor: '3F'") || !text.bangbaeSeed.includes("key: '1f', floor: '1F'") || !text.bangbaeSeed.includes("key: '1f-shop', floor: '1F'") || !text.bangbaeSeed.includes("key: 'b1', floor: 'B1'") || !text.bangbaeSeed.includes("areaSqm: 40.99") || !text.bangbaeSeed.includes("label: '방배동 448-37'")) throw new Error('방배동 건축물대장 원본 기준 공간 5행(1층 2용도 분리)과 비교거래 6건 seed 데이터가 누락되었습니다.');
