@@ -50,6 +50,10 @@ if (!text.extractionPanel.includes('층별 구성 Data Room 연결') || !text.ex
 if (!text.dataBuilder.includes('floors: floorSpaces') || !text.dataBuilder.includes("const fieldKey = `space:${space.id}`")) throw new Error('ReportViewModel은 Data Room PropertySpace와 provenance를 층별 구성으로 매핑해야 합니다.');
 if (!text.detailMaster.includes('model.building.floors') || text.detailMaster.includes('층별 임대·이용 현황')) throw new Error('7P 2페이지는 층별 placeholder가 아니라 ReportViewModel 실데이터를 렌더링해야 합니다.');
 if (!text.comparableService.includes("resourceType: 'comparable_transaction_set'") || !text.comparableService.includes("sourceType: 'market_data'") || !text.comparableService.includes('saveVerification')) throw new Error('비교거래는 market_data DataSource와 Verification을 함께 저장해야 합니다.');
+if (!text.comparableService.includes('sourceRow?: number') || !text.comparableService.includes('sourceRecordLabel?: string')) throw new Error('비교거래 구조는 원문 행번호와 원문 표기명을 provenance로 보존해야 합니다.');
+for (const marker of ['sourceRow: 9', 'sourceRow: 10', 'sourceRow: 11', 'sourceRow: 12', 'sourceRow: 13', 'sourceRow: 14', "sourceRecordLabel: '유한빌딩'", "sourceRecordLabel: '주식회사더코너스톤'"]) {
+  if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 비교거래 원문 provenance 누락: ${marker}`);
+}
 if (!text.comparablePanel.includes('비교거래 저장 및 보고서 연결') || !text.dataRoom.includes('value="market"')) throw new Error('Data Room은 사용자가 구조화 비교거래를 입력·갱신할 수 있는 경로를 제공해야 합니다.');
 if (!text.dataBuilder.includes('comparables: comparableRows(bundle)') || !text.detailMaster.includes('model.investment.comparables')) throw new Error('7P 4페이지는 구조화 비교거래 DataSource를 ReportViewModel을 통해 렌더링해야 합니다.');
 if (!text.mediaPanel.includes("'exterior', 'road', 'surroundings'") || !text.dataRoom.includes('MediaClassificationPanel')) throw new Error('Data Room은 외관·도로·주변 미디어를 보고서용 category로 분류할 수 있어야 합니다.');
