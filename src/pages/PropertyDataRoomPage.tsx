@@ -146,18 +146,29 @@ function DocumentPanel({ documents, documentType, setDocumentType, upload, uploa
   return <><div className="document-toolbar"><div><h2>문서 자료</h2><p>파일명으로 문서 유형을 1차 자동 분류하고, 출처·검증 메타데이터를 별도 보존합니다.</p></div><TextField select size="small" label="문서 분류" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>{Object.entries(DOCUMENT_TYPE_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button component="label" variant="contained" startIcon={<CloudUploadOutlined />} disabled={uploading}>{uploading ? '등록 중…' : '문서 등록'}<input hidden type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={upload} /></Button></div>{documents.length ? <div className="document-list">{documents.map((document) => <article key={document.id}><div className="file-icon"><DescriptionOutlined /></div><div><b>{document.title}</b><span>{DOCUMENT_TYPE_LABELS[document.documentType]} · {(document.fileSize / 1024 / 1024).toFixed(2)}MB · v{document.version}</span><small>{document.sourceName} · {new Date(document.uploadedAt).toLocaleDateString('ko-KR')}</small><DocumentExtractionPanel document={document} onQueued={onQueued} /></div><TextField select size="small" value={document.verificationStatus} onChange={(event) => changeVerification(document, event.target.value as VerificationStatus)} aria-label={`${document.title} 검증 상태`}>{Object.entries(VERIFICATION_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button startIcon={<DownloadRounded />} onClick={() => propertyDataRoomService.downloadDocument(document)}>다운로드</Button><Button color="error" startIcon={<DeleteOutlineRounded />} onClick={() => remove(document)}>삭제</Button></article>)}</div> : <EmptyState title="등록된 문서가 없습니다." detail="건축물대장, 토지대장, 등기부등본 등 확인된 원본 자료를 등록하세요." />}</>;
 }
 
+function normalizedSourceFileName(value: string) {
+  return value.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
+}
+
 function OfficialPanel({ documents, sources }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources'] }) {
-  return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다. 원본 존재 확인과 private Storage 파일 연결은 별도 상태로 관리합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => {
+  return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다. 원본 확인, migration upload 준비, private Storage 연결을 각각 분리해 관리합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => {
     const isSourceInventory = source.resourceType === 'source_document_inventory';
     const binaryStorageStatus = source.metadata?.binaryStorageStatus;
     const originalSourcePresence = source.metadata?.originalSourcePresence;
+    const sourceReference = typeof source.sourceReference === 'string' ? source.sourceReference : '';
+    const matchingDocument = isSourceInventory && sourceReference
+      ? documents.find((document) => normalizedSourceFileName(document.originalFileName) === normalizedSourceFileName(sourceReference))
+      : undefined;
+    const migrationUploadReady = Boolean(matchingDocument && (matchingDocument.fileData || matchingDocument.fileUrl));
     return <article key={source.id}>
       <b>{source.sourceName}</b>
       <span>{SOURCE_TYPE_LABELS[source.sourceType]} · {source.sourceDate || source.collectedAt.slice(0, 10)}</span>
       <VerificationBadge status={source.verificationStatus} />
       {isSourceInventory && <div className="source-inventory-status">
         <Chip size="small" label={originalSourcePresence === 'confirmed' ? '원본 확인' : '원본 상태 미확인'} color={originalSourcePresence === 'confirmed' ? 'success' : 'default'} />
+        <Chip size="small" label={migrationUploadReady ? '이관 파일 준비' : '이관 파일 미등록'} color={migrationUploadReady ? 'success' : 'warning'} />
         <Chip size="small" label={binaryStorageStatus === 'connected' ? 'Storage 연결' : 'Storage 미연결'} color={binaryStorageStatus === 'connected' ? 'success' : 'warning'} />
+        {matchingDocument && <small>{matchingDocument.originalFileName} · {(matchingDocument.fileSize / 1024 / 1024).toFixed(1)} MiB</small>}
       </div>}
     </article>;
   })}</div> : <EmptyState title="등록된 공적자료가 없습니다." detail="문서 탭에서 공적자료를 등록하면 출처와 검증 상태가 함께 표시됩니다." />}</div>;
