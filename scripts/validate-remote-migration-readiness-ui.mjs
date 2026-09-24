@@ -111,4 +111,20 @@ for (const marker of [
 if (!text.page.includes('Supabase Auth Leaked Password Protection 활성화 여부를 Dashboard에서 수동 확인')) {
   throw new Error('Migration rehearsal에 Supabase Auth leaked-password protection 수동 게이트가 필요합니다.');
 }
+
+for (const marker of [
+  'PRODUCTION ACCEPTANCE · EXTERNAL GATES',
+  '실운영 승인 전 남은 항목',
+  'NOT PRODUCTION READY',
+  '실 운영 OWNER Auth 계정',
+  '물리 2nd-device browser E2E',
+  'Production frontend host',
+  'Protected map/POI proxy',
+  'Production provider/domain allowlist',
+  'Supabase Leaked Password Protection',
+  'Spreadsheet parser release advisory review',
+]) {
+  if (!text.page.includes(marker)) throw new Error(`Production external acceptance gate 누락: ${marker}`);
+}
+
 console.log('Remote migration readiness review + handoff bundle UI boundary: PASS');
