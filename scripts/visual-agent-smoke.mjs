@@ -27,9 +27,9 @@ async function verifyExternalShareCenter(page) {
 
 async function verifyPropertyHub(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11`, { waitUntil: 'domcontentloaded' });
-  for (const text of ['PROPERTY DETAIL HUB', '방배동 815-11 코너빌딩', 'CORE PROPERTY PROFILE', 'WORKSPACE NAVIGATION', '사진 · 미디어', '문서 · 공적자료', '비교거래', '임대 · 수익 분석', '검토 이력', '보고서', '3D · 도면', '입지 브리핑', 'Data Room 전체보기', '대표 외관 미디어 미연결']) await waitForText(page, text);
+  for (const text of ['PROPERTY DETAIL HUB', '방배동 815-11 코너빌딩', 'CORE PROPERTY PROFILE', 'WORKSPACE NAVIGATION', '사진 · 미디어', '문서 · 공적자료', '비교거래', '임대 · 수익 분석', '검토 이력', '보고서', '3D · 도면', 'Room Intelligence', '5개 PropertySpace · 승인 3D 연결 0건', '입지 브리핑', 'Data Room 전체보기', '대표 외관 미디어 미연결']) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-property-hub.png`, fullPage: true });
-  console.log('[PASS] Bangbae property hub: fact-first summary + 8 workspace entry cards + no fabricated hero media');
+  console.log('[PASS] Bangbae property hub: fact-first summary + Room Intelligence context card + no fabricated hero media');
 }
 
 async function verifyDataRoomDeepLinks(page) {
@@ -56,6 +56,17 @@ async function verifyBangbaeDataRoom(page) {
   for (const text of ['방배동 815-11 코너빌딩', '층별 구성 · Data Room', '4개 층 · 5개 공간', '합계 349.08㎡', '3F', '2F', '1F', 'B1', '제2종근린생활시설(부동산중개업소)', '점포', '다가구용단독주택(1가구)', '출처와 검증', '방배동 815-11 건축물대장.pdf', '비교거래 요약', '6건', '5,862만/평 ~ 8,788만/평', '2026-06-02', '방배동 실거래사례1년간.pdf', '비교거래 전체 보기']) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-overview.png`, fullPage: true });
   console.log('[PASS] Bangbae Data Room: floor provenance + 6 comparable transactions + market summary rendered');
+}
+
+async function verifyBangbaeWorkspaceContext(page, path, heading) {
+  await page.goto(`${BASE_URL}${path}?propertyId=daon-bangbae-815-11`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, heading);
+  await waitForText(page, '방배동 815-11 코너빌딩');
+  const propertySelect = page.getByRole('combobox', { name: '대상 물건' });
+  await propertySelect.waitFor({ state: 'visible', timeout: 30_000 });
+  const selectedPropertyText = (await propertySelect.textContent()) || '';
+  if (!selectedPropertyText.includes('방배동 815-11 코너빌딩')) throw new Error(`${heading} property context was not preserved for Bangbae 815-11.`);
+  console.log(`[PASS] ${heading} query context preselects Bangbae 815-11`);
 }
 
 async function verifyBangbaeDigitalTwinIntakeHandoff(page) {
@@ -93,6 +104,8 @@ try {
   await verifyDataRoomDeepLinks(page);
   await verifyBangbaeDataRoom(page);
   await verifyBangbaeDigitalTwinIntakeHandoff(page);
+  await verifyBangbaeWorkspaceContext(page, '/room-ops', 'Room Twin Operations');
+  await verifyBangbaeWorkspaceContext(page, '/interior', 'Interior Workspace');
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
   console.log('Rendered core platform + property hub deep links + Data Room + financial/review workspaces smoke QA: PASS');
