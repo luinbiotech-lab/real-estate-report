@@ -50,8 +50,37 @@ if (!text.dataBuilder.includes('floors: floorSpaces') || !text.dataBuilder.inclu
 if (!text.detailMaster.includes('model.building.floors') || text.detailMaster.includes('층별 임대·이용 현황')) throw new Error('7P 2페이지는 층별 placeholder가 아니라 ReportViewModel 실데이터를 렌더링해야 합니다.');
 if (!text.comparableService.includes("resourceType: 'comparable_transaction_set'") || !text.comparableService.includes("sourceType: 'market_data'") || !text.comparableService.includes('saveVerification')) throw new Error('비교거래는 market_data DataSource와 Verification을 함께 저장해야 합니다.');
 if (!text.comparableService.includes('sourceRow?: number') || !text.comparableService.includes('sourceRecordLabel?: string')) throw new Error('비교거래 구조는 원문 행번호와 원문 표기명을 provenance로 보존해야 합니다.');
-for (const marker of ['sourceRow: 9', 'sourceRow: 10', 'sourceRow: 11', 'sourceRow: 12', 'sourceRow: 13', 'sourceRow: 14', "sourceRecordLabel: '유한빌딩'", "sourceRecordLabel: '주식회사더코너스톤'"]) {
-  if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 비교거래 원문 provenance 누락: ${marker}`);
+for (const marker of [
+  "{ label: '방배동 811-20', sourceRow: 11, sourceRecordLabel: '방배동 811-20'",
+  "landUnitPrice: 79_050_000",
+  "tradeDate: '2025-11-25'",
+  "{ label: '방배동 2112', sourceRow: 10, sourceRecordLabel: '방배동 2112'",
+  "landUnitPrice: 85_160_000",
+  "tradeDate: '2025-10-24'",
+  "{ label: '방배동 811-19', sourceRow: 13, sourceRecordLabel: '방배동 811-19'",
+  "landUnitPrice: 58_620_000",
+  "{ label: '유한빌딩 882-25', sourceRow: 12, sourceRecordLabel: '유한빌딩'",
+  "landUnitPrice: 70_810_000",
+  "tradeDate: '2026-06-02'",
+  "{ label: '더코너스톤 456-30', sourceRow: 14, sourceRecordLabel: '주식회사더코너스톤'",
+  "landUnitPrice: 68_950_000",
+  "tradeDate: '2025-11-18'",
+  "{ label: '방배동 448-37', sourceRow: 9, sourceRecordLabel: '방배동 448-37'",
+  "landUnitPrice: 87_880_000",
+  "tradeDate: '2026-02-13'",
+]) {
+  if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 비교거래 6건 원문 provenance/value 계약 누락: ${marker}`);
+}
+for (const marker of [
+  'metadata: {',
+  'provenance:',
+  "status: provenanceMissing.length === 0 ? 'complete' : 'review_required'",
+  'completeCount: provenanceComplete.length',
+  'missingCount: provenanceMissing.length',
+  "rowLocator: 'sourceRow'",
+  "recordLocator: 'sourceRecordLabel'",
+]) {
+  if (!text.comparableService.includes(marker)) throw new Error(`비교거래 provenance completeness 계약 누락: ${marker}`);
 }
 if (!text.comparablePanel.includes('비교거래 저장 및 보고서 연결') || !text.dataRoom.includes('value="market"')) throw new Error('Data Room은 사용자가 구조화 비교거래를 입력·갱신할 수 있는 경로를 제공해야 합니다.');
 if (!text.dataBuilder.includes('comparables: comparableRows(bundle)') || !text.detailMaster.includes('model.investment.comparables')) throw new Error('7P 4페이지는 구조화 비교거래 DataSource를 ReportViewModel을 통해 렌더링해야 합니다.');
