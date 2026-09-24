@@ -11,6 +11,7 @@ import {
   type AccessRole,
 } from '../services/accessControlService';
 import { AUTH_PROVIDER_SUMMARIES, remoteAuthGateway, type AuthSession } from '../services/authProviderService';
+import type { RemoteAuthProfile } from '../services/supabaseRemoteAuthGateway';
 
 const ROLES: AccessRole[] = ['owner', 'admin', 'editor', 'viewer'];
 const AUTH_CAPABILITY_LABELS = [
@@ -31,10 +32,20 @@ export default function AccessManagementPage() {
   const [remoteEmail, setRemoteEmail] = useState('');
   const [remotePassword, setRemotePassword] = useState('');
   const [remoteSession, setRemoteSession] = useState<AuthSession | null>(null);
+  const [remoteProfiles, setRemoteProfiles] = useState<RemoteAuthProfile[]>([]);
+  const [remoteInviteEmail, setRemoteInviteEmail] = useState('');
+  const [remoteInviteName, setRemoteInviteName] = useState('');
+  const [remoteInviteRole, setRemoteInviteRole] = useState<AccessRole>('viewer');
+  const [ownerBootstrapKey, setOwnerBootstrapKey] = useState('');
   const [remoteBusy, setRemoteBusy] = useState(false);
 
   useEffect(() => {
-    void remoteAuthGateway.getSession().then(setRemoteSession).catch(() => setRemoteSession(null));
+    void remoteAuthGateway.getSession().then(async (session) => {
+      setRemoteSession(session);
+      if (session?.role === 'owner') {
+        try { setRemoteProfiles(await remoteAuthGateway.listProfiles()); } catch { setRemoteProfiles([]); }
+      }
+    }).catch(() => setRemoteSession(null));
   }, []);
 
   const signInRemote = async () => {
@@ -42,6 +53,7 @@ export default function AccessManagementPage() {
     try {
       const session = await remoteAuthGateway.signIn(remoteEmail, remotePassword);
       setRemoteSession(session);
+      setRemoteProfiles(session.role === 'owner' ? await remoteAuthGateway.listProfiles() : []);
       setRemotePassword('');
       setNotice('REMOTE AUTH 로그인과 서버 profile/RLS 확인이 완료되었습니다.');
     } catch (reason) {
@@ -56,9 +68,82 @@ export default function AccessManagementPage() {
     try {
       await remoteAuthGateway.signOut();
       setRemoteSession(null);
+      setRemoteProfiles([]);
+      setOwnerBootstrapKey('');
       setNotice('REMOTE AUTH 세션을 종료했습니다.');
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'REMOTE AUTH 로그아웃에 실패했습니다.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
+
+  const loadRemoteProfiles = async () => {
+    if (remoteSession?.role !== 'owner') return;
+    setRemoteBusy(true); setError('');
+    try {
+      setRemoteProfiles(await remoteAuthGateway.listProfiles());
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE profile을 불러오지 못했습니다.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
+
+  const bootstrapRemoteOwner = async () => {
+    if (!remoteSession || !ownerBootstrapKey) return;
+    setRemoteBusy(true); setError(''); setNotice('');
+    try {
+      const profile = await remoteAuthGateway.bootstrapOwner(ownerBootstrapKey);
+      setRemoteSession(profile);
+      setOwnerBootstrapKey('');
+      setRemoteProfiles(await remoteAuthGateway.listProfiles());
+      setNotice('최초 REMOTE OWNER bootstrap이 완료되었습니다. 운영 secret은 즉시 rotate/remove해야 합니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE OWNER bootstrap에 실패했습니다.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
+
+  const inviteRemoteUser = async () => {
+    if (remoteSession?.role !== 'owner' || !remoteInviteEmail) return;
+    setRemoteBusy(true); setError(''); setNotice('');
+    try {
+      await remoteAuthGateway.inviteUser(remoteInviteEmail, remoteInviteRole, remoteInviteName);
+      setRemoteInviteEmail(''); setRemoteInviteName(''); setRemoteInviteRole('viewer');
+      setRemoteProfiles(await remoteAuthGateway.listProfiles());
+      setNotice('REMOTE 사용자 초대를 요청했습니다. 서버 profile은 OWNER 정책과 RLS가 최종 강제합니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE 사용자 초대에 실패했습니다.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
+
+  const updateRemoteRole = async (profile: RemoteAuthProfile, role: AccessRole) => {
+    if (remoteSession?.role !== 'owner') return;
+    setRemoteBusy(true); setError(''); setNotice('');
+    try {
+      await remoteAuthGateway.updateRole(profile.userId, role);
+      setRemoteProfiles(await remoteAuthGateway.listProfiles());
+      setNotice('REMOTE role을 변경했습니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE role 변경에 실패했습니다.');
+    } finally {
+      setRemoteBusy(false);
+    }
+  };
+
+  const toggleRemoteActive = async (profile: RemoteAuthProfile) => {
+    if (remoteSession?.role !== 'owner') return;
+    setRemoteBusy(true); setError(''); setNotice('');
+    try {
+      await remoteAuthGateway.setActive(profile.userId, !profile.active);
+      setRemoteProfiles(await remoteAuthGateway.listProfiles());
+      setNotice('REMOTE 사용자 활성 상태를 변경했습니다.');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'REMOTE 사용자 상태 변경에 실패했습니다.');
     } finally {
       setRemoteBusy(false);
     }
@@ -148,6 +233,38 @@ export default function AccessManagementPage() {
         <Button variant="contained" disabled={remoteBusy || !remoteEmail || !remotePassword} onClick={signInRemote}>REMOTE 로그인</Button>
       </div>}
     </section>
+
+    {remoteSession && remoteSession.role !== 'owner' && <section style={{ background: '#fff', border: '1px solid #e4d7b8', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <strong>REMOTE OWNER BOOTSTRAP · ONE TIME</strong>
+      <p style={{ color: '#667085', fontSize: 12 }}>최초 운영 OWNER가 아직 없을 때만 사용합니다. bootstrap key는 이 화면의 memory state에만 두고 성공 후 즉시 비웁니다.</p>
+      <Alert severity="warning" sx={{ mb: 1.25 }}>성공 직후 서버의 <code>DAON_OWNER_BOOTSTRAP_KEY</code>를 rotate/remove해야 합니다. 두 번째 bootstrap은 서버에서 거부되어야 합니다.</Alert>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
+        <TextField size="small" label="OWNER bootstrap key" type="password" autoComplete="off" value={ownerBootstrapKey} onChange={(event) => setOwnerBootstrapKey(event.target.value)} />
+        <Button color="warning" variant="contained" disabled={remoteBusy || !ownerBootstrapKey} onClick={() => void bootstrapRemoteOwner()}>최초 OWNER 승격</Button>
+      </div>
+    </section>}
+
+    {remoteSession?.role === 'owner' && <section style={{ background: '#fff', border: '1px solid #b7d8c2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div><strong>REMOTE USER ADMIN · OWNER ONLY</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>Production Supabase profile과 server-side owner-only administration을 직접 사용합니다.</p></div>
+        <Button size="small" variant="outlined" disabled={remoteBusy} onClick={() => void loadRemoteProfiles()}>서버 프로필 새로고침</Button>
+      </div>
+      <Alert severity="info" sx={{ my: 1.25 }}>마지막 active OWNER 강등·비활성화, self-promotion, 비인가 role 변경은 UI가 아니라 Edge Function/RLS가 최종 차단합니다.</Alert>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px auto', gap: 8, marginBottom: 12 }}>
+        <TextField size="small" label="초대 이메일" type="email" value={remoteInviteEmail} onChange={(event) => setRemoteInviteEmail(event.target.value)} />
+        <TextField size="small" label="표시명(선택)" value={remoteInviteName} onChange={(event) => setRemoteInviteName(event.target.value)} />
+        <TextField select size="small" label="초대 역할" value={remoteInviteRole} onChange={(event) => setRemoteInviteRole(event.target.value as AccessRole)}>{ROLES.map((role) => <MenuItem key={role} value={role}>{ROLE_LABELS[role]}</MenuItem>)}</TextField>
+        <Button variant="contained" startIcon={<PersonAddAltRounded />} disabled={remoteBusy || !remoteInviteEmail} onClick={() => void inviteRemoteUser()}>REMOTE 초대</Button>
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {remoteProfiles.map((profile) => <div key={profile.userId} style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,1fr) 160px 110px', gap: 8, alignItems: 'center', border: '1px solid #e7ebf0', borderRadius: 10, padding: 10 }}>
+          <div><strong style={{ display: 'block', fontSize: 13 }}>{profile.displayName || profile.email || profile.userId}</strong><small style={{ color: '#667085' }}>{profile.email || 'email 미확인'} · {profile.active ? 'ACTIVE' : 'INACTIVE'}</small></div>
+          <TextField select size="small" value={profile.role} disabled={remoteBusy} onChange={(event) => void updateRemoteRole(profile, event.target.value as AccessRole)}>{ROLES.map((role) => <MenuItem key={role} value={role}>{ROLE_LABELS[role]}</MenuItem>)}</TextField>
+          <Button size="small" color={profile.active ? 'warning' : 'success'} disabled={remoteBusy} onClick={() => void toggleRemoteActive(profile)}>{profile.active ? '비활성화' : '활성화'}</Button>
+        </div>)}
+        {!remoteProfiles.length && <p style={{ color: '#7b8794', margin: 0 }}>서버 profile 목록을 아직 불러오지 않았습니다.</p>}
+      </div>
+    </section>}
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(160px,1fr))', gap: 10, marginBottom: 16 }}>
       {[
