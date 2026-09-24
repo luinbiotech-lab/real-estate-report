@@ -4,6 +4,7 @@ const files = {
   envExample: '.env.example',
   serverEnv: 'server/env.mjs',
   proxy: 'server/proxy.mjs',
+  proxyClient: 'src/services/maps/proxyClient.ts',
   authProvider: 'src/services/authProviderService.ts',
   productionConfig: 'src/services/supabaseProductionConfig.ts',
   supabaseRemoteAuthAdapter: 'src/services/supabaseRemoteAuthGateway.ts',
@@ -31,7 +32,7 @@ for (const file of Object.values(files)) {
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=']) {
+for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=', 'VITE_API_BASE_URL=']) {
   if (!text.envExample.includes(key)) throw new Error(`환경변수 예시 누락: ${key}`);
 }
 if (!text.envExample.includes('Server-only credentials. Never commit real values.')) throw new Error('서버 전용 지도 credential 보안 경계를 명시해야 합니다.');
@@ -145,6 +146,18 @@ for (const marker of [
 }
 for (const marker of ['MAP_PROXY_ALLOWED_ORIGINS wildcard는 허용하지 않습니다.', 'mapProxyAllowedOrigins: exactOrigins', "mapProxyHost: envValue('MAP_PROXY_HOST'", "mapProxyPort: Number(envValue('MAP_PROXY_PORT'"]) {
   if (!text.serverEnv.includes(marker)) throw new Error(`Protected proxy env validation 누락: ${marker}`);
+}
+for (const marker of [
+  'VITE_API_BASE_URL',
+  'resolveProxyBaseUrl',
+  'PROXY_BASE_URL',
+  "path.startsWith('/api/')",
+  "url.protocol !== 'https:'",
+  "url.pathname !== '/'",
+  "fetch(proxyUrl('/api/status')",
+  'Protected API proxy에 연결할 수 없습니다.',
+]) {
+  if (!text.proxyClient.includes(marker)) throw new Error(`Browser protected proxy origin 계약 누락: ${marker}`);
 }
 
 for (const marker of [
