@@ -104,6 +104,7 @@ try {
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
   for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY', 'CONTENT READINESS · NON-BLOCKING', 'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.', '원본 inventory', 'PRODUCTION ACCEPTANCE · EXTERNAL GATES', 'NOT PRODUCTION READY', '물리 2nd-device browser E2E', 'Production frontend host', '실사용 OWNER public-share issue/list/revoke browser acceptance', 'Production browser bundle/source-map server-secret scan', 'Spreadsheet import release regression']) await waitForText(page, text);
   await waitForText(page, '4/6');
+  for (const text of ['필수자료 원본', '3/4', '필수자료 binary', '0/4', '필수자료 공식검증', '필수자료 미확인', '토지대장']) await waitForText(page, text);
 
   const manifestDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
