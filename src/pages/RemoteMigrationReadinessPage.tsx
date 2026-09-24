@@ -48,6 +48,19 @@ const rehearsal = [
   'cross-device 동일 데이터 확인 후에만 local-first → remote persistence 전환',
 ];
 
+const productionAcceptance = [
+  { label: 'Dedicated Supabase backend · RLS · private Storage', status: 'connected' as const },
+  { label: 'REMOTE AUTH / REMOTE PUBLIC Edge backend', status: 'connected' as const },
+  { label: '실사용 OWNER 로그인 · profile/role acceptance', status: 'required' as const },
+  { label: 'Supabase Auth Leaked Password Protection', status: 'required' as const },
+  { label: '물리 2nd-device 동일 profile/data E2E', status: 'required' as const },
+  { label: 'Production frontend host + protected map/POI proxy', status: 'required' as const },
+  { label: 'NAVER/Kakao/Supabase production domain allowlist', status: 'required' as const },
+  { label: '실사용 OWNER public-share issue/list/revoke browser acceptance', status: 'required' as const },
+  { label: 'Production browser bundle/source-map server-secret scan', status: 'required' as const },
+  { label: 'Spreadsheet import release regression', status: 'required' as const },
+];
+
 export default function RemoteMigrationReadinessPage({ settings }: Props) {
   const [properties, setProperties] = useState<Property[]>([]);
   const [targetPropertyId, setTargetPropertyId] = useState('');
@@ -208,6 +221,20 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
             <p className="eyebrow">BLOCKER REVIEW</p><h2 style={{ margin: '4px 0 12px' }}>차단 항목</h2>
             {!plan.blockers.length && <Alert severity="success"><strong>구조적 blocker가 없습니다.</strong> 이것은 실제 Supabase migration 승인이나 production READY를 의미하지 않습니다.</Alert>}
             {!!plan.blockers.length && <div style={{ display: 'grid', gap: 8 }}>{plan.blockers.map((blocker, index) => <div key={`${blocker.code}-${blocker.store}-${blocker.id ?? index}`} style={{ border: '1px solid #efcaca', background: '#fffafa', borderRadius: 10, padding: 12 }}><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}><Chip size="small" color="error" label={blocker.code} /><Chip size="small" variant="outlined" label={blocker.store} />{blocker.id && <Chip size="small" variant="outlined" label={blocker.id} />}</div><strong>{blocker.message}</strong>{blocker.propertyId && <small style={{ display: 'block', color: '#667085', marginTop: 4 }}>propertyId: {blocker.propertyId}</small>}</div>)}</div>}
+          </section>
+
+          <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div><p className="eyebrow">FULL PRODUCTION ACCEPTANCE</p><h2 style={{ margin: '4px 0' }}>운영 승인 Gate</h2></div>
+              <Chip size="small" color="warning" label="MANUAL ACCEPTANCE REMAINS" />
+            </div>
+            <Alert severity="warning" sx={{ my: 1.25 }}><strong>CONTROLLED MIGRATION PASS ≠ FULL PRODUCTION READY.</strong> 아래 항목은 실제 운영 환경에서 별도 확인해야 하며 이 화면이 자동으로 완료 처리하지 않습니다.</Alert>
+            <div style={{ display: 'grid', gap: 7 }}>
+              {productionAcceptance.map((item) => <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid #eef1f4', paddingBottom: 7 }}>
+                <span>{item.label}</span>
+                <Chip size="small" color={item.status === 'connected' ? 'success' : 'warning'} variant="outlined" label={item.status === 'connected' ? 'BACKEND CONNECTED' : 'ACCEPTANCE REQUIRED'} />
+              </div>)}
+            </div>
           </section>
 
           <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
