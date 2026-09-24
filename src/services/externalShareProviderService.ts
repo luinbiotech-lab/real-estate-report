@@ -15,6 +15,8 @@ export interface ExternalShareProviderDescriptor {
   label: string;
   mode: ExternalShareProviderMode;
   availability: ExternalShareProviderAvailability;
+  backendState: 'ready' | 'not_configured';
+  operatorAcceptance: 'not_required' | 'required' | 'accepted';
   capabilities: ExternalShareCapabilities;
   reason?: string;
 }
@@ -33,6 +35,8 @@ const providers: ExternalShareProviderDescriptor[] = [
     label: 'LOCAL / OFFLINE',
     mode: 'local',
     availability: 'ready',
+    backendState: 'ready',
+    operatorAcceptance: 'not_required',
     capabilities: {
       publicUrl: false,
       remoteRevoke: false,
@@ -46,6 +50,8 @@ const providers: ExternalShareProviderDescriptor[] = [
     label: 'REMOTE / PUBLIC',
     mode: 'remote',
     availability: 'ready',
+    backendState: 'ready',
+    operatorAcceptance: 'required',
     capabilities: {
       publicUrl: true,
       remoteRevoke: true,
@@ -53,7 +59,7 @@ const providers: ExternalShareProviderDescriptor[] = [
       authenticatedAccess: true,
       syncedReview: true,
     },
-    reason: 'Supabase REMOTE / PUBLIC server와 self-hosted read-only viewer가 연결되어 있습니다.',
+    reason: 'Supabase REMOTE / PUBLIC server와 self-hosted read-only viewer는 연결되어 있습니다. 실제 OWNER issue/list/revoke browser acceptance는 아직 필요합니다.',
   },
 ];
 
