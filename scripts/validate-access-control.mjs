@@ -49,7 +49,7 @@ if (!text.migration.includes("default 'viewer'") || !text.migration.includes('Do
 if (!text.migration.includes('Do not apply it to GPS/Sports projects')) throw new Error('부동산 전용 backend 외 프로젝트에 migration 적용 금지 경계를 명시해야 합니다.');
 
 
-if (!page.includes('PRODUCTION SECURITY · MANUAL CHECK REQUIRED') || !page.includes('Leaked Password Protection') || !page.includes('브라우저 UI는 이 설정을 자동으로 READY 처리하지 않습니다.')) {
+if (!text.page.includes('PRODUCTION SECURITY · MANUAL CHECK REQUIRED') || !text.page.includes('Leaked Password Protection') || !text.page.includes('브라우저 UI는 이 설정을 자동으로 READY 처리하지 않습니다.')) {
   throw new Error('Production Auth 수동 보안 게이트 표시가 필요합니다.');
 }
 console.log('Access control policy integrity: PASS');
