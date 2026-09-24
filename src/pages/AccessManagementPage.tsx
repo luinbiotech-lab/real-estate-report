@@ -193,7 +193,8 @@ export default function AccessManagementPage() {
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Chip color="success" icon={<ShieldRounded />} label="LOCAL POLICY READY" />
-        <Chip color="success" icon={<LockPersonRounded />} label="REMOTE AUTH READY" />
+        <Chip color="success" icon={<LockPersonRounded />} label="REMOTE AUTH BACKEND CONNECTED" />
+        <Chip color={remoteSession?.role === 'owner' ? 'warning' : 'default'} label={remoteSession?.role === 'owner' ? 'OWNER SESSION · ACCEPTANCE PENDING' : 'REAL OPERATOR OWNER REQUIRED'} />
       </div>
     </header>
 
@@ -232,6 +233,23 @@ export default function AccessManagementPage() {
         <TextField size="small" label="비밀번호" type="password" autoComplete="current-password" value={remotePassword} onChange={(event) => setRemotePassword(event.target.value)} />
         <Button variant="contained" disabled={remoteBusy || !remoteEmail || !remotePassword} onClick={signInRemote}>REMOTE 로그인</Button>
       </div>}
+    </section>
+
+    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div>
+          <strong>PRODUCTION OPERATOR ACCEPTANCE GATE</strong>
+          <p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>Backend 연결과 실제 운영 승인 상태를 분리합니다. 아래 항목은 자동으로 READY 처리하지 않습니다.</p>
+        </div>
+        <Chip size="small" color="warning" label="MANUAL ACCEPTANCE REQUIRED" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(160px,1fr))', gap: 8, marginTop: 12 }}>
+        <div style={{ border: '1px solid #e7ebf0', borderRadius: 9, padding: 10 }}><small style={{ color: '#667085' }}>REMOTE SESSION</small><strong style={{ display: 'block', marginTop: 3 }}>{remoteSession ? 'CONNECTED' : 'REQUIRED'}</strong></div>
+        <div style={{ border: '1px solid #e7ebf0', borderRadius: 9, padding: 10 }}><small style={{ color: '#667085' }}>OWNER ROLE</small><strong style={{ display: 'block', marginTop: 3 }}>{remoteSession?.role === 'owner' ? 'SESSION OWNER' : 'REQUIRED'}</strong></div>
+        <div style={{ border: '1px solid #e7ebf0', borderRadius: 9, padding: 10 }}><small style={{ color: '#667085' }}>PHYSICAL 2ND DEVICE</small><strong style={{ display: 'block', marginTop: 3 }}>E2E REQUIRED</strong></div>
+        <div style={{ border: '1px solid #e7ebf0', borderRadius: 9, padding: 10 }}><small style={{ color: '#667085' }}>LEAKED PASSWORD PROTECTION</small><strong style={{ display: 'block', marginTop: 3 }}>DASHBOARD CHECK</strong></div>
+      </div>
+      <Alert severity="warning" sx={{ mt: 1.25 }}>OWNER 세션이 보여도 실제 운영자 계정 확인, 물리 2nd-device 동일 profile/role 검증, Supabase Dashboard 보안 설정 확인 전에는 Production READY가 아닙니다.</Alert>
     </section>
 
     {remoteSession && remoteSession.role !== 'owner' && <section style={{ background: '#fff', border: '1px solid #e4d7b8', borderRadius: 12, padding: 16, marginBottom: 16 }}>
