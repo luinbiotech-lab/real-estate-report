@@ -162,7 +162,7 @@ try {
   const sourceDocumentUploads = (preparedManifest.assetUploads ?? []).filter((asset) =>
     asset?.resourceType === 'document' &&
     asset?.propertyId === 'daon-bangbae-815-11' &&
-    ['방배동 815-11 건축물대장.pdf', '방배동 815-11 토지등기부.pdf', '방배동 815-11 건물등기부.pdf', '방배동 815-11 토지이용계획확인서.pdf'].includes(asset?.fileName)
+    ['방배동 815-11 건축물대장.pdf', '방배동 815-11 토지등기부.pdf', '방배동 815-11 건물등기부.pdf', '방배 815-11 토지이용확인원.pdf'].includes(asset?.fileName)
   );
   if (sourceDocumentUploads.length !== 4 || sourceDocumentUploads.some((asset) => asset.binarySource !== 'blob')) {
     throw new Error('Prepared Bangbae source documents were not mapped to 4 local-binary Storage uploads.');
