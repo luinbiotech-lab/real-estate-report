@@ -81,6 +81,9 @@ for (const marker of ['Data Room 평면도 재사용', 'getDocuments(id)', "docu
 for (const marker of ['getSpaces(id)', 'setFloorOptions(floors)', '층 미지정', 'floorOptions.map']) {
   if (!text.twinIntakePage.includes(marker)) throw new Error(`Digital Twin Intake는 검증된 PropertySpace 층 목록을 사용해야 합니다: ${marker}`);
 }
+for (const marker of ["const [searchParams, setSearchParams] = useSearchParams()", "setSearchParams(id ? { propertyId: id } : {})"]) {
+  if (!text.twinIntakePage.includes(marker)) throw new Error(`Digital Twin Intake 물건 URL context 계약 누락: ${marker}`);
+}
 for (const marker of ['도면 · 3D 자료 등록/추가', 'Room Intelligence 열기', 'Interior Intelligence 열기', '/room-ops?propertyId=', '/interior?propertyId=']) {
   if (!text.dataRoom.includes(marker)) throw new Error(`Data Room 3D 탭 workspace handoff 누락: ${marker}`);
 }
