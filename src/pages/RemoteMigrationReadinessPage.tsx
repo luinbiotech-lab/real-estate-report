@@ -3,6 +3,7 @@ import { Alert, Button, Chip, CircularProgress, Dialog, DialogActions, DialogCon
 import { useEffect, useMemo, useState } from 'react';
 import type { Property, Settings } from '../types';
 import { propertyRepository } from '../repositories/propertyRepository';
+import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { remoteMigrationDryRunService } from '../services/remoteMigrationDryRunService';
 import { remoteMigrationHandoffService } from '../services/remoteMigrationHandoffService';
 import type { LocalMigrationSnapshot, RemoteMigrationPlan } from '../services/remoteMigrationPlanService';
@@ -11,6 +12,19 @@ import { REMOTE_MIGRATION_CONFIRMATION, remoteMigrationExecutionService, type Re
 interface Props {
   settings: Settings;
 }
+
+interface ContentReadiness {
+  sourceInventoryTotal: number;
+  sourceInventoryConfirmed: number;
+  sourceInventoryUnconfirmed: number;
+  connectedDocuments: number;
+  mediaAssets: number;
+  digitalTwinAssets: number;
+  readyReportSnapshots: number;
+  storageConnectedSources: number;
+  unconfirmedSourceNames: string[];
+}
+
 
 const cards: Array<{ key: keyof RemoteMigrationPlan['counts']; label: string }> = [
   { key: 'properties', label: 'PROPERTIES' },
@@ -43,6 +57,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
   const [confirmationText, setConfirmationText] = useState('');
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [executionResult, setExecutionResult] = useState<RemoteMigrationExecutionResult>();
+  const [contentReadiness, setContentReadiness] = useState<ContentReadiness>();
   const [error, setError] = useState('');
   const targetProperty = useMemo(() => properties.find((item) => item.id === targetPropertyId), [properties, targetPropertyId]);
 
@@ -52,6 +67,25 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
     });
   }, []);
 
+  const loadContentReadiness = async (propertyId: string) => {
+    if (!propertyId) { setContentReadiness(undefined); return; }
+    const bundle = await propertyDataRoomRepository.getBundle(propertyId);
+    const inventories = bundle.dataSources.filter((source) => source.resourceType === 'source_document_inventory');
+    const confirmed = inventories.filter((source) => source.metadata?.originalSourcePresence === 'confirmed');
+    const unconfirmed = inventories.filter((source) => source.metadata?.originalSourcePresence !== 'confirmed');
+    setContentReadiness({
+      sourceInventoryTotal: inventories.length,
+      sourceInventoryConfirmed: confirmed.length,
+      sourceInventoryUnconfirmed: unconfirmed.length,
+      connectedDocuments: bundle.documents.length,
+      mediaAssets: bundle.media.length,
+      digitalTwinAssets: bundle.digitalTwinAssets.length,
+      readyReportSnapshots: bundle.reportSnapshots.filter((snapshot) => snapshot.status === 'ready').length,
+      storageConnectedSources: inventories.filter((source) => source.metadata?.binaryStorageStatus === 'connected').length,
+      unconfirmedSourceNames: unconfirmed.map((source) => source.sourceName),
+    });
+  };
+
   const selectTargetProperty = (propertyId: string) => {
     setTargetPropertyId(propertyId);
     setPlan(undefined);
@@ -59,6 +93,10 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
     setExecutionResult(undefined);
     setConfirmationText('');
     setConfirmOpen(false);
+    setContentReadiness(undefined);
+    void loadContentReadiness(propertyId).catch((reason) => {
+      setError(reason instanceof Error ? reason.message : '선택 물건의 Data Room 완성도를 읽지 못했습니다.');
+    });
   };
 
   const runDryRun = async () => {
@@ -142,6 +180,27 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
               <Chip color={plan.readyForRemoteWrite ? 'success' : 'error'} label={plan.readyForRemoteWrite ? 'BLOCKER 0' : `BLOCKER ${plan.blockers.length}`} />
             </div>
             <p style={{ color: '#667085', marginBottom: 0 }}>대상 {targetProperty?.name || targetPropertyId} · schema {plan.schemaVersion} · 생성 {new Date(plan.generatedAt).toLocaleString('ko-KR')} · dryRun={String(plan.dryRun)} · networkWrites={plan.networkWrites}</p>
+          </section>
+
+          <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div><p className="eyebrow">CONTENT READINESS · NON-BLOCKING</p><h2 style={{ margin: '4px 0' }}>Data Room 완성도</h2></div>
+              <Chip
+                size="small"
+                color={contentReadiness && contentReadiness.sourceInventoryUnconfirmed === 0 && contentReadiness.connectedDocuments > 0 && contentReadiness.mediaAssets > 0 ? 'success' : 'warning'}
+                label={contentReadiness && contentReadiness.sourceInventoryUnconfirmed === 0 && contentReadiness.connectedDocuments > 0 && contentReadiness.mediaAssets > 0 ? 'CONTENT REVIEW READY' : 'CONTENT INCOMPLETE'}
+              />
+            </div>
+            <Alert severity="info" sx={{ my: 1.25 }}><strong>STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.</strong> 이 영역은 Production write를 차단하지 않지만 운영자가 실데이터 완성도를 별도로 확인하기 위한 지표입니다.</Alert>
+            {contentReadiness && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8, fontSize: 13 }}>
+              <div>원본 inventory <strong style={{ float: 'right' }}>{contentReadiness.sourceInventoryConfirmed}/{contentReadiness.sourceInventoryTotal}</strong></div>
+              <div>Storage 연결 <strong style={{ float: 'right' }}>{contentReadiness.storageConnectedSources}/{contentReadiness.sourceInventoryTotal}</strong></div>
+              <div>문서 binary <strong style={{ float: 'right' }}>{contentReadiness.connectedDocuments}</strong></div>
+              <div>실제 미디어 <strong style={{ float: 'right' }}>{contentReadiness.mediaAssets}</strong></div>
+              <div>Digital Twin <strong style={{ float: 'right' }}>{contentReadiness.digitalTwinAssets}</strong></div>
+              <div>확정 Report <strong style={{ float: 'right' }}>{contentReadiness.readyReportSnapshots}</strong></div>
+            </div>}
+            {!!contentReadiness?.unconfirmedSourceNames.length && <Alert severity="warning" sx={{ mt: 1.25 }}>원본 미확인: {contentReadiness.unconfirmedSourceNames.join(' · ')}</Alert>}
           </section>
 
           <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
