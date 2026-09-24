@@ -80,6 +80,10 @@ export const comparableTransactionService = {
     const existingVerifications = await propertyDataRoomRepository.getVerifications(propertyId);
     const storedRows = rows.map(enrichComparableArithmetic);
     const arithmeticReviewRequired = storedRows.filter((row) => row.arithmeticReviewStatus === 'review_required');
+    const provenanceComplete = storedRows.filter((row) =>
+      Number.isInteger(row.sourceRow) && Number(row.sourceRow) > 0 && Boolean(row.sourceRecordLabel?.trim())
+    );
+    const provenanceMissing = storedRows.filter((row) => !provenanceComplete.includes(row));
     const summary = storedRows.map(formatComparable).join('\n');
 
     await propertyDataRoomRepository.saveDataSource({
@@ -96,6 +100,14 @@ export const comparableTransactionService = {
       metadata: {
         rows: storedRows.map((row) => ({ ...row })),
         count: storedRows.length,
+        provenance: {
+          status: provenanceMissing.length === 0 ? 'complete' : 'review_required',
+          completeCount: provenanceComplete.length,
+          missingCount: provenanceMissing.length,
+          missingLabels: provenanceMissing.map((row) => row.label),
+          rowLocator: 'sourceRow',
+          recordLocator: 'sourceRecordLabel',
+        },
         arithmetic: {
           version: COMPARABLE_ARITHMETIC_VERSION,
           tolerancePct: COMPARABLE_ARITHMETIC_TOLERANCE_PCT,
@@ -113,7 +125,7 @@ export const comparableTransactionService = {
       propertyId,
       fieldKey: 'nearbyTransactions',
       status: source.verificationStatus,
-      note: `${source.sourceName} 비교거래 ${storedRows.length}건 원문 전사 검증 · 원문 평당가 보존 · 산술 차이 검토 ${arithmeticReviewRequired.length}건`,
+      note: `${source.sourceName} 비교거래 ${storedRows.length}건 원문 전사 검증 · row provenance ${provenanceComplete.length}/${storedRows.length} · 원문 평당가 보존 · 산술 차이 검토 ${arithmeticReviewRequired.length}건`,
       verifiedAt: source.verificationStatus === 'verified' || source.verificationStatus === 'confirmed' ? now : undefined,
       createdAt: existingVerifications.find((item) => item.id === verificationId)?.createdAt ?? now,
       updatedAt: now,
@@ -125,6 +137,6 @@ export const comparableTransactionService = {
       updatedAt: now,
     };
     await propertyRepository.update(updated);
-    return { property: updated, rows: storedRows, sourceId, verificationId, arithmeticReviewRequired };
+    return { property: updated, rows: storedRows, sourceId, verificationId, arithmeticReviewRequired, provenanceComplete, provenanceMissing };
   },
 };
