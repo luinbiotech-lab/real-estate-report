@@ -1,7 +1,7 @@
 import { existsSync, readFileSync } from 'node:fs';
 
 const files = {
-  app: 'src/App.tsx', layout: 'src/components/Layout.tsx', propertyHub: 'src/pages/PropertyHubPage.tsx',
+  app: 'src/App.tsx', layout: 'src/components/Layout.tsx', propertyHub: 'src/pages/PropertyHubPage.tsx', dataRoom: 'src/pages/PropertyDataRoomPage.tsx',
   reportHistoryPage: 'src/pages/ReportHistoryPage.tsx', reportHistoryService: 'src/services/reportSnapshotHistoryService.ts',
   twinIntakePage: 'src/pages/DigitalTwinIntakePage.tsx', twinIntakeService: 'src/services/digitalTwinAssetIntakeService.ts', orchestrator: 'src/services/agentOrchestratorService.ts', repository: 'src/repositories/propertyDataRoomRepository.ts',
   releasePanel: 'src/components/BuildingReleasePanel.tsx', releaseShareWorkspace: 'src/components/ReleaseShareWorkspace.tsx', releaseCollaboration: 'src/services/buildingReleaseCollaborationService.ts', releaseSharePackage: 'src/services/releaseSharePackageService.ts', externalShareCenter: 'src/pages/ExternalShareCenterPage.tsx', externalShareProvider: 'src/services/externalShareProviderService.ts',
