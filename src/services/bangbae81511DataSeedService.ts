@@ -251,9 +251,14 @@ export const bangbae81511DataSeedService = {
     });
 
     const comparableSource = sources.find((item) => item.id === COMPARABLE_SOURCE_ID);
+    const comparableProvenance = comparableSource?.metadata?.provenance;
+    const comparableProvenanceComplete = !!comparableProvenance &&
+      typeof comparableProvenance === 'object' &&
+      comparableProvenance.status === 'complete' &&
+      Number(comparableProvenance.completeCount) === comparableSeed.length;
     if (!comparableSource || (
       comparableSource.sourceReference === '방배동 실거래사례1년간.pdf' &&
-      comparableSource.verificationStatus !== 'verified'
+      (comparableSource.verificationStatus !== 'verified' || !comparableProvenanceComplete)
     )) {
       await comparableTransactionService.replace(PROPERTY_ID, comparableSeed, {
         sourceName: '방배동 실거래사례 1년간',
