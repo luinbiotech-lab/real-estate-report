@@ -17,7 +17,6 @@ try {
   for (const text of [
     '사용자 · 권한 관리',
     'LOCAL POLICY READY',
-    'REMOTE AUTH READY',
     'AUTH PROVIDER',
     'LOCAL POLICY',
     'REMOTE AUTH',
