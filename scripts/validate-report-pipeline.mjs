@@ -14,7 +14,6 @@ const files = {
   comparablePanel: 'src/components/propertyDataRoom/ComparableTransactionPanel.tsx',
   comparableOverviewPanel: 'src/components/propertyDataRoom/ComparableTransactionOverviewPanel.tsx',
   streetViewProvenance: 'src/services/streetViewProvenanceService.ts',
-  bangbaeSeed: 'src/services/bangbae81511DataSeedService.ts',
   mediaPanel: 'src/components/propertyDataRoom/MediaClassificationPanel.tsx',
   extractionPanel: 'src/components/propertyDataRoom/DocumentExtractionPanel.tsx',
   spaceOverviewPanel: 'src/components/propertyDataRoom/PropertySpaceOverviewPanel.tsx',
