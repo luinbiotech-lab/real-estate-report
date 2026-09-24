@@ -33,6 +33,12 @@ for (const required of [
   'REMOTE DATA adapter = CONNECTED',
   'REMOTE / PUBLIC server + self-hosted viewer = CONNECTED',
   'real operator OWNER account = REQUIRED',
+  'production runtime package = READY_TO_DEPLOY',
+  'npm run start:prod',
+  'VITE_API_BASE_URL',
+  'MAP_PROXY_ALLOWED_ORIGINS',
+  '/healthz',
+  '/api/status',
 ]) {
   if (!text.includes(required)) throw new Error(`Production connection checklist 필수 규칙 누락: ${required}`);
 }
