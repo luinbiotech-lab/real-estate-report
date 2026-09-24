@@ -338,6 +338,9 @@ release 직전 필수:
 - REMOTE / PUBLIC backend: CONNECTED
 - self-hosted public viewer: ACTIVE
 - QA OWNER / EDITOR / VIEWER RLS E2E: PASS
+- Production profile snapshot (2026-09-24): QA Owner 1 / QA Editor 1 / QA Viewer 1 / active Admin 0
+- remote-auth-admin Edge Function: ACTIVE / verify_jwt=true
+- remote-public-share Edge Function: ACTIVE / verify_jwt=false + function-internal token/auth boundary
 - real operator OWNER Auth account: REQUIRED
 - actual second-device browser E2E: REQUIRED
 - production frontend runtime package: READY_TO_DEPLOY
