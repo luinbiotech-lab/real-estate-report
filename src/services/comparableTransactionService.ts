@@ -23,6 +23,36 @@ export interface ComparableTransactionSource {
   verificationStatus: Extract<VerificationStatus, 'verified' | 'confirmed' | 'imported' | 'unverified'>;
 }
 
+export type ComparableArithmeticReviewStatus = 'consistent' | 'review_required';
+
+export interface ComparableTransactionStoredRow extends ComparableTransactionInput {
+  sourceLandUnitPrice: number;
+  derivedLandUnitPrice: number;
+  landUnitPriceVariancePct: number;
+  arithmeticReviewStatus: ComparableArithmeticReviewStatus;
+  sourceValueSemantics: 'source_reported';
+}
+
+export const COMPARABLE_ARITHMETIC_TOLERANCE_PCT = 0.5;
+export const COMPARABLE_ARITHMETIC_VERSION = 'source-land-unit-v1';
+
+function roundVariance(value: number) {
+  return Math.round(value * 1000) / 1000;
+}
+
+export function enrichComparableArithmetic(row: ComparableTransactionInput): ComparableTransactionStoredRow {
+  const derivedLandUnitPrice = Math.round(row.salePrice / row.landAreaPyeong);
+  const landUnitPriceVariancePct = roundVariance(((row.landUnitPrice - derivedLandUnitPrice) / derivedLandUnitPrice) * 100);
+  return {
+    ...row,
+    sourceLandUnitPrice: row.landUnitPrice,
+    derivedLandUnitPrice,
+    landUnitPriceVariancePct,
+    arithmeticReviewStatus: Math.abs(landUnitPriceVariancePct) > COMPARABLE_ARITHMETIC_TOLERANCE_PCT ? 'review_required' : 'consistent',
+    sourceValueSemantics: 'source_reported',
+  };
+}
+
 function formatComparable(row: ComparableTransactionInput) {
   const approval = row.approvalYear ? ` · 승인 ${row.approvalYear}` : '';
   return `${row.label} | ${formatWon(row.salePrice)} | 대지 ${row.landAreaPyeong.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}평 | 토지평당 ${formatWon(row.landUnitPrice)}${approval} · 거래일 ${row.tradeDate}`;
@@ -48,7 +78,9 @@ export const comparableTransactionService = {
     const verificationId = `verification:market-comparables:${propertyId}`;
     const existingSources = await propertyDataRoomRepository.getDataSources(propertyId);
     const existingVerifications = await propertyDataRoomRepository.getVerifications(propertyId);
-    const summary = rows.map(formatComparable).join('\n');
+    const storedRows = rows.map(enrichComparableArithmetic);
+    const arithmeticReviewRequired = storedRows.filter((row) => row.arithmeticReviewStatus === 'review_required');
+    const summary = storedRows.map(formatComparable).join('\n');
 
     await propertyDataRoomRepository.saveDataSource({
       id: sourceId,
@@ -62,8 +94,16 @@ export const comparableTransactionService = {
       sourceDate: source.sourceDate,
       verificationStatus: source.verificationStatus,
       metadata: {
-        rows: rows.map((row) => ({ ...row })),
-        count: rows.length,
+        rows: storedRows.map((row) => ({ ...row })),
+        count: storedRows.length,
+        arithmetic: {
+          version: COMPARABLE_ARITHMETIC_VERSION,
+          tolerancePct: COMPARABLE_ARITHMETIC_TOLERANCE_PCT,
+          sourceValueSemantics: 'source_reported',
+          consistentCount: storedRows.length - arithmeticReviewRequired.length,
+          reviewRequiredCount: arithmeticReviewRequired.length,
+          reviewRequiredLabels: arithmeticReviewRequired.map((row) => row.label),
+        },
       },
       createdAt: existingSources.find((item) => item.id === sourceId)?.createdAt ?? now,
     });
@@ -73,7 +113,7 @@ export const comparableTransactionService = {
       propertyId,
       fieldKey: 'nearbyTransactions',
       status: source.verificationStatus,
-      note: `${source.sourceName} 비교거래 ${rows.length}건 구조화 연결`,
+      note: `${source.sourceName} 비교거래 ${storedRows.length}건 원문 전사 검증 · 원문 평당가 보존 · 산술 차이 검토 ${arithmeticReviewRequired.length}건`,
       verifiedAt: source.verificationStatus === 'verified' || source.verificationStatus === 'confirmed' ? now : undefined,
       createdAt: existingVerifications.find((item) => item.id === verificationId)?.createdAt ?? now,
       updatedAt: now,
@@ -85,6 +125,6 @@ export const comparableTransactionService = {
       updatedAt: now,
     };
     await propertyRepository.update(updated);
-    return { property: updated, rows, sourceId, verificationId };
+    return { property: updated, rows: storedRows, sourceId, verificationId, arithmeticReviewRequired };
   },
 };
