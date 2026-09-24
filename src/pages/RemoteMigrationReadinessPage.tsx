@@ -8,6 +8,7 @@ import { remoteMigrationDryRunService } from '../services/remoteMigrationDryRunS
 import { remoteMigrationHandoffService } from '../services/remoteMigrationHandoffService';
 import type { LocalMigrationSnapshot, RemoteMigrationPlan } from '../services/remoteMigrationPlanService';
 import { REMOTE_MIGRATION_CONFIRMATION, remoteMigrationExecutionService, type RemoteMigrationExecutionResult } from '../services/remoteMigrationExecutionService';
+import { assessRequiredDocumentReadiness } from '../services/propertyReadinessService';
 
 interface Props {
   settings: Settings;
@@ -18,6 +19,11 @@ interface ContentReadiness {
   sourceInventoryConfirmed: number;
   sourceInventoryUnconfirmed: number;
   connectedDocuments: number;
+  requiredDocumentTotal: number;
+  requiredSourcePresent: number;
+  requiredBinaryConnected: number;
+  requiredOfficiallyVerified: number;
+  requiredMissingNames: string[];
   mediaAssets: number;
   digitalTwinAssets: number;
   readyReportSnapshots: number;
@@ -75,11 +81,17 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
     const inventories = bundle.dataSources.filter((source) => source.resourceType === 'source_document_inventory');
     const confirmed = inventories.filter((source) => source.metadata?.originalSourcePresence === 'confirmed');
     const unconfirmed = inventories.filter((source) => source.metadata?.originalSourcePresence !== 'confirmed');
+    const requiredDocuments = assessRequiredDocumentReadiness(bundle);
     setContentReadiness({
       sourceInventoryTotal: inventories.length,
       sourceInventoryConfirmed: confirmed.length,
       sourceInventoryUnconfirmed: unconfirmed.length,
       connectedDocuments: bundle.documents.length,
+      requiredDocumentTotal: requiredDocuments.present.length + requiredDocuments.missing.length,
+      requiredSourcePresent: requiredDocuments.present.length,
+      requiredBinaryConnected: requiredDocuments.connected.length,
+      requiredOfficiallyVerified: requiredDocuments.verified.length,
+      requiredMissingNames: requiredDocuments.missing.map((type) => type),
       mediaAssets: bundle.media.length,
       digitalTwinAssets: bundle.digitalTwinAssets.length,
       readyReportSnapshots: bundle.reportSnapshots.filter((snapshot) => snapshot.status === 'ready').length,
@@ -196,13 +208,17 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
             <Alert severity="info" sx={{ my: 1.25 }}><strong>STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.</strong> 이 영역은 Production write를 차단하지 않지만 운영자가 실데이터 완성도를 별도로 확인하기 위한 지표입니다.</Alert>
             {contentReadiness && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8, fontSize: 13 }}>
               <div>원본 inventory <strong style={{ float: 'right' }}>{contentReadiness.sourceInventoryConfirmed}/{contentReadiness.sourceInventoryTotal}</strong></div>
+              <div>필수자료 원본 <strong style={{ float: 'right' }}>{contentReadiness.requiredSourcePresent}/{contentReadiness.requiredDocumentTotal}</strong></div>
+              <div>필수자료 binary <strong style={{ float: 'right' }}>{contentReadiness.requiredBinaryConnected}/{contentReadiness.requiredDocumentTotal}</strong></div>
+              <div>필수자료 공식검증 <strong style={{ float: 'right' }}>{contentReadiness.requiredOfficiallyVerified}/{contentReadiness.requiredDocumentTotal}</strong></div>
               <div>Storage 연결 <strong style={{ float: 'right' }}>{contentReadiness.storageConnectedSources}/{contentReadiness.sourceInventoryTotal}</strong></div>
-              <div>문서 binary <strong style={{ float: 'right' }}>{contentReadiness.connectedDocuments}</strong></div>
+              <div>전체 문서 binary <strong style={{ float: 'right' }}>{contentReadiness.connectedDocuments}</strong></div>
               <div>실제 미디어 <strong style={{ float: 'right' }}>{contentReadiness.mediaAssets}</strong></div>
               <div>Digital Twin <strong style={{ float: 'right' }}>{contentReadiness.digitalTwinAssets}</strong></div>
               <div>확정 Report <strong style={{ float: 'right' }}>{contentReadiness.readyReportSnapshots}</strong></div>
             </div>}
-            {!!contentReadiness?.unconfirmedSourceNames.length && <Alert severity="warning" sx={{ mt: 1.25 }}>원본 미확인: {contentReadiness.unconfirmedSourceNames.join(' · ')}</Alert>}
+            {!!contentReadiness?.requiredMissingNames.length && <Alert severity="warning" sx={{ mt: 1.25 }}>필수자료 미확인: {contentReadiness.requiredMissingNames.join(' · ')}</Alert>}
+            {!!contentReadiness?.unconfirmedSourceNames.length && <Alert severity="warning" sx={{ mt: 1.25 }}>전체 inventory 원본 미확인: {contentReadiness.unconfirmedSourceNames.join(' · ')}</Alert>}
           </section>
 
           <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
