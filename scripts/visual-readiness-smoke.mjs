@@ -21,6 +21,7 @@ try {
     'NEXT ACTION QUEUE', '준비도 기반 다음 작업', 'MISSING', 'PARTIAL', 'OPENED', '보완 화면',
     'RECENT PROGRESS', '실제 데이터 변화로 확인된 진행', '재검사 / 새로고침',
     '방배동 815-11 코너빌딩', '기본정보', '문서', '구조화 / 출처', '검증', '미디어', '보고서', '3D / Digital Twin',
+    '원본확인 2/4 · 파일연결 0/4 · 미확인 토지대장·토지이용계획',
     'Verification이 없는 imported 자료는 검증 완료로 승격하지 않습니다.',
     '작업 완료도 실제 readiness 변화가 확인될 때만 기록됩니다.',
   ]) await waitForText(page, text);
