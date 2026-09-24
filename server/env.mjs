@@ -33,14 +33,28 @@ function exactOrigins(value) {
   });
 }
 
+function internalProxyUrl(value) {
+  const url = new URL(value);
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password || url.search || url.hash || url.pathname !== '/') {
+    throw new Error('MAP_PROXY_INTERNAL_URL에는 credential/query/hash/path 없는 origin만 설정해야 합니다.');
+  }
+  return url.origin;
+}
+
+function port(value, label) {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 65535) throw new Error(`${label}은 1~65535 정수여야 합니다.`);
+  return parsed;
+}
+
 export const serverEnv = {
   naverClientId: envValue('NAVER_MAP_CLIENT_ID'),
   naverClientSecret: envValue('NAVER_MAP_CLIENT_SECRET'),
   kakaoRestApiKey: envValue('KAKAO_REST_API_KEY'),
   mapProxyHost: envValue('MAP_PROXY_HOST', '127.0.0.1'),
-  mapProxyPort: Number(envValue('MAP_PROXY_PORT', '5175')),
+  mapProxyPort: port(envValue('MAP_PROXY_PORT', '5175'), 'MAP_PROXY_PORT'),
   mapProxyAllowedOrigins: exactOrigins(envValue('MAP_PROXY_ALLOWED_ORIGINS', 'http://localhost:5174')),
   frontendHost: envValue('FRONTEND_HOST', '127.0.0.1'),
-  frontendPort: Number(envValue('FRONTEND_PORT', '4174')),
-  mapProxyInternalUrl: envValue('MAP_PROXY_INTERNAL_URL', 'http://127.0.0.1:5175'),
+  frontendPort: port(envValue('FRONTEND_PORT', '4174'), 'FRONTEND_PORT'),
+  mapProxyInternalUrl: internalProxyUrl(envValue('MAP_PROXY_INTERNAL_URL', 'http://127.0.0.1:5175')),
 };
