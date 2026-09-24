@@ -353,3 +353,11 @@ npm run readiness:prod
 - spreadsheet parser = PATCHED_PINNED_REVIEW_AT_RELEASE
 
 서버 연결 완료와 실사용 운영 마감은 구분한다. 운영 계정·second-device·도메인·proxy 검증 후 최종 Production READY로 승격한다.
+## Production runtime package
+
+- production runtime package = READY_TO_DEPLOY
+- `npm run start:prod`는 `server/frontend.mjs` + `server/proxy.mjs`를 함께 실행한다.
+- production frontend host/domain/TLS는 여전히 외부 인프라에서 연결해야 한다.
+- `VITE_API_BASE_URL`이 비어 있으면 same-origin `/api`, 분리 배포 시 HTTPS origin만 허용한다.
+- `MAP_PROXY_ALLOWED_ORIGINS` wildcard `*` 사용 금지, exact origin allowlist만 허용한다.
+- 실제 host 연결 후 `/healthz`, `/api/status`, NAVER geocode/static, Kakao POI를 production domain에서 검증한다.
