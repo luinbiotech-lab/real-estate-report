@@ -21,46 +21,19 @@ export interface PropertyReadinessAssessment {
   stages: ReadinessStage[];
 }
 
-function coreStage(property: Property): ReadinessStage {
-  const checks = [
-    Boolean(property.address?.trim()),
-    property.landAreaSqm > 0,
-    property.totalFloorAreaSqm > 0,
-    Boolean(property.managerName?.trim()),
-  ];
-  const complete = checks.filter(Boolean).length;
-  return {
-    id: 'core',
-    label: '기본정보',
-    state: complete === checks.length ? 'ready' : complete > 0 ? 'partial' : 'missing',
-    detail: `${complete}/${checks.length} 핵심필드`,
-  };
+export interface RequiredDocumentReadiness {
+  present: typeof REQUIRED_DOCUMENT_TYPES;
+  connected: typeof REQUIRED_DOCUMENT_TYPES;
+  verified: typeof REQUIRED_DOCUMENT_TYPES;
+  missing: typeof REQUIRED_DOCUMENT_TYPES;
 }
 
-export function assessPropertyReadiness(property: Property, bundle: DataRoomBundle): PropertyReadinessAssessment {
-  const spaces = bundle.spaces ?? [];
-  const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
-  const hasReport = bundle.reportSnapshots.length > 0;
-  const inventoryDocumentTypes = new Set(bundle.dataSources
-    .filter((source) => source.resourceType === 'source_document_inventory' && source.metadata?.originalSourcePresence === 'confirmed')
-    .map((source) => {
-      const type = source.metadata?.documentType;
-      if (type === 'registry_land' || type === 'registry_building' || type === 'registry') return 'registry';
-      return typeof type === 'string' ? type : '';
-    })
-    .filter(Boolean));
-  const requiredConnected = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) => document.documentType === type));
-  const requiredPresent = REQUIRED_DOCUMENT_TYPES.filter((type) =>
-    requiredConnected.includes(type) || inventoryDocumentTypes.has(type)
-  );
-  const requiredVerified = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) =>
-    document.documentType === type &&
-    (document.verificationStatus === 'verified' || bundle.verifications.some((verification) =>
-      verification.status === 'verified' &&
-      (verification.fieldKey === `document:${document.id}` || verification.fieldKey === document.id)
-    ))
-  ));
-  const requiredMissing = REQUIRED_DOCUMENT_TYPES.filter((type) => !requiredPresent.includes(type));
+export function assessRequiredDocumentReadiness(bundle: DataRoomBundle): RequiredDocumentReadiness {
+  const required = assessRequiredDocumentReadiness(bundle);
+  const requiredPresent = required.present;
+  const requiredConnected = required.connected;
+  const requiredVerified = required.verified;
+  const requiredMissing = required.missing;
   const documentState: ReadinessState = requiredConnected.length === REQUIRED_DOCUMENT_TYPES.length && requiredVerified.length === REQUIRED_DOCUMENT_TYPES.length
     ? 'ready'
     : requiredPresent.length > 0 || requiredConnected.length > 0
