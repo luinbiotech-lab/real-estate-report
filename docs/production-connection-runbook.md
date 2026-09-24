@@ -242,6 +242,18 @@ proxy runtime 계약:
 
 완료 조건: browser bundle/HTML/source map에서 server-only credential이 검출되지 않고, 허용되지 않은 Origin이 protected proxy에서 403으로 차단된다.
 
+실제 host 연결 후 HTTP acceptance:
+
+```bash
+DAON_PRODUCTION_BASE_URL=https://<frontend-origin> \
+DAON_PRODUCTION_API_BASE_URL=https://<api-origin> \
+npm run test:prod-http
+```
+
+- `DAON_PRODUCTION_BASE_URL`이 없으면 스크립트는 실패한다. 외부 host 없이 PASS를 가장하지 않는다.
+- HTTPS origin, `/healthz`, SPA deep-link fallback, 보안 헤더, protected `/api/status`, server-secret 비노출을 검증한다.
+- same-origin 배포면 `DAON_PRODUCTION_API_BASE_URL`은 생략 가능하다.
+
 ## 6. Provider/domain allowlist
 
 production URL 확정 후:
