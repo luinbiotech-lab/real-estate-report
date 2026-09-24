@@ -18,7 +18,7 @@ const STATUS_LABELS: Record<DigitalTwinAsset['processingStatus'], string> = {
 
 export default function DigitalTwinIntakePage() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const requestedPropertyId = searchParams.get('propertyId') || '';
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
@@ -76,6 +76,7 @@ export default function DigitalTwinIntakePage() {
 
   const selectProperty = async (id: string) => {
     setPropertyId(id); setNotice(''); setError('');
+    setSearchParams(id ? { propertyId: id } : {});
     await loadAssets(id);
   };
 
