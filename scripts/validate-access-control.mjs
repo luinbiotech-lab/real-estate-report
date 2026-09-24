@@ -48,4 +48,8 @@ for (const sql of ['create table if not exists public.profiles', "'owner', 'admi
 if (!text.migration.includes("default 'viewer'") || !text.migration.includes('Do NOT expose service_role credentials to the browser')) throw new Error('신규 사용자는 VIEWER 기본값이며 service_role 브라우저 노출 금지 규칙이 필요합니다.');
 if (!text.migration.includes('Do not apply it to GPS/Sports projects')) throw new Error('부동산 전용 backend 외 프로젝트에 migration 적용 금지 경계를 명시해야 합니다.');
 
+
+if (!page.includes('PRODUCTION SECURITY · MANUAL CHECK REQUIRED') || !page.includes('Leaked Password Protection') || !page.includes('브라우저 UI는 이 설정을 자동으로 READY 처리하지 않습니다.')) {
+  throw new Error('Production Auth 수동 보안 게이트 표시가 필요합니다.');
+}
 console.log('Access control policy integrity: PASS');
