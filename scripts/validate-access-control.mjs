@@ -52,4 +52,17 @@ if (!text.migration.includes('Do not apply it to GPS/Sports projects')) throw ne
 if (!text.page.includes('PRODUCTION SECURITY · MANUAL CHECK REQUIRED') || !text.page.includes('Leaked Password Protection') || !text.page.includes('브라우저 UI는 이 설정을 자동으로 READY 처리하지 않습니다.')) {
   throw new Error('Production Auth 수동 보안 게이트 표시가 필요합니다.');
 }
+for (const marker of [
+  'REMOTE AUTH BACKEND CONNECTED',
+  'REAL OPERATOR OWNER REQUIRED',
+  'OWNER SESSION · ACCEPTANCE PENDING',
+  'PRODUCTION OPERATOR ACCEPTANCE GATE',
+  'MANUAL ACCEPTANCE REQUIRED',
+  'PHYSICAL 2ND DEVICE',
+  'E2E REQUIRED',
+  'DASHBOARD CHECK',
+  'Production READY가 아닙니다.',
+]) {
+  if (!text.page.includes(marker)) throw new Error(`실운영 OWNER/2nd-device 수동 승인 경계 누락: ${marker}`);
+}
 console.log('Access control policy integrity: PASS');
