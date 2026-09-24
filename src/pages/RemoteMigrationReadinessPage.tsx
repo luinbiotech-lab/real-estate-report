@@ -9,6 +9,7 @@ import { remoteMigrationHandoffService } from '../services/remoteMigrationHandof
 import type { LocalMigrationSnapshot, RemoteMigrationPlan } from '../services/remoteMigrationPlanService';
 import { REMOTE_MIGRATION_CONFIRMATION, remoteMigrationExecutionService, type RemoteMigrationExecutionResult } from '../services/remoteMigrationExecutionService';
 import { assessRequiredDocumentReadiness } from '../services/propertyReadinessService';
+import { DOCUMENT_TYPE_LABELS } from '../domain/propertyDataRoom/labels';
 
 interface Props {
   settings: Settings;
@@ -91,7 +92,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
       requiredSourcePresent: requiredDocuments.present.length,
       requiredBinaryConnected: requiredDocuments.connected.length,
       requiredOfficiallyVerified: requiredDocuments.verified.length,
-      requiredMissingNames: requiredDocuments.missing.map((type) => type),
+      requiredMissingNames: requiredDocuments.missing.map((type) => DOCUMENT_TYPE_LABELS[type]),
       mediaAssets: bundle.media.length,
       digitalTwinAssets: bundle.digitalTwinAssets.length,
       readyReportSnapshots: bundle.reportSnapshots.filter((snapshot) => snapshot.status === 'ready').length,
