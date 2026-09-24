@@ -105,4 +105,18 @@ for (const marker of [
 ]) {
   if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 토지이용계획 source inventory 검증 누락: ${marker}`);
 }
+
+for (const marker of [
+  'provenanceComplete',
+  'provenanceMissing',
+  "status: provenanceMissing.length === 0 ? 'complete' : 'review_required'",
+  "rowLocator: 'sourceRow'",
+  "recordLocator: 'sourceRecordLabel'",
+  'row provenance',
+]) {
+  if (!text.comparableService.includes(marker)) throw new Error(`비교거래 row provenance 계약 누락: ${marker}`);
+}
+for (const marker of ['출처 · 원문 위치', 'row provenance', 'provenanceCompleteCount']) {
+  if (!text.comparableOverviewPanel.includes(marker)) throw new Error(`비교거래 provenance UI 누락: ${marker}`);
+}
 console.log('DA:ON report pipeline integrity: PASS');
