@@ -361,3 +361,9 @@ npm run readiness:prod
 - `VITE_API_BASE_URL`이 비어 있으면 same-origin `/api`, 분리 배포 시 HTTPS origin만 허용한다.
 - `MAP_PROXY_ALLOWED_ORIGINS` wildcard `*` 사용 금지, exact origin allowlist만 허용한다.
 - 실제 host 연결 후 `/healthz`, `/api/status`, NAVER geocode/static, Kakao POI를 production domain에서 검증한다.
+
+## External production HTTP acceptance
+
+- 실제 host 연결 후 `DAON_PRODUCTION_BASE_URL=https://...`과 필요 시 `DAON_PRODUCTION_API_BASE_URL=https://...`을 설정하고 `npm run test:prod-http` 실행
+- production URL 미설정 상태를 PASS 처리하지 않는다.
+- HTTPS, `/healthz`, SPA fallback, 보안 헤더, `/api/status`, server-secret 비노출을 확인한다.
