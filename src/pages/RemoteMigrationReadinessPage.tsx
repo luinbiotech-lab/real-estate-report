@@ -215,6 +215,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
             <p className="eyebrow">CONTROLLED PRODUCTION RELEASE</p><h2 style={{ margin: '4px 0 10px' }}>Production 이관 승인</h2>
             <Alert severity="warning" sx={{ mb: 1.5 }}>이 작업은 원격 DB와 private Storage를 변경합니다. Dry-run 이후 데이터가 바뀌면 반드시 다시 Dry-run을 실행해야 합니다.</Alert>
             <Alert severity="info" sx={{ mb: 1.5 }}><strong>INITIAL MIGRATION · NO OVERWRITE</strong> · 같은 propertyId가 Production에 이미 존재하면 실행기는 쓰기 전에 중단합니다. 기존 원격 Property 갱신은 별도 동기화 워크플로로 분리합니다.</Alert>
+            <Alert severity="warning" sx={{ mb: 1.5 }}><strong>PARTIAL WRITE SAFETY</strong> · 모든 local binary와 기존 원격 Property 충돌은 첫 write 전에 검사합니다. 이후 네트워크/서버 오류로 실행이 중단되면 성공으로 처리하지 않으며, 재실행 전에 원격 상태를 확인하고 reconciliation 기준으로 판단해야 합니다.</Alert>
             <TextField fullWidth size="small" label="승인 문구" value={confirmationText} onChange={(event) => setConfirmationText(event.target.value)} placeholder={REMOTE_MIGRATION_CONFIRMATION} disabled={executing || !plan.readyForRemoteWrite} />
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginTop: 10 }}>
               <small style={{ color: '#667085' }}>정확히 “{REMOTE_MIGRATION_CONFIRMATION}” 입력 후 최종 확인이 필요합니다.</small>
