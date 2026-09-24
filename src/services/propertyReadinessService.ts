@@ -41,7 +41,18 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
   const spaces = bundle.spaces ?? [];
   const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
   const hasReport = bundle.reportSnapshots.length > 0;
-  const requiredPresent = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) => document.documentType === type));
+  const inventoryDocumentTypes = new Set(bundle.dataSources
+    .filter((source) => source.resourceType === 'source_document_inventory' && source.metadata?.originalSourcePresence === 'confirmed')
+    .map((source) => {
+      const type = source.metadata?.documentType;
+      if (type === 'registry_land' || type === 'registry_building' || type === 'registry') return 'registry';
+      return typeof type === 'string' ? type : '';
+    })
+    .filter(Boolean));
+  const requiredConnected = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) => document.documentType === type));
+  const requiredPresent = REQUIRED_DOCUMENT_TYPES.filter((type) =>
+    requiredConnected.includes(type) || inventoryDocumentTypes.has(type)
+  );
   const requiredVerified = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) =>
     document.documentType === type &&
     (document.verificationStatus === 'verified' || bundle.verifications.some((verification) =>
@@ -50,14 +61,14 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
     ))
   ));
   const requiredMissing = REQUIRED_DOCUMENT_TYPES.filter((type) => !requiredPresent.includes(type));
-  const documentState: ReadinessState = requiredPresent.length === REQUIRED_DOCUMENT_TYPES.length && requiredVerified.length === REQUIRED_DOCUMENT_TYPES.length
+  const documentState: ReadinessState = requiredConnected.length === REQUIRED_DOCUMENT_TYPES.length && requiredVerified.length === REQUIRED_DOCUMENT_TYPES.length
     ? 'ready'
-    : requiredPresent.length > 0
+    : requiredPresent.length > 0 || requiredConnected.length > 0
       ? 'partial'
       : 'missing';
   const documentDetail = requiredMissing.length
-    ? `필수 ${requiredPresent.length}/${REQUIRED_DOCUMENT_TYPES.length} · 미확인 ${requiredMissing.map((type) => DOCUMENT_TYPE_LABELS[type]).join('·')}`
-    : `필수 4/4 · 공식검증 ${requiredVerified.length}/${REQUIRED_DOCUMENT_TYPES.length}`;
+    ? `원본확인 ${requiredPresent.length}/${REQUIRED_DOCUMENT_TYPES.length} · 파일연결 ${requiredConnected.length}/${REQUIRED_DOCUMENT_TYPES.length} · 미확인 ${requiredMissing.map((type) => DOCUMENT_TYPE_LABELS[type]).join('·')}`
+    : `원본확인 4/4 · 파일연결 ${requiredConnected.length}/4 · 공식검증 ${requiredVerified.length}/4`;
   const stages: ReadinessStage[] = [
     coreStage(property),
     {
