@@ -37,6 +37,14 @@ for (const marker of ["source.resourceType === 'source_document_inventory'", "so
   if (!readinessService.includes(marker)) throw new Error(`Source inventory 기반 문서 확보상태 계산 누락: ${marker}`);
 }
 if (readinessService.includes("state: bundle.documents.length > 0 ? 'ready' : 'missing'")) throw new Error('문서 1건만으로 Property Readiness를 READY 처리하면 안 됩니다.');
+if (!readinessService.includes('export function assessRequiredDocumentReadiness')) throw new Error('필수 공적자료 readiness는 공통 함수로 유지해야 합니다.');
+const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
+for (const marker of ['assessRequiredDocumentReadiness(bundle)', 'requiredSourcePresent', 'requiredBinaryConnected', 'requiredOfficiallyVerified', 'requiredDocumentTotal']) {
+  if (!dataRoomService.includes(marker)) throw new Error(`Data Room summary는 공통 필수자료 readiness를 사용해야 합니다: ${marker}`);
+}
+for (const marker of ['문서 준비도', 'requiredSourcePresent', 'requiredBinaryConnected', 'requiredDocumentTotal']) {
+  if (!text.propertyHub.includes(marker)) throw new Error(`Property Hub 문서 준비도 UI 누락: ${marker}`);
+}
 
 if (!text.app.includes('path="report-history"') || !text.layout.includes('to="/report-history"')) throw new Error('보고서 Snapshot 이력 화면의 route/navigation 연결이 필요합니다.');
 if (!text.reportHistoryService.includes('isLatestReady') || !text.reportHistoryService.includes('archiveSupersededDrafts')) throw new Error('보고서 이력 서비스는 최신 확정본 식별과 이전 draft 보관 기능을 유지해야 합니다.');
