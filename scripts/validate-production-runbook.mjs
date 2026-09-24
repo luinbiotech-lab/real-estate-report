@@ -85,6 +85,10 @@ for (const required of [
   'MAP_PROXY_ALLOWED_ORIGINS',
   'wildcard',
   'READY_TO_DEPLOY',
+  'npm run test:prod-http',
+  'DAON_PRODUCTION_BASE_URL',
+  'DAON_PRODUCTION_API_BASE_URL',
+  '외부 host 없이 PASS를 가장하지 않는다',
 ]) {
   if (!text.runbook.includes(required)) throw new Error(`Production runbook 필수 규칙 누락: ${required}`);
 }
