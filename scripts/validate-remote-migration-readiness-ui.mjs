@@ -92,4 +92,19 @@ for (const forbidden of ['SUPABASE_SERVICE_ROLE_KEY', 'DAON_OWNER_BOOTSTRAP_KEY=
 if (!text.dryRun.includes("await db.getAll('properties')")) throw new Error('Dry-run executor는 local properties를 IndexedDB에서 읽어야 합니다.');
 if (text.dryRun.includes("db.get('settings'") || text.dryRun.includes("db.getAll('settings'")) throw new Error('settings store 전체를 remote migration collector가 자동 수집하면 안 됩니다.');
 
+
+for (const marker of [
+  'CONTENT READINESS · NON-BLOCKING',
+  'Data Room 완성도',
+  'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.',
+  'CONTENT INCOMPLETE',
+  'sourceInventoryConfirmed',
+  'sourceInventoryUnconfirmed',
+  'storageConnectedSources',
+  'unconfirmedSourceNames',
+  'propertyDataRoomRepository.getBundle(propertyId)',
+]) {
+  if (!text.page.includes(marker)) throw new Error(`Migration UI content-readiness boundary 누락: ${marker}`);
+}
+
 console.log('Remote migration readiness review + handoff bundle UI boundary: PASS');
