@@ -251,9 +251,11 @@ export const bangbae81511DataSeedService = {
     });
 
     const comparableSource = sources.find((item) => item.id === COMPARABLE_SOURCE_ID);
-    const comparableProvenance = comparableSource?.metadata?.provenance;
+    const comparableProvenance = comparableSource?.metadata?.provenance &&
+      typeof comparableSource.metadata.provenance === 'object'
+      ? comparableSource.metadata.provenance as Record<string, unknown>
+      : undefined;
     const comparableProvenanceComplete = !!comparableProvenance &&
-      typeof comparableProvenance === 'object' &&
       comparableProvenance.status === 'complete' &&
       Number(comparableProvenance.completeCount) === comparableSeed.length;
     if (!comparableSource || (
