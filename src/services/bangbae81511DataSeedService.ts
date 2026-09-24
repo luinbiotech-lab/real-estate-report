@@ -260,12 +260,13 @@ export const bangbae81511DataSeedService = {
       Number(comparableProvenance.completeCount) === comparableSeed.length;
     if (!comparableSource || (
       comparableSource.sourceReference === '방배동 실거래사례1년간.pdf' &&
-      (comparableSource.verificationStatus !== 'verified' || !comparableProvenanceComplete)
+      (comparableSource.verificationStatus !== 'confirmed' || !comparableProvenanceComplete ||
+        comparableProvenance.independentOfficialVerification !== false)
     )) {
       await comparableTransactionService.replace(PROPERTY_ID, comparableSeed, {
         sourceName: '방배동 실거래사례 1년간',
         sourceReference: '방배동 실거래사례1년간.pdf',
-        verificationStatus: 'verified',
+        verificationStatus: 'confirmed',
       });
     }
   },
