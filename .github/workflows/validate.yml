@@ -133,6 +133,19 @@ jobs:
       - name: Build production container image
         run: docker build --tag daon-real-estate-report:ci .
 
+      - name: Smoke production container runtime
+        run: |
+          docker run -d --rm --name daon-real-estate-report-ci -p 4176:4174 daon-real-estate-report:ci
+          trap 'docker rm -f daon-real-estate-report-ci >/dev/null 2>&1 || true' EXIT
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4176/healthz >/tmp/daon-container-health.json; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4176/healthz
+          curl -fsS http://127.0.0.1:4176/api/status
+          curl -fsS http://127.0.0.1:4176/property/daon-bangbae-815-11 | grep -q 'id="root"'
+          docker inspect --format='{{json .State.Health.Status}}' daon-real-estate-report-ci
+
       - name: Install Playwright for rendered QA
         run: |
           npm install --no-save playwright@1.55.0
