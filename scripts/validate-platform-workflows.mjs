@@ -8,6 +8,7 @@ const files = {
   rentalIncomePage: 'src/pages/RentalIncomeWorkspacePage.tsx', rentalIncomeService: 'src/services/rentalIncomeScenarioService.ts',
   reviewHistoryPage: 'src/pages/ReviewHistoryPage.tsx', reviewHistoryService: 'src/services/reviewHistoryService.ts',
   interiorPage: 'src/pages/InteriorWorkspacePage.tsx', roomOpsPage: 'src/pages/RoomTwinOperationsPage.tsx',
+  accessPage: 'src/pages/AccessManagementPage.tsx',
 };
 for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(`플랫폼 workflow 필수 파일 누락: ${file}`);
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
@@ -45,6 +46,22 @@ for (const marker of ['assessRequiredDocumentReadiness(bundle)', 'requiredSource
 for (const marker of ['문서 준비도', 'requiredSourcePresent', 'requiredBinaryConnected', 'requiredDocumentTotal']) {
   if (!text.propertyHub.includes(marker)) throw new Error(`Property Hub 문서 준비도 UI 누락: ${marker}`);
 }
+
+for (const marker of [
+  'REMOTE OWNER BOOTSTRAP · ONE TIME',
+  'REMOTE USER ADMIN · OWNER ONLY',
+  'remoteAuthGateway.bootstrapOwner(ownerBootstrapKey)',
+  'remoteAuthGateway.listProfiles()',
+  'remoteAuthGateway.inviteUser(remoteInviteEmail, remoteInviteRole, remoteInviteName)',
+  'remoteAuthGateway.updateRole(profile.userId, role)',
+  'remoteAuthGateway.setActive(profile.userId, !profile.active)',
+  "setOwnerBootstrapKey('')",
+  "remoteSession?.role === 'owner'",
+  "remoteSession && remoteSession.role !== 'owner'",
+]) {
+  if (!text.accessPage.includes(marker)) throw new Error(`REMOTE OWNER 운영 UI 계약 누락: ${marker}`);
+}
+if (!text.accessPage.includes('마지막 active OWNER 강등·비활성화') || !text.accessPage.includes('Edge Function/RLS가 최종 차단')) throw new Error('REMOTE OWNER 관리 UI는 서버 보안 경계를 명시해야 합니다.');
 
 if (!text.app.includes('path="report-history"') || !text.layout.includes('to="/report-history"')) throw new Error('보고서 Snapshot 이력 화면의 route/navigation 연결이 필요합니다.');
 if (!text.reportHistoryService.includes('isLatestReady') || !text.reportHistoryService.includes('archiveSupersededDrafts')) throw new Error('보고서 이력 서비스는 최신 확정본 식별과 이전 draft 보관 기능을 유지해야 합니다.');
