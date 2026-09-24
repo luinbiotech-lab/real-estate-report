@@ -18,8 +18,11 @@ if (!text.propertyHub.includes('/income?propertyId=') || !text.propertyHub.inclu
 if (!text.propertyHub.includes('대표 외관 미디어 미연결') || !text.propertyHub.includes('provenance')) throw new Error('대표미디어가 없을 때 가짜 사진 대신 미연결 상태와 provenance 원칙을 표시해야 합니다.');
 
 const readinessService = readFileSync('src/services/propertyReadinessService.ts', 'utf8');
-for (const marker of ['REQUIRED_DOCUMENT_TYPES', 'DOCUMENT_TYPE_LABELS', 'requiredPresent', 'requiredVerified', 'requiredMissing', "documentState: ReadinessState", '필수 4/4 · 공식검증']) {
-  if (!readinessService.includes(marker)) throw new Error(`Property Readiness 문서 단계는 필수자료 존재+공식검증을 사용해야 합니다: ${marker}`);
+for (const marker of ['REQUIRED_DOCUMENT_TYPES', 'DOCUMENT_TYPE_LABELS', 'inventoryDocumentTypes', 'requiredConnected', 'requiredPresent', 'requiredVerified', 'requiredMissing', "documentState: ReadinessState", '원본확인 4/4 · 파일연결', '공식검증']) {
+  if (!readinessService.includes(marker)) throw new Error(`Property Readiness 문서 단계는 원본확인+binary 연결+공식검증을 분리해야 합니다: ${marker}`);
+}
+for (const marker of ["source.resourceType === 'source_document_inventory'", "source.metadata?.originalSourcePresence === 'confirmed'", "type === 'registry_land' || type === 'registry_building' || type === 'registry'"]) {
+  if (!readinessService.includes(marker)) throw new Error(`Source inventory 기반 문서 확보상태 계산 누락: ${marker}`);
 }
 if (readinessService.includes("state: bundle.documents.length > 0 ? 'ready' : 'missing'")) throw new Error('문서 1건만으로 Property Readiness를 READY 처리하면 안 됩니다.');
 
