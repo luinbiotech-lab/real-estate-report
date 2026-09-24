@@ -40,4 +40,7 @@ export const serverEnv = {
   mapProxyHost: envValue('MAP_PROXY_HOST', '127.0.0.1'),
   mapProxyPort: Number(envValue('MAP_PROXY_PORT', '5175')),
   mapProxyAllowedOrigins: exactOrigins(envValue('MAP_PROXY_ALLOWED_ORIGINS', 'http://localhost:5174')),
+  frontendHost: envValue('FRONTEND_HOST', '127.0.0.1'),
+  frontendPort: Number(envValue('FRONTEND_PORT', '4174')),
+  mapProxyInternalUrl: envValue('MAP_PROXY_INTERNAL_URL', 'http://127.0.0.1:5175'),
 };
