@@ -104,6 +104,16 @@ export async function executeRemoteMigration(
     throw new Error(`초기 Production migration 대상이 이미 원격에 존재합니다: ${existingRemoteProperties.map((item) => item.id).join(', ')}. 기존 원격 Property overwrite는 별도 동기화 워크플로에서만 허용합니다.`);
   }
 
+  const localAssetBlobs = new Map<string, Blob>();
+  for (const upload of plan.assetUploads) {
+    const local = findLocalAsset(snapshot, upload.resourceType, upload.id);
+    const blob = local?.fileData;
+    if (!(blob instanceof Blob)) {
+      throw new Error(`${upload.resourceType}/${upload.id}: 첫 원격 write 전 preflight에서 local Blob을 찾을 수 없습니다.`);
+    }
+    localAssetBlobs.set(`${upload.resourceType}:${upload.id}`, blob);
+  }
+
   const existingCandidates = await existingIdsByProperty<PropertyVerificationCandidate>(
     propertyIds,
     (propertyId) => remoteDataGateway.listVerificationCandidates(propertyId),
@@ -139,9 +149,8 @@ export async function executeRemoteMigration(
   }
 
   for (const upload of plan.assetUploads) {
-    const local = findLocalAsset(snapshot, upload.resourceType, upload.id);
-    const blob = local?.fileData;
-    if (!(blob instanceof Blob)) throw new Error(`${upload.resourceType}/${upload.id}: 실행 시점에 local Blob을 찾을 수 없습니다.`);
+    const blob = localAssetBlobs.get(`${upload.resourceType}:${upload.id}`);
+    if (!blob) throw new Error(`${upload.resourceType}/${upload.id}: preflight binary map이 일치하지 않습니다.`);
     await remoteAssetStorageGateway.upload(upload.storagePath, blob, upload.mimeType, true);
   }
   for (const asset of plan.assets) {
