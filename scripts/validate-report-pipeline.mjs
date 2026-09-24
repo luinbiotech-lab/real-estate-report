@@ -97,4 +97,13 @@ for (const marker of ['이관 파일 준비', '이관 파일 미등록', 'Storag
   if (!text.dataRoom.includes(marker)) throw new Error(`공적자료 원본→migration upload→Storage 상태 분리 UI 누락: ${marker}`);
 }
 
+
+for (const marker of [
+  "id: 'bangbae-815-11-land-use-plan-inventory'",
+  "sourceReference: '방배 815-11 토지이용확인원.pdf'",
+  "documentType: 'land_use_plan'",
+  "originalSourcePresence: 'confirmed'",
+]) {
+  if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 토지이용계획 source inventory 검증 누락: ${marker}`);
+}
 console.log('DA:ON report pipeline integrity: PASS');
