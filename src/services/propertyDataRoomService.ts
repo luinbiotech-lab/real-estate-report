@@ -4,6 +4,7 @@ import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentExtractio
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
+import { assessRequiredDocumentReadiness } from './propertyReadinessService';
 import type { Property } from '../types';
 
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
@@ -40,12 +41,11 @@ export const propertyDataRoomService = {
   summarize(property: Property, bundle: DataRoomBundle): DataRoomSummary {
     const existingMedia = [property.mainImage, property.mapImage, property.locationAnalysisImage, ...property.additionalImages].filter(Boolean).length;
     const statuses = [...bundle.documents.map((item) => item.verificationStatus), ...bundle.verifications.map((item) => item.status), ...bundle.dataSources.map((item) => item.verificationStatus)];
-    const present = new Set(bundle.documents.map((item) => item.documentType));
-    const missingDocumentTypes = REQUIRED_DOCUMENT_TYPES.filter((type) => !present.has(type));
+    const requiredDocuments = assessRequiredDocumentReadiness(bundle);
+    const missingDocumentTypes = requiredDocuments.missing;
     const verificationCandidates = bundle.verificationCandidates ?? [];
     const activeCandidates = verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held');
-    const requiredDocumentsVerified = REQUIRED_DOCUMENT_TYPES.every((type) => bundle.documents.some((document) =>
-      document.documentType === type && (document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed')));
+    const requiredDocumentsVerified = requiredDocuments.verified.length === REQUIRED_DOCUMENT_TYPES.length;
     const agentJobs = bundle.agentJobs ?? [];
     const agentReviews = bundle.agentReviews ?? [];
     return {
@@ -58,6 +58,10 @@ export const propertyDataRoomService = {
       agentReviewRequired: agentReviews.filter((review) => review.decision === 'pending').length,
       missingDocumentTypes,
       reportReady: missingDocumentTypes.length === 0 && requiredDocumentsVerified && activeCandidates.length === 0,
+      requiredSourcePresent: requiredDocuments.present.length,
+      requiredBinaryConnected: requiredDocuments.connected.length,
+      requiredOfficiallyVerified: requiredDocuments.verified.length,
+      requiredDocumentTotal: REQUIRED_DOCUMENT_TYPES.length,
     };
   },
   classifyDocument(fileName: string): DocumentType {
