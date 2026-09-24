@@ -61,7 +61,7 @@ async function verifyDataRoomDeepLinks(page) {
 
 async function verifyBangbaeDataRoom(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room`, { waitUntil: 'domcontentloaded' });
-  for (const text of ['방배동 815-11 코너빌딩', '층별 구성 · Data Room', '4개 층 · 5개 공간', '합계 349.08㎡', '3F', '2F', '1F', 'B1', '제2종근린생활시설(부동산중개업소)', '점포', '다가구용단독주택(1가구)', '출처와 검증', '방배동 815-11 건축물대장.pdf', '비교거래 요약', '6건', '5,862만/평 ~ 8,788만/평', '2026-06-02', '방배동 실거래사례1년간.pdf', '비교거래 전체 보기']) await waitForText(page, text);
+  for (const text of ['방배동 815-11 코너빌딩', '층별 구성 · Data Room', '4개 층 · 5개 공간', '합계 349.08㎡', '3F', '2F', '1F', 'B1', '제2종근린생활시설(부동산중개업소)', '점포', '다가구용단독주택(1가구)', '출처와 검증', '방배동 815-11 건축물대장.pdf', '비교거래 요약', '6건', '5,862만/평 ~ 8,788만/평', '2026-06-02', '방배동 실거래사례1년간.pdf', 'row provenance 6/6', '비교거래 전체 보기']) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-overview.png`, fullPage: true });
   console.log('[PASS] Bangbae Data Room: floor provenance + 6 comparable transactions + market summary rendered');
 }
