@@ -43,6 +43,7 @@ const rehearsal = [
   'Property/Data RLS + private asset Storage migration 적용 전 SQL review 수행',
   '이 화면의 BLOCKER가 0인지 확인하고 dry-run JSON을 별도 보관',
   'VIEWER / EDITOR / ADMIN / OWNER 권한별 server-side RLS E2E 수행',
+  'Supabase Auth Leaked Password Protection 활성화 여부를 Dashboard에서 수동 확인',
   'Storage 업로드 후 문서·미디어·3D metadata와 binary round-trip 확인',
   'cross-device 동일 데이터 확인 후에만 local-first → remote persistence 전환',
 ];
