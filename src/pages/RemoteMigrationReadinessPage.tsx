@@ -251,7 +251,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
                 ['Production frontend host', 'EXTERNAL INFRA REQUIRED'],
                 ['Protected map/POI proxy', 'EXTERNAL INFRA REQUIRED'],
                 ['Production provider/domain allowlist', 'CHECK REQUIRED'],
-                ['Supabase Leaked Password Protection', 'MANUAL ENABLE/CHECK'],
+                ['Supabase Leaked Password Protection', 'DISABLED · ENABLE REQUIRED'],
                 ['실사용 OWNER public-share issue/list/revoke browser acceptance', 'REQUIRED'],
                 ['Production browser bundle/source-map server-secret scan', 'REQUIRED'],
                 ['Spreadsheet parser release advisory review', 'RELEASE CHECK REQUIRED'],
