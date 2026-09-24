@@ -77,6 +77,14 @@ for (const required of [
   'Remote Data Gateway: CONNECTED',
   'REMOTE / PUBLIC server code + migration: DEPLOYED',
   'REMOTE / PUBLIC backend: CONNECTED',
+  'server/frontend.mjs',
+  'scripts/production.mjs',
+  'npm run start:prod',
+  '/healthz',
+  'VITE_API_BASE_URL',
+  'MAP_PROXY_ALLOWED_ORIGINS',
+  'wildcard',
+  'READY_TO_DEPLOY',
 ]) {
   if (!text.runbook.includes(required)) throw new Error(`Production runbook 필수 규칙 누락: ${required}`);
 }
