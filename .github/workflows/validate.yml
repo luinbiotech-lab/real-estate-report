@@ -72,6 +72,9 @@ jobs:
       - name: Validate production deployment checklist
         run: node scripts/validate-production-connection-checklist.mjs
 
+      - name: Validate production container contract
+        run: node scripts/validate-production-container.mjs
+
       - name: Validate remote public share Edge boundary
         run: node scripts/validate-remote-public-share.mjs
 
@@ -126,6 +129,9 @@ jobs:
 
       - name: Smoke self-hosted production runtime
         run: npm run test:prod-runtime
+
+      - name: Build production container image
+        run: docker build --tag daon-real-estate-report:ci .
 
       - name: Install Playwright for rendered QA
         run: |
