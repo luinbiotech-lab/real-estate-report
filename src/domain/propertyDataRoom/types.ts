@@ -180,4 +180,5 @@ export interface DataRoomSummary {
   documents: number; media: number; officiallyVerified: number; unverified: number; verificationPending: number;
   reports: number; digitalTwin: number; agentQueued: number; agentReviewRequired: number;
   missingDocumentTypes: DocumentType[]; reportReady: boolean;
+  requiredSourcePresent: number; requiredBinaryConnected: number; requiredOfficiallyVerified: number; requiredDocumentTotal: number;
 }
