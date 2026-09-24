@@ -35,7 +35,7 @@ async function uploadBangbaeSourceDocuments(page) {
     ['방배동 815-11 건축물대장', '방배동 815-11 건축물대장.pdf'],
     ['방배동 815-11 토지등기부', '방배동 815-11 토지등기부.pdf'],
     ['방배동 815-11 건물등기부', '방배동 815-11 건물등기부.pdf'],
-    ['방배동 815-11 토지이용계획확인서', '방배동 815-11 토지이용계획확인서.pdf'],
+    ['방배동 815-11 토지이용계획확인서', '방배 815-11 토지이용확인원.pdf'],
   ];
   for (const [sourceName, fileName] of uploads) {
     const sourceCard = page.locator('article').filter({ hasText: sourceName }).filter({ hasText: 'Storage 미연결' }).last();
@@ -103,7 +103,7 @@ try {
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
   for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY', 'CONTENT READINESS · NON-BLOCKING', 'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.', '원본 inventory', 'PRODUCTION ACCEPTANCE · EXTERNAL GATES', 'NOT PRODUCTION READY', '물리 2nd-device browser E2E', 'Production frontend host', '실사용 OWNER public-share issue/list/revoke browser acceptance', 'Production browser bundle/source-map server-secret scan', 'Spreadsheet import release regression']) await waitForText(page, text);
-  await waitForText(page, '3/6');
+  await waitForText(page, '4/6');
 
   const manifestDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
