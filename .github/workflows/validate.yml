@@ -109,7 +109,20 @@ jobs:
         run: npm run lint
 
       - name: Build
+        env:
+          NAVER_MAP_CLIENT_SECRET: CI_SENTINEL_NAVER_SERVER_SECRET_20260924
+          KAKAO_REST_API_KEY: CI_SENTINEL_KAKAO_SERVER_SECRET_20260924
+          SUPABASE_SERVICE_ROLE_KEY: CI_SENTINEL_SUPABASE_SERVICE_ROLE_20260924
+          DAON_OWNER_BOOTSTRAP_KEY: CI_SENTINEL_DAON_OWNER_BOOTSTRAP_20260924
         run: npm run build
+
+      - name: Scan browser build for server secrets
+        env:
+          NAVER_MAP_CLIENT_SECRET: CI_SENTINEL_NAVER_SERVER_SECRET_20260924
+          KAKAO_REST_API_KEY: CI_SENTINEL_KAKAO_SERVER_SECRET_20260924
+          SUPABASE_SERVICE_ROLE_KEY: CI_SENTINEL_SUPABASE_SERVICE_ROLE_20260924
+          DAON_OWNER_BOOTSTRAP_KEY: CI_SENTINEL_DAON_OWNER_BOOTSTRAP_20260924
+        run: npm run scan:build-secrets
 
       - name: Smoke self-hosted production runtime
         run: npm run test:prod-runtime
