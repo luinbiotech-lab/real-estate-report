@@ -31,7 +31,20 @@ for (const [name, source] of [['Room Twin Operations', roomOpsPage], ['Interior 
 }
 
 const readinessService = readFileSync('src/services/propertyReadinessService.ts', 'utf8');
-for (const marker of ['REQUIRED_DOCUMENT_TYPES', 'DOCUMENT_TYPE_LABELS', 'inventoryDocumentTypes', 'requiredConnected', 'requiredPresent', 'requiredVerified', 'requiredMissing', "documentState: ReadinessState", '원본확인 4/4 · 파일연결', '공식검증']) {
+for (const marker of [
+  'REQUIRED_DOCUMENT_TYPES',
+  'DOCUMENT_TYPE_LABELS',
+  'inventoryDocumentTypes',
+  'requiredConnected',
+  'requiredPresent',
+  'requiredVerified',
+  'requiredMissing',
+  "documentState: ReadinessState",
+  'requiredPresent.length',
+  'REQUIRED_DOCUMENT_TYPES.length',
+  '파일연결',
+  '공식검증',
+]) {
   if (!readinessService.includes(marker)) throw new Error(`Property Readiness 문서 단계는 원본확인+binary 연결+공식검증을 분리해야 합니다: ${marker}`);
 }
 for (const marker of ["source.resourceType === 'source_document_inventory'", "source.metadata?.originalSourcePresence === 'confirmed'", "type === 'registry_land' || type === 'registry_building' || type === 'registry'"]) {
