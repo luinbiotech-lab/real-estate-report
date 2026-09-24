@@ -31,7 +31,7 @@ for (const file of Object.values(files)) {
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=']) {
+for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=']) {
   if (!text.envExample.includes(key)) throw new Error(`환경변수 예시 누락: ${key}`);
 }
 if (!text.envExample.includes('Server-only credentials. Never commit real values.')) throw new Error('서버 전용 지도 credential 보안 경계를 명시해야 합니다.');
@@ -130,6 +130,21 @@ for (const marker of ['grant usage on schema private to authenticated', 'private
 
 for (const marker of ['/api/maps/geocode', '/api/maps/static', '/api/poi/search']) {
   if (!text.proxy.includes(marker)) throw new Error(`production proxy 승격 대상 route 누락: ${marker}`);
+}
+for (const marker of [
+  'serverEnv.mapProxyHost',
+  'serverEnv.mapProxyPort',
+  'serverEnv.mapProxyAllowedOrigins',
+  "'ORIGIN_NOT_ALLOWED'",
+  "request.method === 'OPTIONS'",
+  "'access-control-allow-origin'",
+  "'vary': 'Origin'",
+  "'x-content-type-options': 'nosniff'",
+]) {
+  if (!text.proxy.includes(marker)) throw new Error(`Protected proxy production hardening 누락: ${marker}`);
+}
+for (const marker of ['MAP_PROXY_ALLOWED_ORIGINS wildcard는 허용하지 않습니다.', 'mapProxyAllowedOrigins: exactOrigins', "mapProxyHost: envValue('MAP_PROXY_HOST'", "mapProxyPort: Number(envValue('MAP_PROXY_PORT'"]) {
+  if (!text.serverEnv.includes(marker)) throw new Error(`Protected proxy env validation 누락: ${marker}`);
 }
 
 for (const marker of [
