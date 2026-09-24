@@ -4,6 +4,8 @@ const files = {
   envExample: '.env.example',
   serverEnv: 'server/env.mjs',
   proxy: 'server/proxy.mjs',
+  frontendServer: 'server/frontend.mjs',
+  productionSupervisor: 'scripts/production.mjs',
   proxyClient: 'src/services/maps/proxyClient.ts',
   authProvider: 'src/services/authProviderService.ts',
   productionConfig: 'src/services/supabaseProductionConfig.ts',
@@ -32,7 +34,7 @@ for (const file of Object.values(files)) {
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=', 'VITE_API_BASE_URL=']) {
+for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=', 'VITE_API_BASE_URL=', 'FRONTEND_HOST=', 'FRONTEND_PORT=', 'MAP_PROXY_INTERNAL_URL=']) {
   if (!text.envExample.includes(key)) throw new Error(`환경변수 예시 누락: ${key}`);
 }
 if (!text.envExample.includes('Server-only credentials. Never commit real values.')) throw new Error('서버 전용 지도 credential 보안 경계를 명시해야 합니다.');
@@ -161,6 +163,25 @@ for (const marker of [
 }
 
 for (const marker of [
+  "url.pathname === '/healthz'",
+  "url.pathname.startsWith('/api/')",
+  'safeDistPath',
+  'INDEX_FILE',
+  "'x-content-type-options': 'nosniff'",
+  "'x-frame-options': 'DENY'",
+  'serverEnv.mapProxyInternalUrl',
+]) {
+  if (!text.frontendServer.includes(marker)) throw new Error(`Production frontend runtime 누락: ${marker}`);
+}
+for (const marker of ["start('map-proxy'", "start('frontend'", "process.on('SIGINT'", "process.on('SIGTERM'"]) {
+  if (!text.productionSupervisor.includes(marker)) throw new Error(`Production runtime supervisor 누락: ${marker}`);
+}
+if (String(JSON.parse(text.packageJson).scripts?.['start:prod'] ?? '') !== 'node scripts/production.mjs') {
+  throw new Error('npm run start:prod production runtime script가 필요합니다.');
+}
+
+
+for (const marker of [
   'MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024',
   'hasExcelFileSignature',
   'cellFormula: false',
@@ -208,6 +229,8 @@ const status = {
   remoteDataProviderConnection: 'CONNECTED',
   remotePublicShareServerCode: 'DEPLOYED',
   remotePublicShareBackend: 'CONNECTED_SELF_HOSTED_VIEWER',
+  productionFrontendRuntimePackage: 'READY_TO_DEPLOY',
+  protectedProxyRuntimePackage: 'READY_TO_DEPLOY',
   productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
   realOperatorAuthAccount: 'REQUIRED',
   secondDeviceBrowserE2E: 'REQUIRED',
