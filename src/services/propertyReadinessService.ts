@@ -1,4 +1,5 @@
 import type { DataRoomBundle } from '../domain/propertyDataRoom/types';
+import { DOCUMENT_TYPE_LABELS, REQUIRED_DOCUMENT_TYPES } from '../domain/propertyDataRoom/labels';
 import type { Property } from '../types';
 
 export type ReadinessState = 'ready' | 'partial' | 'missing';
@@ -40,13 +41,30 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
   const spaces = bundle.spaces ?? [];
   const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
   const hasReport = bundle.reportSnapshots.length > 0;
+  const requiredPresent = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) => document.documentType === type));
+  const requiredVerified = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) =>
+    document.documentType === type &&
+    (document.verificationStatus === 'verified' || bundle.verifications.some((verification) =>
+      verification.status === 'verified' &&
+      (verification.fieldKey === `document:${document.id}` || verification.fieldKey === document.id)
+    ))
+  ));
+  const requiredMissing = REQUIRED_DOCUMENT_TYPES.filter((type) => !requiredPresent.includes(type));
+  const documentState: ReadinessState = requiredPresent.length === REQUIRED_DOCUMENT_TYPES.length && requiredVerified.length === REQUIRED_DOCUMENT_TYPES.length
+    ? 'ready'
+    : requiredPresent.length > 0
+      ? 'partial'
+      : 'missing';
+  const documentDetail = requiredMissing.length
+    ? `필수 ${requiredPresent.length}/${REQUIRED_DOCUMENT_TYPES.length} · 미확인 ${requiredMissing.map((type) => DOCUMENT_TYPE_LABELS[type]).join('·')}`
+    : `필수 4/4 · 공식검증 ${requiredVerified.length}/${REQUIRED_DOCUMENT_TYPES.length}`;
   const stages: ReadinessStage[] = [
     coreStage(property),
     {
       id: 'documents',
       label: '문서',
-      state: bundle.documents.length > 0 ? 'ready' : 'missing',
-      detail: `${bundle.documents.length}건`,
+      state: documentState,
+      detail: documentDetail,
       pathSuffix: '?tab=documents',
     },
     {
