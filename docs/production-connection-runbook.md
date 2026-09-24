@@ -345,7 +345,7 @@ release 직전 필수:
 - production frontend host: MISSING EXTERNAL INFRA
 - protected backend proxy host: MISSING EXTERNAL INFRA
 - production provider/domain allowlist: CHECK REQUIRED
-- Supabase Auth leaked-password protection: MANUAL ENABLE REQUIRED
+- Supabase Auth leaked-password protection: DISABLED CONFIRMED 2026-09-24 / MANUAL ENABLE REQUIRED
 - spreadsheet parser known-advisory baseline: PATCHED/PINNED
 - spreadsheet parser release advisory review: REQUIRED
 
