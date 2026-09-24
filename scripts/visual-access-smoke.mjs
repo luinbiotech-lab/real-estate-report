@@ -35,6 +35,8 @@ try {
     'ACCESS PROFILES',
     '로컬 소유자',
     'production Auth 세션과 서버 RLS가 강제합니다',
+    'PRODUCTION SECURITY · MANUAL CHECK REQUIRED',
+    'Leaked Password Protection',
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/access-management.png`, fullPage: true });
 
