@@ -200,6 +200,15 @@ Binary asset 경계:
 - frontend: Vite, local port 5174
 - protected map/POI proxy: local port 5175
 
+준비된 self-hosted runtime:
+
+- `server/frontend.mjs`: `dist` 정적파일 + SPA fallback + 보안 헤더 + `/api/*` internal reverse proxy
+- `server/proxy.mjs`: NAVER/Kakao protected map/POI gateway
+- `scripts/production.mjs`: frontend + proxy 프로세스 supervisor
+- `npm run start:prod`: 두 서버를 하나의 runtime 단위로 실행
+- `/healthz`: frontend runtime health endpoint
+- 브라우저는 `VITE_API_BASE_URL`이 비어 있으면 same-origin `/api`, 분리 배포 시 HTTPS origin만 허용
+
 production에서는 다음을 분리한다.
 
 ### Browser-safe
@@ -319,8 +328,10 @@ release 직전 필수:
 - QA OWNER / EDITOR / VIEWER RLS E2E: PASS
 - real operator OWNER Auth account: REQUIRED
 - actual second-device browser E2E: REQUIRED
+- production frontend runtime package: READY_TO_DEPLOY
+- protected proxy runtime package: READY_TO_DEPLOY
 - production frontend host: MISSING EXTERNAL INFRA
-- protected backend proxy: MISSING EXTERNAL INFRA
+- protected backend proxy host: MISSING EXTERNAL INFRA
 - production provider/domain allowlist: CHECK REQUIRED
 - Supabase Auth leaked-password protection: MANUAL ENABLE REQUIRED
 - spreadsheet parser known-advisory baseline: PATCHED/PINNED
