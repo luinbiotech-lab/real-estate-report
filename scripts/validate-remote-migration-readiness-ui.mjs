@@ -107,4 +107,8 @@ for (const marker of [
   if (!text.page.includes(marker)) throw new Error(`Migration UI content-readiness boundary 누락: ${marker}`);
 }
 
+
+if (!text.page.includes('Supabase Auth Leaked Password Protection 활성화 여부를 Dashboard에서 수동 확인')) {
+  throw new Error('Migration rehearsal에 Supabase Auth leaked-password protection 수동 게이트가 필요합니다.');
+}
 console.log('Remote migration readiness review + handoff bundle UI boundary: PASS');
