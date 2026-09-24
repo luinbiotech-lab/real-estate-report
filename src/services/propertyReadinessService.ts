@@ -29,6 +29,47 @@ export interface RequiredDocumentReadiness {
 }
 
 export function assessRequiredDocumentReadiness(bundle: DataRoomBundle): RequiredDocumentReadiness {
+  const inventoryDocumentTypes = new Set(bundle.dataSources
+    .filter((source) => source.resourceType === 'source_document_inventory' && source.metadata?.originalSourcePresence === 'confirmed')
+    .map((source) => {
+      const type = source.metadata?.documentType;
+      if (type === 'registry_land' || type === 'registry_building' || type === 'registry') return 'registry';
+      return typeof type === 'string' ? type : '';
+    })
+    .filter(Boolean));
+  const connected = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) => document.documentType === type));
+  const present = REQUIRED_DOCUMENT_TYPES.filter((type) => connected.includes(type) || inventoryDocumentTypes.has(type));
+  const verified = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) =>
+    document.documentType === type &&
+    (document.verificationStatus === 'verified' || bundle.verifications.some((verification) =>
+      verification.status === 'verified' &&
+      (verification.fieldKey === `document:${document.id}` || verification.fieldKey === document.id)
+    ))
+  ));
+  const missing = REQUIRED_DOCUMENT_TYPES.filter((type) => !present.includes(type));
+  return { present, connected, verified, missing };
+}
+
+function coreStage(property: Property): ReadinessStage {
+  const checks = [
+    Boolean(property.address?.trim()),
+    property.landAreaSqm > 0,
+    property.totalFloorAreaSqm > 0,
+    Boolean(property.managerName?.trim()),
+  ];
+  const complete = checks.filter(Boolean).length;
+  return {
+    id: 'core',
+    label: '기본정보',
+    state: complete === checks.length ? 'ready' : complete > 0 ? 'partial' : 'missing',
+    detail: `${complete}/${checks.length} 핵심필드`,
+  };
+}
+
+export function assessPropertyReadiness(property: Property, bundle: DataRoomBundle): PropertyReadinessAssessment {
+  const spaces = bundle.spaces ?? [];
+  const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
+  const hasReport = bundle.reportSnapshots.length > 0;
   const required = assessRequiredDocumentReadiness(bundle);
   const requiredPresent = required.present;
   const requiredConnected = required.connected;
