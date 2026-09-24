@@ -112,7 +112,8 @@ for (const marker of [
   if (!text.bangbaeSeed.includes(marker)) throw new Error(`Bangbae bootstrap은 운영 승격 상태를 하향 덮어쓰면 안 됩니다: ${marker}`);
 }
 if (!text.app.includes('bangbae81511DataSeedService.ensure()') || !text.bangbaeSeed.includes("const PROPERTY_ID = 'daon-bangbae-815-11'")) throw new Error('방배동 샘플 Data Room 실데이터 bootstrap 경로를 유지해야 합니다.');
-if (!text.bangbaeSeed.includes("verificationStatus: 'verified'") || !text.bangbaeSeed.includes("sourceDate: BUILDING_SOURCE_DATE") || !text.bangbaeSeed.includes("sourceVerified: true") || !text.bangbaeSeed.includes("comparableSource.sourceReference === '방배동 실거래사례1년간.pdf'")) throw new Error('방배동 bootstrap은 원본 대조가 끝난 건축물대장·비교거래 provenance만 verified로 승격해야 합니다.');
+if (!text.bangbaeSeed.includes("verificationStatus: 'verified'") || !text.bangbaeSeed.includes("sourceDate: BUILDING_SOURCE_DATE") || !text.bangbaeSeed.includes("sourceVerified: true")) throw new Error('방배동 건축물대장 기반 공간 facts는 공식 문서 대조 후 verified 상태를 유지해야 합니다.');
+if (!text.bangbaeSeed.includes("comparableSource.sourceReference === '방배동 실거래사례1년간.pdf'") || !text.bangbaeSeed.includes("verificationStatus: 'confirmed'")) throw new Error('방배동 비교거래는 제공 원문 확인 상태인 confirmed로 유지해야 하며 공식 검증으로 과승격하면 안 됩니다.');
 for (const marker of ["resourceType: 'exterior_photo_embedded_report_evidence'", "directMediaAssetConnected: exteriorMetadata.directMediaAssetConnected === true", "privateStorageStatus: exteriorMetadata.privateStorageStatus === 'connected' ? 'connected' : 'not_connected'", "sellerPolicy: 'exterior_only'", "interiorMediaExcluded: true"]) {
   if (!text.bangbaeSeed.includes(marker)) throw new Error(`방배동 외관 사진 evidence와 direct media asset 경계를 보존해야 합니다: ${marker}`);
 }
@@ -141,6 +142,9 @@ for (const marker of [
   "status: provenanceMissing.length === 0 ? 'complete' : 'review_required'",
   "rowLocator: 'sourceRow'",
   "recordLocator: 'sourceRecordLabel'",
+  "sourceAuthority: 'provided_market_document'",
+  'independentOfficialVerification: false',
+  '독립 공식 원천 검증 미완료',
   'row provenance',
 ]) {
   if (!text.comparableService.includes(marker)) throw new Error(`비교거래 row provenance 계약 누락: ${marker}`);
