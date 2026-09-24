@@ -17,6 +17,12 @@ for (const label of ['사진 · 미디어', '문서 · 공적자료', '비교거
 if (!text.propertyHub.includes('/income?propertyId=') || !text.propertyHub.includes('/review-history?propertyId=')) throw new Error('상세 허브는 선택 물건 context를 임대·수익/검토 이력으로 전달해야 합니다.');
 if (!text.propertyHub.includes('대표 외관 미디어 미연결') || !text.propertyHub.includes('provenance')) throw new Error('대표미디어가 없을 때 가짜 사진 대신 미연결 상태와 provenance 원칙을 표시해야 합니다.');
 
+const readinessService = readFileSync('src/services/propertyReadinessService.ts', 'utf8');
+for (const marker of ['REQUIRED_DOCUMENT_TYPES', 'DOCUMENT_TYPE_LABELS', 'requiredPresent', 'requiredVerified', 'requiredMissing', "documentState: ReadinessState", '필수 4/4 · 공식검증']) {
+  if (!readinessService.includes(marker)) throw new Error(`Property Readiness 문서 단계는 필수자료 존재+공식검증을 사용해야 합니다: ${marker}`);
+}
+if (readinessService.includes("state: bundle.documents.length > 0 ? 'ready' : 'missing'")) throw new Error('문서 1건만으로 Property Readiness를 READY 처리하면 안 됩니다.');
+
 if (!text.app.includes('path="report-history"') || !text.layout.includes('to="/report-history"')) throw new Error('보고서 Snapshot 이력 화면의 route/navigation 연결이 필요합니다.');
 if (!text.reportHistoryService.includes('isLatestReady') || !text.reportHistoryService.includes('archiveSupersededDrafts')) throw new Error('보고서 이력 서비스는 최신 확정본 식별과 이전 draft 보관 기능을 유지해야 합니다.');
 if (!text.reportHistoryService.includes("snapshot.status === 'ready'") || !text.reportHistoryService.includes('확정된 Snapshot')) throw new Error('확정 Snapshot 임의 archive 차단 규칙을 유지해야 합니다.');
