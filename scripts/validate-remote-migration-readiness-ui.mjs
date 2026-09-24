@@ -145,4 +145,16 @@ for (const marker of [
 ]) {
   if (!text.page.includes(marker)) throw new Error(`필수 공적자료 migration preflight 누락: ${marker}`);
 }
+
+for (const marker of [
+  'contentReadiness.requiredSourcePresent === contentReadiness.requiredDocumentTotal',
+  'contentReadiness.requiredBinaryConnected === contentReadiness.requiredDocumentTotal',
+  'contentReadiness.requiredOfficiallyVerified === contentReadiness.requiredDocumentTotal',
+  'contentReadiness.mediaAssets > 0',
+  'CONTENT REVIEW READY',
+  'CONTENT INCOMPLETE',
+]) {
+  if (!text.page.includes(marker)) throw new Error(`Content review-ready gate 누락: ${marker}`);
+}
+
 console.log('Remote migration readiness review + handoff bundle UI boundary: PASS');
