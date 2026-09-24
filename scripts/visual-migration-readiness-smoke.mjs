@@ -102,7 +102,7 @@ try {
   await page.getByLabel('이관 대상 물건').click();
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
-  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY', 'CONTENT READINESS · NON-BLOCKING', 'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.', '원본 inventory', 'PRODUCTION ACCEPTANCE · EXTERNAL GATES', 'NOT PRODUCTION READY', '물리 2nd-device browser E2E', 'Production frontend host']) await waitForText(page, text);
+  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY', 'CONTENT READINESS · NON-BLOCKING', 'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.', '원본 inventory', 'PRODUCTION ACCEPTANCE · EXTERNAL GATES', 'NOT PRODUCTION READY', '물리 2nd-device browser E2E', 'Production frontend host', '실사용 OWNER public-share issue/list/revoke browser acceptance', 'Production browser bundle/source-map server-secret scan', 'Spreadsheet import release regression']) await waitForText(page, text);
   await waitForText(page, '3/6');
 
   const manifestDownloadPromise = page.waitForEvent('download');
