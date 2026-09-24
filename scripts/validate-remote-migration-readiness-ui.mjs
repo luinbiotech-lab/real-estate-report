@@ -130,4 +130,19 @@ for (const marker of [
   if (!text.page.includes(marker)) throw new Error(`Production external acceptance gate 누락: ${marker}`);
 }
 
+
+for (const marker of [
+  'assessRequiredDocumentReadiness(bundle)',
+  'requiredDocumentTotal',
+  'requiredSourcePresent',
+  'requiredBinaryConnected',
+  'requiredOfficiallyVerified',
+  '필수자료 원본',
+  '필수자료 binary',
+  '필수자료 공식검증',
+  '필수자료 미확인',
+  'DOCUMENT_TYPE_LABELS[type]',
+]) {
+  if (!text.page.includes(marker)) throw new Error(`필수 공적자료 migration preflight 누락: ${marker}`);
+}
 console.log('Remote migration readiness review + handoff bundle UI boundary: PASS');
