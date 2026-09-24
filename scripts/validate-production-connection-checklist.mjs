@@ -39,6 +39,9 @@ for (const required of [
   'MAP_PROXY_ALLOWED_ORIGINS',
   '/healthz',
   '/api/status',
+  'npm run test:prod-http',
+  'DAON_PRODUCTION_BASE_URL',
+  'production URL 미설정 상태를 PASS 처리하지 않는다',
 ]) {
   if (!text.includes(required)) throw new Error(`Production connection checklist 필수 규칙 누락: ${required}`);
 }
