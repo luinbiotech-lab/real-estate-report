@@ -82,7 +82,7 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
       : 'missing';
   const documentDetail = requiredMissing.length
     ? `원본확인 ${requiredPresent.length}/${REQUIRED_DOCUMENT_TYPES.length} · 파일연결 ${requiredConnected.length}/${REQUIRED_DOCUMENT_TYPES.length} · 미확인 ${requiredMissing.map((type) => DOCUMENT_TYPE_LABELS[type]).join('·')}`
-    : `원본확인 4/4 · 파일연결 ${requiredConnected.length}/4 · 공식검증 ${requiredVerified.length}/4`;
+    : `원본확인 ${requiredPresent.length}/${REQUIRED_DOCUMENT_TYPES.length} · 파일연결 ${requiredConnected.length}/${REQUIRED_DOCUMENT_TYPES.length} · 공식검증 ${requiredVerified.length}/${REQUIRED_DOCUMENT_TYPES.length}`;
   const stages: ReadinessStage[] = [
     coreStage(property),
     {
