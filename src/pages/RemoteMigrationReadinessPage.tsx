@@ -48,18 +48,6 @@ const rehearsal = [
   'cross-device 동일 데이터 확인 후에만 local-first → remote persistence 전환',
 ];
 
-const productionAcceptance = [
-  { label: 'Dedicated Supabase backend · RLS · private Storage', status: 'connected' as const },
-  { label: 'REMOTE AUTH / REMOTE PUBLIC Edge backend', status: 'connected' as const },
-  { label: '실사용 OWNER 로그인 · profile/role acceptance', status: 'required' as const },
-  { label: 'Supabase Auth Leaked Password Protection', status: 'required' as const },
-  { label: '물리 2nd-device 동일 profile/data E2E', status: 'required' as const },
-  { label: 'Production frontend host + protected map/POI proxy', status: 'required' as const },
-  { label: 'NAVER/Kakao/Supabase production domain allowlist', status: 'required' as const },
-  { label: '실사용 OWNER public-share issue/list/revoke browser acceptance', status: 'required' as const },
-  { label: 'Production browser bundle/source-map server-secret scan', status: 'required' as const },
-  { label: 'Spreadsheet import release regression', status: 'required' as const },
-];
 
 export default function RemoteMigrationReadinessPage({ settings }: Props) {
   const [properties, setProperties] = useState<Property[]>([]);
@@ -224,20 +212,6 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
           </section>
 
           <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div><p className="eyebrow">FULL PRODUCTION ACCEPTANCE</p><h2 style={{ margin: '4px 0' }}>운영 승인 Gate</h2></div>
-              <Chip size="small" color="warning" label="MANUAL ACCEPTANCE REMAINS" />
-            </div>
-            <Alert severity="warning" sx={{ my: 1.25 }}><strong>CONTROLLED MIGRATION PASS ≠ FULL PRODUCTION READY.</strong> 아래 항목은 실제 운영 환경에서 별도 확인해야 하며 이 화면이 자동으로 완료 처리하지 않습니다.</Alert>
-            <div style={{ display: 'grid', gap: 7 }}>
-              {productionAcceptance.map((item) => <div key={item.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, borderBottom: '1px solid #eef1f4', paddingBottom: 7 }}>
-                <span>{item.label}</span>
-                <Chip size="small" color={item.status === 'connected' ? 'success' : 'warning'} variant="outlined" label={item.status === 'connected' ? 'BACKEND CONNECTED' : 'ACCEPTANCE REQUIRED'} />
-              </div>)}
-            </div>
-          </section>
-
-          <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
             <p className="eyebrow">CONTROLLED PRODUCTION RELEASE</p><h2 style={{ margin: '4px 0 10px' }}>Production 이관 승인</h2>
             <Alert severity="warning" sx={{ mb: 1.5 }}>이 작업은 원격 DB와 private Storage를 변경합니다. Dry-run 이후 데이터가 바뀌면 반드시 다시 Dry-run을 실행해야 합니다.</Alert>
             <Alert severity="info" sx={{ mb: 1.5 }}><strong>INITIAL MIGRATION · NO OVERWRITE</strong> · 같은 propertyId가 Production에 이미 존재하면 실행기는 쓰기 전에 중단합니다. 기존 원격 Property 갱신은 별도 동기화 워크플로로 분리합니다.</Alert>
@@ -271,13 +245,16 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
             <Alert severity="warning" sx={{ my: 1.25 }}>Migration BLOCKER 0과 실제 Production READY는 다릅니다. 아래 외부 운영 항목은 코드가 임의 완료 처리하지 않습니다.</Alert>
             <div style={{ display: 'grid', gap: 8, fontSize: 12 }}>
               {[
-                ['실 운영 OWNER Auth 계정', 'REQUIRED'],
+                ['실사용 OWNER 로그인 · profile/role acceptance', 'REQUIRED'],
                 ['물리 2nd-device browser E2E', 'REQUIRED'],
                 ['Production frontend host', 'EXTERNAL INFRA REQUIRED'],
                 ['Protected map/POI proxy', 'EXTERNAL INFRA REQUIRED'],
                 ['Production provider/domain allowlist', 'CHECK REQUIRED'],
                 ['Supabase Leaked Password Protection', 'MANUAL ENABLE/CHECK'],
+                ['실사용 OWNER public-share issue/list/revoke browser acceptance', 'REQUIRED'],
+                ['Production browser bundle/source-map server-secret scan', 'REQUIRED'],
                 ['Spreadsheet parser release advisory review', 'RELEASE CHECK REQUIRED'],
+                ['Spreadsheet import release regression', 'RELEASE CHECK REQUIRED'],
               ].map(([label, status]) => <div key={label} style={{ border: '1px solid #e7ebf0', borderRadius: 9, padding: 10 }}><span>{label}</span><strong style={{ float: 'right' }}>{status}</strong></div>)}
             </div>
           </section>
