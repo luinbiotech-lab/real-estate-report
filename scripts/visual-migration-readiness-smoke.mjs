@@ -137,7 +137,9 @@ try {
   await waitForText(page, 'INLINE_BINARY');
   await waitForText(page, 'CONTENT INCOMPLETE');
   await waitForText(page, '4/6');
-  await waitForText(page, '원본 미확인: 방배동 815-11 토지대장 · 방배동 815-11 지적도');
+  await waitForText(page, '원본 미확인:');
+  await waitForText(page, '방배동 815-11 토지대장');
+  await waitForText(page, '방배동 815-11 지적도');
 
   const preparedManifestDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
@@ -145,7 +147,7 @@ try {
   await preparedManifestDownload.saveAs(MANIFEST_PATH);
   const preparedManifest = JSON.parse(await readFile(MANIFEST_PATH, 'utf8'));
   const preparedBlockerCodes = new Set((preparedManifest.blockers ?? []).map((row) => row?.code));
-  if (preparedBlockerCodes.has('SOURCE_DOCUMENT_BINARY_NOT_CONNECTED')) throw new Error('Source-document blocker remained after all 3 PDFs were prepared.');
+  if (preparedBlockerCodes.has('SOURCE_DOCUMENT_BINARY_NOT_CONNECTED')) throw new Error('Source-document blocker remained after prepared source PDFs were uploaded.');
   if (!preparedBlockerCodes.has('INLINE_BINARY')) throw new Error('Independent INLINE_BINARY safety blocker must remain after source PDFs are prepared.');
   if (preparedBlockerCodes.has('INLINE_DATA_URL')) throw new Error('Blob-backed exterior media preview data URL must not block migration.');
   const exteriorMediaUploads = (preparedManifest.assetUploads ?? []).filter((asset) =>
