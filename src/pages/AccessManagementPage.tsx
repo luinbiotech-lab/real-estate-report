@@ -115,6 +115,7 @@ export default function AccessManagementPage() {
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
     <Alert severity="info" sx={{ mb: 1.5 }}>로컬 정책 프로필은 `{ACCESS_STORAGE_KEY}`에 별도 유지됩니다. REMOTE AUTH는 production Supabase에 연결됐으며 로그인 후 서버 profile과 RLS가 적용됩니다. 비밀번호와 access token은 이 화면에서 영구 저장하지 않습니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 1.5 }}><strong>PRODUCTION SECURITY · MANUAL CHECK REQUIRED</strong> · Supabase Auth의 Leaked Password Protection 활성화 여부는 운영 승인 전에 Dashboard에서 직접 확인해야 합니다. 브라우저 UI는 이 설정을 자동으로 READY 처리하지 않습니다.</Alert>
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(320px,1fr))', gap: 12, marginBottom: 16 }}>
       {AUTH_PROVIDER_SUMMARIES.map((provider) => <div key={provider.kind} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}>
