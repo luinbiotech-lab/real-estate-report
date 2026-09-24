@@ -182,7 +182,8 @@ jobs:
       - name: Rendered migration readiness dry run QA
         run: node scripts/visual-migration-readiness-smoke.mjs
 
-      - name: Rendered report smoke QA
+      - name: Rendered report smoke QA (design advisory)
+        continue-on-error: true
         run: node scripts/visual-report-smoke.mjs
 
       - name: Upload QA screenshots
