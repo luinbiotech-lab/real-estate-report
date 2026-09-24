@@ -146,7 +146,7 @@ for (const marker of [
 ]) {
   if (!text.proxy.includes(marker)) throw new Error(`Protected proxy production hardening 누락: ${marker}`);
 }
-for (const marker of ['MAP_PROXY_ALLOWED_ORIGINS wildcard는 허용하지 않습니다.', 'mapProxyAllowedOrigins: exactOrigins', "mapProxyHost: envValue('MAP_PROXY_HOST'", "mapProxyPort: Number(envValue('MAP_PROXY_PORT'"]) {
+for (const marker of ['MAP_PROXY_ALLOWED_ORIGINS wildcard는 허용하지 않습니다.', 'mapProxyAllowedOrigins: exactOrigins', "mapProxyHost: envValue('MAP_PROXY_HOST'", "mapProxyPort: port(envValue('MAP_PROXY_PORT'"]) {
   if (!text.serverEnv.includes(marker)) throw new Error(`Protected proxy env validation 누락: ${marker}`);
 }
 for (const marker of [
