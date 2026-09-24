@@ -47,6 +47,9 @@ async function verifyDataRoomDeepLinks(page) {
     await tabNode.waitFor({ state: 'visible', timeout: 30_000 });
     if ((await tabNode.getAttribute('aria-selected')) !== 'true') throw new Error(`Data Room deep link failed: ${tab} → ${label}`);
     if (tab === 'market') await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-deep-link-market.png`, fullPage: true });
+    if (tab === 'digitalTwin') {
+      for (const text of ['도면 · 3D 자료 등록/추가', 'Room Intelligence 열기', 'Interior Intelligence 열기']) await waitForText(page, text);
+    }
   }
   console.log('[PASS] Property hub deep links: media/documents/market/reports/digitalTwin open the requested Data Room tab');
 }
