@@ -171,7 +171,16 @@ export default function PropertyDataRoomPage() {
       {tab === 'market' && <ComparableTransactionPanel propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
       {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
       {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
-      {tab === 'digitalTwin' && (bundle.digitalTwinAssets.length ? <div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div> : <div><EmptyState title="Digital Twin 데이터가 연결되지 않았습니다." detail="실제 도면·360 사진·3D 모델 원본이 필요합니다. geometry를 임의 생성하지 않고 이 물건에 원본 asset을 등록한 뒤 검토 흐름을 시작합니다." /><div style={{ display: 'flex', justifyContent: 'center', marginTop: 12 }}><Button variant="contained" onClick={() => navigate(`/digital-twin-intake?propertyId=${encodeURIComponent(id)}`)}>이 물건에 도면 · 3D 자료 등록</Button></div></div>)}
+      {tab === 'digitalTwin' && <div>
+        {bundle.digitalTwinAssets.length
+          ? <div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div>
+          : <EmptyState title="Digital Twin 데이터가 연결되지 않았습니다." detail="실제 도면·360 사진·3D 모델 원본이 필요합니다. geometry를 임의 생성하지 않고 이 물건에 원본 asset을 등록한 뒤 검토 흐름을 시작합니다." />}
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+          <Button variant="contained" onClick={() => navigate(`/digital-twin-intake?propertyId=${encodeURIComponent(id)}`)}>도면 · 3D 자료 등록/추가</Button>
+          <Button variant="outlined" onClick={() => navigate(`/room-ops?propertyId=${encodeURIComponent(id)}`)}>Room Intelligence 열기</Button>
+          <Button variant="outlined" onClick={() => navigate(`/interior?propertyId=${encodeURIComponent(id)}`)}>Interior Intelligence 열기</Button>
+        </div>
+      </div>}
     </div></section>
   </main>;
 }
