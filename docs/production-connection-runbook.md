@@ -223,7 +223,15 @@ proxy 승격 대상 route:
 - `/api/maps/static`
 - `/api/poi/search`
 
-완료 조건: browser bundle/HTML/source map에서 server-only credential이 검출되지 않는다.
+proxy runtime 계약:
+
+- `MAP_PROXY_HOST` / `MAP_PROXY_PORT`로 production bind를 외부 인프라에서 주입한다.
+- `MAP_PROXY_ALLOWED_ORIGINS`는 쉼표 구분 exact origin만 허용하며 `*` wildcard를 금지한다.
+- cross-origin 사용 시 OPTIONS preflight와 exact `Access-Control-Allow-Origin`을 사용한다.
+- `/api/status`는 credential 값을 반환하지 않고 provider configured 여부와 allowlist 개수만 노출한다.
+- 운영 배포에서 localhost를 사용할지, same-origin reverse proxy로 감출지는 host 구성에서 결정한다.
+
+완료 조건: browser bundle/HTML/source map에서 server-only credential이 검출되지 않고, 허용되지 않은 Origin이 protected proxy에서 403으로 차단된다.
 
 ## 6. Provider/domain allowlist
 
