@@ -102,7 +102,8 @@ try {
   await page.getByLabel('이관 대상 물건').click();
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
-  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY']) await waitForText(page, text);
+  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY', 'CONTENT READINESS · NON-BLOCKING', 'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.', '원본 inventory']) await waitForText(page, text);
+  await waitForText(page, '3/6');
 
   const manifestDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
@@ -134,6 +135,9 @@ try {
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
   await waitForText(page, 'INLINE_BINARY');
+  await waitForText(page, 'CONTENT INCOMPLETE');
+  await waitForText(page, '4/6');
+  await waitForText(page, '원본 미확인: 방배동 815-11 토지대장 · 방배동 815-11 지적도');
 
   const preparedManifestDownloadPromise = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Manifest JSON 다운로드' }).click();
