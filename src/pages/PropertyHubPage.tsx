@@ -70,6 +70,7 @@ export default function PropertyHubPage() {
     { label: '보고서', detail: `${summary?.reports ?? 0}개 Snapshot · 1P/7P 진입`, icon: <FactCheckRounded />, action: () => navigate(`/property/${id}/data-room?tab=reports`) },
     { label: '3D · 도면', detail: `${summary?.digitalTwin ?? 0}개 자산 · Digital Twin 연결`, icon: <ThreeDRotationRounded />, action: () => navigate(`/property/${id}/data-room?tab=digitalTwin`) },
     { label: 'Room Intelligence', detail: `${floors.length}개 PropertySpace · 승인 3D 연결 ${approvedRoomLinks}건`, icon: <ThreeDRotationRounded />, action: () => navigate(`/room-ops?propertyId=${encodeURIComponent(id)}`) },
+    { label: 'Interior Intelligence', detail: `${floors.length}개 PropertySpace · 실내 증거/설비/Room 연결`, icon: <ImageRounded />, action: () => navigate(`/interior?propertyId=${encodeURIComponent(id)}`) },
     { label: '입지 브리핑', detail: property.nearbyStation ? `${property.nearbyStation} · 위치/교통 분석` : '지도·입지자료 확인', icon: <MapRounded />, action: () => navigate(`/properties/${id}/briefing`) },
   ];
 
