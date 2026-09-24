@@ -127,4 +127,21 @@ for (const marker of [
   if (!text.page.includes(marker)) throw new Error(`Production external acceptance gate 누락: ${marker}`);
 }
 
+
+for (const marker of [
+  'FULL PRODUCTION ACCEPTANCE',
+  'MANUAL ACCEPTANCE REMAINS',
+  'CONTROLLED MIGRATION PASS ≠ FULL PRODUCTION READY.',
+  '실사용 OWNER 로그인 · profile/role acceptance',
+  '물리 2nd-device 동일 profile/data E2E',
+  'Production frontend host + protected map/POI proxy',
+  'production domain allowlist',
+  'public-share issue/list/revoke browser acceptance',
+  'server-secret scan',
+  'Spreadsheet import release regression',
+  'ACCEPTANCE REQUIRED',
+]) {
+  if (!text.page.includes(marker)) throw new Error(`Full Production Acceptance 수동 gate 누락: ${marker}`);
+}
+
 console.log('Remote migration readiness review + handoff bundle UI boundary: PASS');
