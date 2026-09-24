@@ -237,6 +237,25 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
           </section>
 
           <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div><p className="eyebrow">PRODUCTION ACCEPTANCE · EXTERNAL GATES</p><h2 style={{ margin: '4px 0' }}>실운영 승인 전 남은 항목</h2></div>
+              <Chip size="small" color="warning" label="NOT PRODUCTION READY" />
+            </div>
+            <Alert severity="warning" sx={{ my: 1.25 }}>Migration BLOCKER 0과 실제 Production READY는 다릅니다. 아래 외부 운영 항목은 코드가 임의 완료 처리하지 않습니다.</Alert>
+            <div style={{ display: 'grid', gap: 8, fontSize: 12 }}>
+              {[
+                ['실 운영 OWNER Auth 계정', 'REQUIRED'],
+                ['물리 2nd-device browser E2E', 'REQUIRED'],
+                ['Production frontend host', 'EXTERNAL INFRA REQUIRED'],
+                ['Protected map/POI proxy', 'EXTERNAL INFRA REQUIRED'],
+                ['Production provider/domain allowlist', 'CHECK REQUIRED'],
+                ['Supabase Leaked Password Protection', 'MANUAL ENABLE/CHECK'],
+                ['Spreadsheet parser release advisory review', 'RELEASE CHECK REQUIRED'],
+              ].map(([label, status]) => <div key={label} style={{ border: '1px solid #e7ebf0', borderRadius: 9, padding: 10 }}><span>{label}</span><strong style={{ float: 'right' }}>{status}</strong></div>)}
+            </div>
+          </section>
+
+          <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 18 }}>
             <p className="eyebrow">REHEARSAL CHECKLIST</p><h2 style={{ margin: '4px 0 12px' }}>실제 연결 전 순서</h2>
             <div style={{ display: 'grid', gap: 10 }}>{rehearsal.map((item, index) => <div key={item} style={{ display: 'grid', gridTemplateColumns: '28px 1fr', gap: 8, alignItems: 'start' }}><span style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', borderRadius: 20, background: '#edf3f8', color: '#073a69', fontWeight: 800, fontSize: 12 }}>{index + 1}</span><span style={{ fontSize: 12, lineHeight: 1.55 }}>{item}</span></div>)}</div>
           </section>
