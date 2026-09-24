@@ -27,6 +27,8 @@ try {
     'RLS 강제',
     'OWNER 전용 관리',
     '멀티디바이스 동기화',
+    'REMOTE AUTH SESSION',
+    'SIGNED OUT',
     'ROLE MATRIX',
     'OWNER',
     'ADMIN',
