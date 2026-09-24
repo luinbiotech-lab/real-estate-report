@@ -202,8 +202,16 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
               <div><p className="eyebrow">CONTENT READINESS · NON-BLOCKING</p><h2 style={{ margin: '4px 0' }}>Data Room 완성도</h2></div>
               <Chip
                 size="small"
-                color={contentReadiness && contentReadiness.sourceInventoryUnconfirmed === 0 && contentReadiness.connectedDocuments > 0 && contentReadiness.mediaAssets > 0 ? 'success' : 'warning'}
-                label={contentReadiness && contentReadiness.sourceInventoryUnconfirmed === 0 && contentReadiness.connectedDocuments > 0 && contentReadiness.mediaAssets > 0 ? 'CONTENT REVIEW READY' : 'CONTENT INCOMPLETE'}
+                color={contentReadiness &&
+                  contentReadiness.requiredSourcePresent === contentReadiness.requiredDocumentTotal &&
+                  contentReadiness.requiredBinaryConnected === contentReadiness.requiredDocumentTotal &&
+                  contentReadiness.requiredOfficiallyVerified === contentReadiness.requiredDocumentTotal &&
+                  contentReadiness.mediaAssets > 0 ? 'success' : 'warning'}
+                label={contentReadiness &&
+                  contentReadiness.requiredSourcePresent === contentReadiness.requiredDocumentTotal &&
+                  contentReadiness.requiredBinaryConnected === contentReadiness.requiredDocumentTotal &&
+                  contentReadiness.requiredOfficiallyVerified === contentReadiness.requiredDocumentTotal &&
+                  contentReadiness.mediaAssets > 0 ? 'CONTENT REVIEW READY' : 'CONTENT INCOMPLETE'}
               />
             </div>
             <Alert severity="info" sx={{ my: 1.25 }}><strong>STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.</strong> 이 영역은 Production write를 차단하지 않지만 운영자가 실데이터 완성도를 별도로 확인하기 위한 지표입니다.</Alert>
