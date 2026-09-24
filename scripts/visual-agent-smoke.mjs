@@ -89,6 +89,7 @@ async function verifyBangbaeDigitalTwinIntakeHandoff(page) {
   await propertySelect.waitFor({ state: 'visible', timeout: 30_000 });
   const selectedPropertyText = (await propertySelect.textContent()) || '';
   if (!selectedPropertyText.includes('방배동 815-11 코너빌딩')) throw new Error('Digital Twin Intake property context was not preserved for Bangbae 815-11.');
+  if (!page.url().includes('propertyId=daon-bangbae-815-11')) throw new Error('Digital Twin Intake URL must retain Bangbae propertyId context.');
   const floorSelect = page.getByRole('combobox', { name: '층(선택)' });
   await floorSelect.click();
   for (const floor of ['B1', '1F', '2F', '3F']) await page.getByRole('option', { name: floor, exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
