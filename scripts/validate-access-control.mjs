@@ -31,7 +31,7 @@ if (!text.service.includes("target.id === 'local-owner' && role !== 'owner'")) t
 if (!text.service.includes("target.id === 'local-owner' && status !== 'active'")) throw new Error('로컬 OWNER 비활성화 차단 규칙이 필요합니다.');
 if (!text.service.includes("viewer: ['view_data']")) throw new Error('VIEWER는 읽기 전용으로 유지해야 합니다.');
 
-for (const label of ['사용자 · 권한 관리', 'LOCAL POLICY READY', 'REMOTE AUTH READY', 'REMOTE AUTH SESSION', 'ROLE MATRIX', 'ACCESS PROFILES', 'AUTH PROVIDER']) {
+for (const label of ['사용자 · 권한 관리', 'LOCAL POLICY READY', 'REMOTE AUTH BACKEND CONNECTED', 'REMOTE AUTH SESSION', 'ROLE MATRIX', 'ACCESS PROFILES', 'AUTH PROVIDER']) {
   if (!text.page.includes(label)) throw new Error(`Access Management UI 필수 표시 누락: ${label}`);
 }
 if (!text.page.includes('AUTH_PROVIDER_SUMMARIES')) throw new Error('Access Management UI는 provider service에서 상태를 렌더해야 합니다.');
