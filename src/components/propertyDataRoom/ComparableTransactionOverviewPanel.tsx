@@ -51,6 +51,12 @@ export default function ComparableTransactionOverviewPanel({ sources, onOpenMark
   const latestTradeDate = rows.map((row) => row.tradeDate).sort((a, b) => b.localeCompare(a))[0];
   const minUnitPrice = unitPrices.length ? Math.min(...unitPrices) : null;
   const maxUnitPrice = unitPrices.length ? Math.max(...unitPrices) : null;
+  const provenance = source?.metadata?.provenance && typeof source.metadata.provenance === 'object'
+    ? source.metadata.provenance as Record<string, unknown>
+    : undefined;
+  const provenanceCompleteCount = Number(provenance?.completeCount);
+  const provenanceMissingCount = Number(provenance?.missingCount);
+  const provenanceStatus = provenance?.status === 'complete' ? 'complete' : 'review_required';
 
   return <section style={{ gridColumn: '1 / -1', border: '1px solid #dfe5ec', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
     <div style={{ padding: '15px 18px', background: '#f7f9fb', borderBottom: '1px solid #e5eaf0', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -63,7 +69,7 @@ export default function ComparableTransactionOverviewPanel({ sources, onOpenMark
         <div style={{ padding: 13, border: '1px solid #edf0f4', borderRadius: 9 }}><small style={{ color: '#667085' }}>거래사례</small><strong style={{ display: 'block', fontSize: 22, marginTop: 4 }}>{rows.length}건</strong></div>
         <div style={{ padding: 13, border: '1px solid #edf0f4', borderRadius: 9 }}><small style={{ color: '#667085' }}>토지 평당가 범위</small><strong style={{ display: 'block', fontSize: 17, marginTop: 6 }}>{minUnitPrice !== null && maxUnitPrice !== null ? `${formatUnitPrice(minUnitPrice)} ~ ${formatUnitPrice(maxUnitPrice)}` : '-'}</strong></div>
         <div style={{ padding: 13, border: '1px solid #edf0f4', borderRadius: 9 }}><small style={{ color: '#667085' }}>최근 거래일</small><strong style={{ display: 'block', fontSize: 17, marginTop: 6 }}>{latestTradeDate || '-'}</strong></div>
-        <div style={{ padding: 13, border: '1px solid #edf0f4', borderRadius: 9 }}><small style={{ color: '#667085' }}>출처</small><strong style={{ display: 'block', fontSize: 13, marginTop: 6 }}>{source?.sourceReference || source?.sourceName || '출처 미연결'}</strong></div>
+        <div style={{ padding: 13, border: '1px solid #edf0f4', borderRadius: 9 }}><small style={{ color: '#667085' }}>출처 · 원문 위치</small><strong style={{ display: 'block', fontSize: 13, marginTop: 6 }}>{source?.sourceReference || source?.sourceName || '출처 미연결'}</strong><span style={{ display: 'block', marginTop: 4, color: provenanceStatus === 'complete' ? '#247a4d' : '#a15c00', fontSize: 12 }}>{Number.isFinite(provenanceCompleteCount) ? `row provenance ${provenanceCompleteCount}/${rows.length}` : 'row provenance 미기록'}{Number.isFinite(provenanceMissingCount) && provenanceMissingCount > 0 ? ` · 검토 ${provenanceMissingCount}` : ''}</span></div>
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', marginTop: 12, flexWrap: 'wrap' }}><small style={{ color: '#667085' }}>요약치는 구조화된 DataSource rows만 사용하며 원문 검증상태를 그대로 유지합니다.</small><Button size="small" onClick={onOpenMarket}>비교거래 전체 보기</Button></div>
     </div>}
