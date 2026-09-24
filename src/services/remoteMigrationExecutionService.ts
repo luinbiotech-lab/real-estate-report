@@ -95,6 +95,15 @@ export async function executeRemoteMigration(
   const startedAt = new Date().toISOString();
   const propertyIds = plan.properties.map((item) => item.id);
 
+  const existingRemoteProperties = [];
+  for (const propertyId of propertyIds) {
+    const existing = await remoteDataGateway.getProperty(propertyId);
+    if (existing) existingRemoteProperties.push(existing);
+  }
+  if (existingRemoteProperties.length) {
+    throw new Error(`초기 Production migration 대상이 이미 원격에 존재합니다: ${existingRemoteProperties.map((item) => item.id).join(', ')}. 기존 원격 Property overwrite는 별도 동기화 워크플로에서만 허용합니다.`);
+  }
+
   const existingCandidates = await existingIdsByProperty<PropertyVerificationCandidate>(
     propertyIds,
     (propertyId) => remoteDataGateway.listVerificationCandidates(propertyId),
