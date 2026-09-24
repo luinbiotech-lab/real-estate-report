@@ -18,6 +18,16 @@ for (const label of ['사진 · 미디어', '문서 · 공적자료', '비교거
 if (!text.propertyHub.includes('/income?propertyId=') || !text.propertyHub.includes('/review-history?propertyId=')) throw new Error('상세 허브는 선택 물건 context를 임대·수익/검토 이력으로 전달해야 합니다.');
 if (!text.propertyHub.includes("label: 'Room Intelligence'") || !text.propertyHub.includes('/room-ops?propertyId=') || !text.propertyHub.includes('approvedRoomLinks')) throw new Error('상세 허브는 PropertySpace/승인 Room link 상태와 함께 Room Intelligence로 물건 context를 전달해야 합니다.');
 if (!text.propertyHub.includes('대표 외관 미디어 미연결') || !text.propertyHub.includes('provenance')) throw new Error('대표미디어가 없을 때 가짜 사진 대신 미연결 상태와 provenance 원칙을 표시해야 합니다.');
+for (const marker of ["Room Intelligence", "/room-ops?propertyId=", "Interior Intelligence", "/interior?propertyId="]) {
+  if (!text.propertyHub.includes(marker)) throw new Error(`Property Hub는 물건 context를 Room/Interior Intelligence로 전달해야 합니다: ${marker}`);
+}
+const roomOpsPage = readFileSync('src/pages/RoomTwinOperationsPage.tsx', 'utf8');
+const interiorWorkspace = readFileSync('src/pages/InteriorWorkspacePage.tsx', 'utf8');
+for (const [name, source] of [['Room Twin Operations', roomOpsPage], ['Interior Workspace', interiorWorkspace]]) {
+  for (const marker of ["useSearchParams", "searchParams.get('propertyId')", "requestedExists", "setSearchParams({ propertyId: nextId })"]) {
+    if (!source.includes(marker)) throw new Error(`${name}는 propertyId query context를 유지해야 합니다: ${marker}`);
+  }
+}
 
 const readinessService = readFileSync('src/services/propertyReadinessService.ts', 'utf8');
 for (const marker of ['REQUIRED_DOCUMENT_TYPES', 'DOCUMENT_TYPE_LABELS', 'inventoryDocumentTypes', 'requiredConnected', 'requiredPresent', 'requiredVerified', 'requiredMissing', "documentState: ReadinessState", '원본확인 4/4 · 파일연결', '공식검증']) {
