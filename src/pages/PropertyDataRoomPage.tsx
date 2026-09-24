@@ -198,17 +198,24 @@ function normalizedSourceFileName(value: string) {
   return value.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
 }
 
+function sourceInventoryDocumentMatches(source: DataRoomBundle['dataSources'][number], document: PropertyDocument) {
+  const sourceReference = typeof source.sourceReference === 'string' ? source.sourceReference : '';
+  if (sourceReference && normalizedSourceFileName(document.originalFileName) === normalizedSourceFileName(sourceReference)) return true;
+
+  const inventoryType = typeof source.metadata?.documentType === 'string' ? source.metadata.documentType : '';
+  if (inventoryType === 'registry_land' || inventoryType === 'registry_building' || inventoryType === 'registry') return false;
+
+  const expectedDocumentType = propertyDataRoomService.classifyDocument(sourceReference || source.sourceName);
+  return expectedDocumentType !== 'other' && document.documentType === expectedDocumentType;
+}
+
 function OfficialPanel({ documents, sources, uploading, onUploadSource }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources']; uploading: boolean; onUploadSource: (source: DataRoomBundle['dataSources'][number], event: ChangeEvent<HTMLInputElement>) => void }) {
   return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다. 원본 확인, migration upload 준비, private Storage 연결을 각각 분리해 관리합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => {
     const isSourceInventory = source.resourceType === 'source_document_inventory';
     const binaryStorageStatus = source.metadata?.binaryStorageStatus;
     const originalSourcePresence = source.metadata?.originalSourcePresence;
-    const sourceReference = typeof source.sourceReference === 'string' ? source.sourceReference : '';
-    const expectedDocumentType = propertyDataRoomService.classifyDocument(sourceReference || source.sourceName);
     const matchingDocument = isSourceInventory
-      ? documents.find((document) =>
-          (sourceReference && normalizedSourceFileName(document.originalFileName) === normalizedSourceFileName(sourceReference)) ||
-          (!sourceReference && expectedDocumentType !== 'other' && document.documentType === expectedDocumentType))
+      ? documents.find((document) => sourceInventoryDocumentMatches(source, document))
       : undefined;
     const migrationUploadReady = Boolean(matchingDocument && (matchingDocument.fileData || matchingDocument.fileUrl));
     return <article key={source.id}>
