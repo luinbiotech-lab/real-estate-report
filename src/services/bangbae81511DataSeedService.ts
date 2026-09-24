@@ -58,10 +58,11 @@ const SOURCE_DOCUMENT_INVENTORY: Array<{
   {
     id: 'bangbae-815-11-land-use-plan-inventory',
     sourceName: '방배동 815-11 토지이용계획확인서',
+    sourceReference: '방배 815-11 토지이용확인원.pdf',
     resourceType: 'source_document_inventory',
     documentType: 'land_use_plan',
-    originalSourcePresence: 'unconfirmed',
-    sourceReviewed: false,
+    originalSourcePresence: 'confirmed',
+    sourceReviewed: true,
   },
   {
     id: 'bangbae-815-11-cadastral-map-inventory',
