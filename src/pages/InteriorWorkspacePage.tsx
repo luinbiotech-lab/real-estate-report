@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { RefreshRounded, VisibilityRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import InteriorRoomLinkPanel from '../components/InteriorRoomLinkPanel';
@@ -13,6 +14,8 @@ const FACILITY_LABEL: Record<PropertyFacility['category'], string> = {
 };
 
 export default function InteriorWorkspacePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedPropertyId = searchParams.get('propertyId') || '';
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
   const [bundle, setBundle] = useState<Awaited<ReturnType<typeof propertyDataRoomRepository.getBundle>>>({ documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] });
@@ -26,7 +29,9 @@ export default function InteriorWorkspacePage() {
     (async () => {
       try {
         const list = await propertyRepository.getAll(); setProperties(list);
-        const first = list[0]?.id || ''; setPropertyId(first); if (first) await load(first);
+        const requestedExists = requestedPropertyId && list.some((item) => item.id === requestedPropertyId);
+        const first = (requestedExists ? requestedPropertyId : '') || list[0]?.id || '';
+        setPropertyId(first); if (first) await load(first);
       } catch (reason) { setError(reason instanceof Error ? reason.message : 'Interior Workspace를 불러오지 못했습니다.'); }
       finally { setLoading(false); }
     })();
@@ -53,7 +58,7 @@ export default function InteriorWorkspacePage() {
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
-      <FormControl size="small" fullWidth><InputLabel id="interior-property-label">대상 물건</InputLabel><Select labelId="interior-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); await load(event.target.value); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
+      <FormControl size="small" fullWidth><InputLabel id="interior-property-label">대상 물건</InputLabel><Select labelId="interior-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { const nextId = event.target.value; setPropertyId(nextId); setSearchParams({ propertyId: nextId }); await load(nextId); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
       <Button startIcon={<RefreshRounded />} onClick={() => load()}>새로고침</Button>
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
