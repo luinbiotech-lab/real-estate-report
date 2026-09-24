@@ -116,6 +116,8 @@ export default function ExternalShareCenterPage() {
       reviewNotes: notes,
       localOnlyWarning: 'REVOKED는 현재 로컬 감사상태입니다. 이미 전달된 standalone HTML 복사본은 서버 권한 없이 원격 차단할 수 없습니다.',
       remoteProviderStatus: remoteProvider.availability,
+      remoteBackendState: remoteProvider.backendState,
+      remoteOperatorAcceptance: remoteProvider.operatorAcceptance,
     };
     downloadText(JSON.stringify(payload, null, 2), `daon-external-share-audit-${new Date().toISOString().slice(0, 10)}.json`);
   };
@@ -178,7 +180,7 @@ export default function ExternalShareCenterPage() {
       {providers.map((provider) => <article key={provider.id} style={{ background: '#fff', border: provider.availability === 'ready' ? '1px solid #b7d8c2' : '1px solid #e4d7b8', borderRadius: 12, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', gap: 9, alignItems: 'center' }}>{provider.mode === 'local' ? <CloudOffRounded color="action" /> : <CloudQueueRounded color="action" />}<div><small style={{ color: '#667085' }}>SHARE PROVIDER</small><strong style={{ display: 'block' }}>{provider.label}</strong></div></div>
-          <Chip size="small" color={provider.availability === 'ready' ? 'success' : 'warning'} label={provider.availability === 'ready' ? 'READY' : 'NOT CONFIGURED'} />
+          <Chip size="small" color={provider.availability === 'ready' ? 'success' : 'warning'} label={provider.mode === 'remote' && provider.operatorAcceptance === 'required' ? 'BACKEND CONNECTED' : provider.availability === 'ready' ? 'READY' : 'NOT CONFIGURED'} />
         </div>
         {provider.reason && <p style={{ color: '#667085', margin: '10px 0 8px', fontSize: 13 }}>{provider.reason}</p>}
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 10 }}>{capabilityLabels.map(([key, label]) => <Chip key={key} size="small" variant="outlined" color={provider.capabilities[key] ? 'primary' : 'default'} label={`${label} ${provider.capabilities[key] ? '✓' : '—'}`} />)}</div>
@@ -216,6 +218,6 @@ export default function ExternalShareCenterPage() {
       })}
     </section>
 
-    <Alert severity="info" icon={<ShareRounded />} sx={{ mt: 1.5 }}><strong>REMOTE / PUBLIC Provider는 READY입니다.</strong> Public URL 발급·서버 만료·remote revoke는 Snapshot의 외부 공유 Workspace에서 REMOTE AUTH 로그인 후 사용할 수 있습니다. 이 감사대장은 기존 LOCAL 공유 이력을 계속 분리해 보존합니다.</Alert>
+    <Alert severity="warning" icon={<ShareRounded />} sx={{ mt: 1.5 }}><strong>REMOTE / PUBLIC backend는 CONNECTED입니다.</strong> Public URL 발급·서버 만료·remote revoke 기능은 연결되어 있지만, 실제 운영 OWNER의 issue/list/revoke browser acceptance 전에는 Production 운영 완료로 보지 않습니다. 이 감사대장은 기존 LOCAL 공유 이력을 계속 분리해 보존합니다.</Alert>
   </main>;
 }
