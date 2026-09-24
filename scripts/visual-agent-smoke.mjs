@@ -36,6 +36,7 @@ async function verifyDataRoomDeepLinks(page) {
   const cases = [
     ['media', '사진'],
     ['documents', '문서'],
+    ['official', '공적자료'],
     ['market', '비교거래'],
     ['reports', '보고서'],
     ['digitalTwin', '3D'],
@@ -47,6 +48,10 @@ async function verifyDataRoomDeepLinks(page) {
     await tabNode.waitFor({ state: 'visible', timeout: 30_000 });
     if ((await tabNode.getAttribute('aria-selected')) !== 'true') throw new Error(`Data Room deep link failed: ${tab} → ${label}`);
     if (tab === 'market') await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-deep-link-market.png`, fullPage: true });
+    if (tab === 'official') {
+      for (const text of ['공적자료 및 데이터 출처', '원본 확인', '이관 파일 미등록', 'Storage 미연결']) await waitForText(page, text);
+      await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-official-readiness.png`, fullPage: true });
+    }
     if (tab === 'digitalTwin') {
       for (const text of ['도면 · 3D 자료 등록/추가', 'Room Intelligence 열기', 'Interior Intelligence 열기']) await waitForText(page, text);
     }
