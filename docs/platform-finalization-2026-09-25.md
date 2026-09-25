@@ -1,7 +1,7 @@
 # DA:ON Platform Finalization — 2026-09-25
 
 Branch: `feat/daon-master-code-lock`  
-Validated baseline: `1413b860b8260beae52fd42c648a590a091edefc`
+Validated baseline: `9c7553b1962df27b57a7789cd07eca3abcdcdf9f`
 
 This document closes the nine platform-body workstreams. Report visual design remains a separate advisory scope and must not block platform release.
 
@@ -157,8 +157,8 @@ No synthetic geometry is created for Bangbae without real source material.
 
 Latest full platform validation baseline:
 
-- GitHub Actions run `36048367241`
-- HEAD `1413b860b8260beae52fd42c648a590a091edefc`
+- GitHub Actions run `36138989670`
+- HEAD `9c7553b1962df27b57a7789cd07eca3abcdcdf9f`
 - overall conclusion: SUCCESS
 
 Passed:
