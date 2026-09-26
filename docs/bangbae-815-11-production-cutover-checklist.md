@@ -37,10 +37,13 @@ Current source-presence state (rechecked 2026-09-26):
 - land register — **not yet confirmed**
 - cadastral map — not yet confirmed; additional material, not one of the four required classes
 
-Raw-byte status:
+Raw-byte status (updated 2026-09-26):
 
-- authorized raw-byte materialization was retried for the four confirmed PDFs and remained blocked by the current Project-file authorization boundary
-- therefore `source presence` remains distinct from `local binary` and `private Storage connection`
+- the four confirmed PDFs were copied from ChatGPT Library into the connected Google Drive folder `DAON_방배동_815-11_자료`
+- all four were downloaded back from Google Drive as raw PDFs successfully
+- binary size/page count/SHA-256 provenance is locked in `docs/bangbae-815-11-binary-manifest.json`
+- therefore `raw binary accessible = complete` for these four confirmed documents
+- `local Data Room attachment` and `private Storage connection` remain separate, incomplete states
 
 Action:
 
@@ -66,7 +69,7 @@ For each confirmed official document:
 
 Required boundary:
 
-`source presence → local binary → private Storage connection → official verification`
+`source presence → raw binary accessible → local Data Room attachment → private Storage connection → official verification`
 
 Do not skip or collapse these states.
 
@@ -299,3 +302,34 @@ Latest branch CI:
 
 - HEAD before this documentation update: `007d13cb7bbf040ac557ff59220bef499b308968`
 - GitHub Actions run `36219164498`: SUCCESS
+
+
+## 2026-09-26 raw-binary recovery
+
+Google Drive folder:
+
+- `DAON_방배동_815-11_자료`
+- folder id: `1lxBpSJSbyOIcPts8YxrQMGKPznetSk-7`
+
+Recovered and round-trip downloaded as raw PDFs:
+
+1. `방배동 815-11 건축물대장.pdf`
+2. `방배동815-11 토지등기부.pdf`
+3. `방배동 815-11 건물등기부.pdf`
+4. `방배 815-11 토지이용확인원.pdf`
+
+The exact byte-level baseline is stored in:
+
+- `docs/bangbae-815-11-binary-manifest.json`
+
+This closes the prior **raw-byte access blocker** for those four files only.
+
+It does **not** mark these items as Data Room-connected or Production Storage-connected. Those gates remain pending until the browser-side PropertyDocument/Blob state is populated and the Bangbae-only migration dry-run includes the corresponding document asset uploads.
+
+Still unresolved:
+
+- land register original
+- cadastral map original (completeness item)
+- direct exterior/road/neighborhood image binary
+- browser-side Data Room attachment of the recovered PDFs
+- private Storage connection (Production write not authorized)
