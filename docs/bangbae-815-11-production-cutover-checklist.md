@@ -2,8 +2,8 @@
 
 Property: `daon-bangbae-815-11`  
 Branch: `feat/daon-master-code-lock`  
-Platform baseline: `392cb644f1d094dbc1731b1dc0a65e3597b85e0a`  
-Latest passing platform run: `36154465935`
+Validated branch HEAD: `5bc1bc6691361a0d0f13a98f29aa6e4d216224a4`  
+Latest passing platform run: `36208843780`
 
 This checklist covers only the remaining real-data / real-operator cutover work. Platform-body code is complete. Report visual design remains a separate scope.
 
@@ -29,13 +29,18 @@ Required readiness classes:
 3. land-use plan
 4. registry
 
-Current source-presence state:
+Current source-presence state (rechecked 2026-09-26):
 
-- building register — confirmed
-- land-use plan — confirmed
-- registry — confirmed through land/building registry originals
+- building register — confirmed as Library PDF
+- land-use plan — confirmed as Library PDF
+- registry — confirmed through land/building registry Library PDFs
 - land register — **not yet confirmed**
 - cadastral map — not yet confirmed; additional material, not one of the four required classes
+
+Raw-byte status:
+
+- authorized raw-byte materialization was retried for the four confirmed PDFs and remained blocked by the current Project-file authorization boundary
+- therefore `source presence` remains distinct from `local binary` and `private Storage connection`
 
 Action:
 
@@ -77,6 +82,7 @@ Already complete at platform level:
 
 Still required:
 
+- historical workspace evidence references `public/daon-master/bangbae-815-11/exterior-retouched-v1.png`, but the underlying original binary is not currently re-verified as an accessible asset
 - at least one real JPEG/PNG/WebP exterior, road or neighborhood image binary
 - classify it as an allowed exterior category
 - select the primary exterior media if appropriate
@@ -253,3 +259,14 @@ Bangbae Production cutover is complete only when:
 Until then, the correct state is:
 
 `PLATFORM COMPLETE / PRODUCTION CUTOVER PENDING`
+
+
+## 2026-09-26 closeout status
+
+Current platform-body work is closed at:
+
+`PLATFORM COMPLETE / PRODUCTION CUTOVER PENDING`
+
+Latest full GitHub Actions validation on the validated branch HEAD completed successfully in run `36208843780`, including Typecheck, Lint, Build, browser-secret scan, self-hosted runtime smoke, production-container runtime smoke, RLS/public-share/migration boundaries, and rendered QA.
+
+No Production write was executed during this closeout. The remaining work is limited to real-data / real-operator / real-host cutover dependencies and the explicitly approved migration/reconciliation sequence above.
