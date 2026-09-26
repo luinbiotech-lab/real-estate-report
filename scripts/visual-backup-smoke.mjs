@@ -7,7 +7,6 @@ const BACKUP_PATH = '/tmp/daon-backup-qa.json';
 const MIGRATION_PLAN_PATH = '/tmp/daon-remote-migration-dry-run-qa.json';
 const QA_MEDIA_ID = 'qa-backup-binary-media';
 const BANGBAE_PHASE1_BACKUP_PATH = '/tmp/daon-bangbae-phase1-merge-qa.json';
-const BANGBAE_PHASE1_BACKUP_PATH = '/tmp/daon-bangbae-phase1-merge-qa.json';
 const BANGBAE_PHASE1_PLAN_PATH = '/tmp/daon-bangbae-phase1-plan-qa.json';
 
 async function waitForText(page, text, timeout = 30_000) {
@@ -190,59 +189,6 @@ try {
   );
   if (phase1Uploads.length !== 4 || phase1Uploads.some((asset) => asset?.binarySource !== 'blob')) {
     throw new Error('Phase 1 restore flow did not produce 4 Blob-backed official document uploads.');
-  }
-
-  const pdfBase64 = Buffer.from('%PDF-1.4\n% DAON Phase 1 restore QA\n%%EOF\n', 'utf8').toString('base64');
-  const phase1Backup = {
-    schemaVersion: 'daon-local-backup-v1',
-    createdAt: new Date().toISOString(),
-    databaseName: 'real-estate-report',
-    databaseVersion: 13,
-    stores: {
-      propertyDocuments: [
-        ['bangbae-phase1-building-register', 'building_register', '방배동 815-11 건축물대장.pdf', '방배동 815-11 건축물대장'],
-        ['bangbae-phase1-land-registry', 'registry', '방배동815-11 토지등기부.pdf', '방배동 815-11 토지등기부'],
-        ['bangbae-phase1-building-registry', 'registry', '방배동 815-11 건물등기부.pdf', '방배동 815-11 건물등기부'],
-        ['bangbae-phase1-land-use-plan', 'land_use_plan', '방배 815-11 토지이용확인원.pdf', '방배동 815-11 토지이용계획확인서'],
-      ].map(([id, documentType, originalFileName, sourceName]) => ({
-        key: id,
-        value: {
-          id,
-          propertyId: 'daon-bangbae-815-11',
-          documentType,
-          title: sourceName,
-          originalFileName,
-          storagePath: `properties/daon-bangbae-815-11/documents/${id}-${originalFileName}`,
-          fileData: { __daonBinary: 'blob', mimeType: 'application/pdf', base64: pdfBase64 },
-          mimeType: 'application/pdf',
-          fileSize: Buffer.from(pdfBase64, 'base64').byteLength,
-          sourceType: 'official_document',
-          sourceName,
-          uploadedAt: new Date().toISOString(),
-          verificationStatus: 'confirmed',
-          version: 1,
-          notes: 'Phase 1 QA fixture',
-          extractionStatus: 'not_started',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        },
-      })),
-    },
-    localStorage: {},
-  };
-  await import('node:fs/promises').then(({ writeFile }) => writeFile(BANGBAE_PHASE1_BACKUP_PATH, JSON.stringify(phase1Backup), 'utf8'));
-
-  const phase1Input = page.locator('input[type="file"][accept="application/json,.json"]');
-  await phase1Input.setInputFiles(BANGBAE_PHASE1_BACKUP_PATH);
-  await waitForText(page, '방배동 815-11 Phase 1 패키지 감지');
-  await page.getByRole('button', { name: '방배동 Phase 1 복원 + Dry Run', exact: true }).click();
-  await waitForText(page, '방배동 Phase 1 복원 + Dry Run 완료');
-  const phase1PanelText = await page.getByTestId('remote-migration-dry-run').innerText();
-  if (!phase1PanelText.includes('NETWORK WRITES') || !phase1PanelText.match(/NETWORK WRITES\s*0/i)) {
-    throw new Error(`Phase 1 restore/dry-run did not remain network-write free: ${phase1PanelText}`);
-  }
-  if (phase1PanelText.includes('SOURCE_DOCUMENT_BINARY_NOT_CONNECTED')) {
-    throw new Error('Phase 1 restore/dry-run left source-document binary blockers after Blob restore.');
   }
 
   await page.screenshot({ path: `${ARTIFACT_DIR}/data-backup-center.png`, fullPage: true });
