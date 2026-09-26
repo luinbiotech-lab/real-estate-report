@@ -1,4 +1,6 @@
 import { database } from '../repositories/database';
+import { REMOTE_OPERATIONAL_MODE } from './operationalDataMode';
+import { remoteDataGateway } from './remoteDataGateway';
 import type { BuildingReleaseSnapshot } from './buildingReleaseSnapshotService';
 
 export type ReleaseLifecycleStatus = 'current' | 'superseded' | 'archived';
@@ -43,21 +45,36 @@ function resolveShareStatus(row: BuildingReleaseShare, now = new Date().toISOStr
 }
 
 export async function getSnapshotStates(propertyId: string): Promise<BuildingReleaseSnapshotState[]> {
+  if (REMOTE_OPERATIONAL_MODE) {
+    return (await remoteDataGateway.listObjects(propertyId, 'buildingReleaseSnapshotStates')).map((item) => item.payload as unknown as BuildingReleaseSnapshotState);
+  }
   return await (await database).getAllFromIndex('buildingReleaseSnapshotStates', 'propertyId', propertyId) as BuildingReleaseSnapshotState[];
 }
 
 export async function setSnapshotState(snapshot: BuildingReleaseSnapshot, status: ReleaseLifecycleStatus, reason?: string, changedBy?: string) {
   const row: BuildingReleaseSnapshotState = { id: id('release-state'), propertyId: snapshot.propertyId, snapshotId: snapshot.id, status, changedAt: new Date().toISOString(), reason: reason?.trim() || undefined, changedBy: changedBy?.trim() || undefined };
-  await (await database).add('buildingReleaseSnapshotStates', row);
+  if (REMOTE_OPERATIONAL_MODE) {
+    await remoteDataGateway.upsertObject({ objectType: 'buildingReleaseSnapshotStates', id: row.id, propertyId: row.propertyId, payload: row as unknown as Record<string, unknown> });
+  } else {
+    await (await database).add('buildingReleaseSnapshotStates', row);
+  }
   return row;
 }
 
 export async function resolveSnapshotStatus(snapshotId: string): Promise<ReleaseLifecycleStatus> {
-  const rows = await (await database).getAllFromIndex('buildingReleaseSnapshotStates', 'snapshotId', snapshotId) as BuildingReleaseSnapshotState[];
+  let rows: BuildingReleaseSnapshotState[] = [];
+  if (REMOTE_OPERATIONAL_MODE) {
+    for (const property of await remoteDataGateway.listProperties()) {
+      rows.push(...(await remoteDataGateway.listObjects(property.id, 'buildingReleaseSnapshotStates')).map((item) => item.payload as unknown as BuildingReleaseSnapshotState).filter((item) => item.snapshotId === snapshotId));
+    }
+  } else {
+    rows = await (await database).getAllFromIndex('buildingReleaseSnapshotStates', 'snapshotId', snapshotId) as BuildingReleaseSnapshotState[];
+  }
   return [...rows].sort((a, b) => b.changedAt.localeCompare(a.changedAt))[0]?.status ?? 'current';
 }
 
 export async function createShare(snapshot: BuildingReleaseSnapshot, input: { expiresAt?: string; allowDownload: boolean; note?: string }) {
+  if (REMOTE_OPERATIONAL_MODE) throw new Error('Production에서는 raw-token legacy share를 생성하지 않습니다. 외부 공유 센터의 REMOTE/PUBLIC 발급 경로를 사용하세요.');
   const now = new Date().toISOString();
   if (input.expiresAt && input.expiresAt <= now) throw new Error('공유 만료일은 현재 시각 이후여야 합니다.');
   const row: BuildingReleaseShare = { id: id('release-share'), propertyId: snapshot.propertyId, snapshotId: snapshot.id, createdAt: now, expiresAt: input.expiresAt, status: 'active', access: 'read_only', allowDownload: input.allowDownload, token: token(), note: input.note?.trim() || undefined };
@@ -66,18 +83,21 @@ export async function createShare(snapshot: BuildingReleaseSnapshot, input: { ex
 }
 
 export async function listShares(snapshotId: string): Promise<BuildingReleaseShare[]> {
+  if (REMOTE_OPERATIONAL_MODE) return [];
   const rows = await (await database).getAllFromIndex('buildingReleaseShares', 'snapshotId', snapshotId) as BuildingReleaseShare[];
   const now = new Date().toISOString();
   return rows.map((row) => resolveShareStatus(row, now)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function listAllShares(): Promise<BuildingReleaseShare[]> {
+  if (REMOTE_OPERATIONAL_MODE) return [];
   const rows = await (await database).getAll('buildingReleaseShares') as BuildingReleaseShare[];
   const now = new Date().toISOString();
   return rows.map((row) => resolveShareStatus(row, now)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function revokeShare(share: BuildingReleaseShare) {
+  if (REMOTE_OPERATIONAL_MODE) throw new Error('Production legacy share revoke는 사용하지 않습니다. 외부 공유 센터의 REMOTE revoke를 사용하세요.');
   const updated: BuildingReleaseShare = { ...share, status: 'revoked' };
   await (await database).put('buildingReleaseShares', updated);
   return updated;
@@ -86,23 +106,45 @@ export async function revokeShare(share: BuildingReleaseShare) {
 export async function addReviewNote(snapshot: BuildingReleaseSnapshot, author: string, body: string) {
   if (!author.trim() || !body.trim()) throw new Error('검토자와 코멘트를 입력하세요.');
   const row: BuildingReleaseReviewNote = { id: id('release-note'), propertyId: snapshot.propertyId, snapshotId: snapshot.id, createdAt: new Date().toISOString(), author: author.trim(), body: body.trim(), status: 'open' };
-  await (await database).add('buildingReleaseReviewNotes', row);
+  if (REMOTE_OPERATIONAL_MODE) {
+    await remoteDataGateway.upsertObject({ objectType: 'buildingReleaseReviewNotes', id: row.id, propertyId: row.propertyId, payload: row as unknown as Record<string, unknown> });
+  } else {
+    await (await database).add('buildingReleaseReviewNotes', row);
+  }
   return row;
 }
 
 export async function listReviewNotes(snapshotId: string): Promise<BuildingReleaseReviewNote[]> {
-  const rows = await (await database).getAllFromIndex('buildingReleaseReviewNotes', 'snapshotId', snapshotId) as BuildingReleaseReviewNote[];
+  let rows: BuildingReleaseReviewNote[] = [];
+  if (REMOTE_OPERATIONAL_MODE) {
+    for (const property of await remoteDataGateway.listProperties()) {
+      rows.push(...(await remoteDataGateway.listObjects(property.id, 'buildingReleaseReviewNotes')).map((item) => item.payload as unknown as BuildingReleaseReviewNote).filter((item) => item.snapshotId === snapshotId));
+    }
+  } else {
+    rows = await (await database).getAllFromIndex('buildingReleaseReviewNotes', 'snapshotId', snapshotId) as BuildingReleaseReviewNote[];
+  }
   return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function listAllReviewNotes(): Promise<BuildingReleaseReviewNote[]> {
+  if (REMOTE_OPERATIONAL_MODE) {
+    const rows: BuildingReleaseReviewNote[] = [];
+    for (const property of await remoteDataGateway.listProperties()) {
+      rows.push(...(await remoteDataGateway.listObjects(property.id, 'buildingReleaseReviewNotes')).map((item) => item.payload as unknown as BuildingReleaseReviewNote));
+    }
+    return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
   const rows = await (await database).getAll('buildingReleaseReviewNotes') as BuildingReleaseReviewNote[];
   return rows.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 export async function resolveReviewNote(note: BuildingReleaseReviewNote) {
   const updated: BuildingReleaseReviewNote = { ...note, status: 'resolved' };
-  await (await database).put('buildingReleaseReviewNotes', updated);
+  if (REMOTE_OPERATIONAL_MODE) {
+    await remoteDataGateway.upsertObject({ objectType: 'buildingReleaseReviewNotes', id: updated.id, propertyId: updated.propertyId, payload: updated as unknown as Record<string, unknown> });
+  } else {
+    await (await database).put('buildingReleaseReviewNotes', updated);
+  }
   return updated;
 }
 
