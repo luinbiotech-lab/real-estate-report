@@ -126,6 +126,9 @@ jobs:
       - name: Validate Supabase auth security automation
         run: node scripts/validate-supabase-auth-security-automation.mjs
 
+      - name: Validate guarded Vercel Production deployment
+        run: node scripts/validate-vercel-production-workflow.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
