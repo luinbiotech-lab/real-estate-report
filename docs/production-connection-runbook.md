@@ -353,3 +353,57 @@ release 직전 필수:
 - spreadsheet parser release advisory review: REQUIRED
 
 서버가 연결되었다는 이유만으로 실사용 계정·도메인·second-device E2E까지 완료된 것으로 표시하지 않는다.
+
+
+## 10. Cutover mode → Remote Operational mode
+
+Production deployment is intentionally two-stage.
+
+### Stage A — Authenticated Cutover
+
+Environment:
+
+- `VITE_REQUIRE_REMOTE_AUTH=true`
+- `VITE_CUTOVER_MODE=true`
+- `VITE_REMOTE_OPERATIONAL_MODE=false`
+
+Purpose:
+
+1. require a real Supabase Auth session before rendering the operational SPA
+2. load the local/cutover bootstrap only after authentication
+3. import the Bangbae Phase 1 Data Room MERGE package
+4. verify the four recovered official PDFs as Blob-backed `PropertyDocument` rows
+5. run Bangbae-only dry-run
+6. execute the controlled migration only after zero technical blockers and exact approval
+
+Cutover mode remains local-first by design. It must not be left enabled as the steady-state production data provider.
+
+### Stage B — Remote Operational
+
+Switch only after controlled migration + reconciliation:
+
+- `VITE_CUTOVER_MODE=false`
+- `VITE_REMOTE_OPERATIONAL_MODE=true`
+
+Then rebuild/redeploy.
+
+Remote Operational mode contracts:
+
+- Property reads/writes/deletes use `remoteDataGateway`
+- company settings use the remote `company_settings` boundary
+- modular Data Room objects use `property_objects`
+- documents/media/Digital Twin assets use `property_assets` + private `daon-property-assets` Storage
+- verification candidates/history use their dedicated remote tables
+- report snapshots remain immutable; draft → ready creates a new final snapshot rather than mutating the original draft
+- local Bangbae/sample seed bootstrap is not loaded in remote operational mode
+- `VITE_CUTOVER_MODE=true` and `VITE_REMOTE_OPERATIONAL_MODE=true` together are rejected at startup
+
+Release verification:
+
+1. run the ordinary production build with cutover mode disabled
+2. `node scripts/scan-production-seed-leak.mjs` must PASS
+3. login using a real active Supabase profile
+4. verify Property list and Data Room are loaded from Production Supabase
+5. verify a second device sees the same remote state
+6. exercise role-specific positive/negative writes through RLS
+7. only then mark Remote Operational persistence READY
