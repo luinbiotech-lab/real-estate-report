@@ -82,7 +82,8 @@ Already complete at platform level:
 
 Still required:
 
-- historical workspace evidence references `public/daon-master/bangbae-815-11/exterior-retouched-v1.png`, but the underlying original binary is not currently re-verified as an accessible asset
+- historical workspace evidence referenced `public/daon-master/bangbae-815-11/exterior-retouched-v1.png`; current branch tree recheck on 2026-09-26 confirms that path/file is **not present**
+- repository-wide Bangbae/media tree recheck found no direct JPEG/PNG/WebP Bangbae exterior asset
 - at least one real JPEG/PNG/WebP exterior, road or neighborhood image binary
 - classify it as an allowed exterior category
 - select the primary exterior media if appropriate
@@ -270,3 +271,31 @@ Current platform-body work is closed at:
 Latest full GitHub Actions validation on the validated branch HEAD completed successfully in run `36208843780`, including Typecheck, Lint, Build, browser-secret scan, self-hosted runtime smoke, production-container runtime smoke, RLS/public-share/migration boundaries, and rendered QA.
 
 No Production write was executed during this closeout. The remaining work is limited to real-data / real-operator / real-host cutover dependencies and the explicitly approved migration/reconciliation sequence above.
+
+
+## 2026-09-26 blocker source-of-truth recheck
+
+Current branch tree and `src/services/bangbae81511DataSeedService.ts` were rechecked against the cutover checklist.
+
+Seed truth:
+
+- building register: original source confirmed / binary not connected
+- land registry: original source confirmed / binary not connected
+- building registry: original source confirmed / binary not connected
+- land-use plan: original source confirmed / binary not connected
+- land register: original source unconfirmed
+- cadastral map: original source unconfirmed
+- embedded exterior evidence: confirmed from existing detailed report pages 1 and 3
+- direct exterior media asset: not connected
+- private Storage exterior status: not connected
+
+Repository tree truth:
+
+- no current `public/daon-master/bangbae-815-11/exterior-retouched-v1.png`
+- no other Bangbae direct image binary was found in the current branch tree
+- no fake/report-page-derived image may be promoted to satisfy this gate
+
+Latest branch CI:
+
+- HEAD before this documentation update: `007d13cb7bbf040ac557ff59220bef499b308968`
+- GitHub Actions run `36219164498`: SUCCESS
