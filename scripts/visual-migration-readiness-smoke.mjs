@@ -200,6 +200,17 @@ try {
   if (sourceDocumentUploads.length !== 4 || sourceDocumentUploads.some((asset) => asset.binarySource !== 'blob')) {
     throw new Error('Prepared Bangbae source documents were not mapped to 4 local-binary Storage uploads.');
   }
+  const promotedSourceObjects = (preparedManifest.objects ?? []).filter((object) =>
+    object?.objectType === 'propertyDataSources' &&
+    object?.propertyId === 'daon-bangbae-815-11' &&
+    object?.payload?.resourceType === 'source_document_inventory' &&
+    object?.payload?.metadata?.binaryStorageStatus === 'connected' &&
+    typeof object?.payload?.metadata?.storagePath === 'string' &&
+    object.payload.metadata.storagePath
+  );
+  if (promotedSourceObjects.length < 4) {
+    throw new Error(`Expected at least 4 source inventory objects promoted to connected Storage paths, got ${promotedSourceObjects.length}.`);
+  }
   if (preparedManifest.readyForRemoteWrite !== false) throw new Error('Independent inline-binary blocker must keep prepared manifest blocked.');
 
   const handoffDownloadPromise = page.waitForEvent('download');
