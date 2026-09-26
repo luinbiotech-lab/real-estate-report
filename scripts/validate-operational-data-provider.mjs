@@ -5,6 +5,7 @@ const files = {
   property: 'src/repositories/propertyRepository.ts',
   dataRoom: 'src/repositories/propertyDataRoomRepository.ts',
   app: 'src/App.tsx',
+  vite: 'vite.config.ts',
   bootstrap: 'src/services/localBootstrapService.ts',
   docker: 'Dockerfile',
   render: 'render.yaml',
@@ -51,6 +52,10 @@ for (const forbidden of [
 ]) if (text.app.includes(forbidden)) throw new Error(`App production entry에 local seed가 남아 있습니다: ${forbidden}`);
 
 if (!text.app.includes("await import('./services/localBootstrapService')")) throw new Error('Local bootstrap은 dynamic import여야 합니다.');
+if (!text.app.includes('__DAON_INCLUDE_LOCAL_BOOTSTRAP__')) throw new Error('Local bootstrap은 build-time flag로 production bundle에서 제거되어야 합니다.');
+for (const marker of ['loadEnv', 'includeLocalBootstrap', '__DAON_INCLUDE_LOCAL_BOOTSTRAP__']) {
+  if (!text.vite.includes(marker)) throw new Error(`Vite local-bootstrap tree-shake 계약 누락: ${marker}`);
+}
 if (!text.bootstrap.includes("id: 'daon-bangbae-815-11'")) throw new Error('Cutover bootstrap은 별도 모듈에 유지되어야 합니다.');
 
 for (const marker of [
