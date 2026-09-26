@@ -1,0 +1,71 @@
+{
+  "schemaVersion": 1,
+  "propertyId": "daon-bangbae-815-11",
+  "generatedAt": "2026-09-26",
+  "purpose": "Binary provenance baseline for Bangbae 815-11 production cutover. This is not a Production Storage connection record.",
+  "driveFolderId": "1lxBpSJSbyOIcPts8YxrQMGKPznetSk-7",
+  "files": [
+    {
+      "documentType": "building_register",
+      "fileName": "방배동 815-11 건축물대장.pdf",
+      "driveFileId": "1IG7g0GfQZL1RJr_d4tLq7mtOaomSgE1x",
+      "mimeType": "application/pdf",
+      "sizeBytes": 419979,
+      "pageCount": 5,
+      "sha256": "e3dbc184dfde1f6d3557379d65f23d22a673a0ae87bb8ce7386fab6728d0db60",
+      "sourcePresence": "confirmed",
+      "rawBinaryAccessible": true,
+      "privateStorageStatus": "not_connected"
+    },
+    {
+      "documentType": "registry_land",
+      "fileName": "방배동815-11 토지등기부.pdf",
+      "driveFileId": "1QDv48xFTh0NUwsqnFrZDDXBsOH77_vyj",
+      "mimeType": "application/pdf",
+      "sizeBytes": 82228,
+      "pageCount": 4,
+      "sha256": "4038754236401d7ce47cfe05981c0632ef0e41691ad9e76ed8018c7a16a3d62e",
+      "sourcePresence": "confirmed",
+      "rawBinaryAccessible": true,
+      "privateStorageStatus": "not_connected"
+    },
+    {
+      "documentType": "registry_building",
+      "fileName": "방배동 815-11 건물등기부.pdf",
+      "driveFileId": "1mGIBCukk9uP9fPU2F-jEDzGsksMuHC-a",
+      "mimeType": "application/pdf",
+      "sizeBytes": 89637,
+      "pageCount": 5,
+      "sha256": "6e7ae247972f1144b5f17e4fcbbd016d66fb2a61b3d24bba0d36d6274b0591b3",
+      "sourcePresence": "confirmed",
+      "rawBinaryAccessible": true,
+      "privateStorageStatus": "not_connected"
+    },
+    {
+      "documentType": "land_use_plan",
+      "fileName": "방배 815-11 토지이용확인원.pdf",
+      "driveFileId": "1sTGyJsQYrNMMn6Q-N7bPk0rUAUEz021E",
+      "mimeType": "application/pdf",
+      "sizeBytes": 97219,
+      "pageCount": 1,
+      "sha256": "f946214027f935c7453c9ddfa906914de1610b0ec2e38a13ae02e8913844fb3b",
+      "sourcePresence": "confirmed",
+      "rawBinaryAccessible": true,
+      "privateStorageStatus": "not_connected"
+    }
+  ],
+  "unresolved": [
+    {
+      "documentType": "land_register",
+      "status": "original_unconfirmed"
+    },
+    {
+      "documentType": "cadastral_map",
+      "status": "original_unconfirmed"
+    },
+    {
+      "resourceType": "direct_exterior_media",
+      "status": "not_connected"
+    }
+  ]
+}

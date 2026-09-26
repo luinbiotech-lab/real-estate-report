@@ -4,6 +4,8 @@ import { parseNumber } from './format';
 import { isSameProperty, normalizeDate, normalizeProperty, validateProperty } from './property';
 import type { ImportJob, ImportRow as AutomationImportRow, ImportRowIssue } from '../services/importAutomation/types';
 
+export const MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024;
+
 export const columns: Record<string, keyof Property> = {
   물건번호: 'propertyNumber', 물건명: 'name', 건물명: 'buildingName', 거래유형: 'tradeType', 매매가: 'salePrice', 보증금: 'deposit', 월세: 'monthlyRent', 협의여부: 'negotiable', 명도상태: 'occupancyStatus', 주소: 'address', 상세주소: 'detailAddress', 인근역: 'nearbyStation', 역거리: 'stationDistance', 도로조건: 'roadCondition', 대지면적평: 'landAreaPyeong', 대지면적제곱미터: 'landAreaSqm', 연면적평: 'totalFloorAreaPyeong', 연면적제곱미터: 'totalFloorAreaSqm', 건축면적평: 'buildingAreaPyeong', 용도지역: 'zoning', 주용도: 'mainUse', 구조: 'structure', 지하층: 'basementFloors', 지상층: 'groundFloors', 준공일: 'completionDate', 건폐율: 'buildingCoverageRate', 용적률: 'floorAreaRatio', 승강기: 'elevator', 주차대수: 'parkingSpaces', 특징: 'features', 투자포인트: 'investmentPoints', 입지분석: 'locationAnalysis', 개발계획: 'developmentPlan', 추천용도: 'recommendedUse', 리스크: 'risks', 종합의견: 'overallOpinion', 인근거래사례: 'nearbyTransactions', 담당자: 'managerName', 담당자연락처: 'managerPhone', 담당자이메일: 'managerEmail', 회사명: 'companyName',
 };
@@ -11,8 +13,35 @@ Object.assign(columns, { 소재지: 'address', 물건주소: 'address', 도로�
 const numericFields = new Set<keyof Property>(['salePrice', 'deposit', 'monthlyRent', 'landAreaPyeong', 'landAreaSqm', 'totalFloorAreaPyeong', 'totalFloorAreaSqm', 'buildingAreaPyeong', 'basementFloors', 'groundFloors', 'buildingCoverageRate', 'floorAreaRatio', 'parkingSpaces']);
 export interface ImportRow { row: number; data: Property; errors: string[]; duplicate: boolean }
 
+function hasExcelFileSignature(buffer: ArrayBuffer) {
+  if (buffer.byteLength < 8) return false;
+  const bytes = new Uint8Array(buffer, 0, Math.min(buffer.byteLength, 8));
+  const isZip = bytes[0] === 0x50 && bytes[1] === 0x4b && (
+    (bytes[2] === 0x03 && bytes[3] === 0x04)
+    || (bytes[2] === 0x05 && bytes[3] === 0x06)
+    || (bytes[2] === 0x07 && bytes[3] === 0x08)
+  );
+  const isOle = bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0
+    && bytes[4] === 0xa1 && bytes[5] === 0xb1 && bytes[6] === 0x1a && bytes[7] === 0xe1;
+  return isZip || isOle;
+}
+
+function readImportWorkbook(buffer: ArrayBuffer) {
+  if (buffer.byteLength > MAX_EXCEL_IMPORT_BYTES) throw new Error('Excel 파일은 10MB 이하만 업로드할 수 있습니다.');
+  if (!hasExcelFileSignature(buffer)) throw new Error('지원하지 않는 Excel 파일 형식입니다. .xlsx 또는 .xls 파일을 확인해 주세요.');
+  return XLSX.read(buffer, {
+    type: 'array',
+    cellDates: true,
+    cellFormula: false,
+    cellHTML: false,
+    bookVBA: false,
+    bookDeps: false,
+    bookFiles: false,
+  });
+}
+
 export function parseWorkbook(buffer: ArrayBuffer, existing: Property[]): ImportRow[] {
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true });
+  const workbook = readImportWorkbook(buffer);
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   if (!sheet) throw new Error('워크시트가 없습니다.');
   const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
@@ -42,7 +71,7 @@ export function parseWorkbook(buffer: ArrayBuffer, existing: Property[]): Import
 }
 
 export function parseImportJob(buffer: ArrayBuffer, fileName: string, existing: Property[]): ImportJob {
-  const workbook = XLSX.read(buffer, { type: 'array', cellDates: true }); const sheet = workbook.Sheets[workbook.SheetNames[0]];
+  const workbook = readImportWorkbook(buffer); const sheet = workbook.Sheets[workbook.SheetNames[0]];
   if (!sheet) throw new Error('워크시트가 없습니다.'); const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' }); const now = new Date().toISOString();
   const rows: AutomationImportRow[] = sourceRows.map((raw, index) => {
     let property: Property = { ...emptyProperty, id: crypto.randomUUID(), createdAt: now, updatedAt: now };

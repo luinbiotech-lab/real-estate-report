@@ -1,5 +1,5 @@
 import type { BriefingItem } from '../../types';
-import type { DataSourceType, DocumentType, MediaCategory, VerificationStatus } from '../propertyDataRoom/types';
+import type { DataSourceType, DocumentType, MediaCategory, SpaceType, VerificationStatus } from '../propertyDataRoom/types';
 
 export type ReportValueState = 'actual' | 'missing' | 'disconnected' | 'estimated' | 'calculated' | 'ai_analysis' | 'unverified';
 
@@ -27,6 +27,30 @@ export interface ProfessionalReportSource {
   confidence: number | null; verificationStatus: VerificationStatus;
 }
 
+export interface ProfessionalReportFloor {
+  id: string;
+  floor: string;
+  name: string;
+  spaceType: SpaceType;
+  areaSqm: number | null;
+  use: string;
+  currentCondition: string;
+  verificationStatus: VerificationStatus;
+  sourceIds: string[];
+}
+
+export interface ProfessionalReportComparable {
+  label: string;
+  address: string;
+  salePrice: number;
+  landAreaPyeong: number;
+  landUnitPrice: number;
+  approvalYear: number | null;
+  tradeDate: string;
+  sourceId: string;
+  verificationStatus: VerificationStatus;
+}
+
 export interface ProfessionalReportViewModel {
   identity: {
     id: string; propertyNumber: ReportValue<string>; name: ReportValue<string>; buildingName: ReportValue<string>;
@@ -41,7 +65,14 @@ export interface ProfessionalReportViewModel {
     totalFloorAreaSqm: ReportValue<number>; totalFloorAreaPyeong: ReportValue<number>; buildingAreaPyeong: ReportValue<number>;
     mainUse: ReportValue<string>; structure: ReportValue<string>; basementFloors: ReportValue<number>;
     groundFloors: ReportValue<number>; completionDate: ReportValue<string>; buildingCoverageRate: ReportValue<number>;
-    floorAreaRatio: ReportValue<number>; elevator: ReportValue<string>; parkingSpaces: ReportValue<number>;
+    floorAreaRatio: ReportValue<number>; elevator: ReportValue<string>;
+    /** Legacy value retained for old snapshots/UI. */
+    parkingSpaces: ReportValue<number>;
+    parkingOfficial: ReportValue<number>;
+    parkingField: ReportValue<number>;
+    parkingFieldNote: ReportValue<string>;
+    /** Legacy snapshots are normalized to an empty array at the snapshot boundary. */
+    floors: ProfessionalReportFloor[];
   };
   land: {
     landAreaSqm: ReportValue<number>; landAreaPyeong: ReportValue<number>; zoning: ReportValue<string>; roadCondition: ReportValue<string>;
@@ -52,7 +83,7 @@ export interface ProfessionalReportViewModel {
   };
   media: {
     mainImage: ReportValue<string>; mapImage: ReportValue<string>; locationAnalysisImage: ReportValue<string>;
-    additionalImages: ReportValue<string[]>; items: ProfessionalReportMedia[];
+    additionalImages: ReportValue<string[]>; items: ProfessionalReportMedia[]; internalPhotoAllowed: boolean;
   };
   documents: { items: ProfessionalReportDocument[]; count: number; verifiedCount: number };
   digitalTwin: { connected: boolean; count: number; readyCount: number };
@@ -63,12 +94,12 @@ export interface ProfessionalReportViewModel {
   };
   investment: {
     features: ReportValue<string>; investmentPoints: ReportValue<string>; developmentPlan: ReportValue<string>;
-    recommendedUse: ReportValue<string>; nearbyTransactions: ReportValue<string>; overallOpinion: ReportValue<string>;
+    recommendedUse: ReportValue<string>; nearbyTransactions: ReportValue<string>; comparables: ProfessionalReportComparable[]; overallOpinion: ReportValue<string>;
   };
   risks: { risks: ReportValue<string> };
   sources: { items: ProfessionalReportSource[]; count: number };
   generated: {
-    generatedAt: string; propertyUpdatedAt: string; engineVersion: string; templateVersion: string;
+    generatedAt: string; propertyUpdatedAt: string; engineVersion: string; templateId: string; templateVersion: string;
     dataPolicy: 'property-and-data-room-only';
   };
 }

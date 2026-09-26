@@ -1,0 +1,36 @@
+name: Production HTTP Acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      production_base_url:
+        description: "HTTPS production frontend origin (for example https://example.com)"
+        required: true
+        type: string
+      production_api_base_url:
+        description: "Optional HTTPS protected API origin; leave blank for same-origin /api"
+        required: false
+        type: string
+
+jobs:
+  acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run production HTTP acceptance
+        env:
+          DAON_PRODUCTION_BASE_URL: ${{ inputs.production_base_url }}
+          DAON_PRODUCTION_API_BASE_URL: ${{ inputs.production_api_base_url }}
+        run: npm run test:prod-http

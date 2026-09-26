@@ -1,26 +1,35 @@
 import type { DataRoomBundle, DocumentType, VerificationStatus } from '../../domain/propertyDataRoom/types';
-import type { ProfessionalReportMedia, ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
+import type { ProfessionalReportComparable, ProfessionalReportMedia, ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
 import { numericReportValue, reportValue } from '../../domain/professionalReport/valuePolicy';
 import { calculateUnitPrice, roundArea, sqmToPyeong, pyeongToSqm } from '../../domain/professionalReport/calculations';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
 import type { Property } from '../../types';
+import { internalPhotoAllowed, reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
+import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
-export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = 'professional-v1';
+export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
+export const PROFESSIONAL_REPORT_TEMPLATE_VERSION = DAON_DETAIL_MASTER_TEMPLATE_VERSION;
 
-type BuilderOptions = { generatedAt?: string; templateVersion?: string };
+type BuilderOptions = { generatedAt?: string; templateId?: string; templateVersion?: string };
 const emptyCounts = <T extends string>(keys: T[]) => Object.fromEntries(keys.map((key) => [key, 0])) as Record<T, number>;
 
 function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalReportMedia[] {
   const items: ProfessionalReportMedia[] = [];
+  const allowInternal = internalPhotoAllowed(property);
+
   if (property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
-  property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
+  if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
-  for (const media of bundle.media) items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
+
+  for (const media of bundle.media) {
+    if (!reportMediaCategoryAllowed(media.category, allowInternal)) continue;
+    items.push({ id: media.id, category: media.category, url: media.url ?? null, caption: media.caption || media.fileName, isPrimary: media.isPrimary, verificationStatus: media.verificationStatus });
+  }
   return items;
 }
 
@@ -32,6 +41,44 @@ function collectValues(input: unknown, path = '', result: Array<{ path: string; 
   }
   for (const [key, value] of Object.entries(input)) collectValues(value, path ? `${path}.${key}` : key, result);
   return result;
+}
+
+function floorSortKey(floor?: string) {
+  const normalized = String(floor ?? '').trim().toUpperCase();
+  const basement = normalized.match(/^B(\d+)$/);
+  if (basement) return -Number(basement[1]);
+  const ground = normalized.match(/^(\d+)(?:F|층)?$/);
+  if (ground) return Number(ground[1]);
+  return Number.NEGATIVE_INFINITY;
+}
+
+function comparableRows(bundle: DataRoomBundle): ProfessionalReportComparable[] {
+  const source = bundle.dataSources.find((item) => item.resourceType === 'comparable_transaction_set' && item.fieldKey === 'nearbyTransactions');
+  const rows = source?.metadata?.rows;
+  if (!source || !Array.isArray(rows)) return [];
+  const result: ProfessionalReportComparable[] = [];
+  for (const row of rows) {
+    if (!row || typeof row !== 'object') continue;
+    const value = row as Record<string, unknown>;
+    const label = typeof value.label === 'string' ? value.label.trim() : '';
+    const salePrice = Number(value.salePrice);
+    const landAreaPyeong = Number(value.landAreaPyeong);
+    const landUnitPrice = Number(value.landUnitPrice);
+    const tradeDate = typeof value.tradeDate === 'string' ? value.tradeDate : '';
+    if (!label || !Number.isFinite(salePrice) || !Number.isFinite(landAreaPyeong) || !Number.isFinite(landUnitPrice) || !tradeDate) continue;
+    result.push({
+      label,
+      address: typeof value.address === 'string' ? value.address : '',
+      salePrice,
+      landAreaPyeong,
+      landUnitPrice,
+      approvalYear: Number.isFinite(Number(value.approvalYear)) ? Number(value.approvalYear) : null,
+      tradeDate,
+      sourceId: source.id,
+      verificationStatus: source.verificationStatus,
+    });
+  }
+  return result.sort((left, right) => right.tradeDate.localeCompare(left.tradeDate));
 }
 
 export function buildProfessionalReportViewModel(property: Property, bundle: DataRoomBundle, options: BuilderOptions = {}): ProfessionalReportViewModel {
@@ -47,6 +94,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const landPyeongCalculated = !storedLandPyeong && landPyeong !== null;
   const landSqmCalculated = !storedLandSqm && landSqm !== null;
   const unitPrice = calculateUnitPrice(property.salePrice, landPyeong);
+  const allowInternal = internalPhotoAllowed(property);
   const media = mediaItems(property, bundle);
 
   const identity = {
@@ -60,6 +108,27 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     negotiable: reportValue(property.negotiable, context('negotiable', { formatter: ((value: boolean) => value ? '협의 가능' : '협의 없음') as (value: never) => string })),
     occupancyStatus: text('occupancyStatus'),
   };
+  const floorSpaces = [...(bundle.spaces ?? [])]
+    .filter((space) => space.floor)
+    .sort((left, right) => floorSortKey(right.floor) - floorSortKey(left.floor) || left.name.localeCompare(right.name, 'ko'))
+    .map((space) => {
+      const fieldKey = `space:${space.id}`;
+      const verification = bundle.verifications.find((item) => item.fieldKey === fieldKey);
+      const sourceIds = bundle.dataSources
+        .filter((source) => source.fieldKey === fieldKey || source.sourceReference === space.id || source.metadata?.spaceId === space.id)
+        .map((source) => source.id);
+      return {
+        id: space.id,
+        floor: space.floor || '',
+        name: space.name,
+        spaceType: space.spaceType,
+        areaSqm: typeof space.areaSqm === 'number' ? space.areaSqm : null,
+        use: space.recommendedUse || space.name,
+        currentCondition: space.currentCondition || '',
+        verificationStatus: verification?.status ?? space.verificationStatus,
+        sourceIds,
+      };
+    });
   const building = {
     totalFloorAreaSqm: number('totalFloorAreaSqm', (value) => formatNullableArea(value, '㎡')),
     totalFloorAreaPyeong: number('totalFloorAreaPyeong', (value) => formatNullableArea(value, '평')),
@@ -69,6 +138,10 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     buildingCoverageRate: number('buildingCoverageRate', (value) => formatNullableNumber(value, '%')),
     floorAreaRatio: number('floorAreaRatio', (value) => formatNullableNumber(value, '%')), elevator: text('elevator'),
     parkingSpaces: number('parkingSpaces', (value) => formatNullableNumber(value, '대')),
+    parkingOfficial: number('parkingOfficial', (value) => formatNullableNumber(value, '대')),
+    parkingField: number('parkingField', (value) => formatNullableNumber(value, '대')),
+    parkingFieldNote: text('parkingFieldNote'),
+    floors: floorSpaces,
   };
   const land = {
     landAreaSqm: numericReportValue(landSqm, context('landAreaSqm', { calculated: landSqmCalculated, formatter: ((value: number) => formatNullableArea(value, '㎡')) as (value: never) => string })),
@@ -84,8 +157,9 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     mainImage: reportValue(property.mainImage, context('mainImage', { disconnected: false })),
     mapImage: reportValue(property.mapImage, context('mapImage', { disconnected: !property.latitude || !property.longitude })),
     locationAnalysisImage: reportValue(property.locationAnalysisImage, context('locationAnalysisImage')),
-    additionalImages: reportValue(property.additionalImages ?? [], context('additionalImages')),
+    additionalImages: reportValue(allowInternal ? property.additionalImages ?? [] : [], context('additionalImages')),
     items: media,
+    internalPhotoAllowed: allowInternal,
   };
   const documents = {
     items: bundle.documents.map((document) => ({ id: document.id, documentType: document.documentType, title: document.title, originalFileName: document.originalFileName, sourceName: document.sourceName, issuedAt: document.issuedAt ?? null, uploadedAt: document.uploadedAt, verificationStatus: document.verificationStatus, version: document.version })),
@@ -99,7 +173,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const verification = { items: bundle.verifications.map((item) => ({ fieldKey: item.fieldKey, status: item.status, note: item.note, verifiedAt: item.verifiedAt ?? null })), counts: verificationCounts };
   const investment = {
     features: text('features'), investmentPoints: text('investmentPoints'), developmentPlan: text('developmentPlan'),
-    recommendedUse: text('recommendedUse'), nearbyTransactions: text('nearbyTransactions'), overallOpinion: text('overallOpinion'),
+    recommendedUse: text('recommendedUse'), nearbyTransactions: text('nearbyTransactions'), comparables: comparableRows(bundle), overallOpinion: text('overallOpinion'),
   };
   const risks = { risks: text('risks') };
   const sourceItems = bundle.dataSources.map((source) => ({ id: source.id, fieldKey: source.fieldKey ?? null, resourceType: source.resourceType ?? null, sourceType: source.sourceType, sourceName: source.sourceName, sourceReference: source.sourceReference ?? null, collectedAt: source.collectedAt, sourceDate: source.sourceDate ?? null, confidence: source.confidence ?? null, verificationStatus: source.verificationStatus }));
@@ -110,16 +184,27 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   values.forEach(({ value }) => { qualityCounts[value.state] += 1; });
   const presentDocuments = new Set(bundle.documents.map((document) => document.documentType));
   const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !presentDocuments.has(type));
+  const requiredDocumentsVerified = REQUIRED_DOCUMENT_TYPES.every((type) => bundle.documents.some((document) =>
+    document.documentType === type && (document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed')));
+  const unresolvedCandidates = bundle.verificationCandidates.some((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held');
   const dataQuality = {
     counts: qualityCounts,
     missingFields: values.filter(({ value }) => value.state === 'missing').map(({ path }) => path),
     disconnectedFields: values.filter(({ value }) => value.state === 'disconnected').map(({ path }) => path),
-    requiredDocumentsMissing, reportReady: requiredDocumentsMissing.length === 0,
+    requiredDocumentsMissing,
+    reportReady: requiredDocumentsMissing.length === 0 && requiredDocumentsVerified && !unresolvedCandidates,
   };
 
   return {
     ...partial, documents, digitalTwin, verification, dataQuality, sources: { items: sourceItems, count: sourceItems.length },
-    generated: { generatedAt: options.generatedAt ?? new Date().toISOString(), propertyUpdatedAt: property.updatedAt, engineVersion: REPORT_ENGINE_VERSION, templateVersion: options.templateVersion ?? PROFESSIONAL_REPORT_TEMPLATE_VERSION, dataPolicy: 'property-and-data-room-only' },
+    generated: {
+      generatedAt: options.generatedAt ?? new Date().toISOString(),
+      propertyUpdatedAt: property.updatedAt,
+      engineVersion: REPORT_ENGINE_VERSION,
+      templateId: options.templateId ?? PROFESSIONAL_REPORT_TEMPLATE_ID,
+      templateVersion: options.templateVersion ?? PROFESSIONAL_REPORT_TEMPLATE_VERSION,
+      dataPolicy: 'property-and-data-room-only',
+    },
   };
 }
 
