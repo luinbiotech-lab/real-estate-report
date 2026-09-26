@@ -2,8 +2,8 @@
 
 Property: `daon-bangbae-815-11`  
 Branch: `feat/daon-master-code-lock`  
-Platform baseline: `9c7553b1962df27b57a7789cd07eca3abcdcdf9f`  
-Latest passing platform run: `36138989670`
+Platform baseline: `392cb644f1d094dbc1731b1dc0a65e3597b85e0a`  
+Latest passing platform run: `36154465935`
 
 This checklist covers only the remaining real-data / real-operator cutover work. Platform-body code is complete. Report visual design remains a separate scope.
 
