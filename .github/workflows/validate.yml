@@ -123,6 +123,9 @@ jobs:
       - name: Validate production browser acceptance contract
         run: node scripts/validate-production-browser-acceptance.mjs
 
+      - name: Validate Supabase auth security automation
+        run: node scripts/validate-supabase-auth-security-automation.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
