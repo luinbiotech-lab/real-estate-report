@@ -28,26 +28,60 @@ async function writeQaRows(page) {
   }), { propertyId: QA_INLINE_PROPERTY_ID, riskId: QA_INLINE_BINARY_ID, binaryPayload: QA_BINARY_PAYLOAD_SENTINEL });
 }
 
-async function uploadBangbaeSourceDocuments(page) {
-  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=official`, { waitUntil: 'domcontentloaded' });
-  await waitForText(page, '공적자료 및 데이터 출처');
+async function importBangbaePhase1Package(page) {
+  const pdf = Buffer.from('%PDF-1.4\n% DAON phase1 package QA document\n%%EOF\n', 'utf8');
+  const encoded = pdf.toString('base64');
+  const now = new Date().toISOString();
+  const docs = [
+    ['bangbae-phase1-building-register', 'building_register', '방배동 815-11 건축물대장.pdf', '방배동 815-11 건축물대장'],
+    ['bangbae-phase1-land-registry', 'registry', '방배동815-11 토지등기부.pdf', '방배동 815-11 토지등기부'],
+    ['bangbae-phase1-building-registry', 'registry', '방배동 815-11 건물등기부.pdf', '방배동 815-11 건물등기부'],
+    ['bangbae-phase1-land-use-plan', 'land_use_plan', '방배 815-11 토지이용확인원.pdf', '방배동 815-11 토지이용계획확인서'],
+  ];
+  const backup = {
+    schemaVersion: 'daon-local-backup-v1',
+    createdAt: now,
+    databaseName: 'real-estate-report',
+    databaseVersion: 13,
+    stores: {
+      propertyDocuments: docs.map(([id, documentType, originalFileName, sourceName]) => ({
+        key: id,
+        value: {
+          id,
+          propertyId: 'daon-bangbae-815-11',
+          documentType,
+          title: sourceName,
+          originalFileName,
+          storagePath: `properties/daon-bangbae-815-11/documents/${id}-${originalFileName}`,
+          fileData: { __daonBinary: 'blob', mimeType: 'application/pdf', base64: encoded },
+          mimeType: 'application/pdf',
+          fileSize: pdf.byteLength,
+          sourceType: 'official_document',
+          sourceName,
+          uploadedAt: now,
+          verificationStatus: 'confirmed',
+          version: 1,
+          notes: 'QA phase1 package',
+          extractionStatus: 'not_started',
+          createdAt: now,
+          updatedAt: now,
+        },
+      })),
+    },
+    localStorage: {},
+  };
 
-  const batchButton = page.getByRole('button', { name: '공적자료 일괄 연결', exact: true });
-  await batchButton.waitFor({ state: 'visible', timeout: 30_000 });
-  const input = batchButton.locator('input[type="file"][multiple]');
-  await input.waitFor({ state: 'attached', timeout: 30_000 });
-  const pdf = Buffer.from('%PDF-1.4\n% DAON migration QA source document\n%%EOF\n', 'utf8');
-  await input.setInputFiles([
-    { name: '방배동 815-11 건축물대장.pdf', mimeType: 'application/pdf', buffer: pdf },
-    { name: '방배동815-11 토지등기부.pdf', mimeType: 'application/pdf', buffer: pdf },
-    { name: '방배동 815-11 건물등기부.pdf', mimeType: 'application/pdf', buffer: pdf },
-    { name: '방배 815-11 토지이용확인원.pdf', mimeType: 'application/pdf', buffer: pdf },
-  ]);
-
-  const ready = page.getByText('이관 파일 준비', { exact: true });
-  await ready.first().waitFor({ state: 'visible', timeout: 30_000 });
-  const readyCount = await ready.count();
-  if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents after batch attachment, got ${readyCount}.`);
+  const button = page.getByRole('button', { name: 'Phase 1 패키지 연결 + Dry-Run', exact: true });
+  await button.waitFor({ state: 'visible', timeout: 30_000 });
+  const input = button.locator('input[type="file"]');
+  await input.setInputFiles({
+    name: 'DAON_Bangbae_815-11_Phase1_DataRoom_MERGE_QA.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(JSON.stringify(backup), 'utf8'),
+  });
+  await waitForText(page, 'Phase 1 패키지 4건을 Data Room에 병합하고 Bangbae-only dry-run을 완료했습니다.');
+  const readyCount = await page.getByText('이관 파일 준비', { exact: true }).count();
+  if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents after phase1 package import, got ${readyCount}.`);
 }
 
 async function verifyBangbaeSourceReadinessAfterReload(page) {
@@ -125,7 +159,7 @@ try {
   if (sourceBinaryBlockers.length < 3) throw new Error(`Expected at least 3 Bangbae source-document blockers, got ${sourceBinaryBlockers.length}.`);
   if (manifest.readyForRemoteWrite !== false) throw new Error('Manifest with inline/source-document blockers cannot be ready for remote write.');
 
-  await uploadBangbaeSourceDocuments(page);
+  await importBangbaePhase1Package(page);
   await uploadBangbaeExteriorMedia(page);
   await verifyBangbaeSourceReadinessAfterReload(page);
   await page.goto(`${BASE_URL}/migration-readiness`, { waitUntil: 'domcontentloaded' });
