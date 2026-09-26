@@ -5,7 +5,7 @@ import { remoteAssetStorageGateway, remoteDataGateway, type RemoteAssetResourceT
 import { database } from './database';
 
 type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets' | 'agentJobs' | 'agentResults' | 'agentReviews' | 'propertySpaces' | 'spaceMediaLinks' | 'spaceRoomLinks' | 'propertyFacilities' | 'roomEvidencePositions' | 'roomConditionHistory' | 'renovationAssessments' | 'roomRenovationAssessments' | 'roomRenovationHistory' | 'riskAssessments' | 'buildingReleaseSnapshots';
-type RemoteStoreName = Extract<RemotePropertyObjectType, StoreName>;
+type RemoteStoreName = StoreName & RemotePropertyObjectType;
 
 const REMOTE_OBJECT_STORES = new Set<RemoteStoreName>([
   'propertyDataSources',
