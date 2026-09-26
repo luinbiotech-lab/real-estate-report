@@ -63,3 +63,10 @@ if (/confirmationText\s*!==\s*REMOTE_MIGRATION_CONFIRMATION/.test(text.executor)
 }
 
 console.log('Controlled production migration executor boundary: PASS');
+
+const uploadIndex = text.executor.indexOf('await remoteAssetStorageGateway.upload');
+const assetMetaIndex = text.executor.indexOf('await remoteDataGateway.upsertAssetMetadata');
+const objectWriteIndex = text.executor.indexOf('await remoteDataGateway.upsertObject');
+if (!(uploadIndex >= 0 && assetMetaIndex > uploadIndex && objectWriteIndex > assetMetaIndex)) {
+  throw new Error('Migration executor는 Storage upload → asset metadata → structured object 순서를 유지해야 합니다.');
+}
