@@ -105,6 +105,9 @@ jobs:
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 
+      - name: Validate official source batch attachment
+        run: node scripts/validate-official-source-batch-attachment.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
