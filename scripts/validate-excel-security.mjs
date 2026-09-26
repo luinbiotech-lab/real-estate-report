@@ -57,7 +57,7 @@ for (const marker of [
   'CVE-2023-30533',
   'CVE-2024-22363',
   '0.20.3',
-  'RELEASE ADVISORY REVIEW REQUIRED',
+  'RELEASE ADVISORY REVIEW COMPLETED 2026-09-27',
   'Browser `<input accept>` is not a security boundary',
 ]) {
   if (!decision.includes(marker)) throw new Error(`Spreadsheet parser 보안 결정 기록 누락: ${marker}`);
@@ -70,6 +70,6 @@ console.log(JSON.stringify({
   xlsxSpec,
   lockedVersion,
   knownAdvisoryFloor: '>=0.20.2',
-  dependencyStatus: 'PATCHED_PINNED_REVIEW_AT_RELEASE',
-  note: 'Known 2023/2024 SheetJS advisories are below the locked version. Re-check vendor/GitHub advisories at each production release because CDN tarball dependencies are not fully represented by npm audit.',
+  dependencyStatus: 'PATCHED_PINNED_RELEASE_REVIEWED_2026_09_27',
+  note: '2026-09-27 release advisory review completed. Known 2023/2024 SheetJS advisories are below the locked version. Re-check vendor/GitHub advisories at each future production release because CDN tarball dependencies are not fully represented by npm audit.',
 }, null, 2));
