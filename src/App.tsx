@@ -32,7 +32,7 @@ import PropertyBriefingPage from './pages/PropertyBriefingPage';
 import PropertyDataRoomPage from './pages/PropertyDataRoomPage';
 import ProfessionalReportSnapshotPage from './pages/ProfessionalReportSnapshotPage';
 import ReportHistoryPage from './pages/ReportHistoryPage';
-import { CUTOVER_MODE, REMOTE_OPERATIONAL_MODE } from './services/operationalDataMode';
+import { REMOTE_OPERATIONAL_MODE } from './services/operationalDataMode';
 
 const DAON_MANAGER = '김은미 대표 / 공인중개사';
 const DAON_PHONE = '010 9953 1270';
@@ -69,7 +69,7 @@ function AppContent() {
   useEffect(() => {
     void (async () => {
       try {
-        if (CUTOVER_MODE) {
+        if (import.meta.env.DEV || import.meta.env.VITE_CUTOVER_MODE === 'true') {
           const { localBootstrapService } = await import('./services/localBootstrapService');
           await localBootstrapService.ensure({
             managerName: DAON_MANAGER,
