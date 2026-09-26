@@ -193,7 +193,7 @@ for (const marker of [
 ]) {
   if (!text.excel.includes(marker)) throw new Error(`Excel upload mitigation 누락: ${marker}`);
 }
-for (const marker of ['CVE-2023-30533', 'CVE-2024-22363', 'RELEASE ADVISORY REVIEW REQUIRED']) {
+for (const marker of ['CVE-2023-30533', 'CVE-2024-22363', 'RELEASE ADVISORY REVIEW COMPLETED 2026-09-27']) {
   if (!text.spreadsheetSecurityDecision.includes(marker)) throw new Error(`Spreadsheet security decision 누락: ${marker}`);
 }
 
@@ -244,7 +244,7 @@ const status = {
   productionDomainAllowlist: 'CHECK_REQUIRED',
   spreadsheetParserDependency,
   spreadsheetParserKnownAdvisoryFloor: '>=0.20.2',
-  spreadsheetParserReleaseAdvisoryReview: 'REQUIRED',
+  spreadsheetParserReleaseAdvisoryReview: 'REVIEWED_2026_09_27',
   spreadsheetParserSpec: String(pkg.dependencies?.xlsx ?? 'MISSING'),
   spreadsheetParserLockedVersion: lockedXlsxVersion || 'MISSING',
 };
