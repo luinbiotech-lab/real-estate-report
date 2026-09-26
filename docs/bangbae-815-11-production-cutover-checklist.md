@@ -333,3 +333,32 @@ Still unresolved:
 - direct exterior/road/neighborhood image binary
 - browser-side Data Room attachment of the recovered PDFs
 - private Storage connection (Production write not authorized)
+
+
+## 2026-09-26 Phase 1 deferred-content decision
+
+User direction: proceed with the platform/cutover work now and supplement currently unavailable materials later.
+
+Authoritative scope record:
+
+- `docs/bangbae-815-11-phase1-release-scope.json`
+
+For Bangbae 815-11 Phase 1 only:
+
+- land register original: deferred, content readiness remains partial
+- cadastral map original: deferred completeness item
+- direct exterior/road/neighborhood image: deferred, media readiness remains partial
+- Digital Twin originals: deferred, no synthetic geometry
+- missing/deferred items must not be fabricated, inferred as present, or replaced by report-page screenshots
+
+This is a **content-scope waiver**, not a migration-safety waiver.
+
+The following still remain hard gates before Production migration:
+
+1. recovered official PDFs attached to local Data Room as actual `PropertyDocument.fileData` / migration-ready binary
+2. Bangbae-only dry-run technical blockers = 0
+3. real operator OWNER / production security / domain prerequisites reviewed
+4. exact explicit human Production migration approval
+5. post-migration reconciliation and second-device/public-share verification
+
+Content readiness may therefore remain `partial` during Phase 1 while technical migration readiness is evaluated separately.
