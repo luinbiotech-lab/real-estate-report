@@ -124,8 +124,8 @@ for (const marker of [
 }
 
 
-if (!text.page.includes('Supabase Auth Leaked Password Protection 활성화 여부를 Dashboard에서 수동 확인')) {
-  throw new Error('Migration rehearsal에 Supabase Auth leaked-password protection 수동 게이트가 필요합니다.');
+if (!text.page.includes('Supabase Auth Leaked Password Protection guarded workflow 실행 후 Security Advisor에서 재검증')) {
+  throw new Error('Migration rehearsal에 Supabase Auth leaked-password protection guarded workflow 게이트가 필요합니다.');
 }
 
 for (const marker of [
