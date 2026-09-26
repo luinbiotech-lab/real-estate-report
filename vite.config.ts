@@ -2,7 +2,7 @@ import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), '');
+  const env = loadEnv(mode, '.', '');
   const includeLocalBootstrap = mode === 'development' || mode === 'cutover' || env.VITE_CUTOVER_MODE === 'true';
   const localBootstrapBoundary = {
     name: 'daon-local-bootstrap-boundary',
