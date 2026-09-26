@@ -1,5 +1,7 @@
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { database } from '../repositories/database';
+import { REMOTE_OPERATIONAL_MODE } from './operationalDataMode';
+import { remoteDataGateway } from './remoteDataGateway';
 import { buildingProductionGateService, type BuildingProductionCandidate } from './buildingProductionGateService';
 
 export const BUILDING_RELEASE_SNAPSHOT_VERSION = 'daon-building-release-snapshot-v1';
@@ -83,12 +85,23 @@ export async function createBuildingReleaseSnapshot(assets: DigitalTwinAsset[]):
     constructionReady: false,
     legalBimReady: false,
   };
-  await (await database).add('buildingReleaseSnapshots', snapshot);
+  if (REMOTE_OPERATIONAL_MODE) {
+    await remoteDataGateway.upsertObject({
+      objectType: 'buildingReleaseSnapshots',
+      id: snapshot.id,
+      propertyId: snapshot.propertyId,
+      payload: snapshot as unknown as Record<string, unknown>,
+    });
+  } else {
+    await (await database).add('buildingReleaseSnapshots', snapshot);
+  }
   return snapshot;
 }
 
 export async function listBuildingReleaseSnapshots(propertyId: string): Promise<BuildingReleaseSnapshot[]> {
-  const rows = await (await database).getAllFromIndex('buildingReleaseSnapshots', 'propertyId', propertyId) as BuildingReleaseSnapshot[];
+  const rows = REMOTE_OPERATIONAL_MODE
+    ? (await remoteDataGateway.listObjects(propertyId, 'buildingReleaseSnapshots')).map((item) => item.payload as unknown as BuildingReleaseSnapshot)
+    : await (await database).getAllFromIndex('buildingReleaseSnapshots', 'propertyId', propertyId) as BuildingReleaseSnapshot[];
   return rows.filter((row) => !(row as BuildingReleaseSnapshot & { deletedAt?: string }).deletedAt).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
