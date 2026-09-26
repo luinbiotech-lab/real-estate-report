@@ -31,26 +31,23 @@ async function writeQaRows(page) {
 async function uploadBangbaeSourceDocuments(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=official`, { waitUntil: 'domcontentloaded' });
   await waitForText(page, '공적자료 및 데이터 출처');
-  const uploads = [
-    ['방배동 815-11 건축물대장', '방배동 815-11 건축물대장.pdf'],
-    ['방배동 815-11 토지등기부', '방배동 815-11 토지등기부.pdf'],
-    ['방배동 815-11 건물등기부', '방배동 815-11 건물등기부.pdf'],
-    ['방배동 815-11 토지이용계획확인서', '방배 815-11 토지이용확인원.pdf'],
-  ];
-  for (const [sourceName, fileName] of uploads) {
-    const sourceCard = page.locator('article').filter({ hasText: sourceName }).filter({ hasText: 'Storage 미연결' }).last();
-    await sourceCard.waitFor({ state: 'visible', timeout: 30_000 });
-    const input = sourceCard.locator('input[type="file"]');
-    await input.waitFor({ state: 'attached', timeout: 30_000 });
-    await input.setInputFiles({
-      name: fileName,
-      mimeType: 'application/pdf',
-      buffer: Buffer.from('%PDF-1.4\n% DAON migration QA source document\n%%EOF\n', 'utf8'),
-    });
-    await sourceCard.getByText('이관 파일 준비', { exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
-  }
-  const readyCount = await page.getByText('이관 파일 준비', { exact: true }).count();
-  if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents, got ${readyCount}.`);
+
+  const batchButton = page.getByRole('button', { name: '공적자료 일괄 연결', exact: true });
+  await batchButton.waitFor({ state: 'visible', timeout: 30_000 });
+  const input = batchButton.locator('input[type="file"][multiple]');
+  await input.waitFor({ state: 'attached', timeout: 30_000 });
+  const pdf = Buffer.from('%PDF-1.4\n% DAON migration QA source document\n%%EOF\n', 'utf8');
+  await input.setInputFiles([
+    { name: '방배동 815-11 건축물대장.pdf', mimeType: 'application/pdf', buffer: pdf },
+    { name: '방배동815-11 토지등기부.pdf', mimeType: 'application/pdf', buffer: pdf },
+    { name: '방배동 815-11 건물등기부.pdf', mimeType: 'application/pdf', buffer: pdf },
+    { name: '방배 815-11 토지이용확인원.pdf', mimeType: 'application/pdf', buffer: pdf },
+  ]);
+
+  const ready = page.getByText('이관 파일 준비', { exact: true });
+  await ready.first().waitFor({ state: 'visible', timeout: 30_000 });
+  const readyCount = await ready.count();
+  if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents after batch attachment, got ${readyCount}.`);
 }
 
 async function verifyBangbaeSourceReadinessAfterReload(page) {
