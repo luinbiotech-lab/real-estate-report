@@ -26,6 +26,10 @@ const files = {
   packageLock: 'package-lock.json',
   excel: 'src/utils/excel.ts',
   spreadsheetSecurityDecision: 'docs/security-spreadsheet-parser.md',
+  authSecurityWorkflow: '.github/workflows/enable-supabase-leaked-password-protection.yml',
+  authSecurityScript: 'scripts/enable-supabase-leaked-password-protection.mjs',
+  backupPage: 'src/pages/DataBackupCenterPage.tsx',
+  backupService: 'src/services/localBackupService.ts',
 };
 
 for (const file of Object.values(files)) {
@@ -232,6 +236,8 @@ const status = {
   productionFrontendRuntimePackage: 'READY_TO_DEPLOY',
   protectedProxyRuntimePackage: 'READY_TO_DEPLOY',
   productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
+  bangbaePhase1DataRoomMergePackageFlow: text.backupPage.includes('방배동 Phase 1 복원 + Dry Run') && text.backupPage.includes("remoteMigrationDryRunService.run({ propertyIds: [BANGBAE_PHASE1_PROPERTY_ID] })") ? 'READY' : 'MISSING',
+  leakedPasswordProtectionAutomation: text.authSecurityWorkflow.includes('ENABLE LEAKED PASSWORD PROTECTION') && text.authSecurityScript.includes('password_hibp_enabled: true') ? 'READY_AWAITING_EXPLICIT_CONFIRMATION_AND_MANAGEMENT_TOKEN' : 'MISSING',
   realOperatorAuthAccount: 'REQUIRED',
   secondDeviceBrowserE2E: 'REQUIRED',
   protectedBackendProxy: 'MISSING_EXTERNAL_INFRA',
