@@ -111,6 +111,9 @@ jobs:
       - name: Validate Render production blueprint
         run: node scripts/validate-render-blueprint.mjs
 
+      - name: Validate production UI auth gate
+        run: node scripts/validate-production-auth-gate.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
