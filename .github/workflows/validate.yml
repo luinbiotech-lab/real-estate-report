@@ -129,6 +129,9 @@ jobs:
       - name: Validate guarded Vercel Production deployment
         run: node scripts/validate-vercel-production-workflow.mjs
 
+      - name: Validate Production cutover preflight contract
+        run: node scripts/validate-production-cutover-preflight.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
