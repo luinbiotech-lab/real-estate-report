@@ -43,6 +43,8 @@ for (const marker of [
   "structuredPayloadIsSafe('companySettings'",
   "binarySource: hasLocalBinary ? 'blob'",
   'readyForRemoteWrite: blockers.length === 0',
+  "binaryStorageStatus: 'connected'",
+  'storagePath: scheduledDocumentUpload.storagePath',
 ]) {
   if (!text.planner.includes(marker)) throw new Error(`Remote migration planner 계약 누락: ${marker}`);
 }
