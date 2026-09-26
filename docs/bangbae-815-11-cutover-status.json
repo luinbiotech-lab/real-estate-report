@@ -32,10 +32,11 @@
     "contentScope": "phase_1_with_deferred_items",
     "contentReadiness": "partial",
     "technicalMigrationReady": false,
-    "explicitMigrationApprovalRecorded": false
+    "explicitMigrationApprovalRecorded": false,
+    "phase1RestorePackagePrepared": true
   },
   "remainingHardGates": [
-    "attach recovered official PDFs into the actual browser Data Room as PropertyDocument.fileData blobs",
+    "restore the prepared Phase 1 MERGE backup in the actual operator browser and confirm 4 PropertyDocument.fileData blobs",
     "run Bangbae-only dry-run and obtain zero technical migration blockers",
     "provision/accept a real operator OWNER",
     "enable Supabase leaked-password protection",
@@ -43,5 +44,18 @@
     "record exact explicit production migration approval",
     "execute controlled migration once",
     "complete post-migration reconciliation and second-device/public-share acceptance"
-  ]
+  ],
+  "phase1DataRoomRestorePackage": {
+    "driveFolderId": "1lxBpSJSbyOIcPts8YxrQMGKPznetSk-7",
+    "driveFileId": "1sfKVkKcO-WrE3cnxvxORNtWkJ2abp_JY",
+    "fileName": "DAON_Bangbae_815-11_Phase1_DataRoom_MERGE_2026-09-26.json",
+    "sha256": "67c858763c1f4220a7191c825088d7a65f5e749881457a4a411bb887209bf763",
+    "sizeBytes": 922539,
+    "schemaVersion": "daon-local-backup-v1",
+    "databaseName": "real-estate-report",
+    "databaseVersion": 13,
+    "restoreMode": "merge",
+    "expectedPropertyDocumentRecords": 4,
+    "purpose": "Restore the four recovered official PDF binaries directly into browser IndexedDB PropertyDocument.fileData via the existing validated backup/restore path."
+  }
 }
