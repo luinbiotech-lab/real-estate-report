@@ -2,7 +2,7 @@
 
 이 문서는 local-first 구현 완료 후 실제 외부 인프라를 연결할 때의 **Deployment Readiness Package**다. production Supabase/backend가 연결된 이후의 실제 배포·운영 마감 상태를 추적한다.
 
-Latest automated validation baseline: `432ce34bbc4d07a8ade26b098e4f223e3a534012` / GitHub Actions run `36217677657` PASS
+Latest automated validation baseline: `7ec0efc8716cefc7a9f8de2555d0a06ca3fd183c` / GitHub Actions run `36250227707` PASS
 Branch: `feat/daon-master-code-lock`
 
 ## 0. 사전 원칙
@@ -391,12 +391,26 @@ Current cutover state:
 
 `PLATFORM COMPLETE / PRODUCTION CUTOVER PENDING`
 
-Blocking external inputs remain:
+Phase 1 deferred content (non-blocking for technical cutover, still incomplete):
 1. land-register original
 2. optional cadastral-map original for completeness
-3. authorized raw binary for confirmed official PDFs
-4. at least one real direct exterior/road/neighborhood image binary
-5. real operator OWNER acceptance
-6. production host/domain/TLS and provider allowlists
-7. Leaked Password Protection enablement
-8. Bangbae-only dry-run blocker = 0 before any migration
+3. real direct exterior/road/neighborhood image binary
+4. Digital Twin real source assets
+
+Confirmed recovered source package:
+- four official PDFs raw-binary recovered and SHA-256 locked
+- Google Drive source folder prepared
+- cutover ZIP prepared
+- Data Room MERGE backup prepared: `DAON_Bangbae_815-11_Phase1_DataRoom_MERGE_2026-09-26.json`
+- MERGE package SHA-256: `67c858763c1f4220a7191c825088d7a65f5e749881457a4a411bb887209bf763`
+- browser E2E validates 4-source batch Blob attachment and Bangbae-only dry-run source-document blocker clearance
+
+Remaining hard gates:
+1. restore the prepared Phase 1 MERGE package in the actual operator browser and confirm 4 Blob-backed PropertyDocuments
+2. actual Bangbae-only dry-run blocker = 0
+3. real operator OWNER acceptance
+4. Production frontend/domain/TLS + protected proxy + provider/auth/CORS allowlists
+5. Supabase Leaked Password Protection enablement
+6. external Production HTTP acceptance
+7. exact `MIGRATE TO PRODUCTION` approval against the final plan
+8. controlled migration + reconciliation + physical second-device/public-share acceptance
