@@ -4,8 +4,22 @@ import react from '@vitejs/plugin-react';
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
   const includeLocalBootstrap = mode === 'development' || env.VITE_CUTOVER_MODE === 'true';
+  const localBootstrapBoundary = {
+    name: 'daon-local-bootstrap-boundary',
+    enforce: 'pre' as const,
+    resolveId(id: string) {
+      if (!includeLocalBootstrap && id === './services/localBootstrapService') return '\0daon-local-bootstrap-stub';
+      return null;
+    },
+    load(id: string) {
+      if (id === '\0daon-local-bootstrap-stub') {
+        return 'export const localBootstrapService = { ensure: async () => undefined };';
+      }
+      return null;
+    },
+  };
   return {
-    plugins: [react()],
+    plugins: [localBootstrapBoundary, react()],
     define: {
       __DAON_INCLUDE_LOCAL_BOOTSTRAP__: JSON.stringify(includeLocalBootstrap),
     },
