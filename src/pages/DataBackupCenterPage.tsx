@@ -16,6 +16,26 @@ function downloadJson(content: string, fileName: string) {
   URL.revokeObjectURL(url);
 }
 
+const BANGBAE_PHASE1_PROPERTY_ID = 'daon-bangbae-815-11';
+const BANGBAE_PHASE1_FILES = new Set([
+  '방배동 815-11 건축물대장.pdf',
+  '방배동815-11 토지등기부.pdf',
+  '방배동 815-11 건물등기부.pdf',
+  '방배 815-11 토지이용확인원.pdf',
+]);
+
+function isBangbaePhase1MergeBackup(backup?: DaonLocalBackup) {
+  if (!backup) return false;
+  const rows = backup.stores.propertyDocuments ?? [];
+  const matched = rows.filter((row) => {
+    const value = row.value as Record<string, unknown> | undefined;
+    return value?.propertyId === BANGBAE_PHASE1_PROPERTY_ID &&
+      typeof value.originalFileName === 'string' &&
+      BANGBAE_PHASE1_FILES.has(value.originalFileName);
+  });
+  return matched.length === BANGBAE_PHASE1_FILES.size;
+}
+
 export default function DataBackupCenterPage() {
   const [backup, setBackup] = useState<DaonLocalBackup>();
   const [preview, setPreview] = useState<BackupPreview>();
@@ -24,6 +44,7 @@ export default function DataBackupCenterPage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const bangbaePhase1Package = isBangbaePhase1MergeBackup(backup);
 
   const createBackup = async () => {
     setBusy(true); setError(''); setNotice('');
@@ -59,6 +80,23 @@ export default function DataBackupCenterPage() {
       setBackup(undefined); setPreview(undefined); setFileName('');
       setError(reason instanceof Error ? reason.message : '백업 파일을 읽지 못했습니다.');
     } finally { setBusy(false); event.target.value = ''; }
+  };
+
+  const restoreBangbaePhase1AndDryRun = async () => {
+    if (!backup || !bangbaePhase1Package) return;
+    setBusy(true); setError(''); setNotice('');
+    try {
+      const restored = await localBackupService.restore(backup, 'merge');
+      const result = await remoteMigrationDryRunService.run({ propertyIds: [BANGBAE_PHASE1_PROPERTY_ID] });
+      setDryRun(result);
+      setNotice(result.plan.readyForRemoteWrite
+        ? `방배동 Phase 1 복원 + Dry Run 완료: ${restored.restoredRecords}개 레코드 복원, blocker 0. Production write는 실행하지 않았습니다.`
+        : `방배동 Phase 1 복원 + Dry Run 완료: ${restored.restoredRecords}개 레코드 복원, blocker ${result.plan.counts.blockers}개가 남았습니다. Production write는 실행하지 않았습니다.`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '방배동 Phase 1 복원 및 Dry Run을 완료하지 못했습니다.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const restore = async (mode: 'merge' | 'replace') => {
@@ -133,6 +171,7 @@ export default function DataBackupCenterPage() {
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><div><p className="eyebrow">RESTORE PREVIEW</p><h2 style={{ margin: '4px 0' }}>백업 파일 검사</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>복원 전에 스키마와 레코드 수를 먼저 확인합니다.</p></div><Button component="label" startIcon={<UploadFileRounded />}>백업 파일 선택<input hidden type="file" accept="application/json,.json" onChange={(event) => void selectBackup(event)} /></Button></div>
           {busy && <div style={{ padding: 24, textAlign: 'center' }}><CircularProgress size={24} /></div>}
           {!busy && !preview && <div style={{ padding: 26, marginTop: 14, border: '1px dashed #ccd5df', borderRadius: 10, textAlign: 'center', color: '#667085' }}>선택된 백업 파일이 없습니다.</div>}
+          {bangbaePhase1Package && <Alert severity="info" sx={{ mt: 1.5 }}><strong>방배동 815-11 Phase 1 패키지 감지</strong> · 공적자료 4종을 기존 데이터에 병합하고 방배동만 대상으로 Dry Run을 즉시 실행할 수 있습니다.</Alert>}
           {preview && <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
             <div style={{ padding: 13, background: '#10243f', color: '#fff', borderRadius: 10 }}><strong>{fileName}</strong><small style={{ display: 'block', marginTop: 5, color: '#d7c8a7' }}>{preview.schemaVersion} · 생성 {new Date(preview.createdAt).toLocaleString('ko-KR')}</small></div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8 }}>{[['STORE', preview.storeCount], ['RECORD', preview.recordCount], ['LOCAL STATE', preview.localStorageCount], ['DB VERSION', preview.databaseVersion]].map(([label, value]) => <div key={String(label)} style={{ border: '1px solid #e4e9ef', borderRadius: 9, padding: 10 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 22 }}>{value}</strong></div>)}</div>
@@ -147,6 +186,7 @@ export default function DataBackupCenterPage() {
           <div style={{ padding: 12, border: '1px solid #dfe5ec', borderRadius: 10 }}><strong>MERGE</strong><p style={{ margin: '5px 0 10px', color: '#667085', fontSize: 12 }}>현재 데이터를 유지하면서 같은 key는 백업 값으로 갱신하고 없는 레코드는 추가합니다.</p><Button fullWidth variant="outlined" startIcon={<RestoreRounded />} disabled={!backup || busy} onClick={() => void restore('merge')}>병합 복원</Button></div>
           <div style={{ padding: 12, border: '1px solid #f1c7c7', borderRadius: 10, background: '#fffafa' }}><strong>REPLACE</strong><p style={{ margin: '5px 0 10px', color: '#667085', fontSize: 12 }}>현재 로컬 store와 daon: 운영상태를 비우고 백업 파일 기준으로 교체합니다. 실행 전 확인창이 표시됩니다.</p><Button fullWidth color="error" variant="outlined" startIcon={<RestoreRounded />} disabled={!backup || busy} onClick={() => void restore('replace')}>전체 교체 복원</Button></div>
         </div>
+        {bangbaePhase1Package && <Button fullWidth sx={{ mt: 1.2 }} variant="contained" color="warning" startIcon={<FactCheckRounded />} disabled={busy} onClick={() => void restoreBangbaePhase1AndDryRun()}>방배동 Phase 1 복원 + Dry Run</Button>}
         <Button fullWidth sx={{ mt: 1.2 }} startIcon={<DownloadRounded />} disabled={busy} onClick={() => void createBackup()}>복원 전 현재 백업</Button>
       </aside>
     </section>
