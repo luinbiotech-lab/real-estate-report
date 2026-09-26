@@ -15,7 +15,7 @@ for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
 for (const marker of [
-  "CUTOVER_MODE = import.meta.env.DEV || import.meta.env.VITE_CUTOVER_MODE === 'true'",
+  "CUTOVER_MODE = import.meta.env.DEV || import.meta.env.MODE === 'cutover' || import.meta.env.VITE_CUTOVER_MODE === 'true'",
   "REMOTE_OPERATIONAL_MODE = import.meta.env.VITE_REMOTE_OPERATIONAL_MODE === 'true'",
   'CUTOVER_MODE && REMOTE_OPERATIONAL_MODE',
 ]) if (!text.mode.includes(marker)) throw new Error(`Operational mode 계약 누락: ${marker}`);
@@ -53,7 +53,7 @@ for (const forbidden of [
 
 if (!text.app.includes("await import('./services/localBootstrapService')")) throw new Error('Local bootstrap은 dynamic import여야 합니다.');
 if (!text.app.includes('__DAON_INCLUDE_LOCAL_BOOTSTRAP__')) throw new Error('Local bootstrap은 build-time flag로 production bundle에서 제거되어야 합니다.');
-for (const marker of ['loadEnv', 'includeLocalBootstrap', '__DAON_INCLUDE_LOCAL_BOOTSTRAP__']) {
+for (const marker of ['loadEnv', "mode === 'cutover'", 'includeLocalBootstrap', '__DAON_INCLUDE_LOCAL_BOOTSTRAP__']) {
   if (!text.vite.includes(marker)) throw new Error(`Vite local-bootstrap tree-shake 계약 누락: ${marker}`);
 }
 if (!text.bootstrap.includes("id: 'daon-bangbae-815-11'")) throw new Error('Cutover bootstrap은 별도 모듈에 유지되어야 합니다.');
