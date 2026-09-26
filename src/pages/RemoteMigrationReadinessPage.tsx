@@ -1,6 +1,6 @@
 import { CloudOffRounded, DownloadRounded, FactCheckRounded, Inventory2Rounded, PlayArrowRounded, ShieldRounded, WarningAmberRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, Dialog, DialogActions, DialogContent, DialogTitle, MenuItem, TextField } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import type { Property, Settings } from '../types';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
@@ -10,6 +10,7 @@ import type { LocalMigrationSnapshot, RemoteMigrationPlan } from '../services/re
 import { REMOTE_MIGRATION_CONFIRMATION, remoteMigrationExecutionService, type RemoteMigrationExecutionResult } from '../services/remoteMigrationExecutionService';
 import { assessRequiredDocumentReadiness } from '../services/propertyReadinessService';
 import { DOCUMENT_TYPE_LABELS } from '../domain/propertyDataRoom/labels';
+import { localBackupService } from '../services/localBackupService';
 
 interface Props {
   settings: Settings;
@@ -76,6 +77,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
   const [executionResult, setExecutionResult] = useState<RemoteMigrationExecutionResult>();
   const [contentReadiness, setContentReadiness] = useState<ContentReadiness>();
   const [error, setError] = useState('');
+  const [phase1Notice, setPhase1Notice] = useState('');
   const targetProperty = useMemo(() => properties.find((item) => item.id === targetPropertyId), [properties, targetPropertyId]);
   const isBangbaePhase1 = targetPropertyId === BANGBAE_PHASE1_PROPERTY_ID;
 
@@ -143,6 +145,54 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
     }
   };
 
+  const importBangbaePhase1Package = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    setBusy(true); setError(''); setPhase1Notice('');
+    try {
+      if (targetPropertyId !== BANGBAE_PHASE1_PROPERTY_ID) throw new Error('Phase 1 패키지는 방배동 815-11 대상에서만 사용할 수 있습니다.');
+      const backup = localBackupService.parse(await file.text());
+      const rows = backup.stores.propertyDocuments ?? [];
+      const expectedFiles = new Set([
+        '방배동 815-11 건축물대장.pdf',
+        '방배동815-11 토지등기부.pdf',
+        '방배동 815-11 건물등기부.pdf',
+        '방배 815-11 토지이용확인원.pdf',
+      ]);
+      const matchedFiles = new Set<string>();
+      for (const row of rows) {
+        const value = row?.value;
+        if (!value || typeof value !== 'object' || Array.isArray(value)) continue;
+        const record = value as Record<string, unknown>;
+        if (record.propertyId !== BANGBAE_PHASE1_PROPERTY_ID) continue;
+        const name = typeof record.originalFileName === 'string' ? record.originalFileName : '';
+        const binary = record.fileData;
+        if (expectedFiles.has(name) && binary && typeof binary === 'object' && !Array.isArray(binary) && (binary as Record<string, unknown>).__daonBinary === 'blob') matchedFiles.add(name);
+      }
+      if (matchedFiles.size !== expectedFiles.size) {
+        throw new Error(`Phase 1 패키지의 공적자료 Blob이 불완전합니다. ${matchedFiles.size}/${expectedFiles.size}건 확인.`);
+      }
+
+      await localBackupService.restore(backup, 'merge');
+      await loadContentReadiness(BANGBAE_PHASE1_PROPERTY_ID);
+      const result = await remoteMigrationDryRunService.run({ companySettings: settings, propertyIds: [BANGBAE_PHASE1_PROPERTY_ID] });
+      setPlan(result.plan);
+      setSnapshot(result.snapshot);
+      setExecutionResult(undefined);
+      setConfirmationText('');
+      setConfirmOpen(false);
+      setPhase1Notice(`Phase 1 패키지 4건을 Data Room에 병합하고 Bangbae-only dry-run을 완료했습니다. Technical blocker ${result.plan.counts.blockers}건.`);
+    } catch (reason) {
+      setPlan(undefined);
+      setSnapshot(undefined);
+      setExecutionResult(undefined);
+      setError(reason instanceof Error ? reason.message : 'Phase 1 패키지를 연결하지 못했습니다.');
+    } finally {
+      setBusy(false);
+      event.target.value = '';
+    }
+  };
+
   const executeMigration = async () => {
     if (!plan || !snapshot) return;
     setExecuting(true); setError(''); setConfirmOpen(false);
@@ -175,12 +225,14 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
           {properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}
         </TextField>
         <Button variant="contained" startIcon={busy ? <CircularProgress size={17} color="inherit" /> : <PlayArrowRounded />} disabled={busy || executing || !targetPropertyId} onClick={() => void runDryRun()}>Dry-Run 실행</Button>
+        {isBangbaePhase1 && <Button component="label" variant="outlined" disabled={busy || executing} startIcon={<Inventory2Rounded />}>Phase 1 패키지 연결 + Dry-Run<input hidden type="file" accept="application/json,.json" onChange={(event) => void importBangbaePhase1Package(event)} /></Button>}
         <Button variant="outlined" startIcon={<DownloadRounded />} disabled={!plan || busy} onClick={() => plan && remoteMigrationDryRunService.download(plan)}>Manifest JSON 다운로드</Button>
         <Button variant="outlined" startIcon={<Inventory2Rounded />} disabled={!plan || busy} onClick={() => plan && remoteMigrationHandoffService.download(plan)}>Handoff Bundle 다운로드</Button>
       </div>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
+    {phase1Notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setPhase1Notice('')}>{phase1Notice}</Alert>
     <Alert severity="info" icon={<CloudOffRounded />} sx={{ mb: 2 }}><strong>DRY-RUN NETWORK WRITES = 0</strong> · Dry-run 자체는 원격 DB/Storage를 변경하지 않습니다. Production 실행은 별도 승인 게이트를 통과해야 합니다.</Alert>
 
     {!plan && !busy && <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 28, textAlign: 'center', marginBottom: 16 }}>
