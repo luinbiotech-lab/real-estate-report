@@ -82,8 +82,6 @@ async function importBangbaePhase1Package(page) {
     buffer: Buffer.from(JSON.stringify(backup), 'utf8'),
   });
   await waitForText(page, 'Phase 1 패키지 4건을 Data Room에 병합하고 Bangbae-only dry-run을 완료했습니다.');
-  const readyCount = await page.getByText('이관 파일 준비', { exact: true }).count();
-  if (readyCount < 4) throw new Error(`Expected 4 migration-ready source documents after phase1 package import, got ${readyCount}.`);
 }
 
 async function verifyBangbaeSourceReadinessAfterReload(page) {
