@@ -44,6 +44,14 @@ const cards: Array<{ key: keyof RemoteMigrationPlan['counts']; label: string }> 
   { key: 'blockers', label: 'BLOCKERS' },
 ];
 
+const BANGBAE_PHASE1_PROPERTY_ID = 'daon-bangbae-815-11';
+const BANGBAE_PHASE1_DEFERRED = [
+  '토지대장 원본',
+  '지적도 원본',
+  '직접 외관/도로/주변 이미지',
+  'Digital Twin 실제 원본',
+] as const;
+
 const rehearsal = [
   '부동산 전용 Supabase 프로젝트 식별자와 GPS/Sports 프로젝트가 분리되어 있는지 확인',
   'Auth/profile migration → 최초 OWNER bootstrap → last-owner protection을 먼저 검증',
@@ -69,6 +77,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
   const [contentReadiness, setContentReadiness] = useState<ContentReadiness>();
   const [error, setError] = useState('');
   const targetProperty = useMemo(() => properties.find((item) => item.id === targetPropertyId), [properties, targetPropertyId]);
+  const isBangbaePhase1 = targetPropertyId === BANGBAE_PHASE1_PROPERTY_ID;
 
   useEffect(() => {
     void propertyRepository.getAll().then((items) => setProperties(items)).catch((reason) => {
@@ -215,6 +224,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
               />
             </div>
             <Alert severity="info" sx={{ my: 1.25 }}><strong>STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.</strong> 이 영역은 Production write를 차단하지 않지만 운영자가 실데이터 완성도를 별도로 확인하기 위한 지표입니다.</Alert>
+            {isBangbaePhase1 && <Alert severity="warning" sx={{ mb: 1.25 }}><strong>PHASE 1 · 후속 보충 승인</strong> · 현재 확보된 공적자료와 검증 데이터로 기술 cutover를 계속합니다. 보충 예정: {BANGBAE_PHASE1_DEFERRED.join(' · ')}. 이 표시는 누락 자료를 완료로 간주하지 않으며 Content Readiness는 계속 부분완성으로 유지됩니다.</Alert>}
             {contentReadiness && <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8, fontSize: 13 }}>
               <div>원본 inventory <strong style={{ float: 'right' }}>{contentReadiness.sourceInventoryConfirmed}/{contentReadiness.sourceInventoryTotal}</strong></div>
               <div>필수자료 원본 <strong style={{ float: 'right' }}>{contentReadiness.requiredSourcePresent}/{contentReadiness.requiredDocumentTotal}</strong></div>
