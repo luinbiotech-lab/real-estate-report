@@ -232,7 +232,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
-    {phase1Notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setPhase1Notice('')}>{phase1Notice}</Alert>
+    {phase1Notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setPhase1Notice('')}>{phase1Notice}</Alert>}
     <Alert severity="info" icon={<CloudOffRounded />} sx={{ mb: 2 }}><strong>DRY-RUN NETWORK WRITES = 0</strong> · Dry-run 자체는 원격 DB/Storage를 변경하지 않습니다. Production 실행은 별도 승인 게이트를 통과해야 합니다.</Alert>
 
     {!plan && !busy && <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 28, textAlign: 'center', marginBottom: 16 }}>
