@@ -102,7 +102,7 @@ try {
   await page.getByLabel('이관 대상 물건').click();
   await page.getByRole('option', { name: /방배동 815-11 코너빌딩/ }).click();
   await page.getByRole('button', { name: 'Dry-Run 실행' }).click();
-  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY', 'CONTENT READINESS · NON-BLOCKING', 'CONTENT INCOMPLETE', 'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.', '원본 inventory', 'PRODUCTION ACCEPTANCE · EXTERNAL GATES', 'NOT PRODUCTION READY', '물리 2nd-device browser E2E', 'Production frontend host', '실사용 OWNER public-share issue/list/revoke browser acceptance', 'Production browser bundle/source-map server-secret scan', 'Spreadsheet import release regression']) await waitForText(page, text);
+  for (const text of ['MIGRATION GATE', 'BLOCKER REVIEW', 'STORAGE PLAN', 'REHEARSAL CHECKLIST', 'networkWrites=0', 'INLINE_BINARY', 'CONTENT READINESS · NON-BLOCKING', 'CONTENT INCOMPLETE', 'PHASE 1 · 후속 보충 승인', '토지대장 원본', '지적도 원본', 'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.', '원본 inventory', 'PRODUCTION ACCEPTANCE · EXTERNAL GATES', 'NOT PRODUCTION READY', '물리 2nd-device browser E2E', 'Production frontend host', '실사용 OWNER public-share issue/list/revoke browser acceptance', 'Production browser bundle/source-map server-secret scan', 'Spreadsheet import release regression']) await waitForText(page, text);
   await waitForText(page, '4/6');
   for (const text of ['필수자료 원본', '3/4', '필수자료 binary', '0/4', '필수자료 공식검증', '필수자료 미확인', '토지대장']) await waitForText(page, text);
 
