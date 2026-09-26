@@ -5,8 +5,8 @@ const root = 'dist-cutover';
 if (!existsSync(root)) throw new Error('dist-cutover build가 없습니다.');
 
 const required = [
+  'daon-bangbae-815-11',
   '서울 서초구 동광로18길 7',
-  '4150000000',
   '래미안 원페를라 인접',
   '소유자 직접 사용 / 잔금일 기준 전체 명도 가능',
 ];
