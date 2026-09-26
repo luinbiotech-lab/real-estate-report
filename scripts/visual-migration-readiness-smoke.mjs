@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 
@@ -31,6 +32,7 @@ async function writeQaRows(page) {
 async function importBangbaePhase1Package(page) {
   const pdf = Buffer.from('%PDF-1.4\n% DAON phase1 package QA document\n%%EOF\n', 'utf8');
   const encoded = pdf.toString('base64');
+  const sha256 = createHash('sha256').update(pdf).digest('hex');
   const now = new Date().toISOString();
   const docs = [
     ['bangbae-phase1-building-register', 'building_register', '방배동 815-11 건축물대장.pdf', '방배동 815-11 건축물대장'],
@@ -61,7 +63,7 @@ async function importBangbaePhase1Package(page) {
           uploadedAt: now,
           verificationStatus: 'confirmed',
           version: 1,
-          notes: 'QA phase1 package',
+          notes: `QA phase1 package; sha256=${sha256}`,
           extractionStatus: 'not_started',
           createdAt: now,
           updatedAt: now,
