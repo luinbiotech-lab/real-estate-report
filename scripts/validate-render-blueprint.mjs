@@ -21,6 +21,9 @@ for (const marker of [
   'key: MAP_PROXY_INTERNAL_URL',
   'key: VITE_SUPABASE_URL',
   'https://neeqcfxjwotyiodrlzvq.supabase.co',
+  'key: VITE_REQUIRE_REMOTE_AUTH',
+  'key: VITE_CUTOVER_MODE',
+  'key: VITE_REMOTE_OPERATIONAL_MODE',
   'key: VITE_SUPABASE_PUBLISHABLE_KEY',
   'key: VITE_KAKAO_JAVASCRIPT_KEY',
   'key: NAVER_MAP_CLIENT_ID',
@@ -50,3 +53,8 @@ if (/sb_secret_|service_role|DAON_OWNER_BOOTSTRAP_KEY\s*:\s*\S+/.test(text)) {
 }
 
 console.log('Render production blueprint boundary: PASS');
+
+const cutoverIndex = text.indexOf('key: VITE_CUTOVER_MODE');
+const remoteIndex = text.indexOf('key: VITE_REMOTE_OPERATIONAL_MODE');
+if (!text.slice(cutoverIndex, cutoverIndex + 90).includes('value: "true"')) throw new Error('초기 Render Blueprint는 authenticated cutover mode여야 합니다.');
+if (!text.slice(remoteIndex, remoteIndex + 110).includes('value: "false"')) throw new Error('초기 Render Blueprint는 migration 전 remote operational mode를 켜면 안 됩니다.');
