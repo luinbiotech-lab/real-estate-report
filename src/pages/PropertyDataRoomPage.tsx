@@ -120,6 +120,86 @@ export default function PropertyDataRoomPage() {
       event.target.value = '';
     }
   };
+  const uploadSourceDocuments = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    if (!files.length) return;
+    const inventories = bundle.dataSources.filter((source) => source.resourceType === 'source_document_inventory');
+    const plans: Array<{ source: DataRoomBundle['dataSources'][number]; file: File; documentType: DocumentType }> = [];
+    const matchedSourceIds = new Set<string>();
+
+    setUploading(true); setError('');
+    try {
+      for (const file of files) {
+        const validationError = propertyDataRoomService.validateDocument(file);
+        if (validationError) throw new Error(`${file.name}: ${validationError}`);
+
+        const normalizedFileName = normalizedSourceFileName(file.name);
+        const exactMatches = inventories.filter((source) => {
+          const sourceReference = typeof source.sourceReference === 'string' ? source.sourceReference : '';
+          return sourceReference && normalizedSourceFileName(sourceReference) === normalizedFileName;
+        });
+        const classifiedFromFile = propertyDataRoomService.classifyDocument(file.name);
+        const typeMatches = exactMatches.length ? [] : inventories.filter((source) => {
+          const inventoryType = typeof source.metadata?.documentType === 'string' ? source.metadata.documentType : '';
+          if (inventoryType === 'registry_land' || inventoryType === 'registry_building' || inventoryType === 'registry') return false;
+          return classifiedFromFile !== 'other' && propertyDataRoomService.classifyDocument(source.sourceReference || source.sourceName) === classifiedFromFile;
+        });
+        const matches = exactMatches.length ? exactMatches : typeMatches;
+        if (matches.length !== 1) {
+          throw new Error(matches.length
+            ? `${file.name}: 공적자료 원본 후보가 여러 개라 자동 연결할 수 없습니다.`
+            : `${file.name}: source inventory와 일치하는 공적자료를 찾지 못했습니다.`);
+        }
+
+        const source = matches[0];
+        if (matchedSourceIds.has(source.id)) throw new Error(`${file.name}: 같은 공적자료 source가 두 번 선택되었습니다.`);
+        const existing = bundle.documents.find((document) => sourceInventoryDocumentMatches(source, document) && Boolean(document.fileData || document.fileUrl));
+        if (existing) throw new Error(`${file.name}: 이미 이관 파일이 연결된 공적자료입니다 (${existing.originalFileName}).`);
+
+        const referenceForClassification = source.sourceReference || source.sourceName || file.name;
+        const classifiedFromSource = propertyDataRoomService.classifyDocument(referenceForClassification);
+        const resolvedType = classifiedFromSource !== 'other'
+          ? classifiedFromSource
+          : classifiedFromFile !== 'other'
+            ? classifiedFromFile
+            : documentType;
+        plans.push({ source, file, documentType: resolvedType });
+        matchedSourceIds.add(source.id);
+      }
+
+      for (const plan of plans) {
+        const savedDocument = await propertyDataRoomService.uploadDocument(id, plan.file, {
+          documentType: plan.documentType,
+          title: plan.source.sourceName || plan.file.name.replace(/\.[^.]+$/, ''),
+          sourceName: plan.source.sourceName || '사용자 업로드',
+        });
+        await propertyDataRoomRepository.saveDataSource({
+          ...plan.source,
+          sourceReference: savedDocument.originalFileName,
+          verificationStatus: 'confirmed',
+          metadata: {
+            ...plan.source.metadata,
+            originalSourcePresence: 'confirmed',
+            binaryStorageStatus: plan.source.metadata?.binaryStorageStatus === 'connected' ? 'connected' : 'not_connected',
+            storagePath: plan.source.metadata?.storagePath ?? null,
+            sourceReviewed: plan.source.metadata?.sourceReviewed === true,
+            matchedDocumentId: savedDocument.id,
+            note: plan.source.metadata?.sourceReviewed === true
+              ? '확인된 원본과 등록 파일을 일괄 연결했습니다. private Storage 연결은 Production migration에서 수행합니다.'
+              : '원본 파일 일괄 등록으로 존재를 확인했습니다. 문서 내용은 별도 검증이 필요하며 private Storage 연결은 Production migration에서 수행합니다.',
+          },
+        });
+      }
+
+      await load();
+      setTab('official');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '공적자료 원본을 일괄 등록하지 못했습니다.');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
+    }
+  };
   const removeDocument = async (document: PropertyDocument) => {
     if (!confirm(`“${document.title}” 문서를 삭제할까요? 파일 본문은 복구되지 않습니다.`)) return;
     await propertyDataRoomRepository.deleteDocument(document.id); await load();
@@ -167,7 +247,7 @@ export default function PropertyDataRoomPage() {
       {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} onTab={setTab} />}
       {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진이 없습니다." detail="물건 수정 화면에서 직접 촬영하거나 보유한 사진을 등록하세요." />}</div><MediaClassificationPanel propertyId={property.id} media={bundle.media} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} onQueued={async () => { await load(); setTab('verification'); }} />}
-      {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} />}
+      {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} onUploadSources={uploadSourceDocuments} />}
       {tab === 'market' && <ComparableTransactionPanel propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
       {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
       {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
@@ -209,8 +289,8 @@ function sourceInventoryDocumentMatches(source: DataRoomBundle['dataSources'][nu
   return expectedDocumentType !== 'other' && document.documentType === expectedDocumentType;
 }
 
-function OfficialPanel({ documents, sources, uploading, onUploadSource }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources']; uploading: boolean; onUploadSource: (source: DataRoomBundle['dataSources'][number], event: ChangeEvent<HTMLInputElement>) => void }) {
-  return <div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다. 원본 확인, migration upload 준비, private Storage 연결을 각각 분리해 관리합니다.</p>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => {
+function OfficialPanel({ documents, sources, uploading, onUploadSource, onUploadSources }: { documents: PropertyDocument[]; sources: DataRoomBundle['dataSources']; uploading: boolean; onUploadSource: (source: DataRoomBundle['dataSources'][number], event: ChangeEvent<HTMLInputElement>) => void; onUploadSources: (event: ChangeEvent<HTMLInputElement>) => void }) {
+  return <div><div className="document-toolbar"><div><h2>공적자료 및 데이터 출처</h2><p className="readiness-copy">공식 문서와 외부 데이터의 출처·기준일·검증 상태를 구분합니다. 원본 확인, migration upload 준비, private Storage 연결을 각각 분리해 관리합니다.</p></div><Button component="label" variant="contained" startIcon={<CloudUploadOutlined />} disabled={uploading}>{uploading ? '연결 중…' : '공적자료 일괄 연결'}<input hidden multiple type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={onUploadSources} /></Button></div>{documents.length || sources.length ? <div className="official-grid">{documents.map((item) => <article key={item.id}><b>{DOCUMENT_TYPE_LABELS[item.documentType]}</b><span>{item.title}</span><VerificationBadge status={item.verificationStatus} /></article>)}{sources.map((source) => {
     const isSourceInventory = source.resourceType === 'source_document_inventory';
     const binaryStorageStatus = source.metadata?.binaryStorageStatus;
     const originalSourcePresence = source.metadata?.originalSourcePresence;
