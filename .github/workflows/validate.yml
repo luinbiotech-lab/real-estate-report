@@ -140,6 +140,12 @@ jobs:
       - name: Scan production build for local property seed
         run: node scripts/scan-production-seed-leak.mjs
 
+      - name: Build explicit cutover bundle
+        run: npm run build:cutover
+
+      - name: Verify cutover build includes local seed
+        run: node scripts/scan-cutover-seed-present.mjs
+
       - name: Scan browser build for server secrets
         env:
           NAVER_MAP_CLIENT_SECRET: CI_SENTINEL_NAVER_SERVER_SECRET_20260924
