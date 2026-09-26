@@ -33,7 +33,8 @@
     "contentReadiness": "partial",
     "technicalMigrationReady": false,
     "explicitMigrationApprovalRecorded": false,
-    "phase1RestorePackagePrepared": true
+    "phase1RestorePackagePrepared": true,
+    "vercelDeploymentAdapterReady": true
   },
   "remainingHardGates": [
     "restore the prepared Phase 1 MERGE backup in the actual operator browser and confirm 4 PropertyDocument.fileData blobs",
@@ -57,5 +58,20 @@
     "restoreMode": "merge",
     "expectedPropertyDocumentRecords": 4,
     "purpose": "Restore the four recovered official PDF binaries directly into browser IndexedDB PropertyDocument.fileData via the existing validated backup/restore path."
+  },
+  "hosting": {
+    "vercelAdapterPrepared": true,
+    "vercelProjectProvisioned": false,
+    "vercelProjectCountObserved": 0,
+    "vercelConfig": "vercel.json",
+    "environmentContract": "docs/vercel-production-environment-contract.md",
+    "serverlessEndpoints": [
+      "/healthz",
+      "/api/status",
+      "/api/maps/geocode",
+      "/api/maps/static",
+      "/api/poi/search"
+    ],
+    "deploymentStatus": "PROJECT_LINK_REQUIRED"
   }
 }
