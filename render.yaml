@@ -25,6 +25,10 @@ services:
         value: https://neeqcfxjwotyiodrlzvq.supabase.co
       - key: VITE_REQUIRE_REMOTE_AUTH
         value: "true"
+      - key: VITE_CUTOVER_MODE
+        value: "true"
+      - key: VITE_REMOTE_OPERATIONAL_MODE
+        value: "false"
       - key: VITE_SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: VITE_KAKAO_JAVASCRIPT_KEY
