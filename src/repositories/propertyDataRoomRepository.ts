@@ -5,8 +5,9 @@ import { remoteAssetStorageGateway, remoteDataGateway, type RemoteAssetResourceT
 import { database } from './database';
 
 type StoreName = 'propertyDocuments' | 'propertyMedia' | 'propertyVerifications' | 'propertyVerificationCandidates' | 'propertyDataSources' | 'reportSnapshots' | 'digitalTwinAssets' | 'agentJobs' | 'agentResults' | 'agentReviews' | 'propertySpaces' | 'spaceMediaLinks' | 'spaceRoomLinks' | 'propertyFacilities' | 'roomEvidencePositions' | 'roomConditionHistory' | 'renovationAssessments' | 'roomRenovationAssessments' | 'roomRenovationHistory' | 'riskAssessments' | 'buildingReleaseSnapshots';
+type RemoteStoreName = Extract<RemotePropertyObjectType, StoreName>;
 
-const REMOTE_OBJECT_STORES = new Set<RemotePropertyObjectType>([
+const REMOTE_OBJECT_STORES = new Set<RemoteStoreName>([
   'propertyDataSources',
   'agentJobs',
   'agentResults',
@@ -24,8 +25,8 @@ const REMOTE_OBJECT_STORES = new Set<RemotePropertyObjectType>([
   'buildingReleaseSnapshots',
 ]);
 
-function isRemoteObjectStore(storeName: StoreName): storeName is RemotePropertyObjectType {
-  return REMOTE_OBJECT_STORES.has(storeName as RemotePropertyObjectType);
+function isRemoteObjectStore(storeName: StoreName): storeName is RemoteStoreName {
+  return REMOTE_OBJECT_STORES.has(storeName as RemoteStoreName);
 }
 
 async function localByProperty<T>(storeName: StoreName, propertyId: string): Promise<T[]> {
