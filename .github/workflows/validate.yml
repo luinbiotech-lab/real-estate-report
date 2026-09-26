@@ -114,6 +114,9 @@ jobs:
       - name: Validate production UI auth gate
         run: node scripts/validate-production-auth-gate.mjs
 
+      - name: Validate operational data provider switch
+        run: node scripts/validate-operational-data-provider.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -127,6 +130,9 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: CI_SENTINEL_SUPABASE_SERVICE_ROLE_20260924
           DAON_OWNER_BOOTSTRAP_KEY: CI_SENTINEL_DAON_OWNER_BOOTSTRAP_20260924
         run: npm run build
+
+      - name: Scan production build for local property seed
+        run: node scripts/scan-production-seed-leak.mjs
 
       - name: Scan browser build for server secrets
         env:
