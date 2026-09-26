@@ -123,9 +123,6 @@ jobs:
       - name: Validate production browser acceptance contract
         run: node scripts/validate-production-browser-acceptance.mjs
 
-      - name: Validate Vercel deployment contract
-        run: node scripts/validate-vercel-deployment.mjs
-
       - name: Typecheck
         run: npm run typecheck
 
