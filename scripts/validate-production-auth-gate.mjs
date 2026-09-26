@@ -21,9 +21,18 @@ for (const marker of [
 
 for (const marker of [
   "import ProductionAuthGate from './components/ProductionAuthGate';",
-  '<ProductionAuthGate><Routes>',
-  '</Routes></ProductionAuthGate>',
+  '<ProductionAuthGate>',
+  '<AppContent />',
+  '</ProductionAuthGate>',
+  'function AppContent()',
 ]) if (!text.app.includes(marker)) throw new Error(`App Production Auth Gate 연결 누락: ${marker}`);
+
+if (text.app.includes("import { bangbae81511DataSeedService }") || text.app.includes("import { streetViewProvenanceService }")) {
+  throw new Error('App은 방배동 seed/provenance 서비스를 정적으로 import하면 안 됩니다.');
+}
+if (!text.app.includes("await import('./services/localBootstrapService')")) {
+  throw new Error('Local/Cutover seed는 Auth 이후 dynamic import로만 로드해야 합니다.');
+}
 
 for (const marker of [
   'ARG VITE_REQUIRE_REMOTE_AUTH=true',
