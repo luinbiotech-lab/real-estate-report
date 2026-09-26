@@ -98,6 +98,8 @@ for (const marker of [
   'Data Room 완성도',
   'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.',
   'CONTENT INCOMPLETE',
+  'PHASE 1 · 후속 보충 승인',
+  'BANGBAE_PHASE1_DEFERRED',
   'sourceInventoryConfirmed',
   'sourceInventoryUnconfirmed',
   'storageConnectedSources',
