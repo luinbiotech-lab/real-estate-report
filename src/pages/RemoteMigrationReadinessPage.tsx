@@ -53,6 +53,23 @@ const BANGBAE_PHASE1_DEFERRED = [
   'Digital Twin 실제 원본',
 ] as const;
 
+function bytesFromBase64(base64: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+async function sha256Hex(bytes: Uint8Array) {
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+  return Array.from(digest, (value) => value.toString(16).padStart(2, '0')).join('');
+}
+
+function sha256FromNotes(value: unknown) {
+  if (typeof value !== 'string') return '';
+  return value.match(/(?:^|\s|;)sha256=([a-f0-9]{64})(?:$|\s|;)/i)?.[1]?.toLowerCase() ?? '';
+}
+
 const rehearsal = [
   '부동산 전용 Supabase 프로젝트 식별자와 GPS/Sports 프로젝트가 분리되어 있는지 확인',
   'Auth/profile migration → 최초 OWNER bootstrap → last-owner protection을 먼저 검증',
@@ -167,7 +184,18 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
         if (record.propertyId !== BANGBAE_PHASE1_PROPERTY_ID) continue;
         const name = typeof record.originalFileName === 'string' ? record.originalFileName : '';
         const binary = record.fileData;
-        if (expectedFiles.has(name) && binary && typeof binary === 'object' && !Array.isArray(binary) && (binary as Record<string, unknown>).__daonBinary === 'blob') matchedFiles.add(name);
+        if (!expectedFiles.has(name) || !binary || typeof binary !== 'object' || Array.isArray(binary)) continue;
+        const encodedBinary = binary as Record<string, unknown>;
+        if (encodedBinary.__daonBinary !== 'blob' || typeof encodedBinary.base64 !== 'string') continue;
+        const bytes = bytesFromBase64(encodedBinary.base64);
+        if (typeof record.fileSize !== 'number' || record.fileSize !== bytes.byteLength) {
+          throw new Error(`${name}: Phase 1 패키지 fileSize가 실제 Blob 크기와 일치하지 않습니다.`);
+        }
+        const expectedSha256 = sha256FromNotes(record.notes);
+        if (!expectedSha256) throw new Error(`${name}: Phase 1 패키지 SHA-256 provenance가 없습니다.`);
+        const actualSha256 = await sha256Hex(bytes);
+        if (actualSha256 !== expectedSha256) throw new Error(`${name}: Phase 1 패키지 SHA-256 검증에 실패했습니다.`);
+        matchedFiles.add(name);
       }
       if (matchedFiles.size !== expectedFiles.size) {
         throw new Error(`Phase 1 패키지의 공적자료 Blob이 불완전합니다. ${matchedFiles.size}/${expectedFiles.size}건 확인.`);
