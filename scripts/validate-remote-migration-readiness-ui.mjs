@@ -59,7 +59,6 @@ for (const marker of [
 ]) if (!text.page.includes(marker)) throw new Error(`Migration readiness UI marker 누락: ${marker}`);
 
 for (const forbidden of [
-  '.from(',
   '.insert(',
   '.update(',
   '.upsert(',
@@ -72,6 +71,9 @@ for (const forbidden of [
   'service_role',
 ]) {
   if (text.page.includes(forbidden)) throw new Error(`Migration readiness page에서 direct backend/secret 사용 금지: ${forbidden}`);
+}
+if (/(?:supabase|client|gateway)\.from\s*\(/.test(text.page)) {
+  throw new Error('Migration readiness page에서 direct backend .from() 사용 금지');
 }
 
 for (const marker of [
