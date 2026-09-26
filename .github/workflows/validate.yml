@@ -108,6 +108,9 @@ jobs:
       - name: Validate official source batch attachment
         run: node scripts/validate-official-source-batch-attachment.mjs
 
+      - name: Validate Render production blueprint
+        run: node scripts/validate-render-blueprint.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
