@@ -143,11 +143,6 @@ export async function executeRemoteMigration(
     written.properties += 1;
   }
 
-  for (const object of plan.objects) {
-    await remoteDataGateway.upsertObject(object);
-    written.objects += 1;
-  }
-
   for (const upload of plan.assetUploads) {
     const blob = localAssetBlobs.get(`${upload.resourceType}:${upload.id}`);
     if (!blob) throw new Error(`${upload.resourceType}/${upload.id}: preflight binary map이 일치하지 않습니다.`);
@@ -156,6 +151,14 @@ export async function executeRemoteMigration(
   for (const asset of plan.assets) {
     await remoteDataGateway.upsertAssetMetadata(asset);
     written.assets += 1;
+  }
+
+  // Source inventory may be promoted to binaryStorageStatus=connected in the plan.
+  // Write structured objects only after every planned binary upload and asset metadata write succeeds,
+  // so a failed Storage phase cannot leave a false "connected" source record behind.
+  for (const object of plan.objects) {
+    await remoteDataGateway.upsertObject(object);
+    written.objects += 1;
   }
 
   for (const item of plan.verificationCandidates) {
