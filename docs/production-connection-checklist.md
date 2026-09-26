@@ -2,7 +2,7 @@
 
 이 문서는 local-first 구현 완료 후 실제 외부 인프라를 연결할 때의 **Deployment Readiness Package**다. production Supabase/backend가 연결된 이후의 실제 배포·운영 마감 상태를 추적한다.
 
-Latest automated validation baseline: `9e1d8717bef59a29c150ce905349e6876138b424` / GitHub Actions #818 PASS
+Latest automated validation baseline: `432ce34bbc4d07a8ade26b098e4f223e3a534012` / GitHub Actions run `36217677657` PASS
 Branch: `feat/daon-master-code-lock`
 
 ## 0. 사전 원칙
@@ -326,7 +326,7 @@ Server-only:
 - [x] Typecheck PASS — GitHub Actions #818
 - [x] Lint PASS — GitHub Actions #818
 - [x] Build PASS — GitHub Actions #818
-- [x] GitHub Actions 전체 PASS — #818 (`9e1d8717bef59a29c150ce905349e6876138b424`)
+- [x] GitHub Actions 전체 PASS — run `36217677657` (`432ce34bbc4d07a8ade26b098e4f223e3a534012`)
 - [ ] Production E2E PASS
 
 ## 현재 상태 확인
@@ -349,7 +349,7 @@ npm run readiness:prod
 - actual second-device browser acceptance = REQUIRED
 - production frontend/proxy = MISSING EXTERNAL INFRA
 - provider/domain allowlist = CHECK REQUIRED
-- Supabase Auth leaked-password protection = MANUAL ENABLE REQUIRED
+- Supabase Auth leaked-password protection = DISABLED CONFIRMED 2026-09-26 / MANUAL ENABLE REQUIRED
 - spreadsheet parser = PATCHED_PINNED_REVIEW_AT_RELEASE
 
 서버 연결 완료와 실사용 운영 마감은 구분한다. 운영 계정·second-device·도메인·proxy 검증 후 최종 Production READY로 승격한다.
@@ -367,3 +367,36 @@ npm run readiness:prod
 - 실제 host 연결 후 `DAON_PRODUCTION_BASE_URL=https://...`과 필요 시 `DAON_PRODUCTION_API_BASE_URL=https://...`을 설정하고 `npm run test:prod-http` 실행
 - production URL 미설정 상태를 PASS 처리하지 않는다.
 - HTTPS, `/healthz`, SPA fallback, 보안 헤더, `/api/status`, server-secret 비노출을 확인한다.
+
+
+## 2026-09-26 Production read-only cutover recheck
+
+Production project: `real-estate-report-production`
+
+Read-only verification result:
+
+- properties = 2
+- Bangbae `daon-bangbae-815-11` = 0
+- property_assets = 0
+- property_verifications = 0
+- report_snapshots = 0
+- external_share_sessions = 0
+- profiles = QA Owner 1 / QA Editor 1 / QA Viewer 1
+- real operator OWNER = not present
+- private bucket `daon-property-assets` = public false / 50 MiB cap
+- Supabase Security Advisor = Leaked Password Protection Disabled
+- no Production write was executed
+
+Current cutover state:
+
+`PLATFORM COMPLETE / PRODUCTION CUTOVER PENDING`
+
+Blocking external inputs remain:
+1. land-register original
+2. optional cadastral-map original for completeness
+3. authorized raw binary for confirmed official PDFs
+4. at least one real direct exterior/road/neighborhood image binary
+5. real operator OWNER acceptance
+6. production host/domain/TLS and provider allowlists
+7. Leaked Password Protection enablement
+8. Bangbae-only dry-run blocker = 0 before any migration
