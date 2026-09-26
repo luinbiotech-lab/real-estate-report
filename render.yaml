@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: daon-real-estate-report
+    runtime: docker
+    repo: https://github.com/luinbiotech-lab/real-estate-report.git
+    branch: feat/daon-master-code-lock
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /healthz
+    autoDeployTrigger: checksPass
+    renderSubdomainPolicy: enabled
+    envVars:
+      - key: FRONTEND_HOST
+        value: 0.0.0.0
+      - key: FRONTEND_PORT
+        value: "4174"
+      - key: MAP_PROXY_HOST
+        value: 127.0.0.1
+      - key: MAP_PROXY_PORT
+        value: "5175"
+      - key: MAP_PROXY_INTERNAL_URL
+        value: http://127.0.0.1:5175
+      - key: VITE_SUPABASE_URL
+        value: https://neeqcfxjwotyiodrlzvq.supabase.co
+      - key: VITE_SUPABASE_PUBLISHABLE_KEY
+        sync: false
+      - key: VITE_KAKAO_JAVASCRIPT_KEY
+        sync: false
+      - key: NAVER_MAP_CLIENT_ID
+        sync: false
+      - key: NAVER_MAP_CLIENT_SECRET
+        sync: false
+      - key: KAKAO_REST_API_KEY
+        sync: false
+      - key: MAP_PROXY_ALLOWED_ORIGINS
+        sync: false
