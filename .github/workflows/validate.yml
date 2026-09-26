@@ -117,6 +117,9 @@ jobs:
       - name: Validate operational data provider switch
         run: node scripts/validate-operational-data-provider.mjs
 
+      - name: Validate production browser acceptance contract
+        run: node scripts/validate-production-browser-acceptance.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
