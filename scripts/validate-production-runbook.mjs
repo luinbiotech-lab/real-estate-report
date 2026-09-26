@@ -168,7 +168,7 @@ for (const marker of ['private.daon_is_owner()', 'revoke all on public.external_
 }
 
 for (const required of [
-  'PATCHED VERSION PINNED / RELEASE ADVISORY REVIEW REQUIRED',
+  'PATCHED VERSION PINNED / RELEASE ADVISORY REVIEW COMPLETED 2026-09-27',
   '0.20.3',
   'CVE-2023-30533',
   'CVE-2024-22363',
