@@ -352,6 +352,21 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
         propertyId: inventory.propertyId,
         message: `${inventory.sourceName} 원본 존재는 확인됐지만 private Storage binary 연결 또는 이번 migration의 document upload 준비가 확인되지 않았습니다.`,
       });
+      continue;
+    }
+
+    const sourceObject = objects.find((item) => item.objectType === 'propertyDataSources' && item.id === inventory.id);
+    if (sourceObject) {
+      const metadata = record(sourceObject.payload.metadata) ?? {};
+      sourceObject.payload = {
+        ...sourceObject.payload,
+        metadata: {
+          ...metadata,
+          binaryStorageStatus: 'connected',
+          storagePath: scheduledDocumentUpload.storagePath,
+          migrationStorageConnectedAt: 'planned-at-cutover',
+        },
+      };
     }
   }
 
