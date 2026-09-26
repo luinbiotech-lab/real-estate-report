@@ -69,7 +69,7 @@ function AppContent() {
   useEffect(() => {
     void (async () => {
       try {
-        if (import.meta.env.DEV || import.meta.env.VITE_CUTOVER_MODE === 'true') {
+        if (__DAON_INCLUDE_LOCAL_BOOTSTRAP__) {
           const { localBootstrapService } = await import('./services/localBootstrapService');
           await localBootstrapService.ensure({
             managerName: DAON_MANAGER,
