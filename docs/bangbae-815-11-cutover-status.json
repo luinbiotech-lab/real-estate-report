@@ -1,0 +1,47 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-26",
+  "propertyId": "daon-bangbae-815-11",
+  "production": {
+    "supabaseProjectId": "neeqcfxjwotyiodrlzvq",
+    "projectName": "real-estate-report-production",
+    "region": "ap-northeast-2",
+    "projectStatus": "ACTIVE_HEALTHY",
+    "projectUrl": "https://neeqcfxjwotyiodrlzvq.supabase.co",
+    "bangbaePropertyCount": 0,
+    "bangbaeAssetCount": 0,
+    "bangbaeVerificationCount": 0,
+    "bangbaeReportSnapshotCount": 0,
+    "productionWritePerformed": false
+  },
+  "sourcePackage": {
+    "driveFolderId": "1lxBpSJSbyOIcPts8YxrQMGKPznetSk-7",
+    "cutoverZipDriveFileId": "1ZDixVaIN4IFXZm7XXUP7gs84x1-76NKk",
+    "recoveredOfficialPdfCount": 4,
+    "rawBinaryAccessible": true
+  },
+  "security": {
+    "realOperatorOwnerPresent": false,
+    "leakedPasswordProtectionEnabled": false,
+    "edgeFunctions": {
+      "remoteAuthAdmin": "active",
+      "remotePublicShare": "active"
+    }
+  },
+  "readiness": {
+    "contentScope": "phase_1_with_deferred_items",
+    "contentReadiness": "partial",
+    "technicalMigrationReady": false,
+    "explicitMigrationApprovalRecorded": false
+  },
+  "remainingHardGates": [
+    "attach recovered official PDFs into the actual browser Data Room as PropertyDocument.fileData blobs",
+    "run Bangbae-only dry-run and obtain zero technical migration blockers",
+    "provision/accept a real operator OWNER",
+    "enable Supabase leaked-password protection",
+    "complete production host/domain/TLS and provider allowlist acceptance",
+    "record exact explicit production migration approval",
+    "execute controlled migration once",
+    "complete post-migration reconciliation and second-device/public-share acceptance"
+  ]
+}
