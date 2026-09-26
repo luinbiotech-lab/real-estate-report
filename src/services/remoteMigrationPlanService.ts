@@ -364,7 +364,6 @@ export function buildRemoteMigrationPlan(snapshot: LocalMigrationSnapshot): Remo
           ...metadata,
           binaryStorageStatus: 'connected',
           storagePath: scheduledDocumentUpload.storagePath,
-          migrationStorageConnectedAt: 'planned-at-cutover',
         },
       };
     }
