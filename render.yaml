@@ -23,6 +23,8 @@ services:
         value: http://127.0.0.1:5175
       - key: VITE_SUPABASE_URL
         value: https://neeqcfxjwotyiodrlzvq.supabase.co
+      - key: VITE_REQUIRE_REMOTE_AUTH
+        value: "true"
       - key: VITE_SUPABASE_PUBLISHABLE_KEY
         sync: false
       - key: VITE_KAKAO_JAVASCRIPT_KEY
