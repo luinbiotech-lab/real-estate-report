@@ -28,6 +28,18 @@
   ],
   "rewrites": [
     {
+      "source": "/healthz",
+      "destination": "/api/healthz"
+    },
+    {
+      "source": "/control-center",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/agents/:path*",
+      "destination": "/index.html"
+    },
+    {
       "source": "/property/:path*",
       "destination": "/index.html"
     },
@@ -36,15 +48,59 @@
       "destination": "/index.html"
     },
     {
-      "source": "/document/:path*",
+      "source": "/import",
       "destination": "/index.html"
     },
     {
-      "source": "/professional-report/:path*",
+      "source": "/bulk-intake",
       "destination": "/index.html"
     },
     {
-      "source": "/migration-readiness",
+      "source": "/readiness",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/interior",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/room-ops",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/spatial",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/digital-twin-intake",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/digital-twin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/external-shares",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/income",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/review-history",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/access",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/risk",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/report-history",
       "destination": "/index.html"
     },
     {
@@ -52,7 +108,19 @@
       "destination": "/index.html"
     },
     {
-      "source": "/:path((?!api/).*)",
+      "source": "/migration-readiness",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/document/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/professional-report/:path*",
       "destination": "/index.html"
     }
   ]
