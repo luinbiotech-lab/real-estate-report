@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "checkedAt": "2026-09-26",
+  "checkedAt": "2026-09-27",
   "propertyId": "daon-bangbae-815-11",
   "production": {
     "supabaseProjectId": "neeqcfxjwotyiodrlzvq",
@@ -34,7 +34,9 @@
     "technicalMigrationReady": false,
     "explicitMigrationApprovalRecorded": false,
     "phase1RestorePackagePrepared": true,
-    "vercelDeploymentAdapterReady": true
+    "vercelDeploymentAdapterReady": true,
+    "postMigrationReconciliationPrepared": true,
+    "blindMigrationRetryAllowed": false
   },
   "remainingHardGates": [
     "restore the prepared Phase 1 MERGE backup in the actual operator browser and confirm 4 PropertyDocument.fileData blobs",
@@ -73,5 +75,22 @@
       "/api/poi/search"
     ],
     "deploymentStatus": "PROJECT_LINK_REQUIRED"
+  },
+  "postMigrationReconciliation": {
+    "workflow": ".github/workflows/post-migration-reconciliation.yml",
+    "script": "scripts/post-migration-reconciliation.mjs",
+    "mode": "read_only",
+    "checks": [
+      "exactly one target property row",
+      "property object counts",
+      "asset metadata rows",
+      "verification candidate rows",
+      "verification rows",
+      "report snapshot rows",
+      "private Storage download round-trip for every migrated asset",
+      "binary byte-size equality against property_assets.file_size"
+    ],
+    "productionWrites": 0,
+    "retryPolicy": "Do not blindly re-run initial migration after partial failure. Diagnose remote state first; executor blocks overwrite when the target property already exists."
   }
 }
