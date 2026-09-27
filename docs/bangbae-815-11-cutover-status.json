@@ -92,5 +92,17 @@
     ],
     "productionWrites": 0,
     "retryPolicy": "Do not blindly re-run initial migration after partial failure. Diagnose remote state first; executor blocks overwrite when the target property already exists."
+  },
+  "productionIntegrityAudit": {
+    "checkedAt": "2026-09-27",
+    "orphanPropertyObjects": 0,
+    "orphanPropertyAssets": 0,
+    "orphanVerificationCandidates": 0,
+    "orphanVerifications": 0,
+    "orphanReportSnapshots": 0,
+    "invalidAssetStoragePaths": 0,
+    "rlsEnabledOnOperationalTables": true,
+    "privateAssetBucket": true,
+    "assetBucketFileSizeLimitBytes": 52428800
   }
 }
