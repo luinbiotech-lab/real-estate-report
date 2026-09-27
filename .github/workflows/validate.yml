@@ -132,6 +132,9 @@ jobs:
       - name: Validate Production cutover preflight contract
         run: node scripts/validate-production-cutover-preflight.mjs
 
+      - name: Validate post-migration reconciliation contract
+        run: node scripts/validate-post-migration-reconciliation.mjs
+
       - name: Typecheck
         run: npm run typecheck
 
