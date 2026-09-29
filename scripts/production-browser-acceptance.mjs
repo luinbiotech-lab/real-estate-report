@@ -18,10 +18,17 @@ async function signInAndVerify(context, label) {
   await page.getByLabel('이메일').fill(email);
   await page.getByLabel('비밀번호').fill(password);
   await page.getByRole('button', { name: 'Production 로그인', exact: true }).click();
-  await page.waitForFunction(() => !document.body?.innerText.includes('운영자 로그인'), undefined, { timeout: 30_000 });
+  await page.waitForFunction(() => {
+    const text = document.body?.innerText ?? '';
+    return !text.includes('운영자 로그인') || text.includes('REMOTE AUTH 요청 실패') || text.includes('Production 로그인에 실패했습니다.');
+  }, undefined, { timeout: 30_000 });
 
   const body = await page.locator('body').innerText();
-  if (!body || body.includes('Production 로그인에 실패했습니다.')) throw new Error(`${label}: Production 로그인 실패`);
+  if (!body) throw new Error(`${label}: Production 응답 본문이 비어 있습니다.`);
+  if (body.includes('운영자 로그인')) {
+    const errorLine = body.split('\n').find((line) => /REMOTE AUTH 요청 실패|Production 로그인에 실패했습니다\.|비활성화된 REMOTE AUTH 사용자|profile을 찾을 수 없습니다/i.test(line)) ?? '로그인 화면이 유지되었습니다.';
+    throw new Error(`${label}: Production 로그인 실패 · ${errorLine}`);
+  }
 
   for (const path of ['/', '/migration-readiness', '/backup', '/external-shares']) {
     await page.goto(new URL(path, base), { waitUntil: 'domcontentloaded' });
