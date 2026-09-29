@@ -55,6 +55,10 @@ function jsonObject(value: unknown): JsonObject {
   return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {};
 }
 
+function defaultFetch(): typeof fetch {
+  return globalThis.fetch.bind(globalThis);
+}
+
 function role(value: unknown): AccessRole {
   return value === 'owner' || value === 'admin' || value === 'editor' || value === 'viewer' ? value : 'viewer';
 }
@@ -96,7 +100,7 @@ export class SupabaseRemoteAuthGateway implements RemoteAuthGateway {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
     this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
     this.tokenStore = config.tokenStore ?? createMemoryRemoteAuthTokenStore();
-    this.fetchImpl = config.fetchImpl ?? fetch;
+    this.fetchImpl = config.fetchImpl ?? defaultFetch();
     this.adminFunctionName = config.adminFunctionName?.trim() || 'remote-auth-admin';
     if (!/^[A-Za-z0-9_-]+$/.test(this.adminFunctionName)) throw new Error('유효하지 않은 Auth admin function name입니다.');
   }
