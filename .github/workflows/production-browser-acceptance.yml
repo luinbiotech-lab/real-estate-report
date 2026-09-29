@@ -7,6 +7,11 @@ on:
         description: "HTTPS production frontend origin"
         required: true
         type: string
+  push:
+    branches:
+      - master
+    paths:
+      - ".github/approvals/production-browser-acceptance.once"
 
 jobs:
   browser-acceptance:
@@ -32,7 +37,7 @@ jobs:
 
       - name: Run production two-context browser acceptance
         env:
-          DAON_PRODUCTION_BASE_URL: ${{ inputs.production_base_url }}
+          DAON_PRODUCTION_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.production_base_url || 'https://real-estate-report-lime.vercel.app' }}
           DAON_PRODUCTION_OWNER_EMAIL: ${{ secrets.DAON_PRODUCTION_OWNER_EMAIL }}
           DAON_PRODUCTION_OWNER_PASSWORD: ${{ secrets.DAON_PRODUCTION_OWNER_PASSWORD }}
         run: node scripts/production-browser-acceptance.mjs
