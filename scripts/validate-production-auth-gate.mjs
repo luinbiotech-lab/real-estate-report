@@ -5,6 +5,7 @@ const files = {
   app: 'src/App.tsx',
   docker: 'Dockerfile',
   render: 'render.yaml',
+  vercel: 'vercel.json',
   env: '.env.example',
 };
 
@@ -41,6 +42,13 @@ for (const marker of [
 
 if (!text.render.includes('key: VITE_REQUIRE_REMOTE_AUTH') || !text.render.includes('value: "true"')) {
   throw new Error('Render production service는 VITE_REQUIRE_REMOTE_AUTH=true여야 합니다.');
+}
+const vercel = JSON.parse(text.vercel);
+if (!String(vercel.buildCommand ?? '').includes('VITE_REQUIRE_REMOTE_AUTH=true')) {
+  throw new Error('Vercel production build는 VITE_REQUIRE_REMOTE_AUTH=true를 강제해야 합니다.');
+}
+if (!String(vercel.buildCommand ?? '').includes('VITE_REMOTE_OPERATIONAL_MODE=true')) {
+  throw new Error('Vercel production build는 VITE_REMOTE_OPERATIONAL_MODE=true를 강제해야 합니다.');
 }
 if (!text.env.includes('VITE_REQUIRE_REMOTE_AUTH=false')) {
   throw new Error('Local env example은 명시적으로 Production Auth Gate default false를 문서화해야 합니다.');
