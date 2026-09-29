@@ -1,0 +1,39 @@
+name: Production Post-Migration Reconciliation
+
+on:
+  workflow_dispatch:
+    inputs:
+      property_id:
+        description: "Property ID to reconcile"
+        required: true
+        default: "daon-bangbae-815-11"
+        type: string
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Reconcile Production DB and private Storage
+        env:
+          SUPABASE_PROJECT_URL: https://neeqcfxjwotyiodrlzvq.supabase.co
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DAON_RECONCILE_PROPERTY_ID: ${{ inputs.property_id }}
+        run: node scripts/post-migration-reconciliation.mjs
+
+      - name: Safety summary
+        if: always()
+        run: |
+          {
+            echo "## DA:ON Post-Migration Reconciliation"
+            echo "- Production mutation: NONE"
+            echo "- Validates DB rows and private Storage round-trip only."
+          } >> "$GITHUB_STEP_SUMMARY"

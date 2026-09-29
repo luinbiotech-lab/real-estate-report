@@ -1,0 +1,108 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-09-27",
+  "propertyId": "daon-bangbae-815-11",
+  "production": {
+    "supabaseProjectId": "neeqcfxjwotyiodrlzvq",
+    "projectName": "real-estate-report-production",
+    "region": "ap-northeast-2",
+    "projectStatus": "ACTIVE_HEALTHY",
+    "projectUrl": "https://neeqcfxjwotyiodrlzvq.supabase.co",
+    "bangbaePropertyCount": 0,
+    "bangbaeAssetCount": 0,
+    "bangbaeVerificationCount": 0,
+    "bangbaeReportSnapshotCount": 0,
+    "productionWritePerformed": false
+  },
+  "sourcePackage": {
+    "driveFolderId": "1lxBpSJSbyOIcPts8YxrQMGKPznetSk-7",
+    "cutoverZipDriveFileId": "1ZDixVaIN4IFXZm7XXUP7gs84x1-76NKk",
+    "recoveredOfficialPdfCount": 4,
+    "rawBinaryAccessible": true
+  },
+  "security": {
+    "realOperatorOwnerPresent": false,
+    "leakedPasswordProtectionEnabled": false,
+    "edgeFunctions": {
+      "remoteAuthAdmin": "active",
+      "remotePublicShare": "active"
+    }
+  },
+  "readiness": {
+    "contentScope": "phase_1_with_deferred_items",
+    "contentReadiness": "partial",
+    "technicalMigrationReady": false,
+    "explicitMigrationApprovalRecorded": false,
+    "phase1RestorePackagePrepared": true,
+    "vercelDeploymentAdapterReady": true,
+    "postMigrationReconciliationPrepared": true,
+    "blindMigrationRetryAllowed": false
+  },
+  "remainingHardGates": [
+    "restore the prepared Phase 1 MERGE backup in the actual operator browser and confirm 4 PropertyDocument.fileData blobs",
+    "run Bangbae-only dry-run and obtain zero technical migration blockers",
+    "provision/accept a real operator OWNER",
+    "enable Supabase leaked-password protection",
+    "complete production host/domain/TLS and provider allowlist acceptance",
+    "record exact explicit production migration approval",
+    "execute controlled migration once",
+    "complete post-migration reconciliation and second-device/public-share acceptance"
+  ],
+  "phase1DataRoomRestorePackage": {
+    "driveFolderId": "1lxBpSJSbyOIcPts8YxrQMGKPznetSk-7",
+    "driveFileId": "1sfKVkKcO-WrE3cnxvxORNtWkJ2abp_JY",
+    "fileName": "DAON_Bangbae_815-11_Phase1_DataRoom_MERGE_2026-09-26.json",
+    "sha256": "67c858763c1f4220a7191c825088d7a65f5e749881457a4a411bb887209bf763",
+    "sizeBytes": 922539,
+    "schemaVersion": "daon-local-backup-v1",
+    "databaseName": "real-estate-report",
+    "databaseVersion": 13,
+    "restoreMode": "merge",
+    "expectedPropertyDocumentRecords": 4,
+    "purpose": "Restore the four recovered official PDF binaries directly into browser IndexedDB PropertyDocument.fileData via the existing validated backup/restore path."
+  },
+  "hosting": {
+    "vercelAdapterPrepared": true,
+    "vercelProjectProvisioned": false,
+    "vercelProjectCountObserved": 0,
+    "vercelConfig": "vercel.json",
+    "environmentContract": "docs/vercel-production-environment-contract.md",
+    "serverlessEndpoints": [
+      "/healthz",
+      "/api/status",
+      "/api/maps/geocode",
+      "/api/maps/static",
+      "/api/poi/search"
+    ],
+    "deploymentStatus": "PROJECT_LINK_REQUIRED"
+  },
+  "postMigrationReconciliation": {
+    "workflow": ".github/workflows/post-migration-reconciliation.yml",
+    "script": "scripts/post-migration-reconciliation.mjs",
+    "mode": "read_only",
+    "checks": [
+      "exactly one target property row",
+      "property object counts",
+      "asset metadata rows",
+      "verification candidate rows",
+      "verification rows",
+      "report snapshot rows",
+      "private Storage download round-trip for every migrated asset",
+      "binary byte-size equality against property_assets.file_size"
+    ],
+    "productionWrites": 0,
+    "retryPolicy": "Do not blindly re-run initial migration after partial failure. Diagnose remote state first; executor blocks overwrite when the target property already exists."
+  },
+  "productionIntegrityAudit": {
+    "checkedAt": "2026-09-27",
+    "orphanPropertyObjects": 0,
+    "orphanPropertyAssets": 0,
+    "orphanVerificationCandidates": 0,
+    "orphanVerifications": 0,
+    "orphanReportSnapshots": 0,
+    "invalidAssetStoragePaths": 0,
+    "rlsEnabledOnOperationalTables": true,
+    "privateAssetBucket": true,
+    "assetBucketFileSizeLimitBytes": 52428800
+  }
+}

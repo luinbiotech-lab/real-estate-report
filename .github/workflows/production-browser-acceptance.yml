@@ -1,0 +1,38 @@
+name: Production Browser Acceptance
+
+on:
+  workflow_dispatch:
+    inputs:
+      production_base_url:
+        description: "HTTPS production frontend origin"
+        required: true
+        type: string
+
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+
+      - name: Run production two-context browser acceptance
+        env:
+          DAON_PRODUCTION_BASE_URL: ${{ inputs.production_base_url }}
+          DAON_PRODUCTION_OWNER_EMAIL: ${{ secrets.DAON_PRODUCTION_OWNER_EMAIL }}
+          DAON_PRODUCTION_OWNER_PASSWORD: ${{ secrets.DAON_PRODUCTION_OWNER_PASSWORD }}
+        run: node scripts/production-browser-acceptance.mjs

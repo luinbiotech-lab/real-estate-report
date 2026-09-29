@@ -1,0 +1,77 @@
+name: Prepare SheetJS Upgrade
+
+on:
+  push:
+    branches:
+      - feat/daon-master-code-lock
+    paths:
+      - .github/workflows/prepare-sheetjs-upgrade.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: feat/daon-master-code-lock
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install current lockfile
+        run: npm ci
+
+      - name: Install official SheetJS 0.20.3
+        run: npm install --save https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz
+
+      - name: Apply safe audit fixes
+        run: npm audit fix
+
+      - name: Verify upgraded dependencies
+        run: |
+          node -e "const p=require('./node_modules/xlsx/package.json'); if(p.version!=='0.20.3') throw new Error('Expected xlsx 0.20.3, got '+p.version); console.log('xlsx',p.version)"
+          node -e "const p=require('./node_modules/js-yaml/package.json'); const [a,b,c]=p.version.split('.').map(Number); if(a<4 || (a===4 && (b<3 || (b===3 && c<2)))) throw new Error('Expected js-yaml >=4.3.2, got '+p.version); console.log('js-yaml',p.version)"
+
+      - name: Typecheck with upgraded dependencies
+        run: npm run typecheck
+
+      - name: Lint with upgraded dependencies
+        run: npm run lint
+
+      - name: Build with upgraded dependencies
+        run: npm run build
+
+      - name: Audit upgraded dependency tree
+        run: |
+          npm audit --json > sheetjs-upgrade-audit.json || true
+          node -e "const a=require('./sheetjs-upgrade-audit.json'); const v=a.metadata?.vulnerabilities||{}; if((v.high||0)>0 || (v.critical||0)>0 || (v.total||0)>0) throw new Error('Vulnerabilities remain: '+JSON.stringify(v)); console.log('audit',v)"
+
+      - name: Commit verified generated lockfiles
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes to commit"
+            exit 0
+          fi
+          git commit -m "security: upgrade SheetJS to official 0.20.3"
+          git push origin HEAD:feat/daon-master-code-lock
+
+      - name: Upload generated lockfiles
+        uses: actions/upload-artifact@v4
+        with:
+          name: sheetjs-upgrade-lockfiles
+          path: |
+            package.json
+            package-lock.json
+            sheetjs-upgrade-audit.json

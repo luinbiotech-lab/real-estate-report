@@ -1,0 +1,57 @@
+{
+  "schemaVersion": 1,
+  "propertyId": "daon-bangbae-815-11",
+  "effectiveDate": "2026-09-26",
+  "releasePhase": "phase_1",
+  "decision": "proceed_with_known_gaps",
+  "rationale": "User approved continuing the platform/cutover work now and supplementing currently unavailable source materials later.",
+  "invariants": {
+    "doNotFabricateMissingSources": true,
+    "contentReadinessMayRemainPartial": true,
+    "migrationTechnicalGateStillRequiresZeroMigrationBlockers": true,
+    "productionMigrationStillRequiresExplicitHumanApproval": true
+  },
+  "inScopeNow": [
+    "building_register",
+    "registry_land",
+    "registry_building",
+    "land_use_plan",
+    "existing verified provenance",
+    "existing comparable transactions",
+    "existing roadview provenance",
+    "platform and cutover infrastructure"
+  ],
+  "deferred": [
+    {
+      "item": "land_register",
+      "status": "original_unconfirmed",
+      "effect": "content_readiness_partial",
+      "followUp": "attach and verify when original becomes available"
+    },
+    {
+      "item": "cadastral_map",
+      "status": "original_unconfirmed",
+      "effect": "completeness_gap",
+      "followUp": "attach and verify when original becomes available"
+    },
+    {
+      "item": "direct_exterior_media",
+      "status": "not_connected",
+      "effect": "media_readiness_partial",
+      "followUp": "attach a real exterior/road/neighborhood image; do not substitute report-page screenshots"
+    },
+    {
+      "item": "digital_twin_originals",
+      "status": "not_available",
+      "effect": "digital_twin_pending",
+      "followUp": "add real floor-plan/DWG/DXF/360/3D source assets later; no synthetic geometry"
+    }
+  ],
+  "phase1ExitCriteria": [
+    "four recovered official PDFs are attached to Data Room as PropertyDocument binaries",
+    "Bangbae-only migration dry-run has zero technical migration blockers",
+    "real operator OWNER and production security/domain prerequisites are satisfied or explicitly reviewed",
+    "explicit production migration approval is recorded",
+    "post-migration reconciliation passes"
+  ]
+}

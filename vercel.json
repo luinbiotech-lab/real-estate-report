@@ -1,0 +1,127 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(), microphone=()"
+        }
+      ]
+    }
+  ],
+  "rewrites": [
+    {
+      "source": "/healthz",
+      "destination": "/api/healthz"
+    },
+    {
+      "source": "/control-center",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/agents/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/property/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/properties/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/import",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/bulk-intake",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/readiness",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/interior",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/room-ops",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/spatial",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/digital-twin-intake",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/digital-twin",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/external-shares",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/income",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/review-history",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/access",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/risk",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/report-history",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/backup",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/migration-readiness",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/settings",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/document/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/professional-report/:path*",
+      "destination": "/index.html"
+    }
+  ]
+}

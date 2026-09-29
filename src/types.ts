@@ -16,18 +16,35 @@ export interface Property {
   address: string; detailAddress: string; latitude?: number; longitude?: number; nearbyStation: string; stationDistance: string; roadCondition: string;
   landAreaPyeong: number; landAreaSqm: number; totalFloorAreaPyeong: number; totalFloorAreaSqm: number; buildingAreaPyeong: number;
   zoning: string; mainUse: string; structure: string; basementFloors: number; groundFloors: number; completionDate: string;
-  buildingCoverageRate: number; floorAreaRatio: number; elevator: string; parkingSpaces: number;
+  buildingCoverageRate: number; floorAreaRatio: number; elevator: string;
+  /** Legacy parking field retained for backward compatibility. */
+  parkingSpaces: number;
+  /** Official/public-record parking count. */
+  parkingOfficial?: number;
+  /** Field-observed usable parking count. Never present as an official count. */
+  parkingField?: number;
+  parkingFieldNote?: string;
   features: string; investmentPoints: string; locationAnalysis: string; developmentPlan: string; recommendedUse: string;
   risks: string; overallOpinion: string; nearbyTransactions: string;
   managerName: string; managerPhone: string; managerEmail: string; companyName: string;
   mainImage: string; additionalImages: string[]; mapImage: string; locationAnalysisImage: string;
+  internalPhotoAllowed?: boolean;
   streetViewVerification?: StreetViewVerification;
   briefingItems: BriefingItem[]; briefingUpdatedAt: string;
   brandMapSettings?: BrandMapSettings;
   createdAt: string; updatedAt: string;
 }
 
-export interface Settings { companyName: string; logo: string; defaultManager: string; phone: string; email: string; footerText: string }
+export interface Settings {
+  companyName: string;
+  brandSlogan: string;
+  logo: string;
+  defaultManager: string;
+  phone: string;
+  email: string;
+  footerText: string;
+  reportContactMode: 'mobile_email_only';
+}
 
 export const emptyProperty: Property = {
   id: '', propertyNumber: '', name: '', buildingName: '', tradeType: '매매', salePrice: 0, deposit: 0, monthlyRent: 0,
