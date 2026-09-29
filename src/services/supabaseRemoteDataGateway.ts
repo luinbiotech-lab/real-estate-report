@@ -29,6 +29,10 @@ interface JsonRow { [key: string]: unknown }
 const ASSET_BUCKET = 'daon-property-assets';
 const JSON_HEADERS = { 'Content-Type': 'application/json' } as const;
 
+function defaultFetch(): typeof fetch {
+  return globalThis.fetch.bind(globalThis);
+}
+
 function cleanProjectUrl(value: string) {
   const trimmed = value.trim().replace(/\/+$/, '');
   if (!trimmed) throw new Error('Supabase project URL이 필요합니다.');
@@ -87,7 +91,7 @@ class SupabaseRestClient {
   constructor(private readonly config: SupabaseRemoteDataGatewayConfig) {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
     this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
-    this.fetchImpl = config.fetchImpl ?? fetch;
+    this.fetchImpl = config.fetchImpl ?? defaultFetch();
   }
 
   async actorId() {
