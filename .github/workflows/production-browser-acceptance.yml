@@ -35,6 +35,12 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
+      - name: Production OWNER direct auth probe
+        env:
+          DAON_PRODUCTION_OWNER_EMAIL: ${{ secrets.DAON_PRODUCTION_OWNER_EMAIL }}
+          DAON_PRODUCTION_OWNER_PASSWORD: ${{ secrets.DAON_PRODUCTION_OWNER_PASSWORD }}
+        run: node scripts/production-auth-direct-probe.mjs
+
       - name: Run production two-context browser acceptance
         env:
           DAON_PRODUCTION_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.production_base_url || 'https://real-estate-report-lime.vercel.app' }}
