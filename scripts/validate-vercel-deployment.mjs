@@ -12,8 +12,12 @@ const files = [
 for (const file of files) if (!existsSync(file)) throw new Error(`Vercel deployment contract file missing: ${file}`);
 
 const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
-if (config.framework !== 'vite' || config.outputDirectory !== 'dist' || config.buildCommand !== 'npm run build') {
-  throw new Error('Vercel Vite build/output contract mismatch.');
+if (
+  config.framework !== 'vite'
+  || config.outputDirectory !== 'dist'
+  || config.buildCommand !== 'VITE_REQUIRE_REMOTE_AUTH=true VITE_REMOTE_OPERATIONAL_MODE=true npm run build'
+) {
+  throw new Error('Vercel Vite build/output/production-mode contract mismatch.');
 }
 const rewrites = Array.isArray(config.rewrites) ? config.rewrites : [];
 const rewriteMap = new Map(rewrites.map((row) => [row.source, row.destination]));
