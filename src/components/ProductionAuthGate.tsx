@@ -119,7 +119,7 @@ export default function ProductionAuthGate({ children }: { children: ReactNode }
         <Button variant="contained" size="large" disabled={busy || !email || !password} onClick={() => void signIn()}>{busy ? '로그인 확인 중…' : 'Production 로그인'}</Button>
         <Button variant="text" disabled={busy || !email} onClick={() => void sendRecoveryEmail()}>비밀번호 재설정 이메일 보내기</Button>
       </div>
-      <Alert severity="info" sx={{ mt: 1.5 }}>비밀번호와 access token은 영구 저장하지 않습니다. 현재 세션은 memory-only 정책을 사용합니다.</Alert>
+      <Alert severity="info" sx={{ mt: 1.5 }}>비밀번호는 저장하지 않습니다. 로그인 세션은 이 브라우저에 안전하게 유지되며 로그아웃 시 삭제됩니다.</Alert>
     </section>
   </main>;
 }
