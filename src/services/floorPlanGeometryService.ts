@@ -1,39 +1,15 @@
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 
 export type DxfSemanticKind = 'wall' | 'door' | 'window' | 'column' | 'stair' | 'elevator' | 'room_label' | 'unknown';
-
-export interface DxfPreviewSegment {
-  kind: 'line' | 'polyline';
-  layer?: string;
-  semantic: DxfSemanticKind;
-  points: Array<{ x: number; y: number }>;
-}
-
-export interface DxfSemanticLayerCandidate {
-  layer: string;
-  semantic: Exclude<DxfSemanticKind, 'room_label'>;
-  confidence: number;
-  basis: 'layer_name';
-  requiresReview: true;
-}
-
+export interface DxfPreviewSegment { kind: 'line' | 'polyline'; layer?: string; semantic: DxfSemanticKind; points: Array<{ x: number; y: number }>; }
+export interface DxfSemanticLayerCandidate { layer: string; semantic: Exclude<DxfSemanticKind, 'room_label'>; confidence: number; basis: 'layer_name'; requiresReview: true; }
 export interface DxfGeometrySummary {
-  parser: 'ascii_dxf_v1';
-  sourceAssetId: string;
-  lineCount: number;
-  polylineCount: number;
-  textCount: number;
-  layers: string[];
-  bounds?: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number };
-  labelCandidates: string[];
-  semanticLayerCandidates: DxfSemanticLayerCandidate[];
-  previewSegments: DxfPreviewSegment[];
-  unitStatus: 'drawing_units_unverified';
-  warnings: string[];
+  parser: 'ascii_dxf_v1' | 'svg_floorplan_v1'; sourceAssetId: string; lineCount: number; polylineCount: number; textCount: number;
+  layers: string[]; bounds?: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number };
+  labelCandidates: string[]; semanticLayerCandidates: DxfSemanticLayerCandidate[]; previewSegments: DxfPreviewSegment[];
+  unitStatus: 'drawing_units_unverified'; warnings: string[];
 }
-
 type Pair = { code: number; value: string };
-
 const SEMANTIC_LAYER_RULES: Array<{ semantic: Exclude<DxfSemanticKind, 'room_label' | 'unknown'>; pattern: RegExp }> = [
   { semantic: 'wall', pattern: /(?:^|[-_ ])(?:wall|walls|벽|벽체)(?:$|[-_ ])/i },
   { semantic: 'door', pattern: /(?:^|[-_ ])(?:door|doors|문|출입문)(?:$|[-_ ])/i },
@@ -42,95 +18,70 @@ const SEMANTIC_LAYER_RULES: Array<{ semantic: Exclude<DxfSemanticKind, 'room_lab
   { semantic: 'stair', pattern: /(?:^|[-_ ])(?:stair|stairs|staircase|계단)(?:$|[-_ ])/i },
   { semantic: 'elevator', pattern: /(?:^|[-_ ])(?:elev|elevator|lift|엘리베이터)(?:$|[-_ ])/i },
 ];
-
-function pairsFromDxf(text: string): Pair[] {
-  const lines = text.replace(/\r/g, '').split('\n');
-  const pairs: Pair[] = [];
-  for (let i = 0; i + 1 < lines.length; i += 2) {
-    const code = Number(lines[i].trim());
-    if (!Number.isFinite(code)) continue;
-    pairs.push({ code, value: lines[i + 1].trim() });
-  }
-  return pairs;
+const roomLike = (text: string) => /(실|room|office|lobby|주방|거실|침실|화장실|욕실|복도|창고|기계실|전기실|주차|hall|kitchen|toilet|restroom|storage|bed|bath|dining|living)/i.test(text);
+const semanticForLayer = (layer = ''): DxfSemanticLayerCandidate['semantic'] => SEMANTIC_LAYER_RULES.find((rule) => rule.pattern.test(` ${layer} `))?.semantic ?? 'unknown';
+const candidateForLayer = (layer: string): DxfSemanticLayerCandidate => { const semantic = semanticForLayer(layer); return { layer, semantic, confidence: semantic === 'unknown' ? 0.2 : 0.78, basis: 'layer_name', requiresReview: true }; };
+const numeric = (value: string | undefined) => { if (value == null || value === '') return undefined; const parsed = Number(value); return Number.isFinite(parsed) ? parsed : undefined; };
+function boundsFromPoints(points: Array<[number, number]>) {
+  if (!points.length) return undefined;
+  const xs = points.map(([x]) => x), ys = points.map(([, y]) => y);
+  const minX = Math.min(...xs), maxX = Math.max(...xs), minY = Math.min(...ys), maxY = Math.max(...ys);
+  return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 }
-
-function numeric(value: string | undefined): number | undefined {
-  if (value == null || value === '') return undefined;
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
-}
-
-function roomLike(text: string) {
-  return /(실|room|office|lobby|주방|거실|침실|화장실|욕실|복도|창고|기계실|전기실|주차|hall|kitchen|toilet|restroom|storage)/i.test(text);
-}
-
-function semanticForLayer(layer = ''): DxfSemanticLayerCandidate['semantic'] {
-  return SEMANTIC_LAYER_RULES.find((rule) => rule.pattern.test(` ${layer} `))?.semantic ?? 'unknown';
-}
-
-function candidateForLayer(layer: string): DxfSemanticLayerCandidate {
-  const semantic = semanticForLayer(layer);
-  return { layer, semantic, confidence: semantic === 'unknown' ? 0.2 : 0.78, basis: 'layer_name', requiresReview: true };
-}
+function pairsFromDxf(text: string): Pair[] { const lines = text.replace(/\r/g, '').split('\n'); const pairs: Pair[] = []; for (let i = 0; i + 1 < lines.length; i += 2) { const code = Number(lines[i].trim()); if (Number.isFinite(code)) pairs.push({ code, value: lines[i + 1].trim() }); } return pairs; }
 
 export async function extractDxfGeometry(asset: DigitalTwinAsset): Promise<DxfGeometrySummary> {
-  if (asset.assetType !== 'dxf' && asset.fileFormat.toLowerCase() !== 'dxf') throw new Error('DXF 자산만 로컬 geometry 추출이 가능합니다.');
+  if (asset.fileFormat.toLowerCase() !== 'dxf') throw new Error('DXF 자산만 DXF geometry 추출이 가능합니다.');
   if (!(asset.fileData instanceof Blob)) throw new Error('DXF 원본 Blob이 없어 geometry를 추출할 수 없습니다.');
   const text = await asset.fileData.text();
   if (!text.includes('SECTION') || !text.includes('ENTITIES')) throw new Error('ASCII DXF 형식을 확인할 수 없습니다.');
-  const pairs = pairsFromDxf(text);
-  let lineCount = 0; let polylineCount = 0; let textCount = 0;
-  const layers = new Set<string>(); const labels = new Set<string>(); const points: Array<[number, number]> = [];
-  const previewSegments: DxfPreviewSegment[] = [];
-
+  const pairs = pairsFromDxf(text); let lineCount = 0, polylineCount = 0, textCount = 0;
+  const layers = new Set<string>(), labels = new Set<string>(), points: Array<[number, number]> = [], previewSegments: DxfPreviewSegment[] = [];
   for (let i = 0; i < pairs.length; i += 1) {
-    if (pairs[i].code !== 0) continue;
-    const entity = pairs[i].value.toUpperCase();
-    if (!['LINE', 'LWPOLYLINE', 'TEXT', 'MTEXT'].includes(entity)) continue;
-    const values: Pair[] = [];
-    for (let j = i + 1; j < pairs.length && pairs[j].code !== 0; j += 1) values.push(pairs[j]);
-    const layer = values.find((pair) => pair.code === 8)?.value;
-    if (layer) layers.add(layer);
-    const semantic = semanticForLayer(layer);
+    if (pairs[i].code !== 0) continue; const entity = pairs[i].value.toUpperCase(); if (!['LINE','LWPOLYLINE','TEXT','MTEXT'].includes(entity)) continue;
+    const values: Pair[] = []; for (let j = i + 1; j < pairs.length && pairs[j].code !== 0; j += 1) values.push(pairs[j]);
+    const layer = values.find((pair) => pair.code === 8)?.value; if (layer) layers.add(layer); const semantic = semanticForLayer(layer);
     if (entity === 'LINE') {
-      lineCount += 1;
-      const x1 = numeric(values.find((pair) => pair.code === 10)?.value); const y1 = numeric(values.find((pair) => pair.code === 20)?.value);
-      const x2 = numeric(values.find((pair) => pair.code === 11)?.value); const y2 = numeric(values.find((pair) => pair.code === 21)?.value);
-      if (x1 != null && y1 != null) points.push([x1, y1]); if (x2 != null && y2 != null) points.push([x2, y2]);
-      if (x1 != null && y1 != null && x2 != null && y2 != null && previewSegments.length < 2500) previewSegments.push({ kind: 'line', layer, semantic, points: [{ x: x1, y: y1 }, { x: x2, y: y2 }] });
+      lineCount++; const x1=numeric(values.find(p=>p.code===10)?.value), y1=numeric(values.find(p=>p.code===20)?.value), x2=numeric(values.find(p=>p.code===11)?.value), y2=numeric(values.find(p=>p.code===21)?.value);
+      if (x1!=null&&y1!=null) points.push([x1,y1]); if (x2!=null&&y2!=null) points.push([x2,y2]); if (x1!=null&&y1!=null&&x2!=null&&y2!=null&&previewSegments.length<2500) previewSegments.push({kind:'line',layer,semantic,points:[{x:x1,y:y1},{x:x2,y:y2}]});
     } else if (entity === 'LWPOLYLINE') {
-      polylineCount += 1;
-      const xs = values.filter((pair) => pair.code === 10).map((pair) => numeric(pair.value));
-      const ys = values.filter((pair) => pair.code === 20).map((pair) => numeric(pair.value));
-      const count = Math.min(xs.length, ys.length); const segmentPoints: Array<{ x: number; y: number }> = [];
-      for (let k = 0; k < count; k += 1) if (xs[k] != null && ys[k] != null) { points.push([xs[k]!, ys[k]!]); segmentPoints.push({ x: xs[k]!, y: ys[k]! }); }
-      if (segmentPoints.length > 1 && previewSegments.length < 2500) previewSegments.push({ kind: 'polyline', layer, semantic, points: segmentPoints });
+      polylineCount++; const xs=values.filter(p=>p.code===10).map(p=>numeric(p.value)), ys=values.filter(p=>p.code===20).map(p=>numeric(p.value)); const segmentPoints:Array<{x:number;y:number}>=[]; for(let k=0;k<Math.min(xs.length,ys.length);k++) if(xs[k]!=null&&ys[k]!=null){points.push([xs[k]!,ys[k]!]);segmentPoints.push({x:xs[k]!,y:ys[k]!});} if(segmentPoints.length>1&&previewSegments.length<2500) previewSegments.push({kind:'polyline',layer,semantic,points:segmentPoints});
     } else {
-      textCount += 1;
-      const content = values.filter((pair) => pair.code === 1 || pair.code === 3).map((pair) => pair.value).join(' ').trim();
-      if (content && roomLike(content)) labels.add(content.slice(0, 120));
-      const x = numeric(values.find((pair) => pair.code === 10)?.value); const y = numeric(values.find((pair) => pair.code === 20)?.value);
-      if (x != null && y != null) points.push([x, y]);
+      textCount++; const content=values.filter(p=>p.code===1||p.code===3).map(p=>p.value).join(' ').trim(); if(content&&roomLike(content)) labels.add(content.slice(0,120));
     }
   }
+  const sortedLayers=[...layers].sort();
+  return { parser:'ascii_dxf_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), previewSegments, unitStatus:'drawing_units_unverified', warnings:['DXF 좌표 단위와 축척은 자동 확정하지 않습니다.','벽·문·창·기둥·계단·엘리베이터 의미는 layer 이름 기반 후보이며 Human Review 전에는 확정 데이터가 아닙니다.'] };
+}
 
-  let bounds: DxfGeometrySummary['bounds'];
-  if (points.length) {
-    const xs = points.map(([x]) => x); const ys = points.map(([, y]) => y);
-    const minX = Math.min(...xs); const maxX = Math.max(...xs); const minY = Math.min(...ys); const maxY = Math.max(...ys);
-    bounds = { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
-  }
-  const sortedLayers = [...layers].sort();
-  return {
-    parser: 'ascii_dxf_v1', sourceAssetId: asset.id, lineCount, polylineCount, textCount,
-    layers: sortedLayers, bounds, labelCandidates: [...labels].slice(0, 50),
-    semanticLayerCandidates: sortedLayers.map(candidateForLayer), previewSegments,
-    unitStatus: 'drawing_units_unverified',
-    warnings: ['DXF 좌표 단위와 축척은 자동 확정하지 않습니다.', '벽·문·창·기둥·계단·엘리베이터 의미는 layer 이름 기반 후보이며 Human Review 전에는 확정 데이터가 아닙니다.'],
-  };
+function numberList(value = '') { return (value.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || []).map(Number).filter(Number.isFinite); }
+function pathPoints(d: string) {
+  const tokens = d.match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/g) || []; const result:Array<{x:number;y:number}>=[]; let i=0,x=0,y=0,sx=0,sy=0,cmd='';
+  const read=()=>Number(tokens[i++]); while(i<tokens.length){ if(/[A-Za-z]/.test(tokens[i])) cmd=tokens[i++]; if(!cmd) break; const rel=cmd===cmd.toLowerCase(); const C=cmd.toUpperCase();
+    if(C==='M'||C==='L'){ if(i+1>=tokens.length) break; let nx=read(), ny=read(); if(rel){nx+=x;ny+=y;} x=nx;y=ny;if(C==='M'){sx=x;sy=y;cmd=rel?'l':'L';} result.push({x,y}); }
+    else if(C==='H'){ let nx=read(); if(rel) nx+=x; x=nx; result.push({x,y}); }
+    else if(C==='V'){ let ny=read(); if(rel) ny+=y; y=ny; result.push({x,y}); }
+    else if(C==='Z'){ x=sx;y=sy; result.push({x,y}); cmd=''; }
+    else { const arity = C==='C'?6:C==='S'||C==='Q'?4:C==='A'?7:C==='T'?2:0; if(!arity||i+arity-1>=tokens.length) break; const vals=Array.from({length:arity},read); let nx=vals[arity-2], ny=vals[arity-1]; if(rel){nx+=x;ny+=y;} x=nx;y=ny; result.push({x,y}); }
+  } return result;
+}
+export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGeometrySummary> {
+  if (asset.fileFormat.toLowerCase() !== 'svg') throw new Error('SVG 자산만 SVG geometry 추출이 가능합니다.');
+  if (!(asset.fileData instanceof Blob)) throw new Error('SVG 원본 Blob이 없어 geometry를 추출할 수 없습니다.');
+  const text=await asset.fileData.text(); const doc=new DOMParser().parseFromString(text,'image/svg+xml'); if(doc.querySelector('parsererror')) throw new Error('SVG 형식을 확인할 수 없습니다.');
+  const points:Array<[number,number]>=[], previewSegments:DxfPreviewSegment[]=[]; const layers=new Set<string>(), labels=new Set<string>(); let lineCount=0, polylineCount=0, textCount=0;
+  const layerFor=(el:Element)=>el.getAttribute('data-layer')||el.id||el.getAttribute('class')||el.tagName.toLowerCase();
+  const add=(pts:Array<{x:number;y:number}>,layer:string,kind:'line'|'polyline')=>{ if(pts.length<2)return; layers.add(layer); pts.forEach(p=>points.push([p.x,p.y])); if(previewSegments.length<2500) previewSegments.push({kind,layer,semantic:semanticForLayer(layer),points:pts}); };
+  doc.querySelectorAll('line').forEach(el=>{ const p=[{x:Number(el.getAttribute('x1')||0),y:Number(el.getAttribute('y1')||0)},{x:Number(el.getAttribute('x2')||0),y:Number(el.getAttribute('y2')||0)}]; lineCount++; add(p,layerFor(el),'line'); });
+  doc.querySelectorAll('polyline,polygon').forEach(el=>{ const n=numberList(el.getAttribute('points')||''); const p:Array<{x:number;y:number}>=[]; for(let i=0;i+1<n.length;i+=2)p.push({x:n[i],y:n[i+1]}); if(el.tagName.toLowerCase()==='polygon'&&p.length)p.push({...p[0]}); polylineCount++; add(p,layerFor(el),'polyline'); });
+  doc.querySelectorAll('rect').forEach(el=>{ const x=Number(el.getAttribute('x')||0),y=Number(el.getAttribute('y')||0),w=Number(el.getAttribute('width')||0),h=Number(el.getAttribute('height')||0); polylineCount++; add([{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h},{x,y}],layerFor(el),'polyline'); });
+  doc.querySelectorAll('path').forEach(el=>{ const p=pathPoints(el.getAttribute('d')||''); if(p.length>1){polylineCount++;add(p,layerFor(el),'polyline');} });
+  doc.querySelectorAll('text,tspan').forEach(el=>{ const t=(el.textContent||'').trim(); if(t){textCount++;if(roomLike(t))labels.add(t.slice(0,120));} });
+  const sortedLayers=[...layers].sort();
+  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','SVG transform·곡선은 1차 preview 후보로 단순화될 수 있으므로 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.'] };
 }
 
 export const floorPlanGeometryService = {
-  canExtract(asset: DigitalTwinAsset) { return asset.assetType === 'dxf' || asset.fileFormat.toLowerCase() === 'dxf'; },
-  extract: extractDxfGeometry,
+  canExtract(asset: DigitalTwinAsset) { return ['dxf','svg'].includes(asset.fileFormat.toLowerCase()); },
+  extract(asset: DigitalTwinAsset) { return asset.fileFormat.toLowerCase()==='svg' ? extractSvgGeometry(asset) : extractDxfGeometry(asset); },
 };
