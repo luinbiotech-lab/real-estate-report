@@ -3,6 +3,7 @@ name: Validate
 on:
   push:
     branches:
+      - master
       - feat/daon-master-code-lock
   workflow_dispatch:
 
