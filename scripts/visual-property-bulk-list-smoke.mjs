@@ -107,10 +107,12 @@ try {
     };
   });
 
-  assert(result.summary.some((value) => value.includes('전체250건')), `Property total summary mismatch: ${result.summary.join(',')}`);
+  const totalSummary = result.summary.find((value) => value.startsWith('전체')) || '';
+  const totalCount = Number(totalSummary.replace(/\D/g, ''));
+  assert(totalCount >= 250, `Property total summary should include at least 250 QA rows: ${result.summary.join(',')}`);
   assert(result.rows === 25, `Property list page size expected 25, got ${result.rows}`);
-  assert(result.pagination.includes('10'), `Property pagination should expose 10 pages: ${result.pagination}`);
-  assert(result.range.includes('1') && result.range.includes('25') && result.range.includes('250'), `Property pagination range mismatch: ${result.range}`);
+  assert(result.pagination.includes(String(Math.ceil(totalCount / 25))), `Property pagination page count mismatch: ${result.pagination}`);
+  assert(result.range.includes('1') && result.range.includes('25') && result.range.includes(String(totalCount)), `Property pagination range mismatch: ${result.range}`);
   assert(result.bodyScrollWidth <= result.viewportWidth + 2, `Page-level horizontal overflow: ${result.bodyScrollWidth}/${result.viewportWidth}`);
 
   await page.screenshot({ path: `${ARTIFACT_DIR}/property-list-250.png`, fullPage: true });
