@@ -1,4 +1,5 @@
 import { createSupabaseRemoteAuthGateway } from './supabaseRemoteAuthGateway';
+import { createBrowserPersistentRemoteAuthTokenStore } from './browserAuthTokenStore';
 import { DAON_REMOTE_AUTH_FUNCTION, DAON_SUPABASE_PROJECT_URL, DAON_SUPABASE_PUBLISHABLE_KEY } from './supabaseProductionConfig';
 import type { AccessRole } from './accessControlService';
 
@@ -79,4 +80,5 @@ export const remoteAuthGateway = createSupabaseRemoteAuthGateway({
   projectUrl: DAON_SUPABASE_PROJECT_URL,
   anonKey: DAON_SUPABASE_PUBLISHABLE_KEY,
   adminFunctionName: DAON_REMOTE_AUTH_FUNCTION,
+  tokenStore: createBrowserPersistentRemoteAuthTokenStore(),
 });
