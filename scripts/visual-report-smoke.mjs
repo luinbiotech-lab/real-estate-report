@@ -199,6 +199,120 @@ try {
   assert(!professional.text.includes('확인 필요'), 'Professional MASTER must omit empty-value placeholders');
   await page.screenshot({ path: `${OUT_DIR}/daon-professional-master.png`, fullPage: true });
 
+  await page.evaluate(async () => {
+    const db = await new Promise((resolve, reject) => {
+      const request = indexedDB.open('real-estate-report', 13);
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+    try {
+      const base = await new Promise((resolve, reject) => {
+        const tx = db.transaction('properties', 'readonly');
+        const request = tx.objectStore('properties').get('daon-bangbae-815-11');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error);
+      });
+      if (!base) throw new Error('Sparse report QA base property missing');
+      const now = new Date().toISOString();
+      const sparse = {
+        ...base,
+        id: 'qa-sparse-excel-property',
+        propertyNumber: 'QA-XLSX-001',
+        name: '엑셀 신규등록 QA 물건',
+        buildingName: '',
+        salePrice: 1200000000,
+        address: '서울특별시 테스트구 테스트로 1',
+        detailAddress: '',
+        nearbyStation: '',
+        stationDistance: '',
+        roadCondition: '',
+        landAreaPyeong: 50,
+        landAreaSqm: 165.29,
+        totalFloorAreaPyeong: 0,
+        totalFloorAreaSqm: 0,
+        buildingAreaPyeong: 0,
+        zoning: '',
+        mainUse: '',
+        structure: '',
+        basementFloors: 0,
+        groundFloors: 0,
+        completionDate: '',
+        buildingCoverageRate: 0,
+        floorAreaRatio: 0,
+        elevator: '',
+        parkingSpaces: 0,
+        parkingOfficial: undefined,
+        parkingField: undefined,
+        parkingFieldNote: '',
+        features: '',
+        investmentPoints: '',
+        locationAnalysis: '',
+        developmentPlan: '',
+        recommendedUse: '',
+        risks: '',
+        overallOpinion: '',
+        nearbyTransactions: '',
+        mainImage: '',
+        additionalImages: [],
+        mapImage: '',
+        locationAnalysisImage: '',
+        briefingItems: [],
+        briefingUpdatedAt: '',
+        createdAt: now,
+        updatedAt: now,
+      };
+      await new Promise((resolve, reject) => {
+        const tx = db.transaction('properties', 'readwrite');
+        tx.objectStore('properties').put(sparse);
+        tx.oncomplete = () => resolve();
+        tx.onerror = () => reject(tx.error);
+        tx.onabort = () => reject(tx.error);
+      });
+    } finally {
+      db.close();
+    }
+  });
+
+  await page.goto(`${BASE_URL}/document/proposal/qa-sparse-excel-property`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+  const sparseOnePage = await page.evaluate(() => {
+    const sheet = document.querySelector('.d1-sheet');
+    if (!(sheet instanceof HTMLElement)) throw new Error('Sparse 1P sheet missing');
+    return {
+      text: sheet.textContent || '',
+      scrollWidth: sheet.scrollWidth,
+      scrollHeight: sheet.scrollHeight,
+      clientWidth: sheet.clientWidth,
+      clientHeight: sheet.clientHeight,
+    };
+  });
+  assert(sparseOnePage.text.includes('엑셀 신규등록 QA 물건'), 'Sparse 1P property title missing');
+  assert(sparseOnePage.scrollHeight <= sparseOnePage.clientHeight + 2, `Sparse 1P vertical overflow: ${sparseOnePage.scrollHeight}/${sparseOnePage.clientHeight}`);
+  assert(sparseOnePage.scrollWidth <= sparseOnePage.clientWidth + 2, `Sparse 1P horizontal overflow: ${sparseOnePage.scrollWidth}/${sparseOnePage.clientWidth}`);
+  await page.screenshot({ path: `${OUT_DIR}/daon-1p-sparse-excel.png`, fullPage: true });
+
+  await page.goto(`${BASE_URL}/document/report/qa-sparse-excel-property`, { waitUntil: 'networkidle' });
+  await page.waitForSelector('.daon-professional-report-master', { timeout: 30_000 });
+  const sparseProfessional = await page.evaluate(() => {
+    const master = document.querySelector('.daon-professional-report-master');
+    const pages = [...master.querySelectorAll('.daon-frame-page, .daon-core-page')].map((node) => ({
+      scrollWidth: node.scrollWidth,
+      scrollHeight: node.scrollHeight,
+      clientWidth: node.clientWidth,
+      clientHeight: node.clientHeight,
+      text: node.textContent || '',
+    }));
+    return { text: master?.textContent || '', pages };
+  });
+  assert(sparseProfessional.text.includes('엑셀 신규등록 QA 물건'), 'Sparse professional report title missing');
+  assert(sparseProfessional.pages.length >= 4, `Sparse professional report page count too small: ${sparseProfessional.pages.length}`);
+  for (const [index, item] of sparseProfessional.pages.entries()) {
+    assert(item.scrollHeight <= item.clientHeight + 2, `Sparse professional page ${index + 1} vertical overflow: ${item.scrollHeight}/${item.clientHeight}`);
+    assert(item.scrollWidth <= item.clientWidth + 2, `Sparse professional page ${index + 1} horizontal overflow: ${item.scrollWidth}/${item.clientWidth}`);
+  }
+  await page.screenshot({ path: `${OUT_DIR}/daon-professional-sparse-excel.png`, fullPage: true });
+
+  console.log('Rendered sparse Excel-like report QA: PASS');
   console.log('Rendered DA:ON professional report smoke QA: PASS');
 } finally {
   await browser.close();
