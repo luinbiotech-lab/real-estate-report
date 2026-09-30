@@ -32,6 +32,9 @@ jobs:
       - name: Validate report pipeline
         run: npm run validate:pipeline
 
+      - name: Validate Digital Twin building flow
+        run: npm run validate:twin-building
+
       - name: Typecheck
         run: npm run typecheck
 
