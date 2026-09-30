@@ -21,11 +21,11 @@ try {
     '매매',
     '현재 필터',
     '최근 업데이트',
-    '물건명, 주소, 물건번호 검색',
     '엑셀 대량 등록',
     '개별 물건 등록',
     '열기',
   ]) await waitForText(page, text);
+  await page.getByPlaceholder('물건명, 주소, 물건번호 검색').waitFor({ state: 'visible', timeout: 30_000 });
   const rows = await page.locator('.property-focus-table tbody tr').count();
   if (rows < 1) throw new Error('Focused property list must render at least one seeded property row.');
   await page.screenshot({ path: `${ARTIFACT_DIR}/property-list-focused.png`, fullPage: true });
