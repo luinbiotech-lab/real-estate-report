@@ -205,6 +205,25 @@ export class SupabaseRemoteAuthGateway implements RemoteAuthGateway {
     }
   }
 
+  async sendPasswordRecoveryEmail(email: string, redirectTo?: string): Promise<void> {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) throw new Error('비밀번호를 재설정할 이메일을 입력하세요.');
+    const query = redirectTo ? `?${new URLSearchParams({ redirect_to: redirectTo }).toString()}` : '';
+    await this.request(`/auth/v1/recover${query}`, {
+      method: 'POST',
+      body: JSON.stringify({ email: normalizedEmail }),
+    });
+  }
+
+  async updatePasswordWithRecoveryToken(accessToken: string, password: string): Promise<void> {
+    if (!accessToken) throw new Error('비밀번호 재설정 링크가 올바르지 않습니다.');
+    if (password.length < 8) throw new Error('비밀번호는 8자 이상이어야 합니다.');
+    await this.request('/auth/v1/user', {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
+    }, accessToken);
+  }
+
   private async adminAction(body: JsonObject) {
     const stored = await this.tokenStore.get();
     if (!stored) throw new Error('REMOTE AUTH 로그인이 필요합니다.');
