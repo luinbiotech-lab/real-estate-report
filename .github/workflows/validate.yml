@@ -213,6 +213,9 @@ jobs:
       - name: Rendered readiness center QA
         run: node scripts/visual-readiness-smoke.mjs
 
+      - name: Rendered Excel bulk 250-row QA
+        run: node scripts/visual-excel-bulk-smoke.mjs
+
       - name: Rendered company settings QA
         run: node scripts/visual-settings-smoke.mjs
 
@@ -222,8 +225,7 @@ jobs:
       - name: Rendered migration readiness dry run QA
         run: node scripts/visual-migration-readiness-smoke.mjs
 
-      - name: Rendered report smoke QA (design advisory)
-        continue-on-error: true
+      - name: Rendered report smoke QA
         run: node scripts/visual-report-smoke.mjs
 
       - name: Upload QA screenshots
