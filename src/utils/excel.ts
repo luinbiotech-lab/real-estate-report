@@ -73,6 +73,7 @@ export function parseWorkbook(buffer: ArrayBuffer, existing: Property[]): Import
 export function parseImportJob(buffer: ArrayBuffer, fileName: string, existing: Property[]): ImportJob {
   const workbook = readImportWorkbook(buffer); const sheet = workbook.Sheets[workbook.SheetNames[0]];
   if (!sheet) throw new Error('워크시트가 없습니다.'); const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' }); const now = new Date().toISOString();
+  const seenWorkbookAddresses = new Set<string>();
   const rows: AutomationImportRow[] = sourceRows.map((raw, index) => {
     let property: Property = { ...emptyProperty, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
     const issues: ImportRowIssue[] = [];
@@ -84,8 +85,10 @@ export function parseImportJob(buffer: ArrayBuffer, fileName: string, existing: 
     if (!property.address.trim()) issues.push({ field: 'address', code: 'INVALID_ADDRESS', message: '주소는 필수입니다.' });
     if (!property.name.trim()) issues.push({ field: 'name', code: 'MISSING_NAME', message: '물건명을 입력해 주세요.' });
     if (property.salePrice < 0 || property.landAreaPyeong < 0 || property.totalFloorAreaPyeong < 0) issues.push({ code: 'INVALID_RANGE', message: '금액과 면적은 음수일 수 없습니다.' });
-    const sameExisting = existing.find((candidate) => isSameProperty(property, candidate) || (!!property.address && candidate.address.trim() === property.address.trim()));
-    const earlier = sourceRows.slice(0, index).some((candidate) => { const address = Object.entries(candidate).find(([header]) => columns[header.trim()] === 'address')?.[1]; return String(address || '').trim() === property.address.trim() && !!property.address.trim(); });
+    const sameExisting = existing.find((candidate) => isSameProperty(property, candidate) || (!!property.address && candidate.address?.trim() === property.address.trim()));
+    const normalizedAddress = property.address.trim();
+    const earlier = Boolean(normalizedAddress && seenWorkbookAddresses.has(normalizedAddress));
+    if (normalizedAddress) seenWorkbookAddresses.add(normalizedAddress);
     const duplicateKind = sameExisting ? 'existing' as const : earlier ? 'workbook' as const : undefined;
     if (duplicateKind) issues.push({ field: 'address', code: duplicateKind === 'existing' ? 'DUPLICATE_EXISTING' : 'DUPLICATE_WORKBOOK', message: duplicateKind === 'existing' ? '기존 물건 가능성' : 'Excel 내부 중복' });
     return { rowId: crypto.randomUUID(), excelRowNumber: index + 2, raw, normalizedProperty: property, status: issues.some((issue) => ['INVALID_ADDRESS', 'INVALID_NUMBER', 'INVALID_RANGE'].includes(issue.code)) ? 'invalid' : 'ready', issues, retryCount: 0, selected: !issues.some((issue) => ['INVALID_ADDRESS', 'INVALID_NUMBER', 'INVALID_RANGE'].includes(issue.code)), duplicateKind, duplicatePropertyId: sameExisting?.id, saveMode: duplicateKind ? 'skip' : 'new' };
