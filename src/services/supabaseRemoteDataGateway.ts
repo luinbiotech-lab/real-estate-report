@@ -1,4 +1,5 @@
-import type { Property, Settings } from '../types';
+import { emptyProperty, type Property, type Settings } from '../types';
+import { normalizeProperty } from '../utils/property';
 import type { PropertyVerification, PropertyVerificationCandidate, ReportSnapshot } from '../domain/propertyDataRoom/types';
 import type {
   RemoteAssetMetadata,
@@ -55,6 +56,14 @@ function asRows(value: unknown): JsonRow[] {
 
 function rowPayload<T>(row: JsonRow | undefined): T | undefined {
   return row?.payload as T | undefined;
+}
+
+function hydrateProperty(row: JsonRow | undefined): Property | undefined {
+  if (!row) return undefined;
+  const payload = row.payload && typeof row.payload === 'object' && !Array.isArray(row.payload) ? row.payload as Partial<Property> : {};
+  const id = String(payload.id || row.id || '');
+  if (!id) return undefined;
+  return normalizeProperty({ ...emptyProperty, ...payload, id } as Property);
 }
 
 function mapObject(row: JsonRow): RemotePropertyObject {
@@ -157,13 +166,13 @@ export class SupabaseRemoteDataGateway implements RemoteDataGateway {
   }
 
   async listProperties() {
-    const params = new URLSearchParams({ select: 'payload', order: 'updated_at.desc' });
-    return (await this.client.getRows('properties', params)).flatMap((row) => rowPayload<Property>(row) ?? []);
+    const params = new URLSearchParams({ select: 'id,payload', order: 'updated_at.desc' });
+    return (await this.client.getRows('properties', params)).flatMap((row) => hydrateProperty(row) ?? []);
   }
 
   async getProperty(propertyId: string) {
-    const params = new URLSearchParams({ select: 'payload', id: encodeEq(propertyId), limit: '1' });
-    return rowPayload<Property>((await this.client.getRows('properties', params))[0]);
+    const params = new URLSearchParams({ select: 'id,payload', id: encodeEq(propertyId), limit: '1' });
+    return hydrateProperty((await this.client.getRows('properties', params))[0]);
   }
 
   async upsertProperty(property: Property) {
