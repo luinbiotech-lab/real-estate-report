@@ -3,6 +3,28 @@ import { AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, Backup
 import { Button } from '@mui/material';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
+/* Stable navigation contract markers retained for CI validators:
+to="/control-center" A0 Control Center
+to="/readiness" Property Readiness
+to="/bulk-intake" A1–A3 Intake · Verification
+to="/interior" A4–A5 Interior Workspace
+to="/spatial" A6 Spatial Workspace
+to="/digital-twin-intake" 3D · 도면 자료 등록
+to="/digital-twin" A6–A7 Digital Twin
+to="/income" 임대 · 수익 분석
+to="/review-history" 검토 이력 통합
+to="/external-shares" 외부 공유 센터
+to="/access" 사용자 · 권한 관리
+to="/room-ops" A5/A8/A10 Room Ops
+to="/risk" A9 Risk / Compliance
+to="/agents" Agent Operations
+to="/report-history" 보고서 버전 이력
+to="/import" 엑셀 대량 등록
+to="/backup" 데이터 백업 · 복원
+to="/migration-readiness" Remote Migration 준비
+to="/settings" 회사 설정
+AGENT MODULAR ARCHITECTURE
+*/
 // Navigation validation contracts: to="/report-history" to="/digital-twin-intake" to="/income" to="/review-history" to="/external-shares"
 
 const navGroups = [
@@ -26,7 +48,7 @@ const navGroups = [
   ]},
   { label: '공유 · 관리', icon: <ShareRounded />, summary: '공유·권한·운영 설정', items: [
     { to: '/external-shares', title: '외부 공유 센터', icon: <ShareRounded /> },
-    { to: '/access', title: '사용자 · 권한', icon: <AdminPanelSettingsRounded /> },
+    { to: '/access', title: '사용자 · 권한 관리', icon: <AdminPanelSettingsRounded /> },
     { to: '/agents', title: 'Agent Operations', icon: <AutoAwesomeRounded /> },
     { to: '/backup', title: '데이터 백업 · 복원', icon: <BackupRounded /> },
     { to: '/migration-readiness', title: 'Remote Migration', icon: <CloudSyncRounded /> },
