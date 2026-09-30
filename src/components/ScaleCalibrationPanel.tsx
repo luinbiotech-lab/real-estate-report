@@ -45,7 +45,7 @@ export default function ScaleCalibrationPanel({ asset, onSaved }: { asset: Digit
     </div>
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(180px,1fr))', gap: 10 }}>
-      <TextField size="small" label="도면상 기준 길이" value={drawingLength} onChange={(event) => setDrawingLength(event.target.value)} inputMode="decimal" helperText="DXF 좌표 단위 기준" />
+      <TextField size="small" label="도면상 기준 길이" value={drawingLength} onChange={(event) => setDrawingLength(event.target.value)} inputMode="decimal" helperText="도면 좌표 단위 기준" />
       <TextField size="small" label="실제 기준 길이(m)" value={realLengthM} onChange={(event) => setRealLengthM(event.target.value)} inputMode="decimal" helperText="도면 표기치수·실측값" />
       <TextField size="small" label="기준 근거" value={referenceLabel} onChange={(event) => setReferenceLabel(event.target.value)} placeholder="예: 1층 전면 폭 7.2m" />
       <TextField size="small" label="검토 메모" value={note} onChange={(event) => setNote(event.target.value)} placeholder="근거 위치 또는 확인 방법" />
