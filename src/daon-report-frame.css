@@ -187,7 +187,7 @@
 .dc-brand-center p{margin:2mm 0 0;font-family:Georgia,"NanumMyeongjo",serif;font-size:10px;color:#163c61}
 .dc-trust{border-left:.4mm solid #c6943b;padding-left:5mm;font-size:7.2px;line-height:1.55;letter-spacing:1.8px;color:#163c61}
 .dc-trust small{display:block;letter-spacing:0;line-height:1.45;margin-top:2mm;font-size:7px}
-.dc-summary-hero{height:111mm;margin:0 7mm;position:relative;overflow:hidden;background:#edf2f6}
+.dc-summary-hero{height:88mm;margin:0 7mm;position:relative;overflow:hidden;background:#edf2f6}
 .dc-summary-hero img{width:100%;height:100%;object-fit:cover}
 .dc-summary-copy{position:absolute;left:10mm;top:13mm;width:75mm;color:#102f54}
 .dc-summary-copy h2{font-family:Georgia,"NanumMyeongjo",serif;font-size:25px;line-height:1.35;margin:0}
