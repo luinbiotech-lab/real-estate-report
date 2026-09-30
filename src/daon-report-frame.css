@@ -245,3 +245,22 @@
 @media print{
   .daon-core-page{page:daon-professional-master;margin:0;box-shadow:none}
 }
+
+/* A4 fit guard: investment analysis keeps all sections while reducing repeated card footprint */
+.dc-analysis-page>section{margin-bottom:2.5mm}
+.dc-analysis-page .dc-section-title{height:8mm;margin-bottom:2mm}
+.dc-analysis-page .dc-section-title b{font-size:13px}
+.dc-analysis-page .dc-analysis-images{height:64mm}
+.dc-analysis-page .dc-number-item{min-height:14mm}
+.dc-analysis-page .dc-number-item b{font-size:9px;margin-bottom:.6mm}
+.dc-analysis-page .dc-number-item p{font-size:6.8px;line-height:1.35}
+.dc-analysis-page .dc-card-four article{min-height:28mm;padding:3mm}
+.dc-analysis-page .dc-card-four.compact article{min-height:24mm}
+.dc-analysis-page .dc-card-four span{width:6.5mm;height:6.5mm;margin-bottom:1.5mm}
+.dc-analysis-page .dc-card-four b{font-size:7.8px;margin-bottom:1mm}
+.dc-analysis-page .dc-card-four p{font-size:6.5px;line-height:1.35}
+.dc-analysis-page .dc-risk-three article{min-height:20mm;padding:3mm}
+.dc-analysis-page .dc-risk-three p{font-size:6.5px;line-height:1.35}
+.dc-analysis-page .dc-opinion{margin:2mm 8mm 16mm;padding:3mm 4mm}
+.dc-analysis-page .dc-opinion b{font-size:10px;margin-bottom:1mm}
+.dc-analysis-page .dc-opinion p{font-size:7px;line-height:1.35}
