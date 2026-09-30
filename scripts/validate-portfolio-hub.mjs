@@ -2,30 +2,59 @@ import { existsSync, readFileSync } from 'node:fs';
 
 const files = {
   list: 'src/pages/PropertyList.tsx',
-  hub: 'src/components/PortfolioOperationsHub.tsx',
+  control: 'src/pages/AgentControlCenterPage.tsx',
+  layout: 'src/components/Layout.tsx',
   access: 'src/services/accessControlService.ts',
   shareProvider: 'src/services/externalShareProviderService.ts',
 };
 
 for (const file of Object.values(files)) {
-  if (!existsSync(file)) throw new Error(`Portfolio hub 필수 파일 누락: ${file}`);
+  if (!existsSync(file)) throw new Error(`Portfolio/operations 필수 파일 누락: ${file}`);
 }
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-if (!text.list.includes('PortfolioOperationsHub') || !text.list.includes('<PortfolioOperationsHub items={items} />')) throw new Error('첫 화면에 Portfolio Operations Hub를 연결해야 합니다.');
-for (const label of ['PORTFOLIO OPERATIONS HUB', '전체 물건', '기본정보 입력완료', '최근 7일 업데이트', '매매 물건']) {
-  if (!text.hub.includes(label)) throw new Error(`Portfolio Hub KPI/표시 누락: ${label}`);
+for (const marker of [
+  '물건 · Data Room',
+  '물건을 찾고 열어 자료·검증·보고 흐름을 이어갑니다.',
+  'property-list-summary',
+  'property-focus-table',
+  'MoreHorizRounded',
+  'DA:ON 7P 상세보고서',
+  'DA:ON 1P 요약제안서',
+  '입지 브리핑',
+]) {
+  if (!text.list.includes(marker)) throw new Error(`집중형 Property List 계약 누락: ${marker}`);
 }
-for (const label of ['Intake · Verification', '임대 · 수익', '검토 이력', '외부 공유', '보고서 이력', '3D · 도면', '사용자 · 권한', '엑셀 대량 등록']) {
-  if (!text.hub.includes(label)) throw new Error(`Portfolio Hub Workspace 진입 항목 누락: ${label}`);
+if (text.list.includes('<PortfolioOperationsHub items={items} />')) {
+  throw new Error('물건 목록은 운영 허브를 중복 노출하지 않아야 합니다.');
 }
-for (const path of ['/bulk-intake', '/income', '/review-history', '/external-shares', '/report-history', '/digital-twin-intake', '/access', '/import']) {
-  if (!text.hub.includes(`path: '${path}'`)) throw new Error(`Portfolio Hub route 누락: ${path}`);
+
+for (const marker of [
+  '운영 홈',
+  '지금 확인할 문제와 다음 작업만 먼저 보여줍니다.',
+  'control-priority',
+  'NEXT ACTION',
+  'Agent 상세 상태',
+  'Blocked Agent',
+  'Review 대기',
+  '/readiness',
+]) {
+  if (!text.control.includes(marker)) throw new Error(`운영 홈 집중형 IA 계약 누락: ${marker}`);
 }
-if (!text.hub.includes('AUTH CONNECTED') || !text.hub.includes('REMOTE SHARE READY')) throw new Error('첫 화면은 Auth/Remote Share production 연결 상태를 명확히 표시해야 합니다.');
-if (!text.hub.includes('property.address?.trim()') || !text.hub.includes('property.landAreaSqm > 0') || !text.hub.includes('property.totalFloorAreaSqm > 0') || !text.hub.includes('property.managerName?.trim()')) throw new Error('기본정보 입력완료 KPI는 실제 Property 필드 기준이어야 합니다.');
+
+for (const marker of [
+  '운영 홈',
+  '물건 · Data Room',
+  '등록 · 검증',
+  '공간 · 3D',
+  '분석 · 보고',
+  '공유 · 관리',
+]) {
+  if (!text.layout.includes(marker)) throw new Error(`상위 navigation IA 누락: ${marker}`);
+}
+
 if (!text.access.includes('AUTH_BACKEND_CONNECTED = true')) throw new Error('Auth 상태 기준이 production connected 상태여야 합니다.');
 if (!text.shareProvider.includes("availability: 'ready'")) throw new Error('Remote Share 상태 기준이 production ready 상태여야 합니다.');
 
-console.log('Portfolio operations hub integrity: PASS');
+console.log('Focused operations + property workspace integrity: PASS');
