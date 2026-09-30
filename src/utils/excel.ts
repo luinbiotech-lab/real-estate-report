@@ -9,6 +9,7 @@ export const MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024;
 export const columns: Record<string, keyof Property> = {
   물건번호: 'propertyNumber', 물건명: 'name', 건물명: 'buildingName', 거래유형: 'tradeType', 매매가: 'salePrice', 보증금: 'deposit', 월세: 'monthlyRent', 협의여부: 'negotiable', 명도상태: 'occupancyStatus', 주소: 'address', 상세주소: 'detailAddress', 인근역: 'nearbyStation', 역거리: 'stationDistance', 도로조건: 'roadCondition', 대지면적평: 'landAreaPyeong', 대지면적제곱미터: 'landAreaSqm', 연면적평: 'totalFloorAreaPyeong', 연면적제곱미터: 'totalFloorAreaSqm', 건축면적평: 'buildingAreaPyeong', 용도지역: 'zoning', 주용도: 'mainUse', 구조: 'structure', 지하층: 'basementFloors', 지상층: 'groundFloors', 준공일: 'completionDate', 건폐율: 'buildingCoverageRate', 용적률: 'floorAreaRatio', 승강기: 'elevator', 주차대수: 'parkingSpaces', 특징: 'features', 투자포인트: 'investmentPoints', 입지분석: 'locationAnalysis', 개발계획: 'developmentPlan', 추천용도: 'recommendedUse', 리스크: 'risks', 종합의견: 'overallOpinion', 인근거래사례: 'nearbyTransactions', 담당자: 'managerName', 담당자연락처: 'managerPhone', 담당자이메일: 'managerEmail', 회사명: 'companyName',
 };
+const templateHeaders = Object.keys(columns);
 Object.assign(columns, { 소재지: 'address', 물건주소: 'address', 도로명주소: 'address', 토지면적: 'landAreaPyeong', 대지면적: 'landAreaPyeong', 건물면적: 'buildingAreaPyeong', 연면적: 'totalFloorAreaPyeong', 건축물용도: 'mainUse', 층수: 'groundFloors', 도로: 'roadCondition', 역명: 'nearbyStation', 위험요인: 'risks' } satisfies Record<string, keyof Property>);
 const numericFields = new Set<keyof Property>(['salePrice', 'deposit', 'monthlyRent', 'landAreaPyeong', 'landAreaSqm', 'totalFloorAreaPyeong', 'totalFloorAreaSqm', 'buildingAreaPyeong', 'basementFloors', 'groundFloors', 'buildingCoverageRate', 'floorAreaRatio', 'parkingSpaces']);
 export interface ImportRow { row: number; data: Property; errors: string[]; duplicate: boolean }
@@ -97,8 +98,8 @@ export function parseImportJob(buffer: ArrayBuffer, fileName: string, existing: 
 }
 
 export function downloadTemplate() {
-  const sample = { 물건번호: 'P-001', 물건명: '예시 물건', 건물명: '예시빌딩', 거래유형: '매매', 매매가: '53억원', 보증금: '', 월세: '', 협의여부: '예', 명도상태: '명도완료', 주소: '서울특별시 성동구', 상세주소: '', 인근역: '성수역', 역거리: '도보 7분', 도로조건: '4m 도로', ...Object.fromEntries(Object.keys(columns).slice(14).map((key) => [key, ''])) };
-  const worksheet = XLSX.utils.json_to_sheet([sample], { header: Object.keys(columns) });
+  const sample = { 물건번호: 'P-001', 물건명: '예시 물건', 건물명: '예시빌딩', 거래유형: '매매', 매매가: '53억원', 보증금: '', 월세: '', 협의여부: '예', 명도상태: '명도완료', 주소: '서울특별시 성동구', 상세주소: '', 인근역: '성수역', 역거리: '도보 7분', 도로조건: '4m 도로', ...Object.fromEntries(templateHeaders.slice(14).map((key) => [key, ''])) };
+  const worksheet = XLSX.utils.json_to_sheet([sample], { header: templateHeaders });
   const workbook = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(workbook, worksheet, '물건등록양식');
   const bytes = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
