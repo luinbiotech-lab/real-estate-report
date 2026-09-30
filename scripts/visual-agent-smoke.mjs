@@ -101,7 +101,7 @@ async function verifyBangbaeDigitalTwinIntakeHandoff(page) {
 await mkdir(ARTIFACT_DIR, { recursive: true });
 const browser = await chromium.launch({ headless: true }); const page = await browser.newPage({ viewport: { width: 1440, height: 1100 } });
 try {
-  await verifyPage(page, '/control-center', ['Agent Control Center', 'A0 · INTEGRATOR', 'Blocked Agent', '검토 필요 Agent', 'Report Agent', 'Agent Workspace'], 'agent-control-center');
+  await verifyPage(page, '/control-center', ['운영 홈', 'A0 · INTEGRATOR', 'Blocked Agent', '검토 필요 Agent', 'Agent 상세 상태', 'NEXT ACTION'], 'agent-control-center');
   await verifyPage(page, '/agents/interior-vision', ['A4 · ISOLATED AGENT WORKSPACE', 'Interior Vision Agent', 'Agent Isolation Rule', 'Contract Input → Output', 'Direct Write Owns', 'Forbidden Direct Writes', 'Promotion Rule', 'Safety Boundary'], 'agent-workspace-interior-vision');
   await verifyPage(page, '/agents/digital-twin', ['A7 · ISOLATED AGENT WORKSPACE', 'Digital Twin Agent', 'production candidate ≠ construction-ready ≠ legal BIM'], 'agent-workspace-digital-twin');
   await verifyPage(page, '/agents/report', ['A11 · ISOLATED AGENT WORKSPACE', 'Report Agent', '보류 상태'], 'agent-workspace-report-deferred');
