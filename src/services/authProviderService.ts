@@ -33,6 +33,8 @@ export interface RemoteAuthGateway {
   getSession(): Promise<AuthSession | null>;
   signIn(email: string, password: string): Promise<AuthSession>;
   signOut(): Promise<void>;
+  sendPasswordRecoveryEmail(email: string, redirectTo?: string): Promise<void>;
+  updatePasswordWithRecoveryToken(accessToken: string, password: string): Promise<void>;
   inviteUser(email: string, role: AccessRole, displayName?: string): Promise<void>;
   updateRole(userId: string, role: AccessRole): Promise<void>;
   setActive(userId: string, active: boolean): Promise<void>;
