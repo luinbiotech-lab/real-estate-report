@@ -19,7 +19,7 @@ const navGroups = [
   { label: '분석 · 보고', icon: <PaidRounded />, summary: '수익·리스크·보고서', items: [
     { to: '/income', title: '임대 · 수익 분석', icon: <PaidRounded /> },
     { to: '/review-history', title: '검토 이력 통합', icon: <RateReviewRounded /> },
-    { to: '/risk', title: 'Risk · Compliance', icon: <GavelRounded /> },
+    { to: '/risk', title: 'Risk / Compliance', icon: <GavelRounded /> },
     { to: '/report-history', title: '보고서 버전 이력', icon: <HistoryRounded /> },
   ]},
   { label: '공유 · 관리', icon: <ShareRounded />, summary: '공유·권한·운영 설정', items: [
