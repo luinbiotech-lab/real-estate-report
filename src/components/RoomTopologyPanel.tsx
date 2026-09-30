@@ -24,7 +24,7 @@ export default function RoomTopologyPanel({ asset, onSaved }: { asset: DigitalTw
   const approved = reviews.filter((item) => item.decision === 'approved').length;
   return <section style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 14, background: '#fbfcfe' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 10 }}>
-      <div><strong>Room Topology / 공간 경계 후보</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>폐합 DXF 폴리라인만 공간 후보로 제시합니다. 자동으로 방·실 면적을 확정하지 않습니다.</p></div>
+      <div><strong>Room Topology / 공간 경계 후보</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>폐합 도면 폴리라인을 공간 후보로 제시합니다. 자동으로 방·실 면적을 확정하지 않습니다.</p></div>
       <div style={{ display: 'flex', gap: 6 }}><Chip size="small" label={`후보 ${candidates.length}`} /><Chip size="small" color={approved ? 'success' : 'default'} label={`승인 ${approved}`} /></div>
     </div>
     <Alert severity="warning" sx={{ mb: 1.5 }}>벽 중심선, 샤프트, 가구 외곽선 등도 폐합 폴리라인일 수 있습니다. 이름·용도·경계는 사람이 확인해야 하며 면적값도 승인 전에는 후보값입니다.</Alert>
