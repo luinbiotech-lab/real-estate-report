@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Chip, IconButton, Menu, MenuItem, Select, TextField, Tooltip } from '@mui/material';
+import { Button, Chip, IconButton, Menu, MenuItem, Pagination, Select, TextField, Tooltip } from '@mui/material';
 import { AddRounded, DeleteOutlineRounded, DescriptionOutlined, EditOutlined, FileDownloadOutlined, FolderSharedOutlined, MapOutlined, MoreHorizRounded, PictureAsPdfOutlined, SearchRounded, UploadFileRounded } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
+
+const PAGE_SIZE = 25;
 
 export default function PropertyList() {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ export default function PropertyList() {
   const [type, setType] = useState('전체');
   const [manager, setManager] = useState('전체');
   const [selected, setSelected] = useState<string[]>([]);
+  const [page, setPage] = useState(1);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [menuProperty, setMenuProperty] = useState<Property | null>(null);
 
@@ -51,6 +54,13 @@ export default function PropertyList() {
     }
   };
 
+  useEffect(() => { setPage(1); }, [query, type, manager]);
+  useEffect(() => {
+    const maxPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+    if (page > maxPage) setPage(maxPage);
+  }, [filtered.length, page]);
+
+  const paged = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   const latestUpdated = items[0] ? new Date(items[0].updatedAt).toLocaleDateString('ko-KR') : '-';
 
   return <main className="property-list-focus">
@@ -108,7 +118,7 @@ export default function PropertyList() {
             </tr>
           </thead>
           <tbody>
-            {filtered.map((property) => <tr key={property.id}>
+            {paged.map((property) => <tr key={property.id}>
               <td><input aria-label={`${property.name} 선택`} type="checkbox" checked={selected.includes(property.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, property.id] : selected.filter((id) => id !== property.id))} /></td>
               <td className="property-primary-cell">
                 <button className="property-name-link" onClick={() => navigate(`/property/${property.id}`)}>{property.name}</button>
@@ -131,6 +141,7 @@ export default function PropertyList() {
         </table>
         {!filtered.length && <div className="empty">조건에 맞는 물건이 없습니다.</div>}
       </div>
+      {filtered.length > PAGE_SIZE && <div className="property-list-pagination"><span>{((page - 1) * PAGE_SIZE + 1).toLocaleString('ko-KR')}–{Math.min(page * PAGE_SIZE, filtered.length).toLocaleString('ko-KR')} / {filtered.length.toLocaleString('ko-KR')}건</span><Pagination page={page} count={Math.ceil(filtered.length / PAGE_SIZE)} onChange={(_, value) => setPage(value)} /></div>}
     </section>
 
     <Menu anchorEl={menuAnchor} open={Boolean(menuAnchor)} onClose={() => { setMenuAnchor(null); setMenuProperty(null); }}>
