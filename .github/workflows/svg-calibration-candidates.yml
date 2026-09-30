@@ -34,3 +34,5 @@ jobs:
           exit 1
       - name: Scan calibration candidates
         run: node scripts/scan-svg-calibration-candidates.mjs
+      - name: Validate SVG topology chain
+        run: node scripts/validate-svg-topology-chain.mjs
