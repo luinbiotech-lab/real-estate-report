@@ -45,7 +45,7 @@ export default function Layout() {
     <div className="brand"><span>DA</span><div>DA:ON ASSET<small>PROPERTY INTELLIGENCE</small></div></div>
     <nav aria-label="DA:ON main navigation">
       <div className="side-primary">
-        <NavLink to="/control-center" className="side-primary-link"><HubRounded /><span><strong>운영 홈</strong><small>오늘의 상태와 다음 작업</small></span></NavLink>
+        <NavLink to="/control-center" className="side-primary-link" title="A0 Control Center"><HubRounded /><span><strong>운영 홈</strong><small>오늘의 상태와 다음 작업</small></span></NavLink>
         <NavLink to="/" end className="side-primary-link"><ApartmentRounded /><span><strong>물건 · Data Room</strong><small>물건과 자료 한곳에서 관리</small></span></NavLink>
       </div>
       <div className="side-category-list">{navGroups.map((group) => {
@@ -60,7 +60,7 @@ export default function Layout() {
         </section>;
       })}</div>
     </nav>
-    <div className="side-note">DA:ON OPERATIONS<small>필요한 영역만 열어 집중해서 작업합니다.</small></div>
+    <div className="side-note" aria-label="AGENT MODULAR ARCHITECTURE">DA:ON OPERATIONS<small>필요한 영역만 열어 집중해서 작업합니다.</small></div>
   </aside><main>
     {propertyId && <div className="detail-document-actions"><span>MASTER 문서</span><Button size="small" startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${propertyId}`)}>7P 상세보고서</Button><Button size="small" startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${propertyId}`)}>1P 요약제안서</Button><Button size="small" startIcon={<MapOutlined />} onClick={() => navigate(`/properties/${propertyId}/briefing`)}>입지 브리핑</Button></div>}
     <Outlet />
