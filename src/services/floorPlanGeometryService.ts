@@ -55,6 +55,34 @@ export async function extractDxfGeometry(asset: DigitalTwinAsset): Promise<DxfGe
 }
 
 function numberList(value = '') { return (value.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi) || []).map(Number).filter(Number.isFinite); }
+type Matrix2D = [number, number, number, number, number, number];
+const IDENTITY_MATRIX: Matrix2D = [1, 0, 0, 1, 0, 0];
+function multiplyMatrix(left: Matrix2D, right: Matrix2D): Matrix2D {
+  const [a1,b1,c1,d1,e1,f1]=left, [a2,b2,c2,d2,e2,f2]=right;
+  return [a1*a2+c1*b2,b1*a2+d1*b2,a1*c2+c1*d2,b1*c2+d1*d2,a1*e2+c1*f2+e1,b1*e2+d1*f2+f1];
+}
+function matrixForTransform(value = ''): Matrix2D {
+  let current: Matrix2D = [...IDENTITY_MATRIX];
+  const re=/(matrix|translate|scale|rotate)\s*\(([^)]*)\)/gi; let match: RegExpExecArray | null;
+  while((match=re.exec(value))){
+    const nums=numberList(match[2]); let next: Matrix2D=[...IDENTITY_MATRIX];
+    if(match[1].toLowerCase()==='matrix'&&nums.length>=6) next=[nums[0],nums[1],nums[2],nums[3],nums[4],nums[5]];
+    else if(match[1].toLowerCase()==='translate'){next=[1,0,0,1,nums[0]||0,nums[1]||0];}
+    else if(match[1].toLowerCase()==='scale'){const sx=nums[0]??1, sy=nums[1]??sx; next=[sx,0,0,sy,0,0];}
+    else if(match[1].toLowerCase()==='rotate'){const rad=(nums[0]||0)*Math.PI/180, cos=Math.cos(rad), sin=Math.sin(rad); const rot:Matrix2D=[cos,sin,-sin,cos,0,0]; if(nums.length>=3){const [cx,cy]=[nums[1],nums[2]]; next=multiplyMatrix(multiplyMatrix([1,0,0,1,cx,cy],rot),[1,0,0,1,-cx,-cy]);}else next=rot;}
+    current=multiplyMatrix(current,next);
+  }
+  return current;
+}
+function cumulativeTransform(el: Element): Matrix2D {
+  const chain: Element[]=[]; let current: Element | null=el;
+  while(current){chain.unshift(current);current=current.parentElement;}
+  return chain.reduce((matrix,node)=>multiplyMatrix(matrix,matrixForTransform(node.getAttribute('transform')||'')),[...IDENTITY_MATRIX] as Matrix2D);
+}
+function transformPoints(el: Element, points: Array<{x:number;y:number}>) {
+  const [a,b,c,d,e,f]=cumulativeTransform(el);
+  return points.map(({x,y})=>({x:a*x+c*y+e,y:b*x+d*y+f}));
+}
 function pathPoints(d: string) {
   const tokens = d.match(/[a-zA-Z]|-?\d*\.?\d+(?:e[-+]?\d+)?/g) || []; const result:Array<{x:number;y:number}>=[]; let i=0,x=0,y=0,sx=0,sy=0,cmd='';
   const read=()=>Number(tokens[i++]); while(i<tokens.length){ if(/[A-Za-z]/.test(tokens[i])) cmd=tokens[i++]; if(!cmd) break; const rel=cmd===cmd.toLowerCase(); const C=cmd.toUpperCase();
@@ -71,14 +99,14 @@ export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGe
   const text=await asset.fileData.text(); const doc=new DOMParser().parseFromString(text,'image/svg+xml'); if(doc.querySelector('parsererror')) throw new Error('SVG 형식을 확인할 수 없습니다.');
   const points:Array<[number,number]>=[], previewSegments:DxfPreviewSegment[]=[]; const layers=new Set<string>(), labels=new Set<string>(); let lineCount=0, polylineCount=0, textCount=0;
   const layerFor=(el:Element)=>el.getAttribute('data-layer')||el.id||el.getAttribute('class')||el.tagName.toLowerCase();
-  const add=(pts:Array<{x:number;y:number}>,layer:string,kind:'line'|'polyline')=>{ if(pts.length<2)return; layers.add(layer); pts.forEach(p=>points.push([p.x,p.y])); if(previewSegments.length<2500) previewSegments.push({kind,layer,semantic:semanticForLayer(layer),points:pts}); };
-  doc.querySelectorAll('line').forEach(el=>{ const p=[{x:Number(el.getAttribute('x1')||0),y:Number(el.getAttribute('y1')||0)},{x:Number(el.getAttribute('x2')||0),y:Number(el.getAttribute('y2')||0)}]; lineCount++; add(p,layerFor(el),'line'); });
-  doc.querySelectorAll('polyline,polygon').forEach(el=>{ const n=numberList(el.getAttribute('points')||''); const p:Array<{x:number;y:number}>=[]; for(let i=0;i+1<n.length;i+=2)p.push({x:n[i],y:n[i+1]}); if(el.tagName.toLowerCase()==='polygon'&&p.length)p.push({...p[0]}); polylineCount++; add(p,layerFor(el),'polyline'); });
-  doc.querySelectorAll('rect').forEach(el=>{ const x=Number(el.getAttribute('x')||0),y=Number(el.getAttribute('y')||0),w=Number(el.getAttribute('width')||0),h=Number(el.getAttribute('height')||0); polylineCount++; add([{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h},{x,y}],layerFor(el),'polyline'); });
-  doc.querySelectorAll('path').forEach(el=>{ const p=pathPoints(el.getAttribute('d')||''); if(p.length>1){polylineCount++;add(p,layerFor(el),'polyline');} });
+  const add=(el:Element,pts:Array<{x:number;y:number}>,layer:string,kind:'line'|'polyline')=>{ if(pts.length<2)return; const transformed=transformPoints(el,pts); layers.add(layer); transformed.forEach(p=>points.push([p.x,p.y])); if(previewSegments.length<2500) previewSegments.push({kind,layer,semantic:semanticForLayer(layer),points:transformed}); };
+  doc.querySelectorAll('line').forEach(el=>{ const p=[{x:Number(el.getAttribute('x1')||0),y:Number(el.getAttribute('y1')||0)},{x:Number(el.getAttribute('x2')||0),y:Number(el.getAttribute('y2')||0)}]; lineCount++; add(el,p,layerFor(el),'line'); });
+  doc.querySelectorAll('polyline,polygon').forEach(el=>{ const n=numberList(el.getAttribute('points')||''); const p:Array<{x:number;y:number}>=[]; for(let i=0;i+1<n.length;i+=2)p.push({x:n[i],y:n[i+1]}); if(el.tagName.toLowerCase()==='polygon'&&p.length)p.push({...p[0]}); polylineCount++; add(el,p,layerFor(el),'polyline'); });
+  doc.querySelectorAll('rect').forEach(el=>{ const x=Number(el.getAttribute('x')||0),y=Number(el.getAttribute('y')||0),w=Number(el.getAttribute('width')||0),h=Number(el.getAttribute('height')||0); polylineCount++; add(el,[{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h},{x,y}],layerFor(el),'polyline'); });
+  doc.querySelectorAll('path').forEach(el=>{ const p=pathPoints(el.getAttribute('d')||''); if(p.length>1){polylineCount++;add(el,p,layerFor(el),'polyline');} });
   doc.querySelectorAll('text,tspan').forEach(el=>{ const t=(el.textContent||'').trim(); if(t){textCount++;if(roomLike(t))labels.add(t.slice(0,120));} });
   const sortedLayers=[...layers].sort();
-  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','SVG transform·곡선은 1차 preview 후보로 단순화될 수 있으므로 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.'] };
+  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','SVG matrix/translate/scale/rotate transform은 좌표 후보에 반영하지만 곡선은 1차 preview에서 단순화될 수 있어 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.'] };
 }
 
 export const floorPlanGeometryService = {
