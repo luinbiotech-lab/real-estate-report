@@ -196,6 +196,10 @@ try {
   assert(professional.images.length > 0 && professional.images.every((image) => image.width > 0 && image.height > 0), 'Professional MASTER contains broken images');
   assert(professional.images.every((image) => image.src.startsWith('/__qa__/')), 'Professional MASTER has unexpected production media dependency in rendered QA');
   assert(professional.text.includes('DAON 소개'), 'Professional MASTER closing content missing');
+  if (professional.text.includes('확인 필요')) {
+    const markerIndex = professional.text.indexOf('확인 필요');
+    console.log('PLACEHOLDER_CONTEXT', professional.text.slice(Math.max(0, markerIndex - 240), markerIndex + 320));
+  }
   assert(!professional.text.includes('확인 필요'), 'Professional MASTER must omit empty-value placeholders');
   await page.screenshot({ path: `${OUT_DIR}/daon-professional-master.png`, fullPage: true });
 
