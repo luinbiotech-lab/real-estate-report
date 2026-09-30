@@ -20,6 +20,7 @@ const EXTENSION_ASSET_TYPE: Record<string, DigitalTwinAssetType> = {
   png: 'scanned_plan',
   webp: 'scanned_plan',
   pdf: 'floor_plan',
+  svg: 'floor_plan',
   json: 'measurement_data',
   csv: 'measurement_data',
 };
