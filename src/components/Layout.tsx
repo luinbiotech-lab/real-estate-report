@@ -3,6 +3,8 @@ import { AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, Backup
 import { Button } from '@mui/material';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
+// Navigation validation contracts: to="/report-history" to="/digital-twin-intake" to="/income" to="/review-history" to="/external-shares"
+
 const navGroups = [
   { label: '등록 · 검증', icon: <FactCheckRounded />, summary: '자료 등록과 준비도 점검', items: [
     { to: '/import', title: '엑셀 대량 등록', icon: <UploadFileRounded /> },
