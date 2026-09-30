@@ -28,7 +28,7 @@ const explicitImportKeys = (row: ImportRow): (keyof Property)[] => {
 };
 
 export default function ExcelImport() {
-  const nav = useNavigate(); const [job, setJob] = useState<ImportJob>(); const [recovery, setRecovery] = useState<ImportJob>(); const [page, setPage] = useState(1); const [review, setReview] = useState<{ type: 'address' | 'poi'; rowId: string }>(); const [busy, setBusy] = useState(false); const pauseRef = useRef(false);
+  const nav = useNavigate(); const [job, setJob] = useState<ImportJob>(); const [recovery, setRecovery] = useState<ImportJob>(); const [page, setPage] = useState(1); const [review, setReview] = useState<{ type: 'address' | 'poi'; rowId: string }>(); const [busy, setBusy] = useState(false); const [saving, setSaving] = useState<{ done: number; total: number }>(); const pauseRef = useRef(false);
   useEffect(() => { importJobRepository.getLatest().then((saved) => { if (saved && saved.rows.some((row) => !['completed', 'invalid', 'skipped'].includes(row.status))) setRecovery({ ...saved, running: false, paused: true }); }); }, []);
   const commit = async (next: ImportJob) => { setJob(next); await importJobRepository.save(next); };
   const pick = async (file?: File) => { if (!file) return; setBusy(true); try { const existing = await propertyRepository.getAll(); const next = parseImportJob(await file.arrayBuffer(), file.name, existing); await commit(next); setPage(1); } catch { alert('엑셀 파일을 읽지 못했습니다. 표준 양식을 확인해 주세요.'); } finally { setBusy(false); } };
@@ -37,44 +37,57 @@ export default function ExcelImport() {
   const pause = () => { pauseRef.current = true; if (job) setJob({ ...job, paused: true }); };
   const retry = async () => { if (!job) return; await mapService.refreshProviderStatus(); const next = { ...job, rows: job.rows.map((row) => row.status === 'failed' ? { ...row, status: 'ready' as const, selected: true, issues: row.issues.filter((issue) => !/^(NAVER_|KAKAO_|GEOCODE_|STATIC_MAP_|POI_|NETWORK_|TIMEOUT)/.test(issue.code)) } : row) }; await commit(next); pauseRef.current = false; await runImportQueue(next, commit, () => pauseRef.current); };
   const saveRows = async (all = false) => {
-    if (!job) return;
+    if (!job || saving) return;
     const existing = await propertyRepository.getAll();
     const targets = job.rows.filter((row) => row.status === 'completed' && row.saveMode !== 'skip' && (all || row.selected));
-    const created: Property[] = []; let queued = 0; let dataRoomTarget: string | undefined;
-    for (const row of targets) {
-      if (row.saveMode === 'merge' && row.duplicatePropertyId) {
-        const current = existing.find((item) => item.id === row.duplicatePropertyId);
-        if (current) {
-          const bundle = await propertyDataRoomService.getBundle(current.id);
-          const active = new Set(bundle.verificationCandidates
-            .filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held')
-            .map((item) => fingerprint(item.fieldKey as keyof Property, item.candidateValue)));
-          for (const key of explicitImportKeys(row)) {
-            if (key === 'id' || key === 'createdAt' || key === 'updatedAt') continue;
-            const incoming = row.normalizedProperty[key];
-            if (sameValue(current[key], incoming)) continue;
-            const keyFingerprint = fingerprint(key, incoming);
-            if (active.has(keyFingerprint)) continue;
-            await propertyDataRoomService.createVerificationCandidate(current.id, {
-              fieldKey: key,
-              candidateValue: incoming,
-              sourceType: 'excel_import',
-              sourceName: job.fileName,
-              sourceReference: `${job.fileName} · Excel ${row.excelRowNumber}행`,
-              note: 'Excel 병합 후보 — 승인 전 기존 Property 미변경',
-            });
-            active.add(keyFingerprint); queued += 1;
-          }
-          dataRoomTarget ??= current.id;
-          continue;
-        }
-      }
-      const candidate = propertyFromImportRow(row);
-      await propertyRepository.create(candidate); created.push(candidate);
+    if (!targets.length) {
+      alert('저장 가능한 완료 항목이 없습니다. 자동조회와 검토 상태를 먼저 확인해 주세요.');
+      return;
     }
-    await commit({ ...job, rows: job.rows.map((row) => targets.some((target) => target.rowId === row.rowId) ? { ...row, selected: false } : row) });
-    alert(`신규 ${created.length}건 저장 · 검증 후보 ${queued}건 등록`);
-    if (!created.length && dataRoomTarget) nav(`/property/${dataRoomTarget}`); else if (created.length) nav('/');
+    const savedRowIds = new Set(targets.map((row) => row.rowId));
+    const created: Property[] = []; let queued = 0; let dataRoomTarget: string | undefined; let done = 0;
+    setSaving({ done: 0, total: targets.length });
+    try {
+      for (const row of targets) {
+        if (row.saveMode === 'merge' && row.duplicatePropertyId) {
+          const current = existing.find((item) => item.id === row.duplicatePropertyId);
+          if (current) {
+            const bundle = await propertyDataRoomService.getBundle(current.id);
+            const active = new Set(bundle.verificationCandidates
+              .filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held')
+              .map((item) => fingerprint(item.fieldKey as keyof Property, item.candidateValue)));
+            for (const key of explicitImportKeys(row)) {
+              if (key === 'id' || key === 'createdAt' || key === 'updatedAt') continue;
+              const incoming = row.normalizedProperty[key];
+              if (sameValue(current[key], incoming)) continue;
+              const keyFingerprint = fingerprint(key, incoming);
+              if (active.has(keyFingerprint)) continue;
+              await propertyDataRoomService.createVerificationCandidate(current.id, {
+                fieldKey: key,
+                candidateValue: incoming,
+                sourceType: 'excel_import',
+                sourceName: job.fileName,
+                sourceReference: `${job.fileName} · Excel ${row.excelRowNumber}행`,
+                note: 'Excel 병합 후보 — 승인 전 기존 Property 미변경',
+              });
+              active.add(keyFingerprint); queued += 1;
+            }
+            dataRoomTarget ??= current.id;
+            done += 1; setSaving({ done, total: targets.length });
+            continue;
+          }
+        }
+        const candidate = propertyFromImportRow(row);
+        await propertyRepository.create(candidate);
+        created.push(candidate);
+        done += 1; setSaving({ done, total: targets.length });
+      }
+      await commit({ ...job, rows: job.rows.map((row) => savedRowIds.has(row.rowId) ? { ...row, selected: false } : row) });
+      alert(`신규 ${created.length}건 저장 · 검증 후보 ${queued}건 등록`);
+      if (!created.length && dataRoomTarget) nav(`/property/${dataRoomTarget}`); else if (created.length) nav('/');
+    } finally {
+      setSaving(undefined);
+    }
   };
   const stats = useMemo(() => { const rows = job?.rows ?? []; return { total: rows.length, ready: rows.filter((r) => r.status === 'ready').length, review: rows.filter((r) => r.status === 'address_review_required' || r.duplicateKind).length, invalid: rows.filter((r) => r.status === 'invalid').length, geocoded: rows.filter((r) => ['geocoded', 'static_map_loading', 'static_map_ready', 'poi_loading', 'poi_ready', 'completed'].includes(r.status)).length, maps: rows.filter((r) => !!r.generatedMapImage).length, pois: rows.filter((r) => !!r.poiCandidates).length, failed: rows.filter((r) => r.status === 'failed').length, complete: rows.filter((r) => r.status === 'completed').length }; }, [job]);
   const visible = job?.rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE) ?? []; const reviewRow = job?.rows.find((row) => row.rowId === review?.rowId); const progress = stats.total ? Math.round((job?.processedRows ?? 0) / stats.total * 100) : 0;
@@ -82,9 +95,11 @@ export default function ExcelImport() {
     {recovery && !job && <Alert severity="info" action={<><Button onClick={() => { setJob(recovery); setRecovery(undefined); }}>검토 / 계속</Button><Button color="error" onClick={async () => { await importJobRepository.delete(recovery.id); setRecovery(undefined); }}>삭제</Button></>}>진행 중이던 가져오기 작업이 있습니다. 자동으로 재시작하지 않았습니다.</Alert>}
     {!job ? <section className="dropzone"><CloudUploadRounded /><h2>Excel 파일을 선택하세요</h2><p>.xlsx 또는 .xls · 파일 선택만으로 Property에 저장되지 않습니다.</p><Button component="label" variant="contained" disabled={busy}>파일 선택<input hidden type="file" accept=".xlsx,.xls" onChange={(event) => pick(event.target.files?.[0])} /></Button></section> : <>
       <section className="import-wizard"><span className="done">1 파일</span><span className="done">2 검증</span><span className={job.running ? 'active' : ''}>3 자동조회</span><span>4 검토</span><span>5 저장</span></section>
+      {stats.total >= 200 && <Alert severity="info" sx={{ mb: 1.5 }}>대량 작업 {stats.total.toLocaleString('ko-KR')}행입니다. 화면은 20행씩 표시하며, 주소·지도·POI 자동조회는 API 보호를 위해 최대 3건 동시 처리합니다. 중간에 새로고침해도 작업 상태를 복구할 수 있습니다.</Alert>}
+      {saving && <section className="panel" style={{ marginBottom: 12 }}><div className="job-progress"><div><b>Production 저장 중</b><span>{saving.done.toLocaleString('ko-KR')} / {saving.total.toLocaleString('ko-KR')}건</span></div><strong>{Math.round((saving.done / saving.total) * 100)}%</strong></div><LinearProgress variant="determinate" value={(saving.done / saving.total) * 100} /></section>}
       <section className="bulk-kpis">{[['전체', stats.total], ['정상', stats.ready], ['검토 필요', stats.review], ['오류', stats.invalid], ['좌표 완료', stats.geocoded], ['지도 완료', stats.maps], ['POI 완료', stats.pois], ['실패', stats.failed]].map(([label, value]) => <div key={String(label)}><small>{label}</small><b>{value}</b></div>)}</section>
       <section className="panel import-control-panel"><div className="job-progress"><div><b>{job.fileName}</b><span>전체 {stats.total} · 완료 {stats.complete} · 검토 {stats.review} · 실패 {stats.failed} · 대기 {stats.ready}</span></div><strong>{progress}%</strong></div><LinearProgress variant="determinate" value={progress} /><div className="automation-actions"><TextField select size="small" label="동시 처리" value={job.concurrency} disabled={job.running} onChange={(event) => updateJob({ concurrency: Number(event.target.value) as 1 | 2 | 3 })}>{[1, 2, 3].map((value) => <MenuItem key={value} value={value}>{value}건</MenuItem>)}</TextField><Button variant="contained" startIcon={<PlayArrowRounded />} disabled={job.running} onClick={() => run(false)}>{job.paused ? '재개' : '자동조회 시작'}</Button><Button startIcon={<PauseRounded />} disabled={!job.running} onClick={pause}>일시정지</Button><Button startIcon={<RefreshRounded />} disabled={job.running || !stats.failed} onClick={retry}>실패건 재시도</Button><Button disabled={job.running} onClick={() => run(true)}>선택 행만 처리</Button><span className="spacer" /><Button onClick={async () => { await importJobRepository.delete(job.id); setJob(undefined); }}>작업 삭제</Button></div></section>
-      <section className="panel"><div className="toolbar"><FormControlLabel control={<Checkbox checked={job.rows.filter((r) => r.status !== 'invalid').every((r) => r.selected)} onChange={(event) => updateJob({ rows: job.rows.map((row) => row.status === 'invalid' ? row : { ...row, selected: event.target.checked }) })} />} label="전체 선택" /><span className="spacer" /><Button startIcon={<SaveRounded />} onClick={() => saveRows(false)}>선택 항목 저장</Button><Button variant="contained" startIcon={<SaveRounded />} onClick={() => saveRows(true)}>정상 항목 모두 저장</Button></div><div className="table-wrap"><table className="bulk-table"><thead><tr><th>선택</th><th>행</th><th>물건명 / 주소</th><th>가격</th><th>상태</th><th>오류·검토</th><th>좌표</th><th>지도</th><th>POI</th><th>중복 처리</th></tr></thead><tbody>{visible.map((row) => { const address = row.selectedAddressCandidateIndex == null ? undefined : row.addressCandidates?.[row.selectedAddressCandidateIndex]; return <tr key={row.rowId}><td><Checkbox checked={row.selected} disabled={row.status === 'invalid'} onChange={(event) => updateRow(row.rowId, (item) => ({ ...item, selected: event.target.checked }))} /></td><td>{row.excelRowNumber}</td><td><b>{String(row.normalizedProperty.name || '-')}</b><small>{String(row.normalizedProperty.address || '-')}</small></td><td>{formatPrice(Number(row.normalizedProperty.salePrice || 0))}</td><td><Chip size="small" color={statusColor(row)} label={statusLabel[row.status] || row.status} /></td><td>{row.issues.map((issue) => <small className="issue-line" key={issue.code}>{issue.message}</small>)}{row.status === 'address_review_required' && <Button size="small" onClick={() => setReview({ type: 'address', rowId: row.rowId })}>주소 검토</Button>}</td><td>{address ? <small>{address.latitude.toFixed(5)}<br />{address.longitude.toFixed(5)}</small> : '-'}</td><td>{row.generatedMapImage ? <img className="mini-map" src={row.generatedMapImage} alt={`${row.excelRowNumber}행 지도`} /> : '-'}</td><td>{row.poiCandidates ? <Button size="small" onClick={() => setReview({ type: 'poi', rowId: row.rowId })}>{row.poiCandidates.filter((poi) => poi.selected).length}/{row.poiCandidates.length} 검토</Button> : '-'}</td><td><TextField select size="small" value={row.saveMode} disabled={!row.duplicateKind} onChange={(event) => updateRow(row.rowId, (item) => ({ ...item, saveMode: event.target.value as ImportRow['saveMode'] }))}><MenuItem value="new">신규 생성</MenuItem><MenuItem value="merge">검증 후보 생성</MenuItem><MenuItem value="skip">건너뛰기</MenuItem></TextField></td></tr>; })}</tbody></table></div><Pagination page={page} count={Math.max(1, Math.ceil(job.rows.length / PAGE_SIZE))} onChange={(_, value) => setPage(value)} /></section>
+      <section className="panel"><div className="toolbar"><FormControlLabel control={<Checkbox checked={job.rows.filter((r) => r.status !== 'invalid').every((r) => r.selected)} onChange={(event) => updateJob({ rows: job.rows.map((row) => row.status === 'invalid' ? row : { ...row, selected: event.target.checked }) })} />} label="전체 선택" /><span className="spacer" /><Button startIcon={<SaveRounded />} disabled={Boolean(saving)} onClick={() => saveRows(false)}>선택 항목 저장</Button><Button variant="contained" startIcon={<SaveRounded />} disabled={Boolean(saving)} onClick={() => saveRows(true)}>{saving ? '저장 중…' : '정상 항목 모두 저장'}</Button></div><div className="table-wrap"><table className="bulk-table"><thead><tr><th>선택</th><th>행</th><th>물건명 / 주소</th><th>가격</th><th>상태</th><th>오류·검토</th><th>좌표</th><th>지도</th><th>POI</th><th>중복 처리</th></tr></thead><tbody>{visible.map((row) => { const address = row.selectedAddressCandidateIndex == null ? undefined : row.addressCandidates?.[row.selectedAddressCandidateIndex]; return <tr key={row.rowId}><td><Checkbox checked={row.selected} disabled={row.status === 'invalid'} onChange={(event) => updateRow(row.rowId, (item) => ({ ...item, selected: event.target.checked }))} /></td><td>{row.excelRowNumber}</td><td><b>{String(row.normalizedProperty.name || '-')}</b><small>{String(row.normalizedProperty.address || '-')}</small></td><td>{formatPrice(Number(row.normalizedProperty.salePrice || 0))}</td><td><Chip size="small" color={statusColor(row)} label={statusLabel[row.status] || row.status} /></td><td>{row.issues.map((issue) => <small className="issue-line" key={issue.code}>{issue.message}</small>)}{row.status === 'address_review_required' && <Button size="small" onClick={() => setReview({ type: 'address', rowId: row.rowId })}>주소 검토</Button>}</td><td>{address ? <small>{address.latitude.toFixed(5)}<br />{address.longitude.toFixed(5)}</small> : '-'}</td><td>{row.generatedMapImage ? <img className="mini-map" src={row.generatedMapImage} alt={`${row.excelRowNumber}행 지도`} /> : '-'}</td><td>{row.poiCandidates ? <Button size="small" onClick={() => setReview({ type: 'poi', rowId: row.rowId })}>{row.poiCandidates.filter((poi) => poi.selected).length}/{row.poiCandidates.length} 검토</Button> : '-'}</td><td><TextField select size="small" value={row.saveMode} disabled={!row.duplicateKind} onChange={(event) => updateRow(row.rowId, (item) => ({ ...item, saveMode: event.target.value as ImportRow['saveMode'] }))}><MenuItem value="new">신규 생성</MenuItem><MenuItem value="merge">검증 후보 생성</MenuItem><MenuItem value="skip">건너뛰기</MenuItem></TextField></td></tr>; })}</tbody></table></div><Pagination page={page} count={Math.max(1, Math.ceil(job.rows.length / PAGE_SIZE))} onChange={(_, value) => setPage(value)} /></section>
       <details className="job-log"><summary>작업 로그 ({job.logs.length})</summary>{job.logs.slice(-50).map((entry, index) => <code key={index}>{new Date(entry.at).toLocaleTimeString('ko-KR')} {entry.row ? `row ${entry.row}` : ''} {entry.message}</code>)}</details>
       {(job.providerPause?.naver || job.providerPause?.kakao) && <Alert severity="warning">요청 한도 보호: NAVER {job.providerPause?.naver ? '일시 대기' : '정상'} · Kakao {job.providerPause?.kakao ? '일시 대기' : '정상'}</Alert>}
     </>}
