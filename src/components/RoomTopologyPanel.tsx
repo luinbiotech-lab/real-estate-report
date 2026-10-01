@@ -10,6 +10,7 @@ export default function RoomTopologyPanel({ asset, onSaved }: { asset: DigitalTw
   const [names, setNames] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState('');
+  const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState('');
 
   const act = async (candidate: RoomBoundaryCandidate, decision: 'approved' | 'held' | 'rejected') => {
@@ -22,16 +23,20 @@ export default function RoomTopologyPanel({ asset, onSaved }: { asset: DigitalTw
   };
 
   const approved = reviews.filter((item) => item.decision === 'approved').length;
+  const priorityCandidates = candidates.filter((candidate) => candidate.areaSqmCandidate == null || (candidate.areaSqmCandidate >= 2 && candidate.areaSqmCandidate <= 80));
+  const secondaryCandidates = candidates.filter((candidate) => !priorityCandidates.some((item) => item.id === candidate.id));
+  const visibleCandidates = showAll ? candidates : priorityCandidates;
   return <section style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 14, background: '#fbfcfe' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 10 }}>
       <div><strong>Room Topology / 공간 경계 후보</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>폐합 도면 폴리라인을 공간 후보로 제시합니다. 자동으로 방·실 면적을 확정하지 않습니다.</p></div>
-      <div style={{ display: 'flex', gap: 6 }}><Chip size="small" label={`후보 ${candidates.length}`} /><Chip size="small" color={approved ? 'success' : 'default'} label={`승인 ${approved}`} /></div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}><Chip size="small" color="primary" variant="outlined" label={`우선 검토 ${priorityCandidates.length}`} /><Chip size="small" label={`전체 ${candidates.length}`} /><Chip size="small" color={approved ? 'success' : 'default'} label={`승인 ${approved}`} /></div>
     </div>
-    <Alert severity="warning" sx={{ mb: 1.5 }}>벽 중심선, 샤프트, 가구 외곽선 등도 폐합 폴리라인일 수 있습니다. 이름·용도·경계는 사람이 확인해야 하며 면적값도 승인 전에는 후보값입니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 1.5 }}>축척이 확인된 경우 2~80㎡ 범위 후보를 우선 표시합니다. 이는 검토 편의를 위한 정렬 기준일 뿐 공간 확정 규칙이 아닙니다. 벽 중심선, 샤프트, 가구 외곽선 등도 반드시 사람이 확인해야 합니다.</Alert>
+    {secondaryCandidates.length > 0 && <div style={{ display:'flex', justifyContent:'flex-end', marginBottom:10 }}><Button size="small" variant="text" onClick={() => setShowAll((value) => !value)}>{showAll ? '우선 후보만 보기' : `기타 후보 ${secondaryCandidates.length}개 펼치기`}</Button></div>}
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
     {!candidates.length && <div style={{ padding: 18, textAlign: 'center', color: '#7b8794' }}>폐합 폴리라인 기반 공간 후보가 없습니다.</div>}
     <div style={{ display: 'grid', gap: 10 }}>
-      {candidates.map((candidate) => {
+      {visibleCandidates.map((candidate) => {
         const review = reviewById.get(candidate.id);
         return <article key={candidate.id} style={{ border: '1px solid #e1e6ec', borderRadius: 8, padding: 12, background: '#fff' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
