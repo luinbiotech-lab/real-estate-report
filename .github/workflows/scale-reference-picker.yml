@@ -1,0 +1,38 @@
+name: Scale Reference Picker QA
+
+on:
+  push:
+    branches:
+      - feat/scale-reference-picker
+  workflow_dispatch:
+
+jobs:
+  picker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
+      - name: Install Playwright
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install --with-deps chromium
+      - name: Start QA server
+        run: |
+          npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-scale-picker.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4174/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/daon-scale-picker.log
+          exit 1
+      - name: Scale picker interaction QA
+        run: node scripts/visual-scale-reference-picker-smoke.mjs
