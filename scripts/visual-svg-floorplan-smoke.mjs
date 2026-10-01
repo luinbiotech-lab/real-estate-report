@@ -51,12 +51,25 @@ try {
       bounds: geometry.bounds,
       labels: geometry.labelCandidates,
       unitStatus: geometry.unitStatus,
+      sunDeck: (() => {
+        const segment = geometry.previewSegments.find((item) => item.layer === 'path2921');
+        if (!segment) return null;
+        const xs = segment.points.map((point) => point.x);
+        const ys = segment.points.map((point) => point.y);
+        return {
+          minX: Math.min(...xs), maxX: Math.max(...xs), minY: Math.min(...ys), maxY: Math.max(...ys),
+          width: Math.max(...xs) - Math.min(...xs),
+        };
+      })(),
     };
   }, svgText);
 
   assert(extraction.parser === 'svg_floorplan_v1', `Unexpected parser: ${extraction.parser}`);
   assert(extraction.segmentCount > 10, `Too few SVG geometry segments: ${extraction.segmentCount}`);
   assert((extraction.bounds?.width || 0) > 0 && (extraction.bounds?.height || 0) > 0, 'SVG bounds were not extracted');
+  assert((extraction.bounds?.minX ?? -999) >= -1 && (extraction.bounds?.minY ?? -999) >= -1, `SVG bounds polluted by non-rendered definitions: ${JSON.stringify(extraction.bounds)}`);
+  assert((extraction.bounds?.maxX ?? 999) <= 274 && (extraction.bounds?.maxY ?? 999) <= 275, `SVG bounds exceed source viewBox: ${JSON.stringify(extraction.bounds)}`);
+  assert(extraction.sunDeck && Math.abs(extraction.sunDeck.width - 258.138) < 0.5, `Sun Deck reference width mismatch: ${JSON.stringify(extraction.sunDeck)}`);
   assert(extraction.unitStatus === 'drawing_units_unverified', `Scale safety status mismatch: ${extraction.unitStatus}`);
 
   console.log('Public-domain SVG floor plan intake: PASS');
