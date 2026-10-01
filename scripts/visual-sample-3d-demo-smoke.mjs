@@ -8,6 +8,7 @@ const page=await browser.newPage({viewport:{width:1440,height:1100}});
 try{
   await page.goto(BASE_URL,{waitUntil:'networkidle'});
   const homeText=await page.locator('body').innerText();
+  console.log('HOME_TEXT',homeText.slice(0,2000));
   assert(homeText.includes('물건 · Data Room'),'Property list did not render');
   assert(homeText.includes('데이터 유형'),'Sample data filter is missing');
 
