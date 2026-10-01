@@ -1,7 +1,10 @@
+import { mkdir, writeFile } from 'node:fs/promises';
 const URL='https://upload.wikimedia.org/wikipedia/commons/7/74/Little_White_House_floor_plan.svg';
 const res=await fetch(URL);
 if(!res.ok) throw new Error('fetch failed '+res.status);
 const text=await res.text();
+await mkdir('artifacts/svg-source',{recursive:true});
+await writeFile('artifacts/svg-source/little-white-house.svg',text,'utf8');
 console.log('SVG bytes', text.length);
 const tags=[...text.matchAll(/<(g|path|rect|line|polyline|polygon|text|tspan)\b([^>]*)>/gi)];
 const interesting=[];
