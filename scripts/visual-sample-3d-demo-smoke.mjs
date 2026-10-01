@@ -10,6 +10,7 @@ page.on('pageerror',(error)=>browserErrors.push(`PAGEERROR: ${error.message}`));
 page.on('console',(message)=>{ if(message.type()==='error') browserErrors.push(`CONSOLE: ${message.text()}`); });
 try{
   await page.goto(BASE_URL,{waitUntil:'networkidle'});
+  await page.waitForFunction(()=>document.body.innerText.includes('물건 · Data Room')||document.body.innerText.includes('플랫폼 초기화 실패'),undefined,{timeout:30000});
   const homeText=await page.locator('body').innerText();
   console.log('HOME_TEXT',homeText.slice(0,2000));
   console.log('BROWSER_ERRORS',JSON.stringify(browserErrors));
