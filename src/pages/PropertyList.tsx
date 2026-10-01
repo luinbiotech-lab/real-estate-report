@@ -29,7 +29,7 @@ export default function PropertyList() {
   const filtered = useMemo(() => items.filter((property) =>
     (type === '전체' || property.tradeType === type)
     && (manager === '전체' || property.managerName === manager)
-    && (dataKind === '전체' || (dataKind === '샘플' ? property.propertyNumber.startsWith('SAMPLE-') : !property.propertyNumber.startsWith('SAMPLE-')))
+    && (dataKind === '전체' || (dataKind === '샘플' ? (property.propertyNumber || '').startsWith('SAMPLE-') : !(property.propertyNumber || '').startsWith('SAMPLE-')))
     && [property.name, property.address, property.propertyNumber, property.buildingName]
       .some((value) => value.toLowerCase().includes(query.toLowerCase()))
   ), [items, query, type, manager, dataKind]);
@@ -128,7 +128,7 @@ export default function PropertyList() {
             {paged.map((property) => <tr key={property.id}>
               <td><input aria-label={`${property.name} 선택`} type="checkbox" checked={selected.includes(property.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, property.id] : selected.filter((id) => id !== property.id))} /></td>
               <td className="property-primary-cell">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}><button className="property-name-link" onClick={() => navigate(`/property/${property.id}`)}>{property.name}</button>{property.propertyNumber.startsWith('SAMPLE-') && <Chip size="small" label="샘플" variant="outlined" color="secondary" />}</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}><button className="property-name-link" onClick={() => navigate(`/property/${property.id}`)}>{property.name}</button>{(property.propertyNumber || '').startsWith('SAMPLE-') && <Chip size="small" label="샘플" variant="outlined" color="secondary" />}</div>
                 <small>{property.propertyNumber || '물건번호 미입력'} · {property.buildingName || '건물명 미입력'}</small>
                 <span>{property.address}</span>
               </td>
