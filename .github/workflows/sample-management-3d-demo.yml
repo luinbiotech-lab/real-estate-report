@@ -27,7 +27,7 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Start Vite QA server
         run: |
-          npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-sample-3d.log 2>&1 &
+          VITE_REQUIRE_REMOTE_AUTH=false VITE_REMOTE_OPERATIONAL_MODE=false npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-sample-3d.log 2>&1 &
           for i in {1..30}; do
             if curl -fsS http://127.0.0.1:4174/ >/dev/null; then exit 0; fi
             sleep 1
