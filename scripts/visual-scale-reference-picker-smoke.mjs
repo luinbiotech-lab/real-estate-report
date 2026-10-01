@@ -61,6 +61,8 @@ try {
   await page.mouse.click(box.x + box.width * 0.2, box.y + box.height * 0.5);
   await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.5);
   const drawing = page.getByLabel('도면상 기준 길이');
+  await page.waitForFunction(() => { const input = [...document.querySelectorAll('input')].find((el) => el.getAttribute('aria-label') === '도면상 기준 길이' || el.closest('label')?.textContent?.includes('도면상 기준 길이')); return Boolean(input && input.value); }, undefined, { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(150);
   const value = await drawing.inputValue();
   assert(Number(value) > 50 && Number(value) < 70, `Unexpected auto drawing length: ${value}`);
   await page.getByLabel('실제 기준 길이(m)').fill('16.4592');
