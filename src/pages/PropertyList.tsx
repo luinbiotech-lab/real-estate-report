@@ -16,6 +16,7 @@ export default function PropertyList() {
   const [query, setQuery] = useState('');
   const [type, setType] = useState('전체');
   const [manager, setManager] = useState('전체');
+  const [dataKind, setDataKind] = useState('전체');
   const [selected, setSelected] = useState<string[]>([]);
   const [page, setPage] = useState(1);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
@@ -28,9 +29,10 @@ export default function PropertyList() {
   const filtered = useMemo(() => items.filter((property) =>
     (type === '전체' || property.tradeType === type)
     && (manager === '전체' || property.managerName === manager)
+    && (dataKind === '전체' || (dataKind === '샘플' ? property.propertyNumber.startsWith('SAMPLE-') : !property.propertyNumber.startsWith('SAMPLE-')))
     && [property.name, property.address, property.propertyNumber, property.buildingName]
       .some((value) => value.toLowerCase().includes(query.toLowerCase()))
-  ), [items, query, type, manager]);
+  ), [items, query, type, manager, dataKind]);
 
   const remove = async (id: string) => {
     if (confirm('이 물건과 연결된 Data Room 자료를 함께 보관 처리한 뒤 삭제할까요?')) {
@@ -54,7 +56,7 @@ export default function PropertyList() {
     }
   };
 
-  useEffect(() => { setPage(1); }, [query, type, manager]);
+  useEffect(() => { setPage(1); }, [query, type, manager, dataKind]);
   useEffect(() => {
     const maxPage = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
     if (page > maxPage) setPage(maxPage);
@@ -99,6 +101,11 @@ export default function PropertyList() {
           <MenuItem value="전체">담당자 · 전체</MenuItem>
           {managers.map((value) => <MenuItem value={value} key={value}>{value}</MenuItem>)}
         </Select>
+        <Select size="small" value={dataKind} onChange={(event) => setDataKind(event.target.value)}>
+          <MenuItem value="전체">데이터 유형 · 전체</MenuItem>
+          <MenuItem value="샘플">샘플</MenuItem>
+          <MenuItem value="운영">운영</MenuItem>
+        </Select>
         <span className="spacer" />
         {selected.length > 0 && <Button startIcon={<FileDownloadOutlined />} onClick={openBulkReports}>선택 {selected.length}건 7P 출력</Button>}
       </div>
@@ -121,7 +128,7 @@ export default function PropertyList() {
             {paged.map((property) => <tr key={property.id}>
               <td><input aria-label={`${property.name} 선택`} type="checkbox" checked={selected.includes(property.id)} onChange={(event) => setSelected(event.target.checked ? [...selected, property.id] : selected.filter((id) => id !== property.id))} /></td>
               <td className="property-primary-cell">
-                <button className="property-name-link" onClick={() => navigate(`/property/${property.id}`)}>{property.name}</button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}><button className="property-name-link" onClick={() => navigate(`/property/${property.id}`)}>{property.name}</button>{property.propertyNumber.startsWith('SAMPLE-') && <Chip size="small" label="샘플" variant="outlined" color="secondary" />}</div>
                 <small>{property.propertyNumber || '물건번호 미입력'} · {property.buildingName || '건물명 미입력'}</small>
                 <span>{property.address}</span>
               </td>
