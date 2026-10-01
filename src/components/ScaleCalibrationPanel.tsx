@@ -1,4 +1,4 @@
-import { useMemo, useState, type MouseEvent } from 'react';
+import { useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { Alert, Button, Chip, TextField } from '@mui/material';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { measurementCalibrationService, readScaleCalibration } from '../services/measurementCalibrationService';
@@ -52,15 +52,14 @@ export default function ScaleCalibrationPanel({ asset, onSaved }: { asset: Digit
     const width = Math.max(1e-6, Number(bounds.width ?? 1));
     const height = Math.max(1e-6, Number(bounds.height ?? 1));
     const point = { x: minX + (viewX / 1000) * width, y: maxY - (viewY / 700) * height };
-    setPickedPoints((currentPoints) => {
-      const next = currentPoints.length >= 2 ? [point] : [...currentPoints, point];
-      if (next.length === 2) {
-        const length = Math.hypot(next[1].x - next[0].x, next[1].y - next[0].y);
-        setDrawingLength(length > 0 ? length.toFixed(6) : '');
-      }
-      return next;
-    });
+    setPickedPoints((currentPoints) => currentPoints.length >= 2 ? [point] : [...currentPoints, point]);
   };
+
+  useEffect(() => {
+    if (pickedPoints.length !== 2) return;
+    const length = Math.hypot(pickedPoints[1].x - pickedPoints[0].x, pickedPoints[1].y - pickedPoints[0].y);
+    setDrawingLength(length > 0 ? length.toFixed(6) : '');
+  }, [pickedPoints]);
 
   const resetPickedPoints = () => {
     setPickedPoints([]);
