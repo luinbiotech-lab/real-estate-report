@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { AutoAwesomeRounded, RefreshRounded, ScienceRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import BuildingProductionGatePanel from '../components/BuildingProductionGatePanel';
@@ -27,6 +28,7 @@ import { agentRuntimeService } from '../services/agentRuntimeService';
 import type { Property } from '../types';
 
 export default function DigitalTwinWorkspacePage() {
+  const navigate = useNavigate();
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
   const [bundle, setBundle] = useState<Awaited<ReturnType<typeof propertyDataRoomRepository.getBundle>>>({ documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] });
