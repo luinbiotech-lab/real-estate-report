@@ -1,0 +1,19 @@
+name: Inspect Little White House SVG
+
+on:
+  push:
+    branches:
+      - qa/svg-source-inspect
+  workflow_dispatch:
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Inspect SVG source
+        run: node scripts/inspect-little-white-house-svg.mjs
