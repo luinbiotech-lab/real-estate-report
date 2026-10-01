@@ -58,11 +58,12 @@ try {
   const svg = page.locator('svg[aria-label="축척 기준선 선택 도면"]');
   const box = await svg.boundingBox();
   assert(box, 'Scale picker SVG box missing');
-  await page.mouse.click(box.x + box.width * 0.2, box.y + box.height * 0.5);
-  await page.mouse.click(box.x + box.width * 0.8, box.y + box.height * 0.5);
+  await svg.click({ position: { x: box.width * 0.2, y: box.height * 0.5 } });
+  await page.getByText('끝점을 선택하면 도면상 길이가 자동 계산됩니다.').waitFor({ timeout: 5000 });
+  await svg.click({ position: { x: box.width * 0.8, y: box.height * 0.5 } });
+  await page.getByText(/선택 완료 · 도면상 길이/).waitFor({ timeout: 5000 });
   const drawing = page.getByLabel('도면상 기준 길이');
-  await page.waitForFunction(() => { const input = [...document.querySelectorAll('input')].find((el) => el.getAttribute('aria-label') === '도면상 기준 길이' || el.closest('label')?.textContent?.includes('도면상 기준 길이')); return Boolean(input && input.value); }, undefined, { timeout: 5000 }).catch(() => {});
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(100);
   const value = await drawing.inputValue();
   assert(Number(value) > 50 && Number(value) < 70, `Unexpected auto drawing length: ${value}`);
   await page.getByLabel('실제 기준 길이(m)').fill('16.4592');
