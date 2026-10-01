@@ -18,6 +18,7 @@ import RoomTwinOperationsPage from './pages/RoomTwinOperationsPage';
 import SpatialWorkspacePage from './pages/SpatialWorkspacePage';
 import DigitalTwinWorkspacePage from './pages/DigitalTwinWorkspacePage';
 import DigitalTwinIntakePage from './pages/DigitalTwinIntakePage';
+import DigitalTwinDemoPage from './pages/DigitalTwinDemoPage';
 import ExternalShareCenterPage from './pages/ExternalShareCenterPage';
 import RentalIncomeWorkspacePage from './pages/RentalIncomeWorkspacePage';
 import ReviewHistoryPage from './pages/ReviewHistoryPage';
@@ -117,6 +118,7 @@ function AppContent() {
       <Route path="spatial" element={<SpatialWorkspacePage />} />
       <Route path="digital-twin-intake" element={<DigitalTwinIntakePage />} />
       <Route path="digital-twin" element={<DigitalTwinWorkspacePage />} />
+      <Route path="digital-twin/demo" element={<DigitalTwinDemoPage />} />
       <Route path="external-shares" element={<ExternalShareCenterPage />} />
       <Route path="income" element={<RentalIncomeWorkspacePage />} />
       <Route path="review-history" element={<ReviewHistoryPage />} />
