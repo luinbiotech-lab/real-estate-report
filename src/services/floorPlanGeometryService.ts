@@ -93,6 +93,10 @@ function pathPoints(d: string) {
     else { const arity = C==='C'?6:C==='S'||C==='Q'?4:C==='A'?7:C==='T'?2:0; if(!arity||i+arity-1>=tokens.length) break; const vals=Array.from({length:arity},read); let nx=vals[arity-2], ny=vals[arity-1]; if(rel){nx+=x;ny+=y;} x=nx;y=ny; result.push({x,y}); }
   } return result;
 }
+function isRenderableSvgGeometry(el: Element) {
+  return !el.closest('defs,pattern,clipPath,mask,symbol,marker');
+}
+
 export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGeometrySummary> {
   if (asset.fileFormat.toLowerCase() !== 'svg') throw new Error('SVG 자산만 SVG geometry 추출이 가능합니다.');
   if (!(asset.fileData instanceof Blob)) throw new Error('SVG 원본 Blob이 없어 geometry를 추출할 수 없습니다.');
@@ -100,13 +104,13 @@ export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGe
   const points:Array<[number,number]>=[], previewSegments:DxfPreviewSegment[]=[]; const layers=new Set<string>(), labels=new Set<string>(); let lineCount=0, polylineCount=0, textCount=0;
   const layerFor=(el:Element)=>el.getAttribute('data-layer')||el.id||el.getAttribute('class')||el.tagName.toLowerCase();
   const add=(el:Element,pts:Array<{x:number;y:number}>,layer:string,kind:'line'|'polyline')=>{ if(pts.length<2)return; const transformed=transformPoints(el,pts); layers.add(layer); transformed.forEach(p=>points.push([p.x,p.y])); if(previewSegments.length<2500) previewSegments.push({kind,layer,semantic:semanticForLayer(layer),points:transformed}); };
-  doc.querySelectorAll('line').forEach(el=>{ const p=[{x:Number(el.getAttribute('x1')||0),y:Number(el.getAttribute('y1')||0)},{x:Number(el.getAttribute('x2')||0),y:Number(el.getAttribute('y2')||0)}]; lineCount++; add(el,p,layerFor(el),'line'); });
-  doc.querySelectorAll('polyline,polygon').forEach(el=>{ const n=numberList(el.getAttribute('points')||''); const p:Array<{x:number;y:number}>=[]; for(let i=0;i+1<n.length;i+=2)p.push({x:n[i],y:n[i+1]}); if(el.tagName.toLowerCase()==='polygon'&&p.length)p.push({...p[0]}); polylineCount++; add(el,p,layerFor(el),'polyline'); });
-  doc.querySelectorAll('rect').forEach(el=>{ const x=Number(el.getAttribute('x')||0),y=Number(el.getAttribute('y')||0),w=Number(el.getAttribute('width')||0),h=Number(el.getAttribute('height')||0); polylineCount++; add(el,[{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h},{x,y}],layerFor(el),'polyline'); });
-  doc.querySelectorAll('path').forEach(el=>{ const p=pathPoints(el.getAttribute('d')||''); if(p.length>1){polylineCount++;add(el,p,layerFor(el),'polyline');} });
-  doc.querySelectorAll('text,tspan').forEach(el=>{ const t=(el.textContent||'').trim(); if(t){textCount++;if(roomLike(t))labels.add(t.slice(0,120));} });
+  doc.querySelectorAll('line').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const p=[{x:Number(el.getAttribute('x1')||0),y:Number(el.getAttribute('y1')||0)},{x:Number(el.getAttribute('x2')||0),y:Number(el.getAttribute('y2')||0)}]; lineCount++; add(el,p,layerFor(el),'line'); });
+  doc.querySelectorAll('polyline,polygon').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const n=numberList(el.getAttribute('points')||''); const p:Array<{x:number;y:number}>=[]; for(let i=0;i+1<n.length;i+=2)p.push({x:n[i],y:n[i+1]}); if(el.tagName.toLowerCase()==='polygon'&&p.length)p.push({...p[0]}); polylineCount++; add(el,p,layerFor(el),'polyline'); });
+  doc.querySelectorAll('rect').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const x=Number(el.getAttribute('x')||0),y=Number(el.getAttribute('y')||0),w=Number(el.getAttribute('width')||0),h=Number(el.getAttribute('height')||0); polylineCount++; add(el,[{x,y},{x:x+w,y},{x:x+w,y:y+h},{x,y:y+h},{x,y}],layerFor(el),'polyline'); });
+  doc.querySelectorAll('path').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const p=pathPoints(el.getAttribute('d')||''); if(p.length>1){polylineCount++;add(el,p,layerFor(el),'polyline');} });
+  doc.querySelectorAll('text,tspan').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const t=(el.textContent||'').trim(); if(t){textCount++;if(roomLike(t))labels.add(t.slice(0,120));} });
   const sortedLayers=[...layers].sort();
-  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','SVG matrix/translate/scale/rotate transform은 좌표 후보에 반영하지만 곡선은 1차 preview에서 단순화될 수 있어 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.'] };
+  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','defs/pattern/clipPath/mask/symbol 내부의 비가시 장식 geometry는 분석 대상에서 제외합니다.','SVG matrix/translate/scale/rotate transform은 좌표 후보에 반영하지만 곡선은 1차 preview에서 단순화될 수 있어 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.'] };
 }
 
 export const floorPlanGeometryService = {
