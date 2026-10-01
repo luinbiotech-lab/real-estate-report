@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Alert, Button, Chip, CircularProgress, Stack } from '@mui/material';
+import { Alert, Button, CircularProgress, Stack } from '@mui/material';
 import { ArrowBackRounded, OpenInNewRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
