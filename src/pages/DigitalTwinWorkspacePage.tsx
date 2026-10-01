@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AutoAwesomeRounded, RefreshRounded } from '@mui/icons-material';
+import { AutoAwesomeRounded, RefreshRounded, ScienceRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import BuildingProductionGatePanel from '../components/BuildingProductionGatePanel';
 import BuildingStackPanel from '../components/BuildingStackPanel';
@@ -89,7 +89,7 @@ export default function DigitalTwinWorkspacePage() {
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20, alignItems: 'center' }}>
       <FormControl size="small" fullWidth><InputLabel id="twin-property-label">대상 물건</InputLabel><Select labelId="twin-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); setNotice(''); await load(event.target.value); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
-      <Button startIcon={<RefreshRounded />} onClick={() => load()}>새로고침</Button>
+      <Button startIcon={<RefreshRounded />} onClick={() => load()}>새로고침</Button><Button variant="outlined" startIcon={<ScienceRounded />} onClick={() => navigate('/digital-twin/demo')}>3D 테스트 데모</Button>
       <Button variant="contained" startIcon={<AutoAwesomeRounded />} disabled={!propertyId || refreshingTwin} onClick={() => void refreshTwinCandidate()}>{refreshingTwin ? '후보 생성 중' : 'Twin 후보 갱신'}</Button>
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
