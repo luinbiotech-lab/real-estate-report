@@ -6,6 +6,7 @@ import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import FloorPlanGeometryPreview from '../components/FloorPlanGeometryPreview';
 import ExtrusionPreview from '../components/ExtrusionPreview';
 import ReviewedMeshViewer from '../components/ReviewedMeshViewer';
+import RoomTopologyPanel from '../components/RoomTopologyPanel';
 import { floorPlanGeometryService } from '../services/floorPlanGeometryService';
 import { roomTopologyService } from '../services/roomTopologyService';
 
@@ -135,6 +136,11 @@ export default function DigitalTwinDemoPage() {
       <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16, marginBottom: 18 }}>
         <h2 style={{ marginTop: 0 }}>1. 원본 geometry</h2>
         <FloorPlanGeometryPreview asset={asset} />
+      </section>
+
+      <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16, marginBottom: 18 }}>
+        <h2 style={{ marginTop: 0 }}>2. 공간 경계 Human Review</h2>
+        <RoomTopologyPanel asset={asset} />
       </section>
 
       <section style={{ marginBottom: 18 }}>
