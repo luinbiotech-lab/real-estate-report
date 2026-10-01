@@ -1,0 +1,36 @@
+name: SVG Test Extrusion QA
+
+on:
+  push:
+    branches:
+      - feat/room-candidate-priority
+  workflow_dispatch:
+
+jobs:
+  extrusion:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Install Chromium
+        run: |
+          npm install --no-save playwright@1.55.0
+          npx playwright install chromium
+      - name: Start QA server
+        run: |
+          npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-svg-extrusion.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4174/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/daon-svg-extrusion.log
+          exit 1
+      - name: Validate test-only extrusion
+        run: node scripts/validate-svg-test-extrusion.mjs
