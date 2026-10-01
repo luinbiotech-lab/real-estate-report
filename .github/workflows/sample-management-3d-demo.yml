@@ -24,7 +24,7 @@ jobs:
       - name: Install Playwright
         run: |
           npm install --no-save playwright@1.55.0
-          npx playwright install --with-deps chromium
+          npx playwright install chromium
       - name: Start Vite QA server
         run: |
           VITE_REQUIRE_REMOTE_AUTH=false VITE_REMOTE_OPERATIONAL_MODE=false npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-sample-3d.log 2>&1 &
