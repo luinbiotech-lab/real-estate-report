@@ -17,3 +17,8 @@ jobs:
           node-version: 20
       - name: Inspect SVG source
         run: node scripts/inspect-little-white-house-svg.mjs
+      - name: Upload SVG source
+        uses: actions/upload-artifact@v4
+        with:
+          name: little-white-house-svg
+          path: artifacts/svg-source/little-white-house.svg
