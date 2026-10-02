@@ -29,6 +29,14 @@ try {
   const rows = await page.locator('.property-focus-table tbody tr').count();
   if (rows < 1) throw new Error('Focused property list must render at least one seeded property row.');
   await page.screenshot({ path: `${ARTIFACT_DIR}/property-list-focused.png`, fullPage: true });
+
+  await page.goto(`${BASE_URL}/digital-twin`, { waitUntil: 'domcontentloaded' });
+  const brand = page.getByRole('link', { name: 'DA:ON 운영 홈으로 이동' });
+  await brand.waitFor({ state: 'visible', timeout: 30_000 });
+  await brand.click();
+  await page.waitForURL(/\/control-center(?:$|\?)/, { timeout: 30_000 });
+  await waitForText(page, '운영 홈');
+  console.log('Brand logo home navigation QA: PASS');
   console.log('Rendered focused property list QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/property-list-focused-failure.png`, fullPage: true });
