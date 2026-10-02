@@ -66,7 +66,7 @@ export default function Layout() {
   useEffect(() => { if (activeGroup) setOpenGroup(activeGroup); }, [activeGroup]);
 
   return <div className="app-shell"><aside>
-    <div className="brand"><span>DA</span><div>DA:ON ASSET<small>PROPERTY DATA & AGENT PLATFORM</small></div></div>
+    <NavLink to="/control-center" className="brand" aria-label="DA:ON 운영 홈으로 이동"><span>DA</span><div>DA:ON ASSET<small>PROPERTY DATA & AGENT PLATFORM</small></div></NavLink>
     <nav aria-label="DA:ON main navigation">
       <div className="side-primary">
         <NavLink to="/control-center" className="side-primary-link" title="A0 Control Center"><HubRounded /><span><strong>운영 홈</strong><small>오늘의 상태와 다음 작업</small></span></NavLink>
