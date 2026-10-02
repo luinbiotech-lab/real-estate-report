@@ -29,7 +29,7 @@ export default function FloorPlanSemanticReviewPanel({ asset, onSaved }: { asset
   };
 
   return <div style={{ display: 'grid', gap: 10 }}>
-    <p style={{ margin: 0, color: '#667085' }}>DXF layer 이름에서 추정한 의미를 검토합니다. 승인은 “이 layer를 이 의미로 해석해도 된다”는 편집 판단이며 구조안전·법적 용도를 확정하는 의미가 아닙니다.</p>
+    <p style={{ margin: 0, color: '#667085' }}>DXF/SVG 벡터 도면의 layer·id·class 이름에서 추정한 의미를 검토합니다. 승인은 “이 도형 그룹을 이 의미로 해석해도 된다”는 편집 판단이며 구조안전·법적 용도를 확정하는 의미가 아닙니다.</p>
     {candidates.map((candidate) => {
       const layer = candidate.layer!;
       const review = existing.find((item) => item.layer === layer);
