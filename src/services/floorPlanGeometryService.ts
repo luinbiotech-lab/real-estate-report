@@ -116,8 +116,18 @@ export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGe
       elementSemanticCandidates.push({ elementId, tag, layer, semantic:'wall', confidence:0.42, basis:'thin_rect_geometry', requiresReview:true, bounds });
       return;
     }
-    if (tag === 'path' && /[AaCcQqSsTt]/.test(el.getAttribute('d') || '')) {
-      elementSemanticCandidates.push({ elementId, tag, layer, semantic:'door', confidence:0.28, basis:'curved_path_geometry', requiresReview:true, bounds });
+    if (tag === 'path') {
+      const d = el.getAttribute('d') || '';
+      const drawingBounds = boundsFromPoints(points);
+      const drawingArea = drawingBounds ? Math.max(0.0001, drawingBounds.width * drawingBounds.height) : 0;
+      const boxArea = bounds.width * bounds.height;
+      const aspect = bounds.width / Math.max(0.0001, bounds.height);
+      const relativeArea = drawingArea ? boxArea / drawingArea : 1;
+      const hasArcCommand = /[Aa]/.test(d);
+      const compactSwingLike = aspect >= 0.45 && aspect <= 2.2 && relativeArea > 0 && relativeArea <= 0.018;
+      if (hasArcCommand && compactSwingLike) {
+        elementSemanticCandidates.push({ elementId, tag, layer, semantic:'door', confidence:0.34, basis:'curved_path_geometry', requiresReview:true, bounds });
+      }
     }
   };
   const add=(el:Element,pts:Array<{x:number;y:number}>,layer:string,kind:'line'|'polyline')=>{ if(pts.length<2)return; const transformed=transformPoints(el,pts); layers.add(layer); transformed.forEach(p=>points.push([p.x,p.y])); addGeometryCandidate(el, transformed, layer); if(previewSegments.length<2500) previewSegments.push({kind,layer,semantic:semanticForLayer(layer),points:transformed}); };
@@ -127,7 +137,7 @@ export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGe
   doc.querySelectorAll('path').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const p=pathPoints(el.getAttribute('d')||''); if(p.length>1){polylineCount++;add(el,p,layerFor(el),'polyline');} });
   doc.querySelectorAll('text,tspan').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const t=(el.textContent||'').trim(); if(t){textCount++;if(roomLike(t))labels.add(t.slice(0,120));} });
   const sortedLayers=[...layers].sort();
-  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), elementSemanticCandidates, previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','defs/pattern/clipPath/mask/symbol 내부의 비가시 장식 geometry는 분석 대상에서 제외합니다.','SVG matrix/translate/scale/rotate transform은 좌표 후보에 반영하지만 곡선은 1차 preview에서 단순화될 수 있어 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.','SVG element geometry 후보는 저신뢰 보조정보이며 thin rect→wall, curved path→door만 제시하고 Human Review 전에는 확정하지 않습니다.'] };
+  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), elementSemanticCandidates, previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','defs/pattern/clipPath/mask/symbol 내부의 비가시 장식 geometry는 분석 대상에서 제외합니다.','SVG matrix/translate/scale/rotate transform은 좌표 후보에 반영하지만 곡선은 1차 preview에서 단순화될 수 있어 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.','SVG element geometry 후보는 저신뢰 보조정보이며 thin rect→wall, 소형 A/a arc path→door만 제시하고 Human Review 전에는 확정하지 않습니다.'] };
 }
 
 export const floorPlanGeometryService = {
