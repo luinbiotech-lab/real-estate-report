@@ -12,6 +12,24 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
 try {
   await page.goto(BASE_URL, { waitUntil: 'networkidle' });
+  const svgStats = await page.evaluate((text) => {
+  const doc = new DOMParser().parseFromString(text, 'image/svg+xml');
+  const commands = {};
+  const rows = [];
+  for (const el of [...doc.querySelectorAll('path')]) {
+    if (el.closest('defs,pattern,clipPath,mask,symbol,marker')) continue;
+    const d = el.getAttribute('d') || '';
+    const kinds = [...new Set((d.match(/[A-Za-z]/g) || []).map((value) => value.toUpperCase()))];
+    for (const kind of kinds) commands[kind] = (commands[kind] || 0) + 1;
+    let box;
+    try { box = el.getBBox(); } catch {}
+    rows.push({ id: el.id || '', kinds, dLength: d.length, box: box ? { x:box.x,y:box.y,width:box.width,height:box.height } : null });
+  }
+  return { commands, rows };
+}, svgText);
+console.log('SVG raw path command stats');
+console.log(JSON.stringify(svgStats, null, 2));
+
   const result = await page.evaluate(async (text) => {
     const mod = await import('/src/services/floorPlanGeometryService.ts');
     const file = new File([text], 'Little_White_House_floor_plan.svg', { type: 'image/svg+xml' });
