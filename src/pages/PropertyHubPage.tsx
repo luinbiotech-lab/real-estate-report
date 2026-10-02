@@ -57,6 +57,16 @@ export default function PropertyHubPage() {
   const distinctFloorCount = new Set(floors.map((item) => String(item.floor || '').trim().toUpperCase()).filter(Boolean)).size;
   const approvedRoomLinks = (bundle.spaceRoomLinks ?? []).filter((item) => item.decision === 'approved').length;
   const primaryMedia = bundle.media.find((item) => item.isPrimary && item.url) || bundle.media.find((item) => item.category === 'exterior' && item.url) || bundle.media.find((item) => item.url);
+  const isSample = property.propertyNumber.startsWith('SAMPLE-');
+  const sampleCompletenessMissing = [
+    property.totalFloorAreaSqm > 0 ? '' : '연면적',
+    property.mainUse ? '' : '주용도',
+    property.structure ? '' : '구조',
+    property.nearbyStation ? '' : '인근역',
+  ].filter(Boolean);
+  const sampleStatus = isSample
+    ? (sampleCompletenessMissing.length === 0 ? '대표 운영 샘플' : '부분 데이터 샘플')
+    : '';
 
   if (loading) return <div className="center"><CircularProgress /><p>물건 상세 허브를 준비하는 중입니다.</p></div>;
   if (!property) return <main style={{ padding: 28 }}><Alert severity="error">{error || '물건을 찾을 수 없습니다.'}</Alert></main>;
@@ -76,11 +86,17 @@ export default function PropertyHubPage() {
 
   return <main style={{ padding: 28, maxWidth: 1420, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start', marginBottom: 18 }}>
-      <div><p className="eyebrow">PROPERTY DETAIL HUB</p><h1 style={{ margin: '4px 0' }}>{property.name}</h1><p style={{ margin: 0, color: '#667085' }}>{property.address} · {property.propertyNumber || '물건번호 미입력'}</p></div>
+      <div><p className="eyebrow">PROPERTY DETAIL HUB</p><div style={{ display: 'flex', alignItems: 'center', gap: 9, flexWrap: 'wrap' }}><h1 style={{ margin: '4px 0' }}>{property.name}</h1>{isSample && <Chip size="small" label={sampleStatus} color="secondary" variant="outlined" />}</div><p style={{ margin: 0, color: '#667085' }}>{property.address} · {property.propertyNumber || '물건번호 미입력'}</p></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Button onClick={() => navigate('/')}>물건 목록</Button><Button variant="outlined" onClick={() => navigate(`/property/${id}/edit`)}>물건 수정</Button><Button variant="contained" onClick={() => navigate(`/property/${id}/data-room`)}>Data Room 전체보기</Button></div>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+    {isSample && <Alert severity={sampleCompletenessMissing.length === 0 ? 'success' : 'info'} sx={{ mb: 2 }}>
+      <strong>{sampleStatus}</strong>
+      {sampleCompletenessMissing.length
+        ? ` · 현재 보완 필요 필드: ${sampleCompletenessMissing.join(' · ')}`
+        : ' · 보고서/Data Room/3D 운영 흐름을 검증하는 대표 샘플로 사용합니다.'}
+    </Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: 'minmax(300px,.9fr) minmax(0,1.1fr)', gap: 16, marginBottom: 16 }}>
       <div style={{ minHeight: 320, borderRadius: 14, overflow: 'hidden', border: '1px solid #d9e0e8', background: '#eef2f6', display: 'grid', placeItems: 'center', position: 'relative' }}>
