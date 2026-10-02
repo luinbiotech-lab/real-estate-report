@@ -78,7 +78,7 @@ export default function PropertyHubPage() {
     { label: '비교거래', detail: market.count ? `${market.count}건 · ${unitPrice(market.min)} ~ ${unitPrice(market.max)}` : '구조화 비교거래 미연결', icon: <AssessmentRounded />, action: () => navigate(`/property/${id}/data-room?tab=market`) },
     { label: '임대 · 수익 분석', detail: 'NOI · Cap Rate · Cash-on-Cash 시나리오', icon: <PaidRounded />, action: () => navigate(`/income?propertyId=${encodeURIComponent(id)}`) },
     { label: '검토 이력', detail: '자료 검증 · Agent · 보고서 · 외부 검토 통합', icon: <RateReviewRounded />, action: () => navigate(`/review-history?propertyId=${encodeURIComponent(id)}`) },
-    { label: '보고서', detail: `${summary?.reports ?? 0}개 Snapshot · 1P/7P 진입`, icon: <FactCheckRounded />, action: () => navigate(`/property/${id}/data-room?tab=reports`) },
+    { label: '보고서', detail: summary?.reportReady ? `${summary.reports}개 Snapshot · 최종 확정 가능 · 1P/7P` : `${summary?.reports ?? 0}개 Snapshot · 초안 생성 가능 · 최종 확정 대기`, icon: <FactCheckRounded />, action: () => navigate(`/property/${id}/data-room?tab=reports`) },
     { label: '3D · 도면', detail: `${summary?.digitalTwin ?? 0}개 자산 · Digital Twin 연결`, icon: <ThreeDRotationRounded />, action: () => navigate(`/property/${id}/data-room?tab=digitalTwin`) },
     { label: 'Room Intelligence', detail: `${floors.length}개 PropertySpace · 승인 3D 연결 ${approvedRoomLinks}건`, icon: <ThreeDRotationRounded />, action: () => navigate(`/room-ops?propertyId=${encodeURIComponent(id)}`) },
     { label: 'Interior Intelligence', detail: `${floors.length}개 PropertySpace · 실내 증거/설비/Room 연결`, icon: <ImageRounded />, action: () => navigate(`/interior?propertyId=${encodeURIComponent(id)}`) },
@@ -118,7 +118,7 @@ export default function PropertyHubPage() {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 8, marginTop: 14 }}>
           {[
             ['층별 데이터', floors.length ? `${distinctFloorCount}개 층 · ${floors.length}개 공간` : '미연결'], ['층별 합계', floorArea ? `${floorArea.toFixed(2)}㎡` : '-'],
-            ['문서 준비도', summary?.reportReady ? '필수자료 검증 완료' : `원본 ${summary?.requiredSourcePresent ?? 0}/${summary?.requiredDocumentTotal ?? 4} · 파일 ${summary?.requiredBinaryConnected ?? 0}/${summary?.requiredDocumentTotal ?? 4}`], ['검증 대기', `${summary?.verificationPending ?? 0}건`],
+            ['문서 준비도', summary?.reportReady ? '필수자료 검증 완료' : `원본 ${summary?.requiredSourcePresent ?? 0}/${summary?.requiredDocumentTotal ?? 4} · 파일 ${summary?.requiredBinaryConnected ?? 0}/${summary?.requiredDocumentTotal ?? 4}`], ['보고서 상태', summary?.reportReady ? '최종 확정 가능' : '초안 생성 가능 · 확정 대기'],
           ].map(([label, value]) => <div key={label} style={{ borderRadius: 9, background: '#f7f9fb', padding: 11 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', marginTop: 4 }}>{value}</strong></div>)}
         </div>
       </div>
