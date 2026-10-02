@@ -39,6 +39,11 @@ try {
     return {
       counts,
       layers: geometry.semanticLayerCandidates,
+      elementCandidates: geometry.elementSemanticCandidates || [],
+      elementCounts: (geometry.elementSemanticCandidates || []).reduce((acc, item) => {
+        acc[item.semantic] = (acc[item.semantic] || 0) + 1;
+        return acc;
+      }, {}),
       previewSemanticCounts: geometry.previewSegments.reduce((acc, item) => {
         acc[item.semantic] = (acc[item.semantic] || 0) + 1;
         return acc;
@@ -46,6 +51,8 @@ try {
     };
   }, svgText);
 
+  assert(result.elementCandidates.every((item) => item.requiresReview === true), 'Geometry semantic candidates must require Human Review');
+  assert(result.elementCandidates.every((item) => item.confidence < 0.5), 'Geometry semantic candidates must remain low confidence');
   console.log('SVG semantic candidate pilot: PASS');
   console.log(JSON.stringify(result, null, 2));
 } finally {
