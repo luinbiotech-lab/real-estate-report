@@ -57,6 +57,10 @@ export default function PropertyHubPage() {
   const distinctFloorCount = new Set(floors.map((item) => String(item.floor || '').trim().toUpperCase()).filter(Boolean)).size;
   const approvedRoomLinks = (bundle.spaceRoomLinks ?? []).filter((item) => item.decision === 'approved').length;
   const primaryMedia = bundle.media.find((item) => item.isPrimary && item.url) || bundle.media.find((item) => item.category === 'exterior' && item.url) || bundle.media.find((item) => item.url);
+
+  if (loading) return <div className="center"><CircularProgress /><p>물건 상세 허브를 준비하는 중입니다.</p></div>;
+  if (!property) return <main style={{ padding: 28 }}><Alert severity="error">{error || '물건을 찾을 수 없습니다.'}</Alert></main>;
+
   const isSample = property.propertyNumber.startsWith('SAMPLE-');
   const sampleCompletenessMissing = [
     property.totalFloorAreaSqm > 0 ? '' : '연면적',
@@ -67,9 +71,6 @@ export default function PropertyHubPage() {
   const sampleStatus = isSample
     ? (sampleCompletenessMissing.length === 0 ? '대표 운영 샘플' : '부분 데이터 샘플')
     : '';
-
-  if (loading) return <div className="center"><CircularProgress /><p>물건 상세 허브를 준비하는 중입니다.</p></div>;
-  if (!property) return <main style={{ padding: 28 }}><Alert severity="error">{error || '물건을 찾을 수 없습니다.'}</Alert></main>;
 
   const cards = [
     { label: '사진 · 미디어', detail: `${summary?.media ?? 0}개 미디어 · 내부사진 정책 적용`, icon: <ImageRounded />, action: () => navigate(`/property/${id}/data-room?tab=media`) },
