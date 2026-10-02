@@ -84,7 +84,7 @@ export default function DigitalTwinWorkspacePage() {
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">FLOOR PLAN · WALLS · SLABS · VERTICAL CORES · MULTI-FLOOR · 3D PREPARATION</p>
       <h1 style={{ margin: '6px 0' }}>Digital Twin Workspace</h1>
-      <p style={{ color: '#667085' }}>DXF geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창, 층고·천장고, 층 기준고와 slab 두께, 계단·엘리베이터 core 연결을 Human Review로 묶어 다층 Building Model 후보, production release gate와 handoff package를 구성합니다.</p>
+      <p style={{ color: '#667085' }}>DXF/SVG 벡터 geometry, 검증 축척, 공간 경계, 벽체 두께, 문·창, 층고·천장고, 층 기준고와 slab 두께, 계단·엘리베이터 core 연결을 Human Review로 묶어 다층 Building Model 후보, production release gate와 handoff package를 구성합니다.</p>
     </header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
@@ -102,7 +102,7 @@ export default function DigitalTwinWorkspacePage() {
       ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 12 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
-    <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고, 층 기준고·slab 두께, 계단·엘리베이터 core 연결은 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
+    <Alert severity="warning" sx={{ mb: 2 }}>DXF/SVG layer·도형 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고, 층 기준고·slab 두께, 계단·엘리베이터 core 연결은 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
     <BuildingStackPanel assets={assets} onSaved={() => load()} />
     <BuildingProductionGatePanel assets={assets} />
     <VerticalCorePanel assets={assets} onSaved={() => load()} />
@@ -131,7 +131,7 @@ export default function DigitalTwinWorkspacePage() {
           {hasGeometry && <div style={{ marginTop: 18 }}><VerticalDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><FloorPlacementPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><SlabGeometryPanel asset={asset} /></div>}
-          {hasGeometry && <div style={{ marginTop: 18 }}><h3>DXF Layer Human Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
+          {hasGeometry && <div style={{ marginTop: 18 }}><h3>Vector Geometry Semantic Review</h3><FloorPlanSemanticReviewPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><WallModelPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><WallJunctionPanel asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><RoomTopologyPanel asset={asset} onSaved={() => load()} /></div>}
@@ -145,7 +145,7 @@ export default function DigitalTwinWorkspacePage() {
           {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · openings: {String(twinModel.openingTopologyStatus || 'review_required')} · opening dimensions: {String(twinModel.openingDimensionStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
         </section>;
       })}
-      {!assets.length && <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 36, textAlign: 'center', color: '#7b8794' }}>Spatial Workspace에서 PDF/DWG/DXF 도면 원본을 먼저 등록하세요.</section>}
+      {!assets.length && <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 36, textAlign: 'center', color: '#7b8794' }}>Spatial Workspace에서 PDF/DWG/DXF/SVG 도면 원본을 먼저 등록하세요.</section>}
     </div>
   </main>;
 }
