@@ -3,7 +3,7 @@ import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 export type DxfSemanticKind = 'wall' | 'door' | 'window' | 'column' | 'stair' | 'elevator' | 'room_label' | 'unknown';
 export interface DxfPreviewSegment { kind: 'line' | 'polyline'; layer?: string; semantic: DxfSemanticKind; points: Array<{ x: number; y: number }>; }
 export interface DxfSemanticLayerCandidate { layer: string; semantic: Exclude<DxfSemanticKind, 'room_label'>; confidence: number; basis: 'layer_name'; requiresReview: true; }
-export interface SvgElementSemanticCandidate { elementId: string; tag: string; layer: string; semantic: 'wall' | 'door'; confidence: number; basis: 'thin_rect_geometry' | 'curved_path_geometry'; requiresReview: true; bounds: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number }; }
+export interface SvgElementSemanticCandidate { elementId: string; tag: string; layer: string; semantic: 'wall' | 'door' | 'window'; confidence: number; basis: 'thin_rect_geometry' | 'curved_path_geometry' | 'slim_rect_geometry'; requiresReview: true; bounds: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number }; }
 export interface DxfGeometrySummary {
   parser: 'ascii_dxf_v1' | 'svg_floorplan_v1'; sourceAssetId: string; lineCount: number; polylineCount: number; textCount: number;
   layers: string[]; bounds?: { minX: number; minY: number; maxX: number; maxY: number; width: number; height: number };
@@ -112,8 +112,13 @@ export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGe
     const elementId = el.id || `${tag}:${elementSemanticCandidates.length + 1}`;
     const longSide = Math.max(bounds.width, bounds.height);
     const shortSide = Math.min(bounds.width, bounds.height);
-    if (tag === 'rect' && shortSide > 0 && longSide / shortSide >= 5) {
+    const ratio = shortSide > 0 ? longSide / shortSide : Infinity;
+    if (tag === 'rect' && shortSide > 0 && ratio >= 5) {
       elementSemanticCandidates.push({ elementId, tag, layer, semantic:'wall', confidence:0.42, basis:'thin_rect_geometry', requiresReview:true, bounds });
+      return;
+    }
+    if (tag === 'rect' && shortSide > 0 && ratio >= 2.2 && ratio < 5) {
+      elementSemanticCandidates.push({ elementId, tag, layer, semantic:'window', confidence:0.34, basis:'slim_rect_geometry', requiresReview:true, bounds });
       return;
     }
     if (tag === 'path' && /[AaCcQqSsTt]/.test(el.getAttribute('d') || '')) {
@@ -127,7 +132,7 @@ export async function extractSvgGeometry(asset: DigitalTwinAsset): Promise<DxfGe
   doc.querySelectorAll('path').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const p=pathPoints(el.getAttribute('d')||''); if(p.length>1){polylineCount++;add(el,p,layerFor(el),'polyline');} });
   doc.querySelectorAll('text,tspan').forEach(el=>{ if(!isRenderableSvgGeometry(el)) return; const t=(el.textContent||'').trim(); if(t){textCount++;if(roomLike(t))labels.add(t.slice(0,120));} });
   const sortedLayers=[...layers].sort();
-  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), elementSemanticCandidates, previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','defs/pattern/clipPath/mask/symbol 내부의 비가시 장식 geometry는 분석 대상에서 제외합니다.','SVG matrix/translate/scale/rotate transform은 좌표 후보에 반영하지만 곡선은 1차 preview에서 단순화될 수 있어 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.','SVG element geometry 후보는 저신뢰 보조정보이며 thin rect→wall, curved path→door만 제시하고 Human Review 전에는 확정하지 않습니다.'] };
+  return { parser:'svg_floorplan_v1', sourceAssetId:asset.id, lineCount, polylineCount, textCount, layers:sortedLayers, bounds:boundsFromPoints(points), labelCandidates:[...labels].slice(0,50), semanticLayerCandidates:sortedLayers.map(candidateForLayer), elementSemanticCandidates, previewSegments, unitStatus:'drawing_units_unverified', warnings:['SVG viewBox/좌표 단위는 실제 미터 축척으로 자동 확정하지 않습니다.','defs/pattern/clipPath/mask/symbol 내부의 비가시 장식 geometry는 분석 대상에서 제외합니다.','SVG matrix/translate/scale/rotate transform은 좌표 후보에 반영하지만 곡선은 1차 preview에서 단순화될 수 있어 Human Review가 필요합니다.','벽·문·창 의미는 id/class/data-layer 이름 기반 후보이며 자동 확정하지 않습니다.','SVG element geometry 후보는 저신뢰 보조정보이며 thin rect→wall, slim rect→window, curved path→door만 제시하고 Human Review 전에는 확정하지 않습니다.'] };
 }
 
 export const floorPlanGeometryService = {
