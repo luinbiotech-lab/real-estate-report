@@ -214,10 +214,22 @@ export class ReportDataBuilder {
   constructor(private readonly now: () => string = () => new Date().toISOString()) {}
 
   async build(propertyId: string, options: Omit<BuilderOptions, 'generatedAt'> = {}): Promise<ProfessionalReportViewModel> {
+    const emptySpatialBundle = {
+      floorPlans: [],
+      spaces: [],
+      mediaAssets: [],
+      mediaSpaceLinks: [],
+      viewerScenes: [],
+      viewerNodes: [],
+      viewerEdges: [],
+      walkthroughRoutes: [],
+      walkthroughSteps: [],
+      verificationEvents: [],
+    };
     const [property, bundle, spatialBundle] = await Promise.all([
       propertyRepository.getById(propertyId),
       propertyDataRoomRepository.getBundle(propertyId),
-      spatialMediaRepository.getBundle(propertyId),
+      spatialMediaRepository.getBundle(propertyId).catch(() => emptySpatialBundle),
     ]);
     if (!property) throw new Error('보고서를 생성할 물건을 찾을 수 없습니다.');
     const viewModel = buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
