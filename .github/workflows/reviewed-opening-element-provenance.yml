@@ -1,0 +1,25 @@
+name: Reviewed Opening Element Provenance
+
+on:
+  push:
+    branches:
+      - feat/reviewed-opening-element-provenance
+  workflow_dispatch:
+
+jobs:
+  qa:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - name: Validate Digital Twin building flow
+        run: npm run validate:twin-building
+      - name: Typecheck
+        run: npm run typecheck
+      - name: Build
+        run: npm run build
