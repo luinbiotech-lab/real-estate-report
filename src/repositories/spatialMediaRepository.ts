@@ -163,11 +163,15 @@ async function remoteInsertRows(table: SpatialTableName, body: JsonRow | JsonRow
   }));
 }
 
+function remoteOrderFor(table: SpatialTableName) {
+  if (table === 'viewer_edges' || table === 'walkthrough_steps') return 'sequence_order.asc';
+  if (table === 'verification_events') return 'created_at.desc';
+  if (table === 'floor_plans') return 'floor_label.asc,updated_at.desc';
+  return 'updated_at.desc';
+}
+
 async function remoteList<T>(config: SpatialTableConfig, propertyId: string): Promise<T[]> {
-  const params = new URLSearchParams({ select: '*', property_id: encodeEq(propertyId) });
-  if (config.table === 'viewer_edges') params.set('order', 'sequence_order.asc');
-  else if (config.table === 'walkthrough_steps') params.set('order', 'sequence_order.asc');
-  else params.set('order', 'updated_at.desc');
+  const params = new URLSearchParams({ select: '*', property_id: encodeEq(propertyId), order: remoteOrderFor(config.table) });
   return (await remoteGetRows(config.table, params)).map(recordFromRow<T>).filter((value) => !(value as { deletedAt?: string }).deletedAt);
 }
 
@@ -177,14 +181,16 @@ async function remoteUpsert<T extends Record<string, unknown>>(config: SpatialTa
   const row = rowFromRecord(value);
   const keyValue = String(value[config.keyField] ?? '');
   if (!keyValue) throw new Error(`${config.table}: key 값이 없습니다.`);
-  if (!config.appendOnly) row.updated_by = config.hasUpdatedBy ? actorId : undefined;
 
   if (config.appendOnly) {
     await remoteInsertRows(config.table, { ...row, created_by: actorId });
     return value;
   }
 
-  const updated = await remotePatchRows(config.table, new URLSearchParams({ [config.keyColumn]: encodeEq(keyValue) }), row);
+  const updated = await remotePatchRows(config.table, new URLSearchParams({ [config.keyColumn]: encodeEq(keyValue) }), {
+    ...row,
+    ...(config.hasUpdatedBy ? { updated_by: actorId } : {}),
+  });
   if (!updated.length) {
     await remoteInsertRows(config.table, {
       ...row,
@@ -255,13 +261,13 @@ export const spatialMediaRepository = {
   getViewerNodes: (propertyId: string) => list<ViewerNodeRecord>(TABLES.viewerNode, propertyId),
   saveViewerNode: (value: ViewerNodeRecord) => upsert(TABLES.viewerNode, value as ViewerNodeRecord & Record<string, unknown>),
 
-  getViewerEdges: (propertyId: string) => list<ViewerEdgeRecord>(TABLES.viewerEdge, propertyId),
+  getViewerEdges: (propertyId: string) => list<ViewerEdgeRecord & { propertyId: string }>(TABLES.viewerEdge, propertyId),
   saveViewerEdge: (value: ViewerEdgeRecord & { propertyId: string }) => upsert(TABLES.viewerEdge, value as ViewerEdgeRecord & { propertyId: string } & Record<string, unknown>),
 
   getWalkthroughRoutes: (propertyId: string) => list<WalkthroughRouteRecord>(TABLES.walkthroughRoute, propertyId),
   saveWalkthroughRoute: (value: WalkthroughRouteRecord) => upsert(TABLES.walkthroughRoute, value as WalkthroughRouteRecord & Record<string, unknown>),
 
-  getWalkthroughSteps: (propertyId: string) => list<WalkthroughStepRecord>(TABLES.walkthroughStep, propertyId),
+  getWalkthroughSteps: (propertyId: string) => list<WalkthroughStepRecord & { propertyId: string }>(TABLES.walkthroughStep, propertyId),
   saveWalkthroughStep: (value: WalkthroughStepRecord & { propertyId: string }) => upsert(TABLES.walkthroughStep, value as WalkthroughStepRecord & { propertyId: string } & Record<string, unknown>),
 
   getVerificationEvents: (propertyId: string) => list<VerificationEventRecord>(TABLES.verificationEvent, propertyId),
