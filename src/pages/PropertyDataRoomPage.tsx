@@ -247,7 +247,7 @@ export default function PropertyDataRoomPage() {
     <div className="data-room-content">
       {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} onTab={setTab} />}
       {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진/영상이 없습니다." detail="실제 촬영 자료와 출처가 확인된 미디어를 등록하세요. AI 시각화는 실제 현장사진과 분리해서 관리합니다." />}</div><MediaClassificationPanel propertyId={property.id} media={bundle.media} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
-      {tab === 'spatial' && <SpatialDataRoomPanel propertyId={property.id} propertyAddress={property.address} mode="spatial" />}
+      {tab === 'spatial' && <SpatialDataRoomPanel propertyId={property.id} propertyAddress={property.address} mode="spatial" legacyBundle={bundle} />}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} onQueued={async () => { await load(); setTab('verification'); }} />}
       {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} onUploadSources={uploadSourceDocuments} />}
       {tab === 'market' && <ComparableTransactionPanel propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
@@ -258,6 +258,7 @@ export default function PropertyDataRoomPage() {
           propertyId={property.id}
           propertyAddress={property.address}
           mode="viewer"
+          legacyBundle={bundle}
           onOpenDigitalTwinIntake={() => navigate(`/digital-twin-intake?propertyId=${encodeURIComponent(id)}`)}
         />
         {bundle.digitalTwinAssets.length > 0 && <section className="data-room-overview"><section><p className="eyebrow">LEGACY / SOURCE ASSETS</p><h2>기존 Digital Twin 원본</h2><div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div></section></section>}
