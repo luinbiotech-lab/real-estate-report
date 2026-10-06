@@ -27,7 +27,7 @@ const emptySpatialBundle: SpatialMediaDataRoomBundle = {
 };
 
 function StatusChip({ status }: { status: keyof typeof SPATIAL_VERIFICATION_LABELS }) {
-  const color = status === 'conflict' || status === 'rejected'
+  const color: 'default' | 'warning' | 'success' | 'error' = status === 'conflict' || status === 'rejected'
     ? 'error'
     : status === 'field_checked' || status === 'owner_confirmed' || status === 'agent_verified'
       ? 'success'
