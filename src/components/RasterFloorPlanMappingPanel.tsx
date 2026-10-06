@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
 import { Alert, Box, Button, Chip, MenuItem, TextField } from '@mui/material';
-import type { DigitalTwinAsset } from '../../domain/propertyDataRoom/types';
-import type { SpatialSpaceType } from '../../domain/propertyDataRoom/spatialMediaModel';
-import { rasterFloorPlanMappingService } from '../../services/rasterFloorPlanMappingService';
+import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
+import type { SpatialSpaceType } from '../domain/propertyDataRoom/spatialMediaModel';
+import { rasterFloorPlanMappingService } from '../services/rasterFloorPlanMappingService';
 
 const SPACE_TYPES: Array<{ value: SpatialSpaceType; label: string }> = [
   { value: 'residential', label: '주거' },
