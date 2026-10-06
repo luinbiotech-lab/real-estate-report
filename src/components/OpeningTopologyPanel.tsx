@@ -21,10 +21,11 @@ export default function OpeningTopologyPanel({ asset, onSaved }: { asset: Digita
   };
 
   const approved = reviews.filter((item) => item.decision === 'approved').length;
+  const elementCandidateCount = candidates.filter((item) => item.sourceKind === 'element').length;
   return <section style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 14, background: '#fbfcfe' }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 10 }}>
-      <div><strong>Door / Window Topology</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>승인된 door/window layer와 승인된 공간 경계의 근접관계를 후보로 연결합니다. 실제 개구부 위치·폭은 확정하지 않습니다.</p></div>
-      <div style={{ display: 'flex', gap: 6 }}><Chip size="small" label={`후보 ${candidates.length}`} /><Chip size="small" color={approved ? 'success' : 'default'} label={`승인 ${approved}`} /></div>
+      <div><strong>Door / Window Topology</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>승인된 door/window layer 또는 SVG element 후보와 승인된 공간 경계의 근접관계를 후보로 연결합니다. 실제 개구부 위치·폭은 확정하지 않습니다.</p></div>
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}><Chip size="small" label={`후보 ${candidates.length}`} /><Chip size="small" variant="outlined" label={`SVG element ${elementCandidateCount}`} /><Chip size="small" color={approved ? 'success' : 'default'} label={`승인 ${approved}`} /></div>
     </div>
     <Alert severity="warning" sx={{ mb: 1.5 }}>근접도 기반 후보입니다. 동일 위치에 겹친 선·심볼·블록 때문에 잘못 연결될 수 있으므로 Human Review가 필요합니다.</Alert>
     {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
@@ -35,7 +36,7 @@ export default function OpeningTopologyPanel({ asset, onSaved }: { asset: Digita
         return <article key={candidate.id} style={{ border: '1px solid #e1e6ec', borderRadius: 8, padding: 12, background: '#fff' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '110px 1fr auto', gap: 10, alignItems: 'center' }}>
             <Chip size="small" color={candidate.semantic === 'door' ? 'primary' : 'default'} label={candidate.semantic} />
-            <div><strong>{candidate.layer}</strong><div style={{ color: '#667085', fontSize: 13, marginTop: 4 }}>인접 공간 후보 {candidate.nearbyRoomIds.length}개 · tolerance {candidate.toleranceDrawingUnits.toFixed(3)} drawing units</div></div>
+            <div><strong>{candidate.layer}</strong><div style={{ display: 'flex', gap: 6, color: '#667085', fontSize: 13, marginTop: 4, flexWrap: 'wrap' }}><span>인접 공간 후보 {candidate.nearbyRoomIds.length}개</span><span>tolerance {candidate.toleranceDrawingUnits.toFixed(3)}</span><Chip size="small" variant="outlined" label={candidate.sourceKind === 'element' ? 'SVG element 후보' : 'Layer 후보'} />{candidate.elementId && <Chip size="small" variant="outlined" label={`element ${candidate.elementId}`} />}</div></div>
             <Chip size="small" color={review?.decision === 'approved' ? 'success' : review?.decision === 'rejected' ? 'error' : review?.decision === 'held' ? 'warning' : 'default'} label={review?.decision || '미검토'} />
           </div>
           <TextField fullWidth size="small" label="검토 메모" sx={{ mt: 1 }} value={notes[candidate.id] ?? review?.note ?? ''} onChange={(event) => setNotes((current) => ({ ...current, [candidate.id]: event.target.value }))} placeholder="실제 연결 공간, 위치 확인 내용" />
