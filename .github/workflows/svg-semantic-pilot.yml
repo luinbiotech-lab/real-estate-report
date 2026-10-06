@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - feat/svg-semantic-pilot
+      - feat/svg-window-semantic-candidates
   workflow_dispatch:
 
 jobs:
