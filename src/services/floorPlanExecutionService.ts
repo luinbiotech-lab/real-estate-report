@@ -4,6 +4,7 @@ import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { floorPlanGeometryService } from './floorPlanGeometryService';
 import { rasterFloorPlanService } from './rasterFloorPlanService';
+import { spatialMediaRepository } from '../repositories/spatialMediaRepository';
 
 async function executeDigitalTwin(job: AgentJob, asset: DigitalTwinAsset) {
   let running = job;
@@ -86,12 +87,33 @@ export const floorPlanExecutionService = {
     const asset = assets.find((item) => item.id === assetId);
     if (!asset) return;
     const geometry = result.payload.geometry && typeof result.payload.geometry === 'object' ? result.payload.geometry as Record<string, unknown> : undefined;
+    const raster = result.payload.raster && typeof result.payload.raster === 'object' ? result.payload.raster as Record<string, unknown> : undefined;
     const geometryStatus = typeof result.payload.geometryStatus === 'string' ? result.payload.geometryStatus : undefined;
+    const now = new Date().toISOString();
     await floorPlanGeometryAgentPort.saveDigitalTwinAsset({
       ...asset,
-      processingStatus: geometry ? 'processing' : asset.processingStatus,
-      metadata: { ...asset.metadata, geometryStatus, geometry, geometryAgentResultId: result.id },
-      updatedAt: new Date().toISOString(),
+      processingStatus: geometry || raster ? 'processing' : asset.processingStatus,
+      metadata: { ...asset.metadata, geometryStatus, geometry, raster, geometryAgentResultId: result.id },
+      updatedAt: now,
     });
+
+    const floorPlans = await spatialMediaRepository.getFloorPlans(result.propertyId);
+    const floorPlan = floorPlans.find((item) => item.id === asset.id);
+    if (floorPlan) {
+      await spatialMediaRepository.saveFloorPlan({
+        ...floorPlan,
+        dimensions: raster ? {
+          widthPx: typeof raster.widthPx === 'number' ? raster.widthPx : undefined,
+          heightPx: typeof raster.heightPx === 'number' ? raster.heightPx : undefined,
+          aspectRatio: typeof raster.aspectRatio === 'number' ? raster.aspectRatio : undefined,
+        } : floorPlan.dimensions,
+        extractionStatus: geometry
+          ? 'space_candidate_detected'
+          : geometryStatus === 'manual_mapping_required'
+            ? 'manual_mapping_required'
+            : floorPlan.extractionStatus,
+        updatedAt: now,
+      });
+    }
   },
 };
