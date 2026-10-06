@@ -1,5 +1,6 @@
 import type { DigitalTwinAsset, DigitalTwinAssetType, PropertyDocument } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { spatialMediaRepository } from '../repositories/spatialMediaRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 
 const MAX_ASSET_BYTES = 50 * 1024 * 1024;
@@ -121,6 +122,36 @@ export const digitalTwinAssetIntakeService = {
       metadata: { assetId: saved.id, assetType: saved.assetType, fileFormat: saved.fileFormat, floor: saved.floor, version: saved.version, fileSize: file.size },
       createdAt: now,
     });
+
+    if (['floor_plan', 'scanned_plan', 'dwg', 'dxf'].includes(saved.assetType)) {
+      try {
+        const spatialFileType = saved.assetType === 'dwg' || saved.assetType === 'dxf'
+          ? saved.assetType
+          : saved.assetType === 'scanned_plan'
+            ? 'scan'
+            : saved.fileFormat === 'pdf'
+              ? 'pdf'
+              : 'image';
+        await spatialMediaRepository.saveFloorPlan({
+          id: saved.id,
+          propertyId,
+          floorId: saved.floor,
+          floorLabel: saved.floor,
+          sourceFileId: saved.sourceDocumentId || saved.id,
+          storagePath: saved.storagePath,
+          fileType: spatialFileType,
+          originalFilename: saved.fileName || saved.storagePath,
+          scaleStatus: 'unknown',
+          extractionStatus: 'uploaded',
+          verificationStatus: 'unknown',
+          createdAt: now,
+          updatedAt: now,
+        });
+      } catch {
+        // Spatial schema may not be deployed yet. The Digital Twin asset remains authoritative until cutover.
+      }
+    }
+
     if (input.queueAgent === false) return { asset: saved };
     const job = await agentOrchestratorService.queueDigitalTwin(saved, 'upload');
     return { asset: saved, jobId: job.id };
