@@ -2,6 +2,7 @@ import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { readScaleCalibration } from './measurementCalibrationService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
 import { readVerticalDimensions } from './verticalDimensionService';
+import { readOpeningAdjacencyReviews } from './openingTopologyService';
 
 export interface ExtrusionRoomGeometry {
   id: string;
@@ -20,6 +21,7 @@ export interface ExtrusionGeometryResult {
   status: 'ready' | 'blocked';
   rooms: ExtrusionRoomGeometry[];
   reason?: string;
+  reviewedOpeningCount?: number;
   warnings: string[];
 }
 
@@ -33,6 +35,7 @@ export function buildExtrusionGeometry(asset: DigitalTwinAsset): ExtrusionGeomet
   const approved = new Map(reviews.map((item) => [item.candidateId, item]));
   const candidates = buildRoomBoundaryCandidates(asset).filter((candidate) => approved.has(candidate.id));
   if (!candidates.length) return { status: 'blocked', rooms: [], reason: 'room_topology_required', warnings: ['승인된 공간 경계가 필요합니다.'] };
+  const reviewedOpeningCount = readOpeningAdjacencyReviews(asset).filter((item) => item.decision === 'approved').length;
   const scale = calibration.metersPerDrawingUnit;
   const rooms = candidates.map((candidate): ExtrusionRoomGeometry => {
     const review = approved.get(candidate.id)!;
@@ -51,9 +54,10 @@ export function buildExtrusionGeometry(asset: DigitalTwinAsset): ExtrusionGeomet
     };
   });
   return {
-    status: 'ready', rooms,
+    status: 'ready', rooms, reviewedOpeningCount,
     warnings: [
       '3D extrusion은 검증 축척·승인 공간 경계·확인 높이를 사용한 시각화 후보입니다.',
+      reviewedOpeningCount ? `승인된 door/window 연결 ${reviewedOpeningCount}건은 provenance로 추적하지만 mesh 절삭에는 아직 반영하지 않습니다.` : '승인된 door/window 연결이 없어 벽체 개구부 절삭은 생성하지 않습니다.',
       '벽 두께·슬래브·구조체·개구부·설비·법정 면적을 확정하지 않습니다.',
       '실시설계·공사·감정·법적 판단에 직접 사용할 수 없습니다.',
     ],
