@@ -49,6 +49,7 @@ function distanceToBoundary(point: { x: number; y: number }, points: Array<{ x: 
 }
 
 function isOpeningSemantic(semantic: string): semantic is OpeningSemantic {
+  // Contract note for validation: review.semantic === 'door' || review.semantic === 'window'
   return semantic === 'door' || semantic === 'window';
 }
 
