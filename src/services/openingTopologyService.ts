@@ -1,5 +1,5 @@
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
-import type { DxfPreviewSegment } from './floorPlanGeometryService';
+import type { DxfPreviewSegment, SvgElementSemanticCandidate } from './floorPlanGeometryService';
 import { floorPlanSemanticReviewService } from './floorPlanSemanticReviewService';
 import { readScaleCalibration } from './measurementCalibrationService';
 import { buildRoomBoundaryCandidates, readRoomTopologyReviews } from './roomTopologyService';
@@ -10,6 +10,9 @@ export interface OpeningAdjacencyCandidate {
   semantic: 'door' | 'window';
   layer: string;
   sourceSegmentIndex: number;
+  sourceReviewKey?: string;
+  sourceKind?: 'layer' | 'element';
+  elementId?: string;
   centroid: { x: number; y: number };
   nearbyRoomIds: string[];
   toleranceDrawingUnits: number;
@@ -23,7 +26,8 @@ export interface OpeningAdjacencyReview {
   reviewedAt: string;
 }
 
-type GeometryMetadata = { previewSegments?: DxfPreviewSegment[] };
+type GeometryMetadata = { previewSegments?: DxfPreviewSegment[]; elementSemanticCandidates?: SvgElementSemanticCandidate[] };
+type OpeningSemantic = 'door' | 'window';
 
 function centroid(points: Array<{ x: number; y: number }>) {
   const sum = points.reduce((acc, point) => ({ x: acc.x + point.x, y: acc.y + point.y }), { x: 0, y: 0 });
@@ -44,11 +48,24 @@ function distanceToBoundary(point: { x: number; y: number }, points: Array<{ x: 
   return min;
 }
 
+function isOpeningSemantic(semantic: string): semantic is OpeningSemantic {
+  return semantic === 'door' || semantic === 'window';
+}
+
+function pointInBounds(point: { x: number; y: number }, bounds: SvgElementSemanticCandidate['bounds'], tolerance = 0.01) {
+  return point.x >= bounds.minX - tolerance && point.x <= bounds.maxX + tolerance && point.y >= bounds.minY - tolerance && point.y <= bounds.maxY + tolerance;
+}
+
 export function buildOpeningAdjacencyCandidates(asset: DigitalTwinAsset): OpeningAdjacencyCandidate[] {
   const geometry = asset.metadata.geometry && typeof asset.metadata.geometry === 'object' ? asset.metadata.geometry as GeometryMetadata : undefined;
   const segments = Array.isArray(geometry?.previewSegments) ? geometry.previewSegments : [];
-  const semanticReviews = floorPlanSemanticReviewService.getReviews(asset).filter((review) => review.decision === 'approved' && (review.semantic === 'door' || review.semantic === 'window'));
-  const semanticByLayer = new Map(semanticReviews.map((review) => [review.layer, review.semantic as 'door' | 'window']));
+  const elementCandidates = Array.isArray(geometry?.elementSemanticCandidates) ? geometry.elementSemanticCandidates : [];
+  const semanticReviews = floorPlanSemanticReviewService.getReviews(asset).filter((review) => review.decision === 'approved' && isOpeningSemantic(review.semantic));
+  const semanticByLayer = new Map(semanticReviews.filter((review) => !review.layer.startsWith('element:')).map((review) => [review.layer, review.semantic as OpeningSemantic]));
+  const elementReviewKeys = new Map(semanticReviews.filter((review) => review.layer.startsWith('element:')).map((review) => [review.layer.slice('element:'.length), review.semantic as OpeningSemantic]));
+  const semanticByElement = elementCandidates
+    .filter((candidate) => elementReviewKeys.has(candidate.elementId))
+    .map((candidate) => ({ candidate, semantic: elementReviewKeys.get(candidate.elementId)! }));
   const topologyReviews = readRoomTopologyReviews(asset).filter((review) => review.decision === 'approved');
   const approvedRoomIds = new Set(topologyReviews.map((review) => review.candidateId));
   const rooms = buildRoomBoundaryCandidates(asset).filter((room) => approvedRoomIds.has(room.id));
@@ -56,12 +73,38 @@ export function buildOpeningAdjacencyCandidates(asset: DigitalTwinAsset): Openin
   const toleranceDrawingUnits = scale ? 0.35 / scale : 1;
 
   const result: OpeningAdjacencyCandidate[] = [];
-  segments.forEach((segment, index) => {
-    if (!segment.layer || !semanticByLayer.has(segment.layer) || !segment.points.length) return;
-    const semantic = semanticByLayer.get(segment.layer)!;
+  const seen = new Set<string>();
+  const pushCandidate = (segment: DxfPreviewSegment, index: number, semantic: OpeningSemantic, sourceKind: 'layer' | 'element', sourceReviewKey: string, elementId?: string) => {
+    if (!segment.points.length) return;
+    const uniqueKey = `${sourceReviewKey}:${index}:${semantic}`;
+    if (seen.has(uniqueKey)) return;
+    seen.add(uniqueKey);
     const center = centroid(segment.points);
     const nearbyRoomIds = rooms.filter((room) => distanceToBoundary(center, room.points) <= toleranceDrawingUnits).map((room) => room.id);
-    result.push({ id: `${asset.id}:opening:${index}`, semantic, layer: segment.layer, sourceSegmentIndex: index, centroid: center, nearbyRoomIds, toleranceDrawingUnits, status: 'candidate' });
+    result.push({
+      id: `${asset.id}:opening:${sourceKind}:${index}:${sourceReviewKey}`,
+      semantic,
+      layer: segment.layer || sourceReviewKey,
+      sourceSegmentIndex: index,
+      sourceReviewKey,
+      sourceKind,
+      elementId,
+      centroid: center,
+      nearbyRoomIds,
+      toleranceDrawingUnits,
+      status: 'candidate',
+    });
+  };
+
+  segments.forEach((segment, index) => {
+    if (segment.layer && semanticByLayer.has(segment.layer)) pushCandidate(segment, index, semanticByLayer.get(segment.layer)!, 'layer', segment.layer);
+    const center = segment.points.length ? centroid(segment.points) : undefined;
+    if (!center) return;
+    for (const { candidate, semantic } of semanticByElement) {
+      if (pointInBounds(center, candidate.bounds, toleranceDrawingUnits * 0.05)) {
+        pushCandidate(segment, index, semantic, 'element', `element:${candidate.elementId}`, candidate.elementId);
+      }
+    }
   });
   return result.slice(0, 300);
 }
@@ -79,9 +122,9 @@ export const openingTopologyService = {
     reviews.push({ candidateId: candidate.id, decision, note: note.trim() || undefined, reviewedAt: now });
     const saved = await propertyDataRoomRepository.saveDigitalTwinAsset({ ...asset, metadata: { ...asset.metadata, openingAdjacencyReviews: reviews, openingTopologyUpdatedAt: now }, updatedAt: now });
     await propertyDataRoomRepository.saveDataSource({
-      id: crypto.randomUUID(), propertyId: asset.propertyId, resourceType: 'digital_twin_opening_topology', sourceType: 'manual', sourceName: `${candidate.semantic}:${candidate.layer}`,
+      id: crypto.randomUUID(), propertyId: asset.propertyId, resourceType: 'digital_twin_opening_topology', sourceType: 'manual', sourceName: `${candidate.semantic}:${candidate.sourceReviewKey || candidate.layer}`,
       sourceReference: asset.id, collectedAt: now, verificationStatus: decision === 'approved' ? 'confirmed' : 'unverified',
-      metadata: { candidateId: candidate.id, semantic: candidate.semantic, layer: candidate.layer, nearbyRoomIds: candidate.nearbyRoomIds, decision, note }, createdAt: now,
+      metadata: { candidateId: candidate.id, semantic: candidate.semantic, layer: candidate.layer, sourceKind: candidate.sourceKind, sourceReviewKey: candidate.sourceReviewKey, elementId: candidate.elementId, nearbyRoomIds: candidate.nearbyRoomIds, decision, note }, createdAt: now,
     });
     return saved;
   },
