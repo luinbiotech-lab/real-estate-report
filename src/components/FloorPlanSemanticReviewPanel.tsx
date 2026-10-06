@@ -37,7 +37,7 @@ export default function FloorPlanSemanticReviewPanel({ asset, onSaved }: { asset
   };
 
   return <div style={{ display: 'grid', gap: 10 }}>
-    <p style={{ margin: 0, color: '#667085' }}>DXF/SVG 벡터 도면의 layer·id·class 이름과 저신뢰 도형 규칙에서 추정한 의미를 검토합니다. 승인은 “이 도형 그룹을 이 의미로 해석해도 된다”는 편집 판단이며 구조안전·법적 용도를 확정하는 의미가 아닙니다.</p>
+    <p style={{ margin: 0, color: '#667085' }}>DXF/SVG 벡터 도면의 layer·id·class 이름에서 추정한 의미를 검토합니다. 저신뢰 도형 규칙에서 생성된 SVG element 후보도 함께 검토합니다. 승인은 “이 도형 그룹을 이 의미로 해석해도 된다”는 편집 판단이며 구조안전·법적 용도를 확정하는 의미가 아닙니다.</p>
     {candidates.map((candidate) => {
       const review = existing.find((item) => item.layer === candidate.reviewKey);
       return <div key={candidate.reviewKey} style={{ display: 'grid', gridTemplateColumns: 'minmax(180px,1fr) 180px auto', gap: 10, alignItems: 'center', border: '1px solid #e1e6ec', borderRadius: 9, padding: 10 }}>
