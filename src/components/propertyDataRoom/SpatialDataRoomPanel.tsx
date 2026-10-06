@@ -12,6 +12,7 @@ import type { DataRoomBundle } from '../../domain/propertyDataRoom/types';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
 import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
+import LightweightSpatialViewer from './LightweightSpatialViewer';
 
 const emptySpatialBundle: SpatialMediaDataRoomBundle = {
   floorPlans: [],
@@ -151,6 +152,10 @@ export default function SpatialDataRoomPanel({
     </>}
 
     {mode === 'viewer' && <>
+      <section>
+        <div className="section-heading-row"><div><p className="eyebrow">LIGHTWEIGHT VIEWER</p><h2>층 · 공간 구조 Viewer</h2></div><Chip size="small" label={String(summary.spaces) + ' spaces'} /></div>
+        <LightweightSpatialViewer spaces={bundle.spaces} />
+      </section>
       <section>
         <div className="section-heading-row"><div><p className="eyebrow">VIEWER SCENES</p><h2>3D Viewer</h2></div><Chip size="small" label={String(summary.readyViewerScenes) + '/' + String(summary.viewerScenes) + ' 준비'} /></div>
         {bundle.viewerScenes.length ? <div className="asset-list">{bundle.viewerScenes.map((scene) => <article key={scene.id}>
