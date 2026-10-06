@@ -126,7 +126,7 @@ export default function DigitalTwinWorkspacePage() {
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{hasScaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{hasVerticalDimensions && <Chip size="small" color="success" variant="outlined" label="Height verified" />}{hasFloorPlacement && <Chip size="small" color="success" variant="outlined" label="Floor placed" />}{approvedRooms > 0 && <Chip size="small" color="success" variant="outlined" label={`Room ${approvedRooms}`} />}{approvedOpenings > 0 && <Chip size="small" color="success" variant="outlined" label={`Opening ${approvedOpenings}`} />}{dimensionCount > 0 && <Chip size="small" color="success" variant="outlined" label={`Dimension ${dimensionCount}`} />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin metadata" />}</div>
           </div>
           <FloorPlanGeometryPreview asset={asset} />
-          {asset.metadata.raster && typeof asset.metadata.raster === 'object' && <RasterFloorPlanMappingPanel asset={asset} onSaved={() => load()} />}
+          {Boolean(asset.metadata.raster && typeof asset.metadata.raster === 'object') && <RasterFloorPlanMappingPanel asset={asset} onSaved={() => load()} />}
           {hasGeometry && <div style={{ marginTop: 18 }}><ScaleCalibrationPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><VerticalDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><FloorPlacementPanel asset={asset} onSaved={() => load()} /></div>}
