@@ -1,4 +1,4 @@
-import { Alert } from '@mui/material';
+import { Alert, Chip } from '@mui/material';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { extrusionGeometryService } from '../services/extrusionGeometryService';
 
@@ -19,7 +19,7 @@ export default function ExtrusionPreview({ asset }: { asset: DigitalTwinAsset })
   const width = Math.max(1, maxX - minX); const height = Math.max(1, maxY - minY); const pad = Math.max(width, height) * 0.08;
 
   return <section style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 14, background: '#fbfcfe' }}>
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 10 }}><div><strong>3D Extrusion Preview</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>승인된 공간 경계에 검증된 높이를 적용한 로컬 3D 후보입니다.</p></div><strong>{result.rooms.length} rooms</strong></div>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', marginBottom: 10 }}><div><strong>3D Extrusion Preview</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 13 }}>승인된 공간 경계에 검증된 높이를 적용한 로컬 3D 후보입니다.</p></div><div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'flex-end' }}><strong>{result.rooms.length} rooms</strong><Chip size="small" variant="outlined" label={`approved openings ${result.reviewedOpeningCount ?? 0}`} /></div></div>
     <svg viewBox={`${minX - pad} ${minY - pad} ${width + pad * 2} ${height + pad * 2}`} style={{ width: '100%', minHeight: 300, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 8 }}>
       {result.rooms.map((room) => {
         const bottom = room.bottom.map(project); const top = room.top.map(project);
@@ -31,6 +31,7 @@ export default function ExtrusionPreview({ asset }: { asset: DigitalTwinAsset })
       })}
     </svg>
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(190px,1fr))', gap: 8, marginTop: 10 }}>{result.rooms.map((room) => <div key={room.id} style={{ padding: 10, background: '#fff', borderRadius: 8, border: '1px solid #e2e8f0' }}><strong>{room.name}</strong><div style={{ color: '#667085', fontSize: 13, marginTop: 4 }}>{room.areaSqmCandidate != null ? `${room.areaSqmCandidate.toFixed(2)}㎡ 후보` : '면적 후보 없음'} · 높이 {room.heightM.toFixed(2)}m{room.volumeM3Candidate != null ? ` · 체적 ${room.volumeM3Candidate.toFixed(2)}㎥ 후보` : ''}</div></div>)}</div>
-    <Alert severity="warning" sx={{ mt: 1.5 }}>{result.warnings[1]}</Alert>
+    <Alert severity="info" sx={{ mt: 1.5 }}>{result.warnings[1]}</Alert>
+    <Alert severity="warning" sx={{ mt: 1.5 }}>{result.warnings[2]}</Alert>
   </section>;
 }
