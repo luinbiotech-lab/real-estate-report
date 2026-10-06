@@ -3,12 +3,33 @@ import { floorPlanGeometryAgentPort } from '../agents/agentDataPorts';
 import { agentExecutionService } from './agentExecutionService';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { floorPlanGeometryService } from './floorPlanGeometryService';
+import { rasterFloorPlanService } from './rasterFloorPlanService';
 
 async function executeDigitalTwin(job: AgentJob, asset: DigitalTwinAsset) {
   let running = job;
   try {
     if (running.status !== 'running') running = await agentOrchestratorService.start(running);
     const floor = asset.floor;
+    if (rasterFloorPlanService.canExtract(asset)) {
+      const raster = await rasterFloorPlanService.extract(asset);
+      return agentOrchestratorService.complete(running, {
+        resultType: 'floor_plan_intake_candidate',
+        payload: {
+          sourceDigitalTwinAssetId: asset.id,
+          fileName: asset.fileName || '',
+          mimeType: asset.mimeType || '',
+          storagePath: asset.storagePath,
+          assetType: asset.assetType,
+          floor,
+          geometryStatus: 'manual_mapping_required',
+          raster,
+          geometryWarnings: raster.warnings,
+          nextAgent: 'digital_twin',
+        },
+        confidence: 0.74,
+        requiresReview: true,
+      });
+    }
     if (!floorPlanGeometryService.canExtract(asset)) {
       return agentOrchestratorService.complete(running, {
         resultType: 'floor_plan_intake_candidate',
