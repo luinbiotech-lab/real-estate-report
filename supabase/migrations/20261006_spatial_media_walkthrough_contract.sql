@@ -510,7 +510,7 @@ begin
   ]
   loop
     execute format('drop policy if exists %I on public.%I', table_name || '_select_active', table_name);
-    execute format('create policy %I on public.%I for select to authenticated using (public.daon_is_active_user())', table_name || '_select_active', table_name);
+    execute format('create policy %I on public.%I for select to authenticated using (private.daon_is_active_user())', table_name || '_select_active', table_name);
   end loop;
 end $$;
 
@@ -533,13 +533,13 @@ begin
   ]
   loop
     execute format('drop policy if exists %I on public.%I', table_name || '_insert_editor_plus', table_name);
-    execute format('create policy %I on public.%I for insert to authenticated with check (public.daon_can_edit_data() and created_by = auth.uid() and updated_by = auth.uid())', table_name || '_insert_editor_plus', table_name);
+    execute format('create policy %I on public.%I for insert to authenticated with check (private.daon_can_edit_data() and created_by = auth.uid() and updated_by = auth.uid())', table_name || '_insert_editor_plus', table_name);
 
     execute format('drop policy if exists %I on public.%I', table_name || '_update_editor_plus', table_name);
-    execute format('create policy %I on public.%I for update to authenticated using (public.daon_can_edit_data()) with check (public.daon_can_edit_data() and updated_by = auth.uid())', table_name || '_update_editor_plus', table_name);
+    execute format('create policy %I on public.%I for update to authenticated using (private.daon_can_edit_data()) with check (private.daon_can_edit_data() and updated_by = auth.uid())', table_name || '_update_editor_plus', table_name);
 
     execute format('drop policy if exists %I on public.%I', table_name || '_delete_owner_only', table_name);
-    execute format('create policy %I on public.%I for delete to authenticated using (public.daon_is_owner())', table_name || '_delete_owner_only', table_name);
+    execute format('create policy %I on public.%I for delete to authenticated using (private.daon_is_owner())', table_name || '_delete_owner_only', table_name);
   end loop;
 end $$;
 
@@ -548,21 +548,21 @@ end $$;
 drop policy if exists "viewer_edges_insert_editor_plus" on public.viewer_edges;
 create policy "viewer_edges_insert_editor_plus" on public.viewer_edges
 for insert to authenticated
-with check (public.daon_can_edit_data() and created_by = auth.uid());
+with check (private.daon_can_edit_data() and created_by = auth.uid());
 
 drop policy if exists "viewer_edges_delete_owner_only" on public.viewer_edges;
 create policy "viewer_edges_delete_owner_only" on public.viewer_edges
-for delete to authenticated using (public.daon_is_owner());
+for delete to authenticated using (private.daon_is_owner());
 
 -- Verification events are append-only for verifier roles. OWNER may delete only for exceptional remediation.
 
 drop policy if exists "verification_events_insert_verifier" on public.verification_events;
 create policy "verification_events_insert_verifier" on public.verification_events
 for insert to authenticated
-with check (public.daon_can_verify_data() and created_by = auth.uid());
+with check (private.daon_can_verify_data() and created_by = auth.uid());
 
 drop policy if exists "verification_events_delete_owner_only" on public.verification_events;
 create policy "verification_events_delete_owner_only" on public.verification_events
-for delete to authenticated using (public.daon_is_owner());
+for delete to authenticated using (private.daon_is_owner());
 
 commit;
