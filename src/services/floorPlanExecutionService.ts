@@ -102,11 +102,8 @@ export const floorPlanExecutionService = {
     if (floorPlan) {
       await spatialMediaRepository.saveFloorPlan({
         ...floorPlan,
-        dimensions: raster ? {
-          widthPx: typeof raster.widthPx === 'number' ? raster.widthPx : undefined,
-          heightPx: typeof raster.heightPx === 'number' ? raster.heightPx : undefined,
-          aspectRatio: typeof raster.aspectRatio === 'number' ? raster.aspectRatio : undefined,
-        } : floorPlan.dimensions,
+        widthPx: raster && typeof raster.widthPx === 'number' ? raster.widthPx : floorPlan.widthPx,
+        heightPx: raster && typeof raster.heightPx === 'number' ? raster.heightPx : floorPlan.heightPx,
         extractionStatus: geometry
           ? 'space_candidate_detected'
           : geometryStatus === 'manual_mapping_required'
