@@ -13,6 +13,7 @@ import { spatialMediaRepository } from '../../repositories/spatialMediaRepositor
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
 import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
+import ThreeGlbViewer from './ThreeGlbViewer';
 
 const emptySpatialBundle: SpatialMediaDataRoomBundle = {
   floorPlans: [],
@@ -152,6 +153,12 @@ export default function SpatialDataRoomPanel({
     </>}
 
     {mode === 'viewer' && <>
+      {bundle.viewerScenes.some((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl) && <section>
+        <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color="success" label="3D model connected" /></div>
+        {bundle.viewerScenes
+          .filter((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl)
+          .map((scene) => <ThreeGlbViewer key={scene.id} modelUrl={scene.modelUrl!} title={scene.title} />)}
+      </section>}
       <section>
         <div className="section-heading-row"><div><p className="eyebrow">LIGHTWEIGHT VIEWER</p><h2>층 · 공간 구조 Viewer</h2></div><Chip size="small" label={String(summary.spaces) + ' spaces'} /></div>
         <LightweightSpatialViewer spaces={bundle.spaces} />
