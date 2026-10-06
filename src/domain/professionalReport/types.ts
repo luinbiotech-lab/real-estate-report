@@ -51,6 +51,71 @@ export interface ProfessionalReportComparable {
   verificationStatus: VerificationStatus;
 }
 
+export interface ProfessionalReportSpatial {
+  mediaPolicy?: {
+    propertyId: string;
+    allowInteriorPhotos: boolean;
+    allowExteriorPhotos: boolean;
+    allowRoadview: boolean;
+    allowPublicMap: boolean;
+    allowAiVisualization: boolean;
+    restrictionNote?: string;
+  };
+  floorPlans: Array<{
+    id: string;
+    floorId?: string;
+    floorLabel?: string;
+    extractionStatus: string;
+    verificationStatus: string;
+  }>;
+  spaces: Array<{
+    id: string;
+    floorId?: string;
+    spaceCode?: string;
+    spaceName: string;
+    spaceType: string;
+    areaM2?: number;
+    areaPy?: number;
+    verificationStatus: string;
+  }>;
+  media: Array<{
+    id: string;
+    mediaType: string;
+    originalFilename: string;
+    sourceOrigin: string;
+    visibilityScope: string;
+    verificationStatus: string;
+    caption?: string;
+  }>;
+  viewer: {
+    scenes: Array<{
+      id: string;
+      sceneType: string;
+      title: string;
+      generationStatus: string;
+      verificationStatus: string;
+    }>;
+    walkthroughRoutes: Array<{
+      id: string;
+      title: string;
+      routeType: string;
+      isDefault: boolean;
+      stepCount: number;
+    }>;
+  };
+  verification: {
+    eventCount: number;
+    fieldCheckedOrHigher: number;
+    conflictCount: number;
+    minimumVerificationLevel: number;
+  };
+  readiness: {
+    spatialReady: boolean;
+    walkthroughReady: boolean;
+    reportSpatialReady: boolean;
+  };
+}
+
 export interface ProfessionalReportViewModel {
   identity: {
     id: string; propertyNumber: ReportValue<string>; name: ReportValue<string>; buildingName: ReportValue<string>;
@@ -87,6 +152,7 @@ export interface ProfessionalReportViewModel {
   };
   documents: { items: ProfessionalReportDocument[]; count: number; verifiedCount: number };
   digitalTwin: { connected: boolean; count: number; readyCount: number };
+  spatial?: ProfessionalReportSpatial;
   verification: { items: Array<{ fieldKey: string; status: VerificationStatus; note: string; verifiedAt: string | null }>; counts: Record<VerificationStatus, number> };
   dataQuality: {
     counts: Record<ReportValueState, number>; missingFields: string[]; disconnectedFields: string[];
