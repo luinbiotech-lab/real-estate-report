@@ -2,15 +2,17 @@ import { REQUIRED_DOCUMENT_TYPES } from '../domain/propertyDataRoom/labels';
 import { isVerificationFieldKey } from '../domain/propertyDataRoom/verificationFieldRegistry';
 import type { DataRoomBundle, DataRoomSummary, DataSourceType, DocumentExtractionMethod, DocumentExtractionStatus, DocumentType, MediaCategory, PropertyDocument, PropertyMedia, PropertyVerificationCandidate, VerificationDecisionStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { spatialMediaRepository } from '../repositories/spatialMediaRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
 import { assessRequiredDocumentReadiness } from './propertyReadinessService';
 import type { Property } from '../types';
 
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
-const MAX_MEDIA_BYTES = 12 * 1024 * 1024;
+const MAX_MEDIA_IMAGE_BYTES = 12 * 1024 * 1024;
+const MAX_MEDIA_VIDEO_BYTES = 50 * 1024 * 1024;
 const ALLOWED_DOCUMENT_TYPES = ['application/pdf', 'image/jpeg', 'image/png', 'image/webp'];
-const ALLOWED_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+const ALLOWED_MEDIA_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'video/mp4', 'video/webm'];
 
 const DOCUMENT_NAME_RULES: Array<{ type: DocumentType; patterns: RegExp[] }> = [
   { type: 'building_register', patterns: [/건축물대장/i, /건축물.?대장/i, /building.?register/i] },
@@ -74,18 +76,21 @@ export const propertyDataRoomService = {
     return '';
   },
   validateMedia(file: File) {
-    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) return 'JPG, PNG, WEBP 이미지만 등록할 수 있습니다.';
-    if (file.size > MAX_MEDIA_BYTES) return '이미지는 12MB 이하만 등록할 수 있습니다.';
+    if (!ALLOWED_MEDIA_TYPES.includes(file.type)) return 'JPG, PNG, WEBP, MP4, WEBM 파일만 등록할 수 있습니다.';
+    const isVideo = file.type.startsWith('video/');
+    const limit = isVideo ? MAX_MEDIA_VIDEO_BYTES : MAX_MEDIA_IMAGE_BYTES;
+    if (file.size > limit) return isVideo ? '영상은 50MB 이하만 등록할 수 있습니다.' : '이미지는 12MB 이하만 등록할 수 있습니다.';
     return '';
   },
-  async uploadMedia(propertyId: string, file: File, input: { category: MediaCategory; caption?: string; isPrimary?: boolean }): Promise<PropertyMedia> {
+  async uploadMedia(propertyId: string, file: File, input: { category: MediaCategory; caption?: string; isPrimary?: boolean; spaceId?: string; floor?: string; room?: string }): Promise<PropertyMedia> {
     const error = this.validateMedia(file); if (error) throw new Error(error);
     const now = new Date().toISOString();
     const id = crypto.randomUUID();
+    const mediaType: PropertyMedia['mediaType'] = file.type.startsWith('video/') ? 'video' : 'image';
     const media: PropertyMedia = {
       id,
       propertyId,
-      mediaType: 'image',
+      mediaType,
       category: input.category,
       storagePath: `properties/${propertyId}/media/${id}-${file.name}`,
       url: await dataUrl(file),
@@ -93,11 +98,13 @@ export const propertyDataRoomService = {
       fileName: file.name,
       mimeType: file.type,
       fileSize: file.size,
+      floor: input.floor,
+      room: input.room,
       caption: input.caption?.trim() || file.name.replace(/\.[^.]+$/, ''),
       aiTags: [],
       verificationStatus: 'unverified',
       sortOrder: Date.now(),
-      isPrimary: Boolean(input.isPrimary),
+      isPrimary: Boolean(input.isPrimary) && mediaType === 'image',
       createdAt: now,
       updatedAt: now,
     };
@@ -111,9 +118,44 @@ export const propertyDataRoomService = {
       sourceReference: saved.id,
       collectedAt: now,
       verificationStatus: 'unverified',
-      metadata: { mediaId: saved.id, category: saved.category, fileName: saved.fileName, mimeType: saved.mimeType, fileSize: saved.fileSize },
+      metadata: { mediaId: saved.id, mediaType: saved.mediaType, category: saved.category, fileName: saved.fileName, mimeType: saved.mimeType, fileSize: saved.fileSize, spaceId: input.spaceId ?? null },
       createdAt: now,
     });
+    if (input.spaceId) {
+      await propertyDataRoomRepository.saveSpaceMediaLink({
+        id: crypto.randomUUID(),
+        propertyId,
+        spaceId: input.spaceId,
+        mediaId: saved.id,
+        confidence: 1,
+        createdAt: now,
+      });
+    }
+
+    try {
+      await spatialMediaRepository.saveMediaAsset({
+        id: saved.id,
+        propertyId,
+        mediaType: saved.mediaType === 'video' ? 'video' : 'photo',
+        mimeType: saved.mimeType,
+        originalFilename: saved.fileName,
+        storagePath: saved.storagePath,
+        fileSizeBytes: saved.fileSize,
+        capturedAt: saved.captureDate,
+        uploadedAt: now,
+        sourceOrigin: 'agent_uploaded',
+        visibilityScope: 'data_room',
+        processingStatus: input.spaceId ? 'matched' : 'awaiting_space_match',
+        verificationStatus: 'unknown',
+        aiAnalysisStatus: 'not_started',
+        caption: saved.caption,
+        notes: 'legacyCategory=' + saved.category,
+        createdAt: now,
+        updatedAt: now,
+      });
+    } catch {
+      // Spatial schema may not be deployed yet. Legacy Data Room remains the source of truth until cutover.
+    }
     return saved;
   },
   async uploadDocument(propertyId: string, file: File, input: { documentType: DocumentType; title: string; sourceName: string }): Promise<PropertyDocument> {
