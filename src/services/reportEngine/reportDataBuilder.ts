@@ -4,11 +4,13 @@ import { numericReportValue, reportValue } from '../../domain/professionalReport
 import { calculateUnitPrice, roundArea, sqmToPyeong, pyeongToSqm } from '../../domain/professionalReport/calculations';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
+import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
 import type { Property } from '../../types';
 import { internalPhotoAllowed, reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
+import { spatialMediaViewService } from '../spatialMediaViewService';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
 export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
@@ -212,9 +214,17 @@ export class ReportDataBuilder {
   constructor(private readonly now: () => string = () => new Date().toISOString()) {}
 
   async build(propertyId: string, options: Omit<BuilderOptions, 'generatedAt'> = {}): Promise<ProfessionalReportViewModel> {
-    const [property, bundle] = await Promise.all([propertyRepository.getById(propertyId), propertyDataRoomRepository.getBundle(propertyId)]);
+    const [property, bundle, spatialBundle] = await Promise.all([
+      propertyRepository.getById(propertyId),
+      propertyDataRoomRepository.getBundle(propertyId),
+      spatialMediaRepository.getBundle(propertyId),
+    ]);
     if (!property) throw new Error('보고서를 생성할 물건을 찾을 수 없습니다.');
-    return buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
+    const viewModel = buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
+    return {
+      ...viewModel,
+      spatial: spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle),
+    };
   }
 }
 
