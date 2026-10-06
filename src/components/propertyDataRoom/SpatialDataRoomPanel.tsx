@@ -8,8 +8,10 @@ import {
   SPATIAL_VERIFICATION_LABELS,
   type SpatialMediaDataRoomBundle,
 } from '../../domain/propertyDataRoom/spatialMediaModel';
+import type { DataRoomBundle } from '../../domain/propertyDataRoom/types';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
+import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
 
 const emptySpatialBundle: SpatialMediaDataRoomBundle = {
   floorPlans: [],
@@ -44,11 +46,13 @@ export default function SpatialDataRoomPanel({
   propertyAddress,
   mode = 'spatial',
   onOpenDigitalTwinIntake,
+  legacyBundle,
 }: {
   propertyId: string;
   propertyAddress?: string;
   mode?: 'spatial' | 'viewer';
   onOpenDigitalTwinIntake?: () => void;
+  legacyBundle?: DataRoomBundle;
 }) {
   const [bundle, setBundle] = useState<SpatialMediaDataRoomBundle>(emptySpatialBundle);
   const [loading, setLoading] = useState(true);
@@ -58,13 +62,19 @@ export default function SpatialDataRoomPanel({
     setLoading(true);
     setError('');
     try {
-      setBundle(await spatialMediaRepository.getBundle(propertyId));
+      const typed = await spatialMediaRepository.getBundle(propertyId);
+      setBundle(legacyBundle ? spatialMediaCompatibilityService.mergePreferTyped(typed, legacyBundle) : typed);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '공간·미디어 데이터를 불러오지 못했습니다.');
+      if (legacyBundle) {
+        setBundle(spatialMediaCompatibilityService.fromLegacyBundle(legacyBundle));
+        setError('새 spatial schema 연결 전이라 기존 Data Room 데이터를 호환 모드로 표시하고 있습니다.');
+      } else {
+        setError(reason instanceof Error ? reason.message : '공간·미디어 데이터를 불러오지 못했습니다.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [propertyId]);
+  }, [legacyBundle, propertyId]);
 
   useEffect(() => { load(); }, [load]);
 
