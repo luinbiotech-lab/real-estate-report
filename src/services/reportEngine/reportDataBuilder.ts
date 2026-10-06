@@ -11,6 +11,7 @@ import { internalPhotoAllowed, reportMediaCategoryAllowed } from '../../domain/p
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 import { spatialMediaViewService } from '../spatialMediaViewService';
+import { spatialMediaCompatibilityService } from '../spatialMediaCompatibilityService';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
 export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
@@ -214,24 +215,15 @@ export class ReportDataBuilder {
   constructor(private readonly now: () => string = () => new Date().toISOString()) {}
 
   async build(propertyId: string, options: Omit<BuilderOptions, 'generatedAt'> = {}): Promise<ProfessionalReportViewModel> {
-    const emptySpatialBundle = {
-      floorPlans: [],
-      spaces: [],
-      mediaAssets: [],
-      mediaSpaceLinks: [],
-      viewerScenes: [],
-      viewerNodes: [],
-      viewerEdges: [],
-      walkthroughRoutes: [],
-      walkthroughSteps: [],
-      verificationEvents: [],
-    };
-    const [property, bundle, spatialBundle] = await Promise.all([
+    const [property, bundle] = await Promise.all([
       propertyRepository.getById(propertyId),
       propertyDataRoomRepository.getBundle(propertyId),
-      spatialMediaRepository.getBundle(propertyId).catch(() => emptySpatialBundle),
     ]);
     if (!property) throw new Error('보고서를 생성할 물건을 찾을 수 없습니다.');
+    const typedSpatialBundle = await spatialMediaRepository.getBundle(propertyId).catch(() => undefined);
+    const spatialBundle = typedSpatialBundle
+      ? spatialMediaCompatibilityService.mergePreferTyped(typedSpatialBundle, bundle)
+      : spatialMediaCompatibilityService.fromLegacyBundle(bundle);
     const viewModel = buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
     return {
       ...viewModel,
