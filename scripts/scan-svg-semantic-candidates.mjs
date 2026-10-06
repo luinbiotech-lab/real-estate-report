@@ -7,7 +7,7 @@ const assert = (condition, message) => { if (!condition) throw new Error(message
 const response = await fetch(SOURCE_URL);
 assert(response.ok, `Failed to fetch SVG: ${response.status}`);
 const svgText = await response.text();
-const syntheticWindowSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><rect x="10" y="10" width="140" height="10"/><rect x="20" y="50" width="60" height="20"/><path d="M100 90 C120 60 150 60 170 90"/></svg>`;
+const syntheticWindowSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 120"><rect x="10" y="10" width="140" height="10"/><rect x="20" y="50" width="60" height="20"/><path d="M100 90 C120 60 150 60 170 80"/></svg>`;
 
 const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage();
