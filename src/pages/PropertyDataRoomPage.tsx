@@ -7,6 +7,7 @@ import ComparableTransactionPanel from '../components/propertyDataRoom/Comparabl
 import DocumentExtractionPanel from '../components/propertyDataRoom/DocumentExtractionPanel';
 import MediaClassificationPanel from '../components/propertyDataRoom/MediaClassificationPanel';
 import PropertySpaceOverviewPanel from '../components/propertyDataRoom/PropertySpaceOverviewPanel';
+import SpatialDataRoomPanel from '../components/propertyDataRoom/SpatialDataRoomPanel';
 import { DOCUMENT_TYPE_LABELS, SOURCE_TYPE_LABELS, VERIFICATION_LABELS } from '../domain/propertyDataRoom/labels';
 import type { DataRoomBundle, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus, VerificationStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
@@ -16,8 +17,8 @@ import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
 
-type TabKey = 'overview' | 'media' | 'documents' | 'official' | 'market' | 'verification' | 'reports' | 'digitalTwin';
-const TAB_KEYS: TabKey[] = ['overview', 'media', 'documents', 'official', 'market', 'verification', 'reports', 'digitalTwin'];
+type TabKey = 'overview' | 'media' | 'spatial' | 'documents' | 'official' | 'market' | 'verification' | 'reports' | 'digitalTwin';
+const TAB_KEYS: TabKey[] = ['overview', 'media', 'spatial', 'documents', 'official', 'market', 'verification', 'reports', 'digitalTwin'];
 const emptyBundle: DataRoomBundle = { documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
 const officialTypes: DocumentType[] = ['building_register', 'land_register', 'land_use_plan', 'registry', 'cadastral_map'];
 
@@ -241,22 +242,26 @@ export default function PropertyDataRoomPage() {
       <div className={summary?.reportReady ? 'ready' : 'attention'}><small>보고서 준비도</small><strong>{summary?.reportReady ? '핵심자료 충족' : `${summary?.missingDocumentTypes.length ?? 0}개 자료 필요`}</strong></div>
     </section>
     <section className="data-room-workspace"><Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" aria-label="Property Data Room 메뉴">
-      <Tab value="overview" label="개요" /><Tab value="media" label="사진" /><Tab value="documents" label="문서" /><Tab value="official" label="공적자료" /><Tab value="market" label="비교거래" /><Tab value="verification" label={`자료 검증${summary?.verificationPending ? ` ${summary.verificationPending}` : ''}`} /><Tab value="reports" label="보고서" /><Tab value="digitalTwin" label="3D" />
+      <Tab value="overview" label="개요" /><Tab value="media" label="사진/영상" /><Tab value="spatial" label="도면/공간" /><Tab value="documents" label="문서" /><Tab value="official" label="공적자료" /><Tab value="market" label="비교거래" /><Tab value="verification" label={`자료 검증${summary?.verificationPending ? ` ${summary.verificationPending}` : ''}`} /><Tab value="reports" label="보고서" /><Tab value="digitalTwin" label="3D/Walkthrough" />
     </Tabs>
     <div className="data-room-content">
       {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} onTab={setTab} />}
-      {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진이 없습니다." detail="물건 수정 화면에서 직접 촬영하거나 보유한 사진을 등록하세요." />}</div><MediaClassificationPanel propertyId={property.id} media={bundle.media} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
+      {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진/영상이 없습니다." detail="실제 촬영 자료와 출처가 확인된 미디어를 등록하세요. AI 시각화는 실제 현장사진과 분리해서 관리합니다." />}</div><MediaClassificationPanel propertyId={property.id} media={bundle.media} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
+      {tab === 'spatial' && <SpatialDataRoomPanel propertyId={property.id} propertyAddress={property.address} mode="spatial" />}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} onQueued={async () => { await load(); setTab('verification'); }} />}
       {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} onUploadSources={uploadSourceDocuments} />}
       {tab === 'market' && <ComparableTransactionPanel propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
       {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
       {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
       {tab === 'digitalTwin' && <div>
-        {bundle.digitalTwinAssets.length
-          ? <div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div>
-          : <EmptyState title="Digital Twin 데이터가 연결되지 않았습니다." detail="실제 도면·360 사진·3D 모델 원본이 필요합니다. geometry를 임의 생성하지 않고 이 물건에 원본 asset을 등록한 뒤 검토 흐름을 시작합니다." />}
+        <SpatialDataRoomPanel
+          propertyId={property.id}
+          propertyAddress={property.address}
+          mode="viewer"
+          onOpenDigitalTwinIntake={() => navigate(`/digital-twin-intake?propertyId=${encodeURIComponent(id)}`)}
+        />
+        {bundle.digitalTwinAssets.length > 0 && <section className="data-room-overview"><section><p className="eyebrow">LEGACY / SOURCE ASSETS</p><h2>기존 Digital Twin 원본</h2><div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div></section></section>}
         <div style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
-          <Button variant="contained" onClick={() => navigate(`/digital-twin-intake?propertyId=${encodeURIComponent(id)}`)}>도면 · 3D 자료 등록/추가</Button>
           <Button variant="outlined" onClick={() => navigate(`/room-ops?propertyId=${encodeURIComponent(id)}`)}>Room Intelligence 열기</Button>
           <Button variant="outlined" onClick={() => navigate(`/interior?propertyId=${encodeURIComponent(id)}`)}>Interior Intelligence 열기</Button>
         </div>
