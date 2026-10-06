@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import {
   BANGBAE_815_11_MEDIA_POLICY,
@@ -13,7 +13,7 @@ import { spatialMediaRepository } from '../../repositories/spatialMediaRepositor
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
 import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
-import ThreeGlbViewer from './ThreeGlbViewer';
+const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
 
 const emptySpatialBundle: SpatialMediaDataRoomBundle = {
   floorPlans: [],
@@ -157,7 +157,7 @@ export default function SpatialDataRoomPanel({
         <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color="success" label="3D model connected" /></div>
         {bundle.viewerScenes
           .filter((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl)
-          .map((scene) => <ThreeGlbViewer key={scene.id} modelUrl={scene.modelUrl!} title={scene.title} />)}
+          .map((scene) => <Suspense key={scene.id} fallback={<div className="center"><CircularProgress size={28} /><p>3D Viewer 모듈을 불러오는 중입니다.</p></div>}><ThreeGlbViewer modelUrl={scene.modelUrl!} title={scene.title} /></Suspense>)}
       </section>}
       <section>
         <div className="section-heading-row"><div><p className="eyebrow">LIGHTWEIGHT VIEWER</p><h2>층 · 공간 구조 Viewer</h2></div><Chip size="small" label={String(summary.spaces) + ' spaces'} /></div>
