@@ -477,6 +477,18 @@ revoke all on public.walkthrough_routes from anon;
 revoke all on public.walkthrough_steps from anon;
 revoke all on public.verification_events from anon;
 
+revoke all on public.property_media_policies from authenticated;
+revoke all on public.floor_plans from authenticated;
+revoke all on public.property_spaces_spatial from authenticated;
+revoke all on public.media_assets from authenticated;
+revoke all on public.media_space_links from authenticated;
+revoke all on public.viewer_scenes from authenticated;
+revoke all on public.viewer_nodes from authenticated;
+revoke all on public.viewer_edges from authenticated;
+revoke all on public.walkthrough_routes from authenticated;
+revoke all on public.walkthrough_steps from authenticated;
+revoke all on public.verification_events from authenticated;
+
 grant select, insert, update, delete on public.property_media_policies to authenticated;
 grant select, insert, update, delete on public.floor_plans to authenticated;
 grant select, insert, update, delete on public.property_spaces_spatial to authenticated;
