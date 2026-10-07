@@ -140,6 +140,17 @@ class SupabaseRestClient {
     return asRows(payload);
   }
 
+  async insertRowsIgnoreDuplicates(table: string, body: JsonRow[], onConflict: string) {
+    if (!body.length) return [];
+    const params = new URLSearchParams({ on_conflict: onConflict });
+    const payload = await this.requestJson(`/rest/v1/${table}?${params.toString()}`, {
+      method: 'POST',
+      headers: { Prefer: 'resolution=ignore-duplicates,return=representation' },
+      body: JSON.stringify(body),
+    });
+    return asRows(payload);
+  }
+
   async deleteRows(table: string, params: URLSearchParams) {
     await this.requestJson(`/rest/v1/${table}?${params.toString()}`, { method: 'DELETE', headers: { Prefer: 'return=minimal' } });
   }
@@ -172,6 +183,19 @@ export class SupabaseRemoteDataGateway implements RemoteDataGateway {
     return property;
   }
 
+  async bulkInsertProperties(properties: Property[]) {
+    if (!properties.length) return [];
+    const actorId = await this.client.actorId();
+    const rows = properties.map((property) => ({
+      id: property.id,
+      payload: property,
+      created_by: actorId,
+      updated_by: actorId,
+    }));
+    await this.client.insertRowsIgnoreDuplicates('properties', rows, 'id');
+    return properties;
+  }
+
   async deleteProperty(propertyId: string) {
     await this.client.deleteRows('properties', new URLSearchParams({ id: encodeEq(propertyId) }));
   }
@@ -197,6 +221,21 @@ export class SupabaseRemoteDataGateway implements RemoteDataGateway {
       });
     }
     return object;
+  }
+
+  async bulkInsertObjects(objects: RemotePropertyObject[]) {
+    if (!objects.length) return [];
+    const actorId = await this.client.actorId();
+    const rows = objects.map((object) => ({
+      object_type: object.objectType,
+      id: object.id,
+      property_id: object.propertyId,
+      payload: object.payload,
+      created_by: actorId,
+      updated_by: actorId,
+    }));
+    await this.client.insertRowsIgnoreDuplicates('property_objects', rows, 'object_type,id');
+    return objects;
   }
 
   async deleteObject(objectType: RemotePropertyObjectType, id: string) {
