@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Alert, Button, Checkbox, Chip, CircularProgress, MenuItem, TextField } from '@mui/material';
+import { Alert, Button, Checkbox, Chip, CircularProgress, MenuItem, Pagination, TextField } from '@mui/material';
 import { ArrowBackRounded, CloudUploadRounded, DocumentScannerRounded } from '@mui/icons-material';
 import { DOCUMENT_TYPE_LABELS } from '../domain/propertyDataRoom/labels';
 import { verificationFieldLabel } from '../domain/propertyDataRoom/verificationFieldRegistry';
@@ -37,6 +37,7 @@ function comparisonState(candidate: PropertyVerificationCandidate): 'new' | 'sam
 }
 
 const COMPARISON_LABELS = { new: '신규', same: '동일', changed: '불일치' };
+const CANDIDATE_PAGE_SIZE = 50;
 
 export default function BulkIntakePage() {
   const navigate = useNavigate();
@@ -50,6 +51,7 @@ export default function BulkIntakePage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
+  const [candidatePage, setCandidatePage] = useState(1);
 
   useEffect(() => {
     propertyRepository.getAll().then((items) => {
@@ -67,12 +69,20 @@ export default function BulkIntakePage() {
     setSelected(new Set(active.filter((item) => comparisonState(item) !== 'same').map((item) => item.id)));
   };
 
-  useEffect(() => { if (propertyId) void loadBundle(propertyId); }, [propertyId]);
+  useEffect(() => { if (propertyId) { setCandidatePage(1); void loadBundle(propertyId); } }, [propertyId]);
 
   const pending = useMemo(() => candidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held'), [candidates]);
   const changedCount = useMemo(() => pending.filter((item) => comparisonState(item) === 'changed').length, [pending]);
   const newCount = useMemo(() => pending.filter((item) => comparisonState(item) === 'new').length, [pending]);
   const sameCount = useMemo(() => pending.filter((item) => comparisonState(item) === 'same').length, [pending]);
+  const candidatePageCount = Math.max(1, Math.ceil(pending.length / CANDIDATE_PAGE_SIZE));
+  const visibleCandidates = useMemo(
+    () => pending.slice((candidatePage - 1) * CANDIDATE_PAGE_SIZE, candidatePage * CANDIDATE_PAGE_SIZE),
+    [candidatePage, pending],
+  );
+  useEffect(() => {
+    setCandidatePage((current) => Math.min(current, candidatePageCount));
+  }, [candidatePageCount]);
 
   const processFile = async (file: File) => {
     const classified = propertyDataRoomService.classifyDocument(file.name);
@@ -197,13 +207,13 @@ export default function BulkIntakePage() {
     <section className="panel">
       <div className="toolbar"><div><h2>검증 후보</h2><p>승인 전에는 Property 원본값이 변경되지 않습니다. 기본 선택은 신규·불일치 후보만 포함합니다.</p></div><span className="spacer" /><Button size="small" onClick={selectReviewTargets}>신규·불일치 선택</Button><Button size="small" onClick={selectAll}>전체 선택</Button><Button size="small" onClick={clearSelection}>선택 해제</Button></div>
       <div className="toolbar"><div><Chip size="small" label={`불일치 ${changedCount}`} color="warning" /> <Chip size="small" label={`신규 ${newCount}`} color="info" /> <Chip size="small" label={`동일 ${sameCount}`} /></div><span className="spacer" /><Button disabled={busy || !!ocrBusyId} color="success" onClick={() => bulkDecision('approved')}>선택 승인</Button><Button disabled={busy || !!ocrBusyId} onClick={() => bulkDecision('held')}>선택 보류</Button><Button disabled={busy || !!ocrBusyId} color="error" onClick={() => bulkDecision('rejected')}>선택 거절</Button></div>
-      {pending.length ? <div className="table-wrap"><table className="bulk-table"><thead><tr><th>선택</th><th>항목</th><th>현재값</th><th>후보값</th><th>비교</th><th>출처</th><th>상태</th></tr></thead><tbody>{pending.map((candidate) => {
+      {pending.length ? <><div className="table-wrap"><table className="bulk-table"><thead><tr><th>선택</th><th>항목</th><th>현재값</th><th>후보값</th><th>비교</th><th>출처</th><th>상태</th></tr></thead><tbody>{visibleCandidates.map((candidate) => {
         const comparison = comparisonState(candidate);
         return <tr key={candidate.id}>
           <td><Checkbox checked={selected.has(candidate.id)} onChange={(event) => setSelected((current) => { const next = new Set(current); if (event.target.checked) next.add(candidate.id); else next.delete(candidate.id); return next; })} /></td>
           <td><b>{verificationFieldLabel(candidate.fieldKey)}</b><small>{candidate.fieldKey}</small></td><td>{displayValue(candidate.currentValue)}</td><td>{displayValue(candidate.candidateValue)}</td><td><Chip size="small" label={COMPARISON_LABELS[comparison]} color={comparison === 'changed' ? 'warning' : comparison === 'new' ? 'info' : 'default'} /></td><td>{candidate.sourceName}<small>{candidate.sourceReference || ''}</small></td><td><Chip size="small" label={candidate.decisionStatus === 'held' ? '보류' : '검토 대기'} /></td>
         </tr>;
-      })}</tbody></table></div> : <Alert severity="info">현재 검증 대기 후보가 없습니다.</Alert>}
+      })}</tbody></table></div><div className="toolbar" style={{ marginTop: 12 }}><small>검증 후보 {pending.length}건 · 페이지당 {CANDIDATE_PAGE_SIZE}건</small><span className="spacer" /><Pagination page={candidatePage} count={candidatePageCount} onChange={(_, value) => setCandidatePage(value)} /></div></> : <Alert severity="info">현재 검증 대기 후보가 없습니다.</Alert>}
     </section>
   </main>;
 }
