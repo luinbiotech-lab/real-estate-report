@@ -31,6 +31,8 @@ const files = {
   authSecurityScript: 'scripts/enable-supabase-leaked-password-protection.mjs',
   backupPage: 'src/pages/DataBackupCenterPage.tsx',
   backupService: 'src/services/localBackupService.ts',
+  vercelConfig: 'vercel.json',
+  vercelProviderProxy: 'api/_lib/providerProxy.mjs',
 };
 
 for (const file of Object.values(files)) {
@@ -189,6 +191,15 @@ if (String(JSON.parse(text.packageJson).scripts?.['start:prod'] ?? '') !== 'node
   throw new Error('npm run start:prod production runtime script가 필요합니다.');
 }
 
+const vercelConfig = JSON.parse(text.vercelConfig);
+if (vercelConfig.framework !== 'vite' || vercelConfig.outputDirectory !== 'dist' || vercelConfig.buildCommand !== 'npm run build') {
+  throw new Error('Vercel production frontend build contract가 올바르지 않습니다.');
+}
+for (const marker of ['MAP_PROXY_ALLOWED_ORIGINS', 'VERCEL_PROJECT_PRODUCTION_URL', 'VERCEL_URL', 'ORIGIN_NOT_ALLOWED', 'API_NOT_CONFIGURED']) {
+  if (!text.vercelProviderProxy.includes(marker)) throw new Error(`Vercel protected provider proxy 계약 누락: ${marker}`);
+}
+
+
 
 for (const marker of [
   'MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024',
@@ -240,13 +251,13 @@ const status = {
   remotePublicShareBackend: 'CONNECTED_SELF_HOSTED_VIEWER',
   productionFrontendRuntimePackage: 'READY_TO_DEPLOY',
   protectedProxyRuntimePackage: 'READY_TO_DEPLOY',
-  productionFrontendHost: 'MISSING_EXTERNAL_INFRA',
+  productionFrontendHost: 'VERCEL_PROJECT_CONFIGURED',
   bangbaePhase1DataRoomMergePackageFlow: text.backupPage.includes('방배동 Phase 1 복원 + Dry Run') && text.backupPage.includes("remoteMigrationDryRunService.run({ propertyIds: [BANGBAE_PHASE1_PROPERTY_ID] })") ? 'READY' : 'MISSING',
   leakedPasswordProtectionAutomation: text.authSecurityWorkflow.includes('ENABLE LEAKED PASSWORD PROTECTION') && text.authSecurityScript.includes('password_hibp_enabled: true') ? 'READY_AWAITING_EXPLICIT_CONFIRMATION_AND_MANAGEMENT_TOKEN' : 'MISSING',
-  realOperatorAuthAccount: 'REQUIRED',
-  secondDeviceBrowserE2E: 'REQUIRED',
-  protectedBackendProxy: 'MISSING_EXTERNAL_INFRA',
-  productionDomainAllowlist: 'CHECK_REQUIRED',
+  realOperatorAuthAccount: 'LIVE_CHECK_REQUIRED',
+  secondDeviceBrowserE2E: 'LIVE_CHECK_REQUIRED',
+  protectedBackendProxy: 'VERCEL_SERVERLESS_CONFIGURED',
+  productionDomainAllowlist: 'VERCEL_EXACT_ORIGIN_AUTO_PLUS_OPTIONAL_ALLOWLIST',
   spreadsheetParserDependency,
   spreadsheetParserKnownAdvisoryFloor: '>=0.20.2',
   spreadsheetParserReleaseAdvisoryReview: 'REVIEWED_2026_09_27',
