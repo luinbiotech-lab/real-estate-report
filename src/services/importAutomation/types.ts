@@ -10,6 +10,9 @@ export interface ImportRow {
   selectedAddressCandidateIndex?: number; generatedMapImage?: string; poiCandidates?: ImportPoiCandidate[];
   retryCount: number; selected: boolean; duplicateKind?: 'existing' | 'workbook'; duplicatePropertyId?: string;
   saveMode: 'new' | 'merge' | 'skip';
+  saveStatus?: 'unsaved' | 'saving' | 'saved' | 'save_failed';
+  savedPropertyId?: string;
+  savedAt?: string;
 }
 export interface ImportJobLog { at: string; row?: number; message: string }
 export interface ImportJob {
