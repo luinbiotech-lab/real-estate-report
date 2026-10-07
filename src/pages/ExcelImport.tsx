@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Alert, Button, Checkbox, Chip, Dialog, DialogActions, DialogContent, DialogTitle, FormControlLabel, LinearProgress, MenuItem, Pagination, TextField } from '@mui/material';
 import { ArrowBackRounded, CloudUploadRounded, DownloadRounded, PauseRounded, PlayArrowRounded, RefreshRounded, SaveRounded } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
+import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { importJobRepository } from '../repositories/importJobRepository';
 import { columns, downloadTemplate, parseImportJob } from '../utils/excel';
 import type { BriefingCategory, Property } from '../types';
@@ -98,6 +99,24 @@ export default function ExcelImport() {
           } else {
             const candidate = propertyFromImportRow(row);
             await propertyRepository.create(candidate);
+            const savedAt = new Date().toISOString();
+            await propertyDataRoomRepository.saveDataSource({
+              id: `excel-import:${job.id}:${row.rowId}`,
+              propertyId: candidate.id,
+              resourceType: 'property_import',
+              sourceType: 'excel_import',
+              sourceName: job.fileName,
+              sourceReference: `${job.fileName} · Excel ${row.excelRowNumber}행`,
+              collectedAt: savedAt,
+              verificationStatus: 'imported',
+              metadata: {
+                importJobId: job.id,
+                importRowId: row.rowId,
+                excelRowNumber: row.excelRowNumber,
+                explicitFields: explicitImportKeys(row).map(String),
+              },
+              createdAt: savedAt,
+            });
             created.push(candidate);
             existingById.set(candidate.id, candidate);
             savedPropertyId = candidate.id;
