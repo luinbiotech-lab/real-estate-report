@@ -146,6 +146,27 @@ export const rasterFloorPlanMappingService = {
       });
     }
 
+    const viewerNodes = await spatialMediaRepository.getViewerNodes(asset.propertyId);
+    for (const node of viewerNodes.filter((item) => item.spaceId === target.spaceId && !item.deletedAt)) {
+      await spatialMediaRepository.saveViewerNode({ ...node, deletedAt: now, updatedAt: now });
+    }
+
+    const walkthroughSteps = await spatialMediaRepository.getWalkthroughSteps(asset.propertyId);
+    for (const step of walkthroughSteps.filter((item) => item.spaceId === target.spaceId && !item.deletedAt)) {
+      await spatialMediaRepository.saveWalkthroughStep({ ...step, propertyId: asset.propertyId, deletedAt: now, updatedAt: now });
+    }
+
+    const sceneId = 'raster-space-scene:' + asset.id;
+    const routeId = 'raster-walkthrough:' + asset.id;
+    if (!nextMappings.length) {
+      const scenes = await spatialMediaRepository.getViewerScenes(asset.propertyId);
+      const scene = scenes.find((item) => item.id === sceneId);
+      if (scene) await spatialMediaRepository.saveViewerScene({ ...scene, generationStatus: 'archived', updatedAt: now });
+      const routes = await spatialMediaRepository.getWalkthroughRoutes(asset.propertyId);
+      const route = routes.find((item) => item.id === routeId);
+      if (route) await spatialMediaRepository.saveWalkthroughRoute({ ...route, deletedAt: now, updatedAt: now });
+    }
+
     const floorPlans = await spatialMediaRepository.getFloorPlans(asset.propertyId);
     const floorPlan = floorPlans.find((item) => item.id === asset.id);
     if (floorPlan) {
@@ -209,6 +230,35 @@ export const rasterFloorPlanMappingService = {
         positionX: mapping.rect.x + mapping.rect.width / 2,
         positionY: 0.12,
         positionZ: mapping.rect.y + mapping.rect.height / 2,
+        verificationStatus: 'estimated',
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    const routeId = 'raster-walkthrough:' + asset.id;
+    await spatialMediaRepository.saveWalkthroughRoute({
+      id: routeId,
+      propertyId: asset.propertyId,
+      title: (asset.floor ? asset.floor + ' · ' : '') + 'Raster 공간 검토 경로',
+      description: '수동 공간 박스를 순서대로 확인하는 schematic walkthrough. 실제 현장 동선으로 확정하지 않음.',
+      routeType: 'floor',
+      isDefault: false,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    for (const [index, mapping] of mappings.entries()) {
+      await spatialMediaRepository.saveWalkthroughStep({
+        id: 'raster-walkthrough-step:' + mapping.spaceId,
+        routeId,
+        propertyId: asset.propertyId,
+        sequenceOrder: index + 1,
+        spaceId: mapping.spaceId,
+        viewerNodeId: 'raster-space-node:' + mapping.spaceId,
+        title: mapping.name,
+        description: 'Raster manual mapping 기반 공간 검토 단계',
+        transitionType: index === 0 ? 'cut' : 'pan',
         verificationStatus: 'estimated',
         createdAt: now,
         updatedAt: now,
