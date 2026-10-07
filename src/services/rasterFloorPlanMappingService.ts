@@ -96,6 +96,46 @@ export const rasterFloorPlanMappingService = {
     return mapping;
   },
 
+  async removeMapping(asset: DigitalTwinAsset, mappingId: string) {
+    const mappings = mappingsFromAsset(asset);
+    const target = mappings.find((item) => item.id === mappingId);
+    if (!target) throw new Error('삭제할 공간 매핑을 찾을 수 없습니다.');
+    const now = new Date().toISOString();
+    const nextMappings = mappings.filter((item) => item.id !== mappingId);
+
+    await propertyDataRoomRepository.saveDigitalTwinAsset({
+      ...asset,
+      metadata: {
+        ...asset.metadata,
+        rasterSpaceMappings: nextMappings,
+        rasterMappingStatus: nextMappings.length ? 'in_progress' : 'not_started',
+        rasterMappingUpdatedAt: now,
+        rasterMappingCompletedAt: undefined,
+      },
+      updatedAt: now,
+    });
+
+    const spaces = await spatialMediaRepository.getSpaces(asset.propertyId);
+    const space = spaces.find((item) => item.id === target.spaceId);
+    if (space) {
+      await spatialMediaRepository.saveSpace({
+        ...space,
+        deletedAt: now,
+        updatedAt: now,
+      });
+    }
+
+    const floorPlans = await spatialMediaRepository.getFloorPlans(asset.propertyId);
+    const floorPlan = floorPlans.find((item) => item.id === asset.id);
+    if (floorPlan) {
+      await spatialMediaRepository.saveFloorPlan({
+        ...floorPlan,
+        extractionStatus: nextMappings.length ? 'manual_mapping_required' : 'manual_mapping_required',
+        updatedAt: now,
+      });
+    }
+  },
+
   async completeMapping(asset: DigitalTwinAsset) {
     const mappings = mappingsFromAsset(asset);
     if (!mappings.length) throw new Error('최소 1개 공간을 매핑한 뒤 완료할 수 있습니다.');
