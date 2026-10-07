@@ -10,6 +10,7 @@ const files = {
   authProvider: 'src/services/authProviderService.ts',
   productionConfig: 'src/services/supabaseProductionConfig.ts',
   supabaseRemoteAuthAdapter: 'src/services/supabaseRemoteAuthGateway.ts',
+  productionAuthGate: 'src/components/ProductionAuthGate.tsx',
   shareProvider: 'src/services/externalShareProviderService.ts',
   authMigration: 'supabase/migrations/20260916_auth_profiles_rls.sql',
   propertyDataMigration: 'supabase/migrations/20260916_property_data_rls.sql',
@@ -38,7 +39,7 @@ for (const file of Object.values(files)) {
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=', 'VITE_API_BASE_URL=', 'FRONTEND_HOST=', 'FRONTEND_PORT=', 'MAP_PROXY_INTERNAL_URL=']) {
+for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'VITE_REMOTE_OPERATIONAL_MODE=', 'VITE_REQUIRE_REMOTE_AUTH=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=', 'VITE_API_BASE_URL=', 'FRONTEND_HOST=', 'FRONTEND_PORT=', 'MAP_PROXY_INTERNAL_URL=']) {
   if (!text.envExample.includes(key)) throw new Error(`환경변수 예시 누락: ${key}`);
 }
 if (!text.envExample.includes('Server-only credentials. Never commit real values.')) throw new Error('서버 전용 지도 credential 보안 경계를 명시해야 합니다.');
@@ -58,6 +59,9 @@ for (const marker of [
   if (!text.supabaseRemoteAuthAdapter.includes(marker)) throw new Error(`Supabase Remote Auth adapter 준비상태 누락: ${marker}`);
 }
 if (!text.authProvider.includes('createSupabaseRemoteAuthGateway({')) throw new Error('Production RemoteAuthGateway는 Supabase adapter에 연결되어야 합니다.');
+if (!text.productionAuthGate.includes("import { REMOTE_OPERATIONAL_MODE } from '../services/operationalDataMode';") || !text.productionAuthGate.includes("REMOTE_OPERATIONAL_MODE || import.meta.env.VITE_REQUIRE_REMOTE_AUTH === 'true'")) {
+  throw new Error('Remote operational mode에서는 ProductionAuthGate가 반드시 인증을 요구해야 합니다.');
+}
 if (!text.productionConfig.includes('sb_publishable_') || /service[_-]?role/i.test(text.productionConfig) || /sb_secret_/i.test(text.productionConfig)) throw new Error('Production browser config는 publishable key만 사용해야 합니다.');
 
 if (!text.authMigration.includes('Do not apply it to GPS/Sports projects')) throw new Error('Auth migration은 부동산 전용 backend에만 적용해야 합니다.');
