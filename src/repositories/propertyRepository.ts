@@ -38,7 +38,10 @@ export const propertyRepository: PropertyRepository = {
   },
   async bulkCreate(items) {
     if (REMOTE_OPERATIONAL_MODE) {
-      for (const item of items) await remoteDataGateway.upsertProperty(item);
+      const chunkSize = 250;
+      for (let offset = 0; offset < items.length; offset += chunkSize) {
+        await remoteDataGateway.bulkInsertProperties(items.slice(offset, offset + chunkSize));
+      }
       return items;
     }
     const tx = (await dbp).transaction('properties', 'readwrite');
