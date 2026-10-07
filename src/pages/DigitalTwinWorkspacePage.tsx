@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { AutoAwesomeRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import BuildingProductionGatePanel from '../components/BuildingProductionGatePanel';
@@ -15,7 +15,7 @@ import ReviewedMeshViewer from '../components/ReviewedMeshViewer';
 import RasterFloorPlanMappingPanel from '../components/RasterFloorPlanMappingPanel';
 import RasterScaleCalibrationPanel from '../components/RasterScaleCalibrationPanel';
 import SchematicGlbExportPanel from '../components/SchematicGlbExportPanel';
-import DigitalTwinAssetGlbViewer from '../components/DigitalTwinAssetGlbViewer';
+const DigitalTwinAssetGlbViewer = lazy(() => import('../components/DigitalTwinAssetGlbViewer'));
 import RoomTopologyPanel from '../components/RoomTopologyPanel';
 import ScaleCalibrationPanel from '../components/ScaleCalibrationPanel';
 import SlabGeometryPanel from '../components/SlabGeometryPanel';
@@ -132,7 +132,7 @@ export default function DigitalTwinWorkspacePage() {
           {Boolean(asset.metadata.raster && typeof asset.metadata.raster === 'object') && <RasterScaleCalibrationPanel asset={asset} onSaved={() => load()} />}
           {Boolean(asset.metadata.raster && typeof asset.metadata.raster === 'object') && <RasterFloorPlanMappingPanel asset={asset} onSaved={() => load()} />}
           {Boolean(asset.metadata.raster && typeof asset.metadata.raster === 'object') && <SchematicGlbExportPanel asset={asset} onSaved={() => load()} />}
-          {(asset.assetType === 'glb' || asset.assetType === 'gltf') && <div style={{ marginTop: 18 }}><DigitalTwinAssetGlbViewer asset={asset} /></div>}
+          {(asset.assetType === 'glb' || asset.assetType === 'gltf') && <div style={{ marginTop: 18 }}><Suspense fallback={<Alert severity="info">GLB Viewer 모듈을 불러오는 중입니다.</Alert>}><DigitalTwinAssetGlbViewer asset={asset} /></Suspense></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><ScaleCalibrationPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><VerticalDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><FloorPlacementPanel asset={asset} onSaved={() => load()} /></div>}
