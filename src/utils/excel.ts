@@ -5,6 +5,10 @@ import { isSameProperty, normalizeDate, normalizeProperty, validateProperty } fr
 import type { ImportJob, ImportRow as AutomationImportRow, ImportRowIssue } from '../services/importAutomation/types';
 
 export const MAX_EXCEL_IMPORT_BYTES = 10 * 1024 * 1024;
+export const MAX_EXCEL_IMPORT_ROWS = 5000;
+
+const importAddressKey = (value: unknown) => String(value ?? '').trim().replace(/\s+/g, ' ').toLowerCase();
+const importNameAddressKey = (name: unknown, address: unknown) => `${String(name ?? '').trim().replace(/\s+/g, ' ').toLowerCase()}|${importAddressKey(address)}`;
 
 export const columns: Record<string, keyof Property> = {
   물건번호: 'propertyNumber', 물건명: 'name', 건물명: 'buildingName', 거래유형: 'tradeType', 매매가: 'salePrice', 보증금: 'deposit', 월세: 'monthlyRent', 협의여부: 'negotiable', 명도상태: 'occupancyStatus', 주소: 'address', 상세주소: 'detailAddress', 인근역: 'nearbyStation', 역거리: 'stationDistance', 도로조건: 'roadCondition', 대지면적평: 'landAreaPyeong', 대지면적제곱미터: 'landAreaSqm', 연면적평: 'totalFloorAreaPyeong', 연면적제곱미터: 'totalFloorAreaSqm', 건축면적평: 'buildingAreaPyeong', 용도지역: 'zoning', 주용도: 'mainUse', 구조: 'structure', 지하층: 'basementFloors', 지상층: 'groundFloors', 준공일: 'completionDate', 건폐율: 'buildingCoverageRate', 용적률: 'floorAreaRatio', 승강기: 'elevator', 주차대수: 'parkingSpaces', 특징: 'features', 투자포인트: 'investmentPoints', 입지분석: 'locationAnalysis', 개발계획: 'developmentPlan', 추천용도: 'recommendedUse', 리스크: 'risks', 종합의견: 'overallOpinion', 인근거래사례: 'nearbyTransactions', 담당자: 'managerName', 담당자연락처: 'managerPhone', 담당자이메일: 'managerEmail', 회사명: 'companyName',
@@ -45,6 +49,7 @@ export function parseWorkbook(buffer: ArrayBuffer, existing: Property[]): Import
   const sheet = workbook.Sheets[workbook.SheetNames[0]];
   if (!sheet) throw new Error('워크시트가 없습니다.');
   const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+  if (sourceRows.length > MAX_EXCEL_IMPORT_ROWS) throw new Error(`Excel 가져오기는 최대 ${MAX_EXCEL_IMPORT_ROWS.toLocaleString('ko-KR')}행까지 지원합니다. 파일을 나누어 등록해 주세요.`);
   const parsed: ImportRow[] = [];
   for (const [index, raw] of sourceRows.entries()) {
     let property: Property = { ...emptyProperty, id: crypto.randomUUID(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
@@ -72,7 +77,21 @@ export function parseWorkbook(buffer: ArrayBuffer, existing: Property[]): Import
 
 export function parseImportJob(buffer: ArrayBuffer, fileName: string, existing: Property[]): ImportJob {
   const workbook = readImportWorkbook(buffer); const sheet = workbook.Sheets[workbook.SheetNames[0]];
-  if (!sheet) throw new Error('워크시트가 없습니다.'); const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' }); const now = new Date().toISOString();
+  if (!sheet) throw new Error('워크시트가 없습니다.'); const sourceRows = XLSX.utils.sheet_to_json<Record<string, unknown>>(sheet, { defval: '' });
+  if (sourceRows.length > MAX_EXCEL_IMPORT_ROWS) throw new Error(`Excel 가져오기는 최대 ${MAX_EXCEL_IMPORT_ROWS.toLocaleString('ko-KR')}행까지 지원합니다. 파일을 나누어 등록해 주세요.`);
+  const now = new Date().toISOString();
+  const existingByAddress = new Map<string, Property>();
+  const existingByPropertyNumber = new Map<string, Property>();
+  const existingByNameAddress = new Map<string, Property>();
+  for (const candidate of existing) {
+    const addressKey = importAddressKey(candidate.address);
+    if (addressKey && !existingByAddress.has(addressKey)) existingByAddress.set(addressKey, candidate);
+    const propertyNumber = candidate.propertyNumber.trim().toLowerCase();
+    if (propertyNumber && !existingByPropertyNumber.has(propertyNumber)) existingByPropertyNumber.set(propertyNumber, candidate);
+    const nameAddressKey = importNameAddressKey(candidate.name, candidate.address);
+    if (candidate.name.trim() && addressKey && !existingByNameAddress.has(nameAddressKey)) existingByNameAddress.set(nameAddressKey, candidate);
+  }
+  const seenWorkbookAddresses = new Set<string>();
   const rows: AutomationImportRow[] = sourceRows.map((raw, index) => {
     let property: Property = { ...emptyProperty, id: crypto.randomUUID(), createdAt: now, updatedAt: now };
     const issues: ImportRowIssue[] = [];
@@ -84,11 +103,17 @@ export function parseImportJob(buffer: ArrayBuffer, fileName: string, existing: 
     if (!property.address.trim()) issues.push({ field: 'address', code: 'INVALID_ADDRESS', message: '주소는 필수입니다.' });
     if (!property.name.trim()) issues.push({ field: 'name', code: 'MISSING_NAME', message: '물건명을 입력해 주세요.' });
     if (property.salePrice < 0 || property.landAreaPyeong < 0 || property.totalFloorAreaPyeong < 0) issues.push({ code: 'INVALID_RANGE', message: '금액과 면적은 음수일 수 없습니다.' });
-    const sameExisting = existing.find((candidate) => isSameProperty(property, candidate) || (!!property.address && candidate.address.trim() === property.address.trim()));
-    const earlier = sourceRows.slice(0, index).some((candidate) => { const address = Object.entries(candidate).find(([header]) => columns[header.trim()] === 'address')?.[1]; return String(address || '').trim() === property.address.trim() && !!property.address.trim(); });
+    const addressKey = importAddressKey(property.address);
+    const propertyNumberKey = property.propertyNumber.trim().toLowerCase();
+    const nameAddressKey = importNameAddressKey(property.name, property.address);
+    const sameExisting = (propertyNumberKey ? existingByPropertyNumber.get(propertyNumberKey) : undefined)
+      ?? (property.name.trim() && addressKey ? existingByNameAddress.get(nameAddressKey) : undefined)
+      ?? (addressKey ? existingByAddress.get(addressKey) : undefined);
+    const earlier = Boolean(addressKey && seenWorkbookAddresses.has(addressKey));
+    if (addressKey) seenWorkbookAddresses.add(addressKey);
     const duplicateKind = sameExisting ? 'existing' as const : earlier ? 'workbook' as const : undefined;
     if (duplicateKind) issues.push({ field: 'address', code: duplicateKind === 'existing' ? 'DUPLICATE_EXISTING' : 'DUPLICATE_WORKBOOK', message: duplicateKind === 'existing' ? '기존 물건 가능성' : 'Excel 내부 중복' });
-    return { rowId: crypto.randomUUID(), excelRowNumber: index + 2, raw, normalizedProperty: property, status: issues.some((issue) => ['INVALID_ADDRESS', 'INVALID_NUMBER', 'INVALID_RANGE'].includes(issue.code)) ? 'invalid' : 'ready', issues, retryCount: 0, selected: !issues.some((issue) => ['INVALID_ADDRESS', 'INVALID_NUMBER', 'INVALID_RANGE'].includes(issue.code)), duplicateKind, duplicatePropertyId: sameExisting?.id, saveMode: duplicateKind ? 'skip' : 'new' };
+    return { rowId: crypto.randomUUID(), excelRowNumber: index + 2, raw, normalizedProperty: property, status: issues.some((issue) => ['INVALID_ADDRESS', 'INVALID_NUMBER', 'INVALID_RANGE'].includes(issue.code)) ? 'invalid' : 'ready', issues, retryCount: 0, selected: !issues.some((issue) => ['INVALID_ADDRESS', 'INVALID_NUMBER', 'INVALID_RANGE'].includes(issue.code)), duplicateKind, duplicatePropertyId: sameExisting?.id, saveMode: duplicateKind ? 'skip' : 'new', saveStatus: 'unsaved' };
   });
   return { id: crypto.randomUUID(), fileName, createdAt: now, updatedAt: now, totalRows: rows.length, processedRows: rows.filter((row) => row.status === 'invalid').length, running: false, paused: false, concurrency: 2, poiRadiusMeters: 1000, rows, logs: [] };
 }
