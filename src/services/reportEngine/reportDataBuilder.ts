@@ -225,9 +225,26 @@ export class ReportDataBuilder {
       ? spatialMediaCompatibilityService.mergePreferTyped(typedSpatialBundle, bundle)
       : spatialMediaCompatibilityService.fromLegacyBundle(bundle);
     const viewModel = buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
+    const spatial = spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle);
     return {
       ...viewModel,
-      spatial: spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle),
+      spatial: {
+        ...spatial,
+        generatedAssets: bundle.digitalTwinAssets
+          .filter((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
+          .map((asset) => ({
+            id: asset.id,
+            assetType: asset.assetType,
+            fileFormat: asset.fileFormat,
+            fileName: asset.fileName,
+            processingStatus: asset.processingStatus,
+            version: asset.version,
+            modelClass: typeof asset.metadata.modelClass === 'string' ? asset.metadata.modelClass : undefined,
+            horizontalScaleVerified: asset.metadata.horizontalScaleVerified === true,
+            heightStatus: typeof asset.metadata.heightStatus === 'string' ? asset.metadata.heightStatus : undefined,
+            sourceFloorPlanAssetId: typeof asset.metadata.sourceFloorPlanAssetId === 'string' ? asset.metadata.sourceFloorPlanAssetId : undefined,
+          })),
+      },
     };
   }
 }
