@@ -15,6 +15,7 @@ import { spatialMediaCompatibilityService } from '../../services/spatialMediaCom
 import LightweightSpatialViewer from './LightweightSpatialViewer';
 const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
 const ThreeSchematicSpaceViewer = lazy(() => import('./ThreeSchematicSpaceViewer'));
+const DigitalTwinAssetGlbViewer = lazy(() => import('../DigitalTwinAssetGlbViewer'));
 
 const emptySpatialBundle: SpatialMediaDataRoomBundle = {
   floorPlans: [],
@@ -161,6 +162,14 @@ export default function SpatialDataRoomPanel({
         <Suspense fallback={<div className="center"><CircularProgress size={28} /><p>공간 3D 모듈을 불러오는 중입니다.</p></div>}>
           <ThreeSchematicSpaceViewer spaces={bundle.spaces} />
         </Suspense>
+      </section>}
+      {Boolean(legacyBundle?.digitalTwinAssets?.some((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)) && <section>
+        <div className="section-heading-row"><div><p className="eyebrow">GENERATED GLB ASSETS</p><h2>Digital Twin GLB</h2></div><Chip size="small" color="warning" label="provenance preserved" /></div>
+        {legacyBundle!.digitalTwinAssets
+          .filter((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
+          .map((asset) => <Suspense key={asset.id} fallback={<div className="center"><CircularProgress size={28} /><p>GLB 자산을 불러오는 중입니다.</p></div>}>
+            <DigitalTwinAssetGlbViewer asset={asset} />
+          </Suspense>)}
       </section>}
       {bundle.viewerScenes.some((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl) && <section>
         <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color="success" label="3D model connected" /></div>
