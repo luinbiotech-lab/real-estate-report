@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
 import { Alert, CircularProgress, createTheme, ThemeProvider } from '@mui/material';
 import { settingsRepository } from './repositories/propertyRepository';
@@ -6,32 +6,32 @@ import type { Settings } from './types';
 import Layout from './components/Layout';
 import ProductionAuthGate from './components/ProductionAuthGate';
 import PropertyList from './pages/PropertyList';
-import PropertyForm from './pages/PropertyForm';
-import PropertyHubPage from './pages/PropertyHubPage';
-import ExcelImport from './pages/ExcelImport';
-import BulkIntakePage from './pages/BulkIntakePage';
-import AgentOpsPage from './pages/AgentOpsPage';
-import AgentControlCenterPage from './pages/AgentControlCenterPage';
-import AgentWorkspacePage from './pages/AgentWorkspacePage';
-import InteriorWorkspacePage from './pages/InteriorWorkspacePage';
-import RoomTwinOperationsPage from './pages/RoomTwinOperationsPage';
-import SpatialWorkspacePage from './pages/SpatialWorkspacePage';
-import DigitalTwinWorkspacePage from './pages/DigitalTwinWorkspacePage';
-import DigitalTwinIntakePage from './pages/DigitalTwinIntakePage';
-import ExternalShareCenterPage from './pages/ExternalShareCenterPage';
-import RentalIncomeWorkspacePage from './pages/RentalIncomeWorkspacePage';
-import ReviewHistoryPage from './pages/ReviewHistoryPage';
-import AccessManagementPage from './pages/AccessManagementPage';
-import PropertyReadinessCenterPage from './pages/PropertyReadinessCenterPage';
-import RiskWorkspacePage from './pages/RiskWorkspacePage';
-import SettingsPage from './pages/SettingsPage';
-import DataBackupCenterPage from './pages/DataBackupCenterPage';
-import RemoteMigrationReadinessPage from './pages/RemoteMigrationReadinessPage';
-import DocumentPreview from './pages/DocumentPreview';
-import PropertyBriefingPage from './pages/PropertyBriefingPage';
-import PropertyDataRoomPage from './pages/PropertyDataRoomPage';
-import ProfessionalReportSnapshotPage from './pages/ProfessionalReportSnapshotPage';
-import ReportHistoryPage from './pages/ReportHistoryPage';
+const PropertyForm = lazy(() => import('./pages/PropertyForm'));
+const PropertyHubPage = lazy(() => import('./pages/PropertyHubPage'));
+const ExcelImport = lazy(() => import('./pages/ExcelImport'));
+const BulkIntakePage = lazy(() => import('./pages/BulkIntakePage'));
+const AgentOpsPage = lazy(() => import('./pages/AgentOpsPage'));
+const AgentControlCenterPage = lazy(() => import('./pages/AgentControlCenterPage'));
+const AgentWorkspacePage = lazy(() => import('./pages/AgentWorkspacePage'));
+const InteriorWorkspacePage = lazy(() => import('./pages/InteriorWorkspacePage'));
+const RoomTwinOperationsPage = lazy(() => import('./pages/RoomTwinOperationsPage'));
+const SpatialWorkspacePage = lazy(() => import('./pages/SpatialWorkspacePage'));
+const DigitalTwinWorkspacePage = lazy(() => import('./pages/DigitalTwinWorkspacePage'));
+const DigitalTwinIntakePage = lazy(() => import('./pages/DigitalTwinIntakePage'));
+const ExternalShareCenterPage = lazy(() => import('./pages/ExternalShareCenterPage'));
+const RentalIncomeWorkspacePage = lazy(() => import('./pages/RentalIncomeWorkspacePage'));
+const ReviewHistoryPage = lazy(() => import('./pages/ReviewHistoryPage'));
+const AccessManagementPage = lazy(() => import('./pages/AccessManagementPage'));
+const PropertyReadinessCenterPage = lazy(() => import('./pages/PropertyReadinessCenterPage'));
+const RiskWorkspacePage = lazy(() => import('./pages/RiskWorkspacePage'));
+const SettingsPage = lazy(() => import('./pages/SettingsPage'));
+const DataBackupCenterPage = lazy(() => import('./pages/DataBackupCenterPage'));
+const RemoteMigrationReadinessPage = lazy(() => import('./pages/RemoteMigrationReadinessPage'));
+const DocumentPreview = lazy(() => import('./pages/DocumentPreview'));
+const PropertyBriefingPage = lazy(() => import('./pages/PropertyBriefingPage'));
+const PropertyDataRoomPage = lazy(() => import('./pages/PropertyDataRoomPage'));
+const ProfessionalReportSnapshotPage = lazy(() => import('./pages/ProfessionalReportSnapshotPage'));
+const ReportHistoryPage = lazy(() => import('./pages/ReportHistoryPage'));
 import { REMOTE_OPERATIONAL_MODE } from './services/operationalDataMode';
 
 const DAON_MANAGER = '김은미 대표 / 공인중개사';
@@ -100,7 +100,7 @@ function AppContent() {
   if (!ready) return <div className="center"><CircularProgress /></div>;
   if (startupError) return <main style={{ padding: 28 }}><Alert severity="error"><strong>플랫폼 초기화 실패</strong> · {startupError}</Alert></main>;
 
-  return <Routes>
+  return <Suspense fallback={<div className="center"><CircularProgress /></div>}><Routes>
     <Route element={<Layout />}>
       <Route index element={<PropertyList />} />
       <Route path="control-center" element={<AgentControlCenterPage />} />
@@ -132,7 +132,7 @@ function AppContent() {
     <Route path="properties/:id/briefing" element={<PropertyBriefingPage settings={settings} />} />
     <Route path="professional-report/snapshot/:snapshotId" element={<ProfessionalReportSnapshotPage />} />
     <Route path="*" element={<Navigate to="/" />} />
-  </Routes>;
+  </Routes></Suspense>;
 }
 
 export default function App() {
