@@ -49,7 +49,8 @@ if ((text.shareProvider.match(/availability: 'ready'/g) ?? []).length < 2 || !te
 for (const marker of [
   'export class SupabaseRemoteAuthGateway',
   'createSupabaseRemoteAuthGateway',
-  'createMemoryRemoteAuthTokenStore',
+  'createBrowserSessionRemoteAuthTokenStore',
+  "window.sessionStorage",
   "'/auth/v1/token?grant_type=password'",
   "'/auth/v1/token?grant_type=refresh_token'",
   '/functions/v1/${this.adminFunctionName}',
