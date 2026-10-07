@@ -65,6 +65,9 @@ export interface ProfessionalReportSpatial {
     id: string;
     floorId?: string;
     floorLabel?: string;
+    widthPx?: number;
+    heightPx?: number;
+    scaleStatus?: string;
     extractionStatus: string;
     verificationStatus: string;
   }>;
@@ -76,6 +79,8 @@ export interface ProfessionalReportSpatial {
     spaceType: string;
     areaM2?: number;
     areaPy?: number;
+    geometry2d?: Record<string, unknown>;
+    estimatedGeometry3d?: Record<string, unknown>;
     verificationStatus: string;
   }>;
   media: Array<{
