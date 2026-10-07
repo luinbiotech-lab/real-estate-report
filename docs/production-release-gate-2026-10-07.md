@@ -5,11 +5,11 @@
 - Repository: `luinbiotech-lab/real-estate-report`
 - Release branch: `feat/daon-master-code-lock`
 - Release candidate HEAD: `fe8b0a44972441d26515c4530b99d76d4116a26c`
-- Current public Production commit: `9836ced84e9b0fe4eb9376da6fbcda44cdd824ce`
+- Current public Production commit: `7d230bd5b54ae0ffedfcfd12e8ed1efc449ea083`
 - Public Production alias: `https://real-estate-report-lime.vercel.app`
 - Production Supabase project: `neeqcfxjwotyiodrlzvq`
 
-The public Production deployment is behind the release branch. Do not treat the following fixes as live until a new Production deployment is completed.
+Production deployment completed on 2026-10-08. Public alias is serving the release candidate HEAD.
 
 ## Release candidate verified
 
@@ -82,35 +82,31 @@ After route split:
 
 Excel, Digital Twin, report and Three.js code load as separate route/runtime chunks.
 
-## Current deployment blockers
+## Production deployment status
 
-### Vercel deployment quota
+### Deployment
 
-The Vercel Hobby project reached the daily deployment API limit.
+- Production deployment ID: `dpl_AzbeziZ9uE8h1vDXeWEL7SsVDbDb`
+- State: `READY`
+- Public alias: `https://real-estate-report-lime.vercel.app`
+- Production HEAD: `7d230bd5b54ae0ffedfcfd12e8ed1efc449ea083`
+- Recent Vercel runtime errors after deployment: 0
+- Production root HTTP: 200
+- Auth Gate is active on protected routes.
+- Production Auth Gate displays sessionStorage-based reload persistence policy.
 
-Observed error:
-- HTTP 402
-- code: `api-deployments-free-per-day`
-- deployment rate limited; retry after 24 hours.
+The prior Hobby deployment quota block has cleared.
 
-GitHub combined status failure for the feature branch is currently the Vercel rate-limit status, not a compile/test failure.
+### Live checks still required
 
-### Preview protection
-
-Existing feature previews are protected by Vercel Deployment Protection / SSO. Anonymous browser automation receives HTTP 302 to Vercel SSO.
-
-### Live checks still required after deploy
-
-1. Deploy the release candidate after the Vercel quota clears.
-2. Confirm the public Production alias points to the new commit.
-3. Sign in with a real operator account.
-4. Refresh the page and confirm the operator remains signed in.
-5. Open Bangbae 815-11 Data Room and verify typed spatial / Viewer / Walkthrough.
-6. Upload a small real Excel file first; verify Property + provenance + report generation.
-7. Run the intended bulk Excel import.
-8. Verify Property list pagination and report generation after the bulk import.
-9. Perform second-device/browser login and report/share smoke test.
-10. Only then mark Production migration/release complete.
+1. Sign in with a real operator account.
+2. Refresh the page and confirm the operator remains signed in.
+3. Open Bangbae 815-11 Data Room and verify typed spatial / Viewer / Walkthrough against live data.
+4. Upload a small real Excel file first; verify Property + provenance + report generation.
+5. Run the intended bulk Excel import.
+6. Verify Property list pagination and report generation after the bulk import.
+7. Perform second-device/browser login and report/share smoke test.
+8. Only then mark the release fully operational.
 
 ## Production safety
 
