@@ -116,6 +116,9 @@ export const spatialMediaViewService = {
         id: item.id,
         floorId: item.floorId,
         floorLabel: item.floorLabel,
+        widthPx: item.widthPx,
+        heightPx: item.heightPx,
+        scaleStatus: item.scaleStatus,
         extractionStatus: item.extractionStatus,
         verificationStatus: item.verificationStatus,
       })),
@@ -127,6 +130,8 @@ export const spatialMediaViewService = {
         spaceType: item.spaceType,
         areaM2: item.areaM2,
         areaPy: item.areaPy,
+        geometry2d: item.geometry2d,
+        estimatedGeometry3d: item.estimatedGeometry3d,
         verificationStatus: item.verificationStatus,
       })),
       media: active(bundle.mediaAssets)
