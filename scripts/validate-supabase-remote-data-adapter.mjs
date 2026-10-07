@@ -32,6 +32,12 @@ for (const marker of [
   'getActorId: () => Promise<string | null>',
   "created_by: actorId",
   "updated_by: actorId",
+  'insertRowsIgnoreDuplicates',
+  "Prefer: 'resolution=ignore-duplicates,return=representation'",
+  "bulkInsertProperties(properties: Property[])",
+  "bulkInsertObjects(objects: RemotePropertyObject[])",
+  "'properties', rows, 'id'",
+  "'property_objects', rows, 'object_type,id'",
 ]) {
   if (!text.adapter.includes(marker)) throw new Error(`Supabase remote adapter 보안/계약 누락: ${marker}`);
 }
@@ -67,6 +73,10 @@ for (const forbidden of [
   'sessionStorage.setItem',
 ]) {
   if (text.adapter.includes(forbidden)) throw new Error(`Supabase remote adapter 금지 패턴 검출: ${forbidden}`);
+}
+
+for (const marker of ['bulkInsertProperties(properties: Property[]): Promise<Property[]>', 'bulkInsertObjects(objects: RemotePropertyObject[]): Promise<RemotePropertyObject[]>']) {
+  if (!text.gateway.includes(marker)) throw new Error(`Remote Data gateway bulk contract 누락: ${marker}`);
 }
 
 if (!text.gateway.includes('createSupabaseRemoteDataGateway(remoteDataConfig)')) {
