@@ -10,6 +10,7 @@ import type { BriefingCategory, Property } from '../types';
 import { BRIEFING_CATEGORIES } from '../services/briefingService';
 import { propertyFromImportRow, runImportQueue, selectAddressCandidate } from '../services/importAutomation/importJobService';
 import type { ImportJob, ImportRow } from '../services/importAutomation/types';
+import type { PropertyDataSource } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomService } from '../services/propertyDataRoomService';
 import { formatPrice } from '../utils/format';
 import { mapService } from '../services/maps/mapService';
@@ -75,85 +76,120 @@ export default function ExcelImport() {
         : row);
       const rowById = new Map(rows.map((row) => [row.rowId, row]));
 
-      for (const target of targets) {
-        const row = rowById.get(target.rowId)!;
+      const markSaved = (row: ImportRow, savedPropertyId: string, savedAt = new Date().toISOString()) => {
+        rowById.set(row.rowId, {
+          ...row,
+          saveStatus: 'saved',
+          savedPropertyId,
+          savedAt,
+          selected: false,
+        });
+      };
+
+      const markFailed = (row: ImportRow, reason: unknown) => {
+        failed += 1;
+        const message = reason instanceof Error ? reason.message : '저장 중 알 수 없는 오류';
+        rowById.set(row.rowId, {
+          ...row,
+          saveStatus: 'save_failed',
+          selected: true,
+          issues: [
+            ...row.issues.filter((issue) => issue.code !== 'SAVE_FAILED'),
+            { code: 'SAVE_FAILED', message: `저장 실패: ${message}` },
+          ],
+        });
+      };
+
+      const newRows = targets
+        .map((target) => rowById.get(target.rowId)!)
+        .filter((row) => row.saveMode !== 'merge' || !row.duplicatePropertyId);
+      const batchSize = 250;
+
+      for (let offset = 0; offset < newRows.length; offset += batchSize) {
+        const chunkRows = newRows.slice(offset, offset + batchSize);
+        const entries = chunkRows.map((row) => {
+          const candidate = propertyFromImportRow(row);
+          const savedAt = new Date().toISOString();
+          const source: PropertyDataSource = {
+            id: `excel-import:${job.id}:${row.rowId}`,
+            propertyId: candidate.id,
+            resourceType: 'property_import',
+            sourceType: 'excel_import',
+            sourceName: job.fileName,
+            sourceReference: `${job.fileName} · Excel ${row.excelRowNumber}행`,
+            collectedAt: savedAt,
+            verificationStatus: 'imported',
+            metadata: {
+              importJobId: job.id,
+              importRowId: row.rowId,
+              excelRowNumber: row.excelRowNumber,
+              explicitFields: explicitImportKeys(row).map(String),
+            },
+            createdAt: savedAt,
+          };
+          return { row, candidate, source, savedAt };
+        });
+
+        let propertiesSaved = false;
         try {
-          let savedPropertyId: string | undefined;
-          if (row.saveMode === 'merge' && row.duplicatePropertyId) {
-            const current = existingById.get(row.duplicatePropertyId);
-            if (!current) throw new Error('병합 대상 기존 물건을 찾을 수 없습니다.');
-
-            const bundle = await propertyDataRoomService.getBundle(current.id);
-            const active = new Set(bundle.verificationCandidates
-              .filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held')
-              .map((item) => fingerprint(item.fieldKey as keyof Property, item.candidateValue)));
-
-            for (const key of explicitImportKeys(row)) {
-              if (key === 'id' || key === 'createdAt' || key === 'updatedAt') continue;
-              const incoming = row.normalizedProperty[key];
-              if (sameValue(current[key], incoming)) continue;
-              const keyFingerprint = fingerprint(key, incoming);
-              if (active.has(keyFingerprint)) continue;
-              await propertyDataRoomService.createVerificationCandidate(current.id, {
-                fieldKey: key,
-                candidateValue: incoming,
-                sourceType: 'excel_import',
-                sourceName: job.fileName,
-                sourceReference: `${job.fileName} · Excel ${row.excelRowNumber}행`,
-                note: 'Excel 병합 후보 — 승인 전 기존 Property 미변경',
-              });
-              active.add(keyFingerprint);
-              queued += 1;
+          await propertyRepository.bulkCreate(entries.map((entry) => entry.candidate));
+          propertiesSaved = true;
+          await propertyDataRoomRepository.saveDataSourcesBulk(entries.map((entry) => entry.source));
+          for (const entry of entries) {
+            created.push(entry.candidate);
+            existingById.set(entry.candidate.id, entry.candidate);
+            markSaved(entry.row, entry.candidate.id, entry.savedAt);
+          }
+        } catch {
+          for (const entry of entries) {
+            try {
+              if (!propertiesSaved) await propertyRepository.create(entry.candidate);
+              await propertyDataRoomRepository.saveDataSource(entry.source);
+              created.push(entry.candidate);
+              existingById.set(entry.candidate.id, entry.candidate);
+              markSaved(entry.row, entry.candidate.id, entry.savedAt);
+            } catch (reason) {
+              markFailed(entry.row, reason);
             }
-            dataRoomTarget ??= current.id;
-            savedPropertyId = current.id;
-          } else {
-            const candidate = propertyFromImportRow(row);
-            await propertyRepository.create(candidate);
-            const savedAt = new Date().toISOString();
-            await propertyDataRoomRepository.saveDataSource({
-              id: `excel-import:${job.id}:${row.rowId}`,
-              propertyId: candidate.id,
-              resourceType: 'property_import',
+          }
+        }
+      }
+
+      const mergeRows = targets
+        .map((target) => rowById.get(target.rowId)!)
+        .filter((row) => row.saveMode === 'merge' && !!row.duplicatePropertyId);
+
+      for (const row of mergeRows) {
+        try {
+          const current = existingById.get(row.duplicatePropertyId!);
+          if (!current) throw new Error('병합 대상 기존 물건을 찾을 수 없습니다.');
+
+          const bundle = await propertyDataRoomService.getBundle(current.id);
+          const active = new Set(bundle.verificationCandidates
+            .filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held')
+            .map((item) => fingerprint(item.fieldKey as keyof Property, item.candidateValue)));
+
+          for (const key of explicitImportKeys(row)) {
+            if (key === 'id' || key === 'createdAt' || key === 'updatedAt') continue;
+            const incoming = row.normalizedProperty[key];
+            if (sameValue(current[key], incoming)) continue;
+            const keyFingerprint = fingerprint(key, incoming);
+            if (active.has(keyFingerprint)) continue;
+            await propertyDataRoomService.createVerificationCandidate(current.id, {
+              fieldKey: key,
+              candidateValue: incoming,
               sourceType: 'excel_import',
               sourceName: job.fileName,
               sourceReference: `${job.fileName} · Excel ${row.excelRowNumber}행`,
-              collectedAt: savedAt,
-              verificationStatus: 'imported',
-              metadata: {
-                importJobId: job.id,
-                importRowId: row.rowId,
-                excelRowNumber: row.excelRowNumber,
-                explicitFields: explicitImportKeys(row).map(String),
-              },
-              createdAt: savedAt,
+              note: 'Excel 병합 후보 — 승인 전 기존 Property 미변경',
             });
-            created.push(candidate);
-            existingById.set(candidate.id, candidate);
-            savedPropertyId = candidate.id;
+            active.add(keyFingerprint);
+            queued += 1;
           }
-
-          const savedAt = new Date().toISOString();
-          const updated = {
-            ...row,
-            saveStatus: 'saved' as const,
-            savedPropertyId,
-            savedAt,
-            selected: false,
-          };
-          rowById.set(row.rowId, updated);
+          dataRoomTarget ??= current.id;
+          markSaved(row, current.id);
         } catch (reason) {
-          failed += 1;
-          const message = reason instanceof Error ? reason.message : '저장 중 알 수 없는 오류';
-          rowById.set(row.rowId, {
-            ...row,
-            saveStatus: 'save_failed' as const,
-            selected: true,
-            issues: [
-              ...row.issues.filter((issue) => issue.code !== 'SAVE_FAILED'),
-              { code: 'SAVE_FAILED', message: `저장 실패: ${message}` },
-            ],
-          });
+          markFailed(row, reason);
         }
       }
 
@@ -165,7 +201,7 @@ export default function ExcelImport() {
           ...job.logs.slice(-199),
           {
             at: new Date().toISOString(),
-            message: `저장 완료 신규 ${created.length}건 · 검증 후보 ${queued}건 · 실패 ${failed}건`,
+            message: `저장 완료 신규 ${created.length}건 · 검증 후보 ${queued}건 · 실패 ${failed}건 · 신규 배치 ${Math.ceil(newRows.length / batchSize)}회`,
           },
         ],
       };
