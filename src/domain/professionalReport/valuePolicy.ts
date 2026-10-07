@@ -25,7 +25,12 @@ const toState = (status?: VerificationStatus, calculated?: boolean): ReportValue
 
 function contextFor(fieldKey: string, verifications: PropertyVerification[], sources: PropertyDataSource[]) {
   const verification = [...verifications].reverse().find((item) => item.fieldKey === fieldKey);
-  const relatedSources = sources.filter((item) => item.fieldKey === fieldKey || item.resourceType === fieldKey);
+  const relatedSources = sources.filter((item) => {
+    if (item.fieldKey === fieldKey || item.resourceType === fieldKey) return true;
+    if (item.sourceType !== 'excel_import' || item.resourceType !== 'property_import') return false;
+    const explicitFields = item.metadata?.explicitFields;
+    return Array.isArray(explicitFields) && explicitFields.some((value) => String(value) === fieldKey);
+  });
   const sourceStatus = relatedSources.at(-1)?.verificationStatus;
   return { verificationStatus: verification?.status ?? sourceStatus, sourceIds: relatedSources.map((item) => item.id) };
 }
