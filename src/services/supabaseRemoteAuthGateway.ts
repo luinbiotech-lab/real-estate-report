@@ -41,6 +41,58 @@ export function createMemoryRemoteAuthTokenStore(): RemoteAuthTokenStore {
   return new MemoryRemoteAuthTokenStore();
 }
 
+const REMOTE_AUTH_SESSION_STORAGE_KEY = 'daon.remote-auth.tokens.v1';
+
+class BrowserSessionRemoteAuthTokenStore implements RemoteAuthTokenStore {
+  constructor(private readonly storage: Storage, private readonly key = REMOTE_AUTH_SESSION_STORAGE_KEY) {}
+
+  async get(): Promise<RemoteAuthTokens | null> {
+    try {
+      const raw = this.storage.getItem(this.key);
+      if (!raw) return null;
+      const value = JSON.parse(raw) as Partial<RemoteAuthTokens>;
+      if (typeof value.accessToken !== 'string' || typeof value.refreshToken !== 'string' || !value.accessToken || !value.refreshToken) {
+        this.storage.removeItem(this.key);
+        return null;
+      }
+      return {
+        accessToken: value.accessToken,
+        refreshToken: value.refreshToken,
+        expiresAt: typeof value.expiresAt === 'number' ? value.expiresAt : undefined,
+      };
+    } catch {
+      try { this.storage.removeItem(this.key); } catch { /* storage may be unavailable */ }
+      return null;
+    }
+  }
+
+  async set(tokens: RemoteAuthTokens): Promise<void> {
+    this.storage.setItem(this.key, JSON.stringify(tokens));
+  }
+
+  async clear(): Promise<void> {
+    this.storage.removeItem(this.key);
+  }
+}
+
+function browserSessionStorage(): Storage | null {
+  if (typeof window === 'undefined') return null;
+  try {
+    const storage = window.sessionStorage;
+    const probe = '__daon_auth_storage_probe__';
+    storage.setItem(probe, '1');
+    storage.removeItem(probe);
+    return storage;
+  } catch {
+    return null;
+  }
+}
+
+export function createBrowserSessionRemoteAuthTokenStore(): RemoteAuthTokenStore {
+  const storage = browserSessionStorage();
+  return storage ? new BrowserSessionRemoteAuthTokenStore(storage) : createMemoryRemoteAuthTokenStore();
+}
+
 function cleanProjectUrl(value: string) {
   const trimmed = value.trim().replace(/\/+$/, '');
   if (!trimmed) throw new Error('Supabase project URL이 필요합니다.');
@@ -95,7 +147,7 @@ export class SupabaseRemoteAuthGateway implements RemoteAuthGateway {
   constructor(config: SupabaseRemoteAuthGatewayConfig) {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
     this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
-    this.tokenStore = config.tokenStore ?? createMemoryRemoteAuthTokenStore();
+    this.tokenStore = config.tokenStore ?? createBrowserSessionRemoteAuthTokenStore();
     this.fetchImpl = config.fetchImpl ?? fetch;
     this.adminFunctionName = config.adminFunctionName?.trim() || 'remote-auth-admin';
     if (!/^[A-Za-z0-9_-]+$/.test(this.adminFunctionName)) throw new Error('유효하지 않은 Auth admin function name입니다.');
