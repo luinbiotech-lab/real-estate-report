@@ -181,5 +181,52 @@ export const rasterFloorPlanMappingService = {
         updatedAt: now,
       });
     }
+
+    const sceneId = 'raster-space-scene:' + asset.id;
+    await spatialMediaRepository.saveViewerScene({
+      id: sceneId,
+      propertyId: asset.propertyId,
+      sceneType: 'space_model',
+      title: (asset.floor ? asset.floor + ' · ' : '') + (asset.fileName || 'Raster floor plan') + ' 공간 모델',
+      description: 'Raster floor plan manual mapping 기반 unitless schematic 3D. Scale/height/wall thickness are not verified.',
+      modelSourceType: 'metadata',
+      floorPlanId: asset.id,
+      generationStatus: 'ready',
+      verificationStatus: 'estimated',
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    for (const mapping of mappings) {
+      await spatialMediaRepository.saveViewerNode({
+        id: 'raster-space-node:' + mapping.spaceId,
+        sceneId,
+        propertyId: asset.propertyId,
+        floorId: mapping.floorId,
+        spaceId: mapping.spaceId,
+        nodeType: 'space',
+        label: mapping.name,
+        positionX: mapping.rect.x + mapping.rect.width / 2,
+        positionY: 0.12,
+        positionZ: mapping.rect.y + mapping.rect.height / 2,
+        verificationStatus: 'estimated',
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+
+    await spatialMediaRepository.appendVerificationEvent({
+      id: crypto.randomUUID(),
+      propertyId: asset.propertyId,
+      targetType: 'viewer_scene',
+      targetId: sceneId,
+      newStatus: 'estimated',
+      verificationLevel: 1,
+      evidenceSourceId: asset.id,
+      verificationMethod: 'manual',
+      confidenceScore: 1,
+      note: 'Generated from approved raster manual mappings. Unitless schematic viewer only.',
+      createdAt: now,
+    });
   },
 };
