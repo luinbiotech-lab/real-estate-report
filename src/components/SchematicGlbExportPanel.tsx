@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Alert, Button, Chip } from '@mui/material';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
-import { schematicGlbExportService } from '../services/schematicGlbExportService';
 import { readScaleCalibration } from '../services/measurementCalibrationService';
 
 export default function SchematicGlbExportPanel({
@@ -19,6 +18,7 @@ export default function SchematicGlbExportPanel({
   const exportGlb = async () => {
     setBusy(true); setError(''); setMessage('');
     try {
+      const { schematicGlbExportService } = await import('../services/schematicGlbExportService');
       const saved = await schematicGlbExportService.exportFromRasterSpaces(asset);
       setMessage(`${saved.fileName || 'GLB'} 생성 완료 · ${Math.round((saved.fileData?.size || 0) / 1024)}KB`);
       await onSaved?.();
