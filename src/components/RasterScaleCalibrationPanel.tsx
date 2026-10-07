@@ -20,6 +20,7 @@ export default function RasterScaleCalibrationPanel({
   const [imageUrl, setImageUrl] = useState('');
   const [start, setStart] = useState<Point | null>(null);
   const [end, setEnd] = useState<Point | null>(null);
+  const [dragging, setDragging] = useState(false);
   const [realLengthM, setRealLengthM] = useState('');
   const [referenceLabel, setReferenceLabel] = useState('도면 표기 치수');
   const [note, setNote] = useState('');
@@ -78,12 +79,13 @@ export default function RasterScaleCalibrationPanel({
     if (!point) return;
     setStart(point);
     setEnd(point);
+    setDragging(true);
     setError('');
     setMessage('');
   };
 
   const mouseMove = (event: MouseEvent<HTMLDivElement>) => {
-    if (!start) return;
+    if (!start || !dragging) return;
     const point = pointFromEvent(event);
     if (point) setEnd(point);
   };
@@ -92,7 +94,7 @@ export default function RasterScaleCalibrationPanel({
     if (!start) return;
     const point = pointFromEvent(event);
     if (point) setEnd(point);
-    setStart((value) => value);
+    setDragging(false);
   };
 
   const save = async () => {
