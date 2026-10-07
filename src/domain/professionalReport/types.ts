@@ -92,6 +92,18 @@ export interface ProfessionalReportSpatial {
     verificationStatus: string;
     caption?: string;
   }>;
+  generatedAssets?: Array<{
+    id: string;
+    assetType: string;
+    fileFormat: string;
+    fileName?: string;
+    processingStatus: string;
+    version: number;
+    modelClass?: string;
+    horizontalScaleVerified?: boolean;
+    heightStatus?: string;
+    sourceFloorPlanAssetId?: string;
+  }>;
   viewer: {
     scenes: Array<{
       id: string;
