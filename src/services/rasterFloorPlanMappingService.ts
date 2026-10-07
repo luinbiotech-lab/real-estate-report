@@ -2,6 +2,7 @@ import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import type { SpatialSpaceType } from '../domain/propertyDataRoom/spatialMediaModel';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { spatialMediaRepository } from '../repositories/spatialMediaRepository';
+import { readScaleCalibration } from './measurementCalibrationService';
 
 export interface RasterSpaceMapping {
   id: string;
@@ -71,6 +72,20 @@ export const rasterFloorPlanMappingService = {
       updatedAt: now,
     });
 
+    const calibration = readScaleCalibration(asset);
+    const raster = asset.metadata.raster && typeof asset.metadata.raster === 'object'
+      ? asset.metadata.raster as Record<string, unknown>
+      : undefined;
+    const widthPx = Number(raster?.widthPx);
+    const heightPx = Number(raster?.heightPx);
+    const canScale = Boolean(
+      calibration &&
+      Number.isFinite(widthPx) && widthPx > 0 &&
+      Number.isFinite(heightPx) && heightPx > 0,
+    );
+    const estimatedWidthM = canScale ? mapping.rect.width * widthPx * calibration!.metersPerDrawingUnit : undefined;
+    const estimatedDepthM = canScale ? mapping.rect.height * heightPx * calibration!.metersPerDrawingUnit : undefined;
+
     await spatialMediaRepository.saveSpace({
       id: spaceId,
       propertyId: asset.propertyId,
@@ -86,14 +101,25 @@ export const rasterFloorPlanMappingService = {
         width: mapping.rect.width,
         height: mapping.rect.height,
       },
-      estimatedGeometry3d: {
-        type: 'unitless_prism',
-        coordinateSpace: 'floor_plan_image_normalized',
-        sourceAssetId: asset.id,
-        extrusionHeight: 0.12,
-        unit: 'normalized',
-        scaleVerified: false,
-      },
+      estimatedGeometry3d: canScale
+        ? {
+            type: 'scaled_rect_prism_candidate',
+            sourceAssetId: asset.id,
+            widthM: Number(estimatedWidthM!.toFixed(4)),
+            depthM: Number(estimatedDepthM!.toFixed(4)),
+            areaEstimateM2: Number((estimatedWidthM! * estimatedDepthM!).toFixed(4)),
+            heightStatus: 'unknown',
+            scaleVerified: true,
+            scaleReference: calibration!.referenceLabel,
+          }
+        : {
+            type: 'unitless_prism',
+            coordinateSpace: 'floor_plan_image_normalized',
+            sourceAssetId: asset.id,
+            extrusionHeight: 0.12,
+            unit: 'normalized',
+            scaleVerified: false,
+          },
       sourceType: 'manual',
       verificationStatus: 'estimated',
       createdAt: now,
