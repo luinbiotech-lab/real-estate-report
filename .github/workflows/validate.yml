@@ -63,6 +63,9 @@ jobs:
       - name: Validate Excel import security boundary
         run: node scripts/validate-excel-security.mjs
 
+      - name: Validate Excel and bulk import regressions
+        run: npm run validate:imports
+
       - name: Validate production readiness boundary
         run: node scripts/validate-production-readiness.mjs
 
@@ -143,6 +146,8 @@ jobs:
 
       - name: Build
         env:
+          VITE_REMOTE_OPERATIONAL_MODE: "true"
+          VITE_REQUIRE_REMOTE_AUTH: "true"
           NAVER_MAP_CLIENT_SECRET: CI_SENTINEL_NAVER_SERVER_SECRET_20260924
           KAKAO_REST_API_KEY: CI_SENTINEL_KAKAO_SERVER_SECRET_20260924
           SUPABASE_SERVICE_ROLE_KEY: CI_SENTINEL_SUPABASE_SERVICE_ROLE_20260924
