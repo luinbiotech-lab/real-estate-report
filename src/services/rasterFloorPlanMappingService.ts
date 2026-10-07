@@ -86,11 +86,32 @@ export const rasterFloorPlanMappingService = {
         width: mapping.rect.width,
         height: mapping.rect.height,
       },
-      estimatedGeometry3d: {},
+      estimatedGeometry3d: {
+        type: 'unitless_prism',
+        coordinateSpace: 'floor_plan_image_normalized',
+        sourceAssetId: asset.id,
+        extrusionHeight: 0.12,
+        unit: 'normalized',
+        scaleVerified: false,
+      },
       sourceType: 'manual',
       verificationStatus: 'estimated',
       createdAt: now,
       updatedAt: now,
+    });
+
+    await spatialMediaRepository.appendVerificationEvent({
+      id: crypto.randomUUID(),
+      propertyId: asset.propertyId,
+      targetType: 'space',
+      targetId: spaceId,
+      newStatus: 'estimated',
+      verificationLevel: 1,
+      evidenceSourceId: asset.id,
+      verificationMethod: 'manual',
+      confidenceScore: 1,
+      note: 'Raster floor plan manual box mapping. Scale and dimensions are not verified.',
+      createdAt: now,
     });
 
     return mapping;
