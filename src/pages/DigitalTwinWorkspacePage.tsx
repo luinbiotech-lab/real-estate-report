@@ -14,6 +14,8 @@ import OpeningTopologyPanel from '../components/OpeningTopologyPanel';
 import ReviewedMeshViewer from '../components/ReviewedMeshViewer';
 import RasterFloorPlanMappingPanel from '../components/RasterFloorPlanMappingPanel';
 import RasterScaleCalibrationPanel from '../components/RasterScaleCalibrationPanel';
+import SchematicGlbExportPanel from '../components/SchematicGlbExportPanel';
+import DigitalTwinAssetGlbViewer from '../components/DigitalTwinAssetGlbViewer';
 import RoomTopologyPanel from '../components/RoomTopologyPanel';
 import ScaleCalibrationPanel from '../components/ScaleCalibrationPanel';
 import SlabGeometryPanel from '../components/SlabGeometryPanel';
@@ -129,6 +131,8 @@ export default function DigitalTwinWorkspacePage() {
           <FloorPlanGeometryPreview asset={asset} />
           {Boolean(asset.metadata.raster && typeof asset.metadata.raster === 'object') && <RasterScaleCalibrationPanel asset={asset} onSaved={() => load()} />}
           {Boolean(asset.metadata.raster && typeof asset.metadata.raster === 'object') && <RasterFloorPlanMappingPanel asset={asset} onSaved={() => load()} />}
+          {Boolean(asset.metadata.raster && typeof asset.metadata.raster === 'object') && <SchematicGlbExportPanel asset={asset} onSaved={() => load()} />}
+          {(asset.assetType === 'glb' || asset.assetType === 'gltf') && <div style={{ marginTop: 18 }}><DigitalTwinAssetGlbViewer asset={asset} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><ScaleCalibrationPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><VerticalDimensionPanel asset={asset} onSaved={() => load()} /></div>}
           {hasGeometry && <div style={{ marginTop: 18 }}><FloorPlacementPanel asset={asset} onSaved={() => load()} /></div>}
