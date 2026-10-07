@@ -46,6 +46,8 @@ jobs:
 
       - name: Validate production contracts
         run: |
+          npm run validate:masters
+          npm run validate:imports
           npm run readiness:prod
           node scripts/validate-vercel-deployment.mjs
           npm run typecheck
