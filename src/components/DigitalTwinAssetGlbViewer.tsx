@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { Alert } from '@mui/material';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
-import ThreeGlbViewer from './propertyDataRoom/ThreeGlbViewer';
+const ThreeGlbViewer = lazy(() => import('./propertyDataRoom/ThreeGlbViewer'));
 
 export default function DigitalTwinAssetGlbViewer({ asset }: { asset: DigitalTwinAsset }) {
   const [url, setUrl] = useState(asset.fileUrl || '');
@@ -26,6 +26,8 @@ export default function DigitalTwinAssetGlbViewer({ asset }: { asset: DigitalTwi
     <Alert severity="warning" sx={{ mb: 1.5 }}>
       이 모델은 {String(asset.metadata.modelClass || '3D asset')}입니다. horizontal scale verified={String(asset.metadata.horizontalScaleVerified === true)} · height status={String(asset.metadata.heightStatus || 'unknown')}
     </Alert>
-    <ThreeGlbViewer modelUrl={url} title={asset.fileName || 'GLB Viewer'} />
+    <Suspense fallback={<Alert severity="info">GLB Viewer 모듈을 불러오는 중입니다.</Alert>}>
+      <ThreeGlbViewer modelUrl={url} title={asset.fileName || 'GLB Viewer'} />
+    </Suspense>
   </>;
 }
