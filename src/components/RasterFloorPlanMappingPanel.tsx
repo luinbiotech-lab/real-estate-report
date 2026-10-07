@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react';
-import { Alert, Box, Button, Chip, MenuItem, TextField } from '@mui/material';
+import { Alert, Box, Button, Chip, MenuItem, Stack, TextField } from '@mui/material';
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import type { SpatialSpaceType } from '../domain/propertyDataRoom/spatialMediaModel';
 import { rasterFloorPlanMappingService } from '../services/rasterFloorPlanMappingService';
@@ -111,6 +111,17 @@ export default function RasterFloorPlanMappingPanel({
     } finally { setBusy(false); }
   };
 
+  const remove = async (mappingId: string) => {
+    setBusy(true); setError(''); setMessage('');
+    try {
+      await rasterFloorPlanMappingService.removeMapping(asset, mappingId);
+      setMessage('공간 매핑을 삭제했습니다. 필요하면 다시 지정하세요.');
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '공간 매핑을 삭제하지 못했습니다.');
+    } finally { setBusy(false); }
+  };
+
   const complete = async () => {
     setBusy(true); setError(''); setMessage('');
     try {
@@ -174,6 +185,13 @@ export default function RasterFloorPlanMappingPanel({
         pointerEvents: 'none',
       }} />}
     </Box> : <Alert severity="info">이 환경에서는 원본 raster binary 또는 file URL을 불러올 수 없어 preview가 없습니다.</Alert>}
+
+    {mappings.length > 0 && <Stack spacing={0.75} sx={{ mt: 1.5 }}>
+      {mappings.map((mapping) => <Box key={mapping.id} sx={{ display: 'flex', justifyContent: 'space-between', gap: 1, alignItems: 'center', p: 1, border: '1px solid #e1e6ec', borderRadius: 1 }}>
+        <div><strong>{mapping.name}</strong><div style={{ color: '#667085', fontSize: 12 }}>{mapping.spaceType} · x {mapping.rect.x.toFixed(3)} / y {mapping.rect.y.toFixed(3)} / w {mapping.rect.width.toFixed(3)} / h {mapping.rect.height.toFixed(3)}</div></div>
+        <Button size="small" color="error" disabled={busy} onClick={() => void remove(mapping.id)}>삭제</Button>
+      </Box>)}
+    </Stack>}
 
     <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.5fr 1fr auto auto' }, gap: 1, mt: 1.5, alignItems: 'center' }}>
       <TextField size="small" label="공간명" value={name} onChange={(event) => setName(event.target.value)} placeholder="예: 거실, 사무실 A" />
