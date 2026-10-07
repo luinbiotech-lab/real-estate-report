@@ -12,7 +12,8 @@ for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
 for (const marker of [
-  "VITE_REQUIRE_REMOTE_AUTH === 'true'",
+  "import { REMOTE_OPERATIONAL_MODE } from '../services/operationalDataMode';",
+  "REMOTE_OPERATIONAL_MODE || import.meta.env.VITE_REQUIRE_REMOTE_AUTH === 'true'",
   'remoteAuthGateway.getSession()',
   'remoteAuthGateway.signIn(email, password)',
   'DA:ON PRODUCTION ACCESS',
