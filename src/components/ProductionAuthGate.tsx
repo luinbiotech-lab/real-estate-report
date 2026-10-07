@@ -50,7 +50,7 @@ export default function ProductionAuthGate({ children }: { children: ReactNode }
         <TextField size="small" label="비밀번호" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} onKeyDown={(event) => { if (event.key === 'Enter' && email && password && !busy) void signIn(); }} />
         <Button variant="contained" size="large" disabled={busy || !email || !password} onClick={() => void signIn()}>{busy ? '로그인 확인 중…' : 'Production 로그인'}</Button>
       </div>
-      <Alert severity="info" sx={{ mt: 1.5 }}>비밀번호와 access token은 영구 저장하지 않습니다. 현재 세션은 memory-only 정책을 사용합니다.</Alert>
+      <Alert severity="info" sx={{ mt: 1.5 }}>비밀번호는 저장하지 않습니다. Auth token은 이 탭의 sessionStorage에만 보관되어 새로고침 후 세션을 복원하며, 탭/브라우저 세션 종료 후에는 다시 로그인합니다.</Alert>
     </section>
   </main>;
 }
