@@ -42,7 +42,7 @@
 4. `supabase functions deploy remote-auth-admin`으로 배포한다. 이 함수에는 `--no-verify-jwt`를 사용하지 않는다.
 5. frontend에는 Supabase project URL과 browser-safe publishable key 또는 legacy anon JWT만 주입한다.
 6. `SupabaseRemoteAuthGateway`를 production provider로 연결한다. browser credential은 publishable key만 사용한다.
-7. token store는 기본 memory-only를 사용한다. persistent session이 필요하면 별도 승인된 `RemoteAuthTokenStore`를 명시적으로 주입하고 token 저장정책을 별도 검토한다.
+7. browser token store는 `sessionStorage`를 사용한다. access/refresh token은 같은 탭의 새로고침 동안만 유지하고, 비밀번호는 저장하지 않는다. `localStorage` 영구 저장은 사용하지 않으며 탭/브라우저 세션 종료 후 재로그인한다.
 8. 첫 Auth 사용자를 생성하고 로그인한다.
 9. 잘못된 bootstrap key가 거부되는지 확인한다.
 10. 올바른 bootstrap key + authenticated session으로 최초 1명만 `owner`로 승격한다.
