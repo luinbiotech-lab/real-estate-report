@@ -1,5 +1,6 @@
 import type { DigitalTwinAsset } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { spatialMediaRepository } from '../repositories/spatialMediaRepository';
 
 export interface ScaleCalibration {
   status: 'verified';
@@ -60,6 +61,52 @@ export const measurementCalibrationService = {
       metadata: { digitalTwinAssetId: asset.id, method: calibration.method, drawingLength: calibration.drawingLength, realLengthM: calibration.realLengthM, metersPerDrawingUnit: calibration.metersPerDrawingUnit, note: calibration.note },
       createdAt: now,
     });
+
+    if (asset.metadata.raster && typeof asset.metadata.raster === 'object') {
+      const floorPlans = await spatialMediaRepository.getFloorPlans(asset.propertyId);
+      const floorPlan = floorPlans.find((item) => item.id === asset.id);
+      if (floorPlan) {
+        await spatialMediaRepository.saveFloorPlan({
+          ...floorPlan,
+          scaleStatus: 'verified',
+          scaleValue: calibration.metersPerDrawingUnit,
+          scaleUnit: 'm_per_px',
+          updatedAt: now,
+        });
+      }
+
+      const raster = asset.metadata.raster as Record<string, unknown>;
+      const widthPx = Number(raster.widthPx);
+      const heightPx = Number(raster.heightPx);
+      if (Number.isFinite(widthPx) && widthPx > 0 && Number.isFinite(heightPx) && heightPx > 0) {
+        const spaces = await spatialMediaRepository.getSpaces(asset.propertyId);
+        for (const space of spaces) {
+          const geometry = space.geometry2d;
+          if (!geometry || geometry.type !== 'normalized_rect' || geometry.sourceAssetId !== asset.id) continue;
+          const normalizedWidth = Number(geometry.width);
+          const normalizedHeight = Number(geometry.height);
+          if (!(normalizedWidth > 0) || !(normalizedHeight > 0)) continue;
+          const estimatedWidthM = normalizedWidth * widthPx * calibration.metersPerDrawingUnit;
+          const estimatedDepthM = normalizedHeight * heightPx * calibration.metersPerDrawingUnit;
+          await spatialMediaRepository.saveSpace({
+            ...space,
+            estimatedGeometry3d: {
+              ...space.estimatedGeometry3d,
+              type: 'scaled_rect_prism_candidate',
+              sourceAssetId: asset.id,
+              widthM: Number(estimatedWidthM.toFixed(4)),
+              depthM: Number(estimatedDepthM.toFixed(4)),
+              areaEstimateM2: Number((estimatedWidthM * estimatedDepthM).toFixed(4)),
+              heightStatus: 'unknown',
+              scaleVerified: true,
+              scaleReference: calibration.referenceLabel,
+            },
+            updatedAt: now,
+          });
+        }
+      }
+    }
+
     return saved;
   },
 };
