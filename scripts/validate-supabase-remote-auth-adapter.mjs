@@ -19,6 +19,9 @@ for (const marker of [
   'export class SupabaseRemoteAuthGateway',
   'createSupabaseRemoteAuthGateway',
   'createMemoryRemoteAuthTokenStore',
+  'createBrowserSessionRemoteAuthTokenStore',
+  "window.sessionStorage",
+  "REMOTE_AUTH_SESSION_STORAGE_KEY = 'daon.remote-auth.tokens.v1'",
   'requireBrowserSafeSupabaseKey',
   "'/auth/v1/token?grant_type=password'",
   "'/auth/v1/token?grant_type=refresh_token'",
@@ -53,7 +56,6 @@ for (const forbidden of [
   'SUPABASE_SERVICE_ROLE_KEY',
   'service_role:',
   'localStorage.setItem',
-  'sessionStorage.setItem',
 ]) {
   if (text.adapter.includes(forbidden)) throw new Error(`Supabase remote auth adapter 금지 패턴 검출: ${forbidden}`);
 }
