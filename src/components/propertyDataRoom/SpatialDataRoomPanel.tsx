@@ -14,6 +14,7 @@ import { spatialMediaViewService } from '../../services/spatialMediaViewService'
 import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
 const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
+const ThreeSchematicSpaceViewer = lazy(() => import('./ThreeSchematicSpaceViewer'));
 
 const emptySpatialBundle: SpatialMediaDataRoomBundle = {
   floorPlans: [],
@@ -153,6 +154,12 @@ export default function SpatialDataRoomPanel({
     </>}
 
     {mode === 'viewer' && <>
+      {bundle.spaces.some((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image') && <section>
+        <div className="section-heading-row"><div><p className="eyebrow">SCHEMATIC 3D</p><h2>Raster 공간 박스 3D</h2></div><Chip size="small" color="warning" label="unscaled" /></div>
+        <Suspense fallback={<div className="center"><CircularProgress size={28} /><p>공간 3D 모듈을 불러오는 중입니다.</p></div>}>
+          <ThreeSchematicSpaceViewer spaces={bundle.spaces} />
+        </Suspense>
+      </section>}
       {bundle.viewerScenes.some((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl) && <section>
         <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color="success" label="3D model connected" /></div>
         {bundle.viewerScenes
