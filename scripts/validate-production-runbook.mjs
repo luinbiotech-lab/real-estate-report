@@ -37,7 +37,7 @@ for (const required of [
   'supabase functions deploy remote-auth-admin',
   'src/services/supabaseRemoteAuthGateway.ts',
   'src/services/supabaseBrowserCredential.ts',
-  'token store는 기본 memory-only',
+  'browser token store는 `sessionStorage`를 사용한다',
   '두 번째 bootstrap',
   '마지막 active OWNER',
   '신규 사용자가 기본 `viewer`',
@@ -110,7 +110,8 @@ for (const marker of ["case 'bootstrap_owner'", "case 'invite_user'", "case 'upd
 
 for (const marker of [
   'export class SupabaseRemoteAuthGateway',
-  'createMemoryRemoteAuthTokenStore',
+  'createBrowserSessionRemoteAuthTokenStore',
+  'window.sessionStorage',
   'requireBrowserSafeSupabaseKey',
   '/functions/v1/${this.adminFunctionName}',
 ]) {
