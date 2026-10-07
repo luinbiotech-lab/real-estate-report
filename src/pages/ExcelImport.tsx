@@ -30,7 +30,18 @@ const explicitImportKeys = (row: ImportRow): (keyof Property)[] => {
 
 export default function ExcelImport() {
   const nav = useNavigate(); const [job, setJob] = useState<ImportJob>(); const [recovery, setRecovery] = useState<ImportJob>(); const [page, setPage] = useState(1); const [review, setReview] = useState<{ type: 'address' | 'poi'; rowId: string }>(); const [busy, setBusy] = useState(false); const [fileError, setFileError] = useState(''); const pauseRef = useRef(false);
-  useEffect(() => { importJobRepository.getLatest().then((saved) => { if (saved && saved.rows.some((row) => !['completed', 'invalid', 'skipped'].includes(row.status))) setRecovery({ ...saved, running: false, paused: true }); }); }, []);
+  useEffect(() => {
+    importJobRepository.getLatest().then((saved) => {
+      if (!saved) return;
+      const processingIncomplete = saved.rows.some((row) => !['completed', 'invalid', 'skipped'].includes(row.status));
+      const completedButUnsaved = saved.rows.some((row) =>
+        row.status === 'completed'
+        && row.saveMode !== 'skip'
+        && row.saveStatus !== 'saved'
+      );
+      if (processingIncomplete || completedButUnsaved) setRecovery({ ...saved, running: false, paused: true });
+    });
+  }, []);
   const commit = async (next: ImportJob) => { setJob(next); await importJobRepository.save(next); };
   const pick = async (file?: File) => { if (!file) return; setBusy(true); setFileError(''); try { const existing = await propertyRepository.getAll(); const next = parseImportJob(await file.arrayBuffer(), file.name, existing); await commit(next); setPage(1); } catch (reason) { setFileError(reason instanceof Error ? reason.message : '엑셀 파일을 읽지 못했습니다. 표준 양식을 확인해 주세요.'); } finally { setBusy(false); } };
   const updateJob = (patch: Partial<ImportJob>) => job && commit({ ...job, ...patch }); const updateRow = (rowId: string, updater: (row: ImportRow) => ImportRow) => job && commit({ ...job, rows: job.rows.map((row) => row.rowId === rowId ? updater(row) : row) });
