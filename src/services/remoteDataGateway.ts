@@ -57,10 +57,12 @@ export interface RemoteDataGateway {
   listProperties(): Promise<Property[]>;
   getProperty(propertyId: string): Promise<Property | undefined>;
   upsertProperty(property: Property): Promise<Property>;
+  bulkInsertProperties(properties: Property[]): Promise<Property[]>;
   deleteProperty(propertyId: string): Promise<void>;
 
   listObjects(propertyId: string, objectType?: RemotePropertyObjectType): Promise<RemotePropertyObject[]>;
   upsertObject(object: RemotePropertyObject): Promise<RemotePropertyObject>;
+  bulkInsertObjects(objects: RemotePropertyObject[]): Promise<RemotePropertyObject[]>;
   deleteObject(objectType: RemotePropertyObjectType, id: string): Promise<void>;
 
   listAssets(propertyId: string, resourceType?: RemoteAssetResourceType): Promise<RemoteAssetMetadata[]>;
