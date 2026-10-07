@@ -278,6 +278,26 @@ export const propertyDataRoomRepository = {
 
   getDataSources: (propertyId: string) => byProperty<PropertyDataSource>('propertyDataSources', propertyId),
   saveDataSource: (value: PropertyDataSource) => put('propertyDataSources', value),
+  async saveDataSourcesBulk(values: PropertyDataSource[]) {
+    if (!values.length) return [];
+    if (REMOTE_OPERATIONAL_MODE) {
+      const chunkSize = 250;
+      for (let offset = 0; offset < values.length; offset += chunkSize) {
+        const chunk = values.slice(offset, offset + chunkSize);
+        await remoteDataGateway.bulkInsertObjects(chunk.map((value) => ({
+          objectType: 'propertyDataSources' as const,
+          id: value.id,
+          propertyId: value.propertyId,
+          payload: value as unknown as Record<string, unknown>,
+        })));
+      }
+      return values;
+    }
+    const db = await database;
+    const tx = db.transaction('propertyDataSources', 'readwrite');
+    await Promise.all([...values.map((value) => tx.store.put(value)), tx.done]);
+    return values;
+  },
 
   async approveVerificationCandidate(input: { property: Property; candidate: PropertyVerificationCandidate; verification: PropertyVerification; dataSource: PropertyDataSource; }): Promise<PropertyVerificationCandidate> {
     if (REMOTE_OPERATIONAL_MODE) {
