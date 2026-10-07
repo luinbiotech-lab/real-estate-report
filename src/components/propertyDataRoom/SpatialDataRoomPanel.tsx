@@ -82,6 +82,8 @@ export default function SpatialDataRoomPanel({
   useEffect(() => { load(); }, [load]);
 
   const summary = useMemo(() => spatialMediaViewService.summarize(bundle), [bundle]);
+  const rasterMappedSpaces = bundle.spaces.filter((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image');
+  const rasterScaleVerified = rasterMappedSpaces.length > 0 && rasterMappedSpaces.every((space) => space.estimatedGeometry3d?.scaleVerified === true);
   const isBangbae81511 = (propertyAddress ?? '').replace(/\s+/g, '').includes('방배동815-11');
   const effectivePolicy = bundle.mediaPolicy ?? (isBangbae81511 ? { propertyId, ...BANGBAE_815_11_MEDIA_POLICY } : undefined);
 
@@ -155,7 +157,7 @@ export default function SpatialDataRoomPanel({
 
     {mode === 'viewer' && <>
       {bundle.spaces.some((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image') && <section>
-        <div className="section-heading-row"><div><p className="eyebrow">SCHEMATIC 3D</p><h2>Raster 공간 박스 3D</h2></div><Chip size="small" color="warning" label="unscaled" /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">SCHEMATIC 3D</p><h2>Raster 공간 박스 3D</h2></div><Chip size="small" color={rasterScaleVerified ? 'success' : 'warning'} label={rasterScaleVerified ? 'scale verified · height unknown' : 'unscaled'} /></div>
         <Suspense fallback={<div className="center"><CircularProgress size={28} /><p>공간 3D 모듈을 불러오는 중입니다.</p></div>}>
           <ThreeSchematicSpaceViewer spaces={bundle.spaces} />
         </Suspense>
