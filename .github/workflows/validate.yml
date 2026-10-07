@@ -195,6 +195,21 @@ jobs:
           npm install --no-save playwright@1.55.0
           npx playwright install --with-deps chromium
 
+      - name: Start remote production preview
+        run: |
+          npx vite preview --host 127.0.0.1 --port 4177 > /tmp/daon-remote-preview.log 2>&1 &
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:4177/ >/dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat /tmp/daon-remote-preview.log
+          exit 1
+
+      - name: Rendered remote production auth gate QA
+        env:
+          REPORT_REMOTE_QA_BASE_URL: http://127.0.0.1:4177
+        run: node scripts/visual-production-auth-gate-smoke.mjs
+
       - name: Start Vite QA server
         run: |
           npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/daon-vite.log 2>&1 &
