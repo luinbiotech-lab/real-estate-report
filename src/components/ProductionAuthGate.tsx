@@ -2,8 +2,9 @@ import { LockPersonRounded } from '@mui/icons-material';
 import { Alert, Button, CircularProgress, TextField } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { remoteAuthGateway, type AuthSession } from '../services/authProviderService';
+import { REMOTE_OPERATIONAL_MODE } from '../services/operationalDataMode';
 
-const REMOTE_AUTH_REQUIRED = import.meta.env.VITE_REQUIRE_REMOTE_AUTH === 'true';
+const REMOTE_AUTH_REQUIRED = REMOTE_OPERATIONAL_MODE || import.meta.env.VITE_REQUIRE_REMOTE_AUTH === 'true';
 
 export default function ProductionAuthGate({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<AuthSession | null>(null);
