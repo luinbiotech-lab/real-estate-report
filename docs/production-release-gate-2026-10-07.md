@@ -4,8 +4,8 @@
 
 - Repository: `luinbiotech-lab/real-estate-report`
 - Release branch: `feat/daon-master-code-lock`
-- Release candidate HEAD: `fe8b0a44972441d26515c4530b99d76d4116a26c`
-- Current public Production commit: `7d230bd5b54ae0ffedfcfd12e8ed1efc449ea083`
+- Release candidate HEAD: `e16cfba8d68cec78d09ea9ea23429b35bc713e24`
+- Current public Production commit: `e16cfba8d68cec78d09ea9ea23429b35bc713e24`
 - Public Production alias: `https://real-estate-report-lime.vercel.app`
 - Production Supabase project: `neeqcfxjwotyiodrlzvq`
 
@@ -43,7 +43,7 @@ Release branch uses browser `sessionStorage` for Supabase access/refresh tokens.
 - Logout/session end clears the browser-session token state.
 - Browser reload E2E: PASS.
 
-The current Production commit does not contain this fix.
+The current Production commit contains this fix.
 
 ### Spatial / 3D
 
@@ -86,16 +86,39 @@ Excel, Digital Twin, report and Three.js code load as separate route/runtime chu
 
 ### Deployment
 
-- Production deployment ID: `dpl_AzbeziZ9uE8h1vDXeWEL7SsVDbDb`
+- Production deployment ID: `dpl_EmPYJbTUet2LKnzBUeaWHuR2w39g`
 - State: `READY`
 - Public alias: `https://real-estate-report-lime.vercel.app`
-- Production HEAD: `7d230bd5b54ae0ffedfcfd12e8ed1efc449ea083`
+- Production HEAD: `e16cfba8d68cec78d09ea9ea23429b35bc713e24`
 - Recent Vercel runtime errors after deployment: 0
 - Production root HTTP: 200
 - Auth Gate is active on protected routes.
 - Production Auth Gate displays sessionStorage-based reload persistence policy.
 
 The prior Hobby deployment quota block has cleared.
+
+### Bangbae 815-11 live data
+
+Canonical Production property ID is `sample-bangbae-815-11`. Legacy local/cutover fixtures retain `daon-bangbae-815-11` through an explicit identity alias.
+
+Production live state:
+- property media policy: interior photos prohibited; exterior / roadview / map allowed
+- typed spaces: 5
+- viewer scenes: 1
+- viewer nodes: 5
+- viewer edges: 4
+- walkthrough routes: 1
+- walkthrough steps: 5
+- verification events: 11
+- report snapshots: 3
+- actual floor plans: 0
+- actual media assets: 0
+
+Restored provenance:
+- comparable transaction source: 6 rows, source-row provenance 6/6 complete, independent official-source verification remains false
+- exterior evidence source: Library-backed DA:ON detailed report, pages 1/3; direct media asset remains not connected
+- no interior media was migrated
+- Roadview pano provenance was not restored because no trusted current repository / DB / Library record containing the prior pano ID was found
 
 ### Live checks still required
 
