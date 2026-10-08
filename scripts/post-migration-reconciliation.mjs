@@ -1,6 +1,6 @@
 const projectUrl = (process.env.SUPABASE_PROJECT_URL || '').trim().replace(/\/+$/, '');
 const serviceRoleKey = (process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-const propertyId = (process.env.DAON_RECONCILE_PROPERTY_ID || 'daon-bangbae-815-11').trim();
+const propertyId = (process.env.DAON_RECONCILE_PROPERTY_ID || 'sample-bangbae-815-11').trim();
 
 if (!projectUrl) throw new Error('SUPABASE_PROJECT_URL이 필요합니다.');
 if (!serviceRoleKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY가 필요합니다.');
