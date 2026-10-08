@@ -1,4 +1,5 @@
 const rawBase = process.env.DAON_PRODUCTION_BASE_URL?.trim() || '';
+const productionPropertyId = (process.env.DAON_PRODUCTION_PROPERTY_ID || 'sample-bangbae-815-11').trim();
 if (!rawBase) throw new Error('DAON_PRODUCTION_BASE_URL이 필요합니다. 실제 production host 없이 acceptance smoke를 통과 처리하지 않습니다.');
 
 const base = new URL(rawBase);
@@ -38,7 +39,7 @@ if (!rootHtml.includes('id="root"')) throw new Error('Production root가 DA:ON S
 requireHeader(root, 'x-content-type-options', 'nosniff');
 requireHeader(root, 'x-frame-options', 'deny');
 
-const deep = await request(new URL('/property/daon-bangbae-815-11', base));
+const deep = await request(new URL(`/property/${encodeURIComponent(productionPropertyId)}`, base));
 if (!deep.ok || !(deep.headers.get('content-type') || '').includes('text/html')) throw new Error('SPA deep-link fallback이 동작하지 않습니다.');
 const deepHtml = await deep.text();
 if (!deepHtml.includes('id="root"')) throw new Error('SPA deep-link가 index.html을 반환하지 않습니다.');
