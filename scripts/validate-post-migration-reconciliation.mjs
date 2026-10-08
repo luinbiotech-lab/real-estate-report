@@ -29,6 +29,20 @@ for (const marker of [
   'bytes.byteLength !== expectedSize',
   'writesPerformed: 0',
   'storageObjectsVerified',
+  "rows('property_media_policies'",
+  "rows('property_spaces_spatial'",
+  "rows('viewer_scenes'",
+  "rows('walkthrough_routes'",
+  "rows('verification_events'",
+  "propertyId === 'sample-bangbae-815-11'",
+  'bangbaeContract.typedSpaces === 5',
+  'bangbaeContract.viewerNodes === 5',
+  'bangbaeContract.viewerEdges === 4',
+  'bangbaeContract.walkthroughSteps === 5',
+  'bangbaeContract.verificationEvents >= 11',
+  'bangbaeContract.comparableRows === 6',
+  'bangbaeContract.comparableProvenanceComplete',
+  'bangbaeContract.exteriorOnlyEvidence',
 ]) if (!script.includes(marker)) throw new Error(`Reconciliation script marker missing: ${marker}`);
 
 for (const forbidden of [
