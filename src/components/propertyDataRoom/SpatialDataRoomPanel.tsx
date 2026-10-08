@@ -11,6 +11,7 @@ import {
 import type { DataRoomBundle } from '../../domain/propertyDataRoom/types';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
+import { isBangbae81511Property } from '../../domain/propertyDataRoom/bangbaeIdentity';
 import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
 const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
@@ -85,7 +86,7 @@ export default function SpatialDataRoomPanel({
   const summary = useMemo(() => spatialMediaViewService.summarize(bundle), [bundle]);
   const rasterMappedSpaces = bundle.spaces.filter((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image');
   const rasterScaleVerified = rasterMappedSpaces.length > 0 && rasterMappedSpaces.every((space) => space.estimatedGeometry3d?.scaleVerified === true);
-  const isBangbae81511 = (propertyAddress ?? '').replace(/\s+/g, '').includes('방배동815-11');
+  const isBangbae81511 = isBangbae81511Property({ id: propertyId, address: propertyAddress });
   const effectivePolicy = bundle.mediaPolicy ?? (isBangbae81511 ? { propertyId, ...BANGBAE_815_11_MEDIA_POLICY } : undefined);
 
   if (loading) return <div className="center"><CircularProgress size={28} /><p>공간·미디어 구조를 불러오는 중입니다.</p></div>;
