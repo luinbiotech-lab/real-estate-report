@@ -114,8 +114,9 @@ for (const marker of [
 }
 if (
   !text.app.includes("await import('./services/localBootstrapService')") ||
-  !text.localBootstrap.includes('bangbae81511DataSeedService.ensure()') ||
-  !text.bangbaeSeed.includes("const PROPERTY_ID = 'daon-bangbae-815-11'")
+  !text.localBootstrap.includes('bangbae81511DataSeedService.ensure(bangbae.id)') ||
+  !text.bangbaeSeed.includes('BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID') ||
+  !text.bangbaeSeed.includes('const DEFAULT_PROPERTY_ID = BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID')
 ) throw new Error('방배동 실데이터 bootstrap은 local/cutover dynamic import 경로로 유지해야 합니다.');
 if (!text.bangbaeSeed.includes("verificationStatus: 'verified'") || !text.bangbaeSeed.includes("sourceDate: BUILDING_SOURCE_DATE") || !text.bangbaeSeed.includes("sourceVerified: true")) throw new Error('방배동 건축물대장 기반 공간 facts는 공식 문서 대조 후 verified 상태를 유지해야 합니다.');
 if (!text.bangbaeSeed.includes("comparableSource.sourceReference === '방배동 실거래사례1년간.pdf'") || !text.bangbaeSeed.includes("verificationStatus: 'confirmed'")) throw new Error('방배동 비교거래는 제공 원문 확인 상태인 confirmed로 유지해야 하며 공식 검증으로 과승격하면 안 됩니다.');
