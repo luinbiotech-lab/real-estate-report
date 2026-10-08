@@ -1,6 +1,8 @@
 import { spawn } from 'node:child_process';
 import { setTimeout as delay } from 'node:timers/promises';
 
+const productionPropertyId = (process.env.DAON_PRODUCTION_PROPERTY_ID || 'sample-bangbae-815-11').trim();
+
 const env = {
   ...process.env,
   FRONTEND_HOST: '127.0.0.1',
@@ -55,7 +57,7 @@ try {
       typeof body.allowedOriginCount === 'number';
   });
 
-  await waitFor('http://127.0.0.1:4174/property/daon-bangbae-815-11', async (response) => {
+  await waitFor(`http://127.0.0.1:4174/property/${encodeURIComponent(productionPropertyId)}`, async (response) => {
     const type = response.headers.get('content-type') || '';
     const body = await response.text();
     return type.includes('text/html') && body.includes('id="root"');
