@@ -56,7 +56,7 @@ if (!text.app.includes('__DAON_INCLUDE_LOCAL_BOOTSTRAP__')) throw new Error('Loc
 for (const marker of ['loadEnv', "mode === 'cutover'", 'includeLocalBootstrap', '__DAON_INCLUDE_LOCAL_BOOTSTRAP__']) {
   if (!text.vite.includes(marker)) throw new Error(`Vite local-bootstrap tree-shake 계약 누락: ${marker}`);
 }
-if (!text.bootstrap.includes("id: 'daon-bangbae-815-11'")) throw new Error('Cutover bootstrap은 별도 모듈에 유지되어야 합니다.');
+if (!text.bootstrap.includes('BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID') || !text.bootstrap.includes('id: BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID')) throw new Error('Cutover bootstrap은 명시적인 legacy local Bangbae ID로 유지되어야 합니다.');
 
 for (const marker of [
   'ARG VITE_CUTOVER_MODE=false',
