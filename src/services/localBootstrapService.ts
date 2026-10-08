@@ -3,6 +3,7 @@ import type { Property } from '../types';
 import { emptyProperty } from '../types';
 import { bangbae81511DataSeedService } from './bangbae81511DataSeedService';
 import { streetViewProvenanceService } from './streetViewProvenanceService';
+import { BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID } from '../domain/propertyDataRoom/bangbaeIdentity';
 
 interface LocalBootstrapIdentity {
   managerName: string;
@@ -58,7 +59,7 @@ export const localBootstrapService = {
 
     const bangbae: Property = {
       ...emptyProperty,
-      id: 'daon-bangbae-815-11',
+      id: BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID,
       propertyNumber: '방배동 815-11',
       name: '방배동 815-11 코너빌딩',
       tradeType: '매매',
@@ -126,7 +127,7 @@ export const localBootstrapService = {
       }
     }
 
-    await bangbae81511DataSeedService.ensure();
+    await bangbae81511DataSeedService.ensure(bangbae.id);
     const currentBangbae = await propertyRepository.getById(bangbae.id);
     if (currentBangbae) await streetViewProvenanceService.ensure(currentBangbae);
   },
