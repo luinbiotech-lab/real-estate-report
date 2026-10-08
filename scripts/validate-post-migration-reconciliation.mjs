@@ -13,7 +13,7 @@ for (const marker of [
   'workflow_dispatch:',
   'SUPABASE_SERVICE_ROLE_KEY',
   'secrets.SUPABASE_SERVICE_ROLE_KEY',
-  'daon-bangbae-815-11',
+  'sample-bangbae-815-11',
   'post-migration-reconciliation.mjs',
   'Production mutation: NONE',
 ]) if (!workflow.includes(marker)) throw new Error(`Reconciliation workflow marker missing: ${marker}`);
