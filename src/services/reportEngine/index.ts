@@ -7,6 +7,8 @@ export {
   REPORT_ENGINE_VERSION,
 } from './reportDataBuilder';
 export { reportSnapshotService } from './reportSnapshotService';
+export { reportSnapshotFreshnessService } from './reportSnapshotFreshnessService';
+export type { ReportSnapshotFreshness } from './reportSnapshotFreshnessService';
 export { REPORT_VALUE_LABELS } from '../../domain/professionalReport/valuePolicy';
 export type { ProfessionalReportViewModel, ReportValue, ReportValueState } from '../../domain/professionalReport/types';
 export {
