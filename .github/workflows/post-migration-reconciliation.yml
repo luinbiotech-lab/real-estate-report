@@ -6,7 +6,7 @@ on:
       property_id:
         description: "Property ID to reconcile"
         required: true
-        default: "daon-bangbae-815-11"
+        default: "sample-bangbae-815-11"
         type: string
 
 jobs:
