@@ -1,12 +1,13 @@
 import type { PropertyDataSource, PropertySpace, PropertyVerification } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { comparableTransactionService, type ComparableTransactionInput } from './comparableTransactionService';
+import { BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID } from '../domain/propertyDataRoom/bangbaeIdentity';
 
-const PROPERTY_ID = 'daon-bangbae-815-11';
+const DEFAULT_PROPERTY_ID = BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID;
 const BUILDING_SOURCE_ID = 'bangbae-815-11-building-register-source';
 const BUILDING_SOURCE_NAME = '방배동 815-11 건축물대장';
 const BUILDING_SOURCE_REFERENCE = '방배동 815-11 건축물대장.pdf';
-const COMPARABLE_SOURCE_ID = `market-comparables:${PROPERTY_ID}`;
+const comparableSourceId = (propertyId: string) => `market-comparables:${propertyId}`;
 const SOURCE_DOCUMENT_INVENTORY: Array<{
   id: string;
   sourceName: string;
@@ -108,11 +109,11 @@ function floorFieldKey(id: string) {
 }
 
 export const bangbae81511DataSeedService = {
-  async ensure() {
+  async ensure(propertyId = DEFAULT_PROPERTY_ID) {
     const [spaces, sources, verifications] = await Promise.all([
-      propertyDataRoomRepository.getSpaces(PROPERTY_ID),
-      propertyDataRoomRepository.getDataSources(PROPERTY_ID),
-      propertyDataRoomRepository.getVerifications(PROPERTY_ID),
+      propertyDataRoomRepository.getSpaces(propertyId),
+      propertyDataRoomRepository.getDataSources(propertyId),
+      propertyDataRoomRepository.getVerifications(propertyId),
     ]);
     const now = new Date().toISOString();
 
@@ -125,7 +126,7 @@ export const bangbae81511DataSeedService = {
       const space: PropertySpace = {
         ...existingSpace,
         id,
-        propertyId: PROPERTY_ID,
+        propertyId,
         name: seed.name,
         spaceType: seed.spaceType,
         floor: seed.floor,
@@ -139,7 +140,7 @@ export const bangbae81511DataSeedService = {
       };
       const source: PropertyDataSource = {
         id: `${BUILDING_SOURCE_ID}-${seed.key}`,
-        propertyId: PROPERTY_ID,
+        propertyId,
         fieldKey,
         resourceType: 'property_space',
         sourceType: 'official_document',
@@ -164,7 +165,7 @@ export const bangbae81511DataSeedService = {
       };
       const verification: PropertyVerification = {
         id: `verification:${id}`,
-        propertyId: PROPERTY_ID,
+        propertyId,
         fieldKey,
         status: 'verified',
         note: `${BUILDING_SOURCE_NAME} 원본(${BUILDING_SOURCE_DATE} 발급) 대조 완료 · 건물ID ${BUILDING_ID}`,
@@ -194,7 +195,7 @@ export const bangbae81511DataSeedService = {
       const existingNote = typeof existingMetadata.note === 'string' ? existingMetadata.note : '';
       const source: PropertyDataSource = {
         id: inventory.id,
-        propertyId: PROPERTY_ID,
+        propertyId,
         fieldKey: `source_inventory:${inventory.documentType}`,
         resourceType: inventory.resourceType,
         sourceType: 'official_document',
@@ -227,7 +228,7 @@ export const bangbae81511DataSeedService = {
     const exteriorMetadata = exteriorEvidence?.metadata ?? {};
     await propertyDataRoomRepository.saveDataSource({
       id: EXTERIOR_MEDIA_EVIDENCE_ID,
-      propertyId: PROPERTY_ID,
+      propertyId,
       fieldKey: 'exteriorMediaEvidence',
       resourceType: 'exterior_photo_embedded_report_evidence',
       sourceType: 'external',
@@ -250,7 +251,7 @@ export const bangbae81511DataSeedService = {
       createdAt: exteriorEvidence?.createdAt ?? now,
     });
 
-    const comparableSource = sources.find((item) => item.id === COMPARABLE_SOURCE_ID);
+    const comparableSource = sources.find((item) => item.id === comparableSourceId(propertyId));
     const comparableProvenance = comparableSource?.metadata?.provenance &&
       typeof comparableSource.metadata.provenance === 'object'
       ? comparableSource.metadata.provenance as Record<string, unknown>
@@ -263,7 +264,7 @@ export const bangbae81511DataSeedService = {
       (comparableSource.verificationStatus !== 'confirmed' || !comparableProvenanceComplete ||
         comparableProvenance.independentOfficialVerification !== false)
     )) {
-      await comparableTransactionService.replace(PROPERTY_ID, comparableSeed, {
+      await comparableTransactionService.replace(propertyId, comparableSeed, {
         sourceName: '방배동 실거래사례 1년간',
         sourceReference: '방배동 실거래사례1년간.pdf',
         verificationStatus: 'confirmed',
