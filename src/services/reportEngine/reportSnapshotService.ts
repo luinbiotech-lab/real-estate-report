@@ -2,6 +2,7 @@ import type { ProfessionalReportViewModel } from '../../domain/professionalRepor
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
+import { reportSnapshotFreshnessService } from './reportSnapshotFreshnessService';
 import {
   PROFESSIONAL_REPORT_TEMPLATE_ID,
   PROFESSIONAL_REPORT_TEMPLATE_VERSION,
@@ -59,6 +60,10 @@ export const reportSnapshotService = {
       const missingDocuments = viewModel.dataQuality.requiredDocumentsMissing.length;
       const missingFields = viewModel.dataQuality.missingFields.length;
       throw new Error(`검증이 완료되지 않아 보고서를 확정할 수 없습니다. 필수자료 ${missingDocuments}건 · 확인 필요 필드 ${missingFields}건을 먼저 검토해 주세요.`);
+    }
+    const freshness = await reportSnapshotFreshnessService.evaluate(current);
+    if (freshness.isStale) {
+      throw new Error('Snapshot 생성 이후 Property/Data Room/Spatial 데이터가 변경되었습니다. 최신 데이터로 새 버전을 생성한 뒤 확정해 주세요.');
     }
     return propertyDataRoomRepository.updateReportSnapshotStatus(snapshotId, 'ready');
   },
