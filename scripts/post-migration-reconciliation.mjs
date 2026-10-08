@@ -47,12 +47,40 @@ if (!Array.isArray(propertyRows) || propertyRows.length !== 1) {
   throw new Error(`Production property count must be exactly 1 for ${propertyId}; observed=${Array.isArray(propertyRows) ? propertyRows.length : 'invalid'}`);
 }
 
-const [objects, assets, candidates, verifications, snapshots] = await Promise.all([
-  rows('property_objects', 'object_type,id,property_id'),
+const [
+  objects,
+  assets,
+  candidates,
+  verifications,
+  snapshots,
+  mediaPolicies,
+  floorPlans,
+  spatialSpaces,
+  mediaAssets,
+  mediaSpaceLinks,
+  viewerScenes,
+  viewerNodes,
+  viewerEdges,
+  walkthroughRoutes,
+  walkthroughSteps,
+  verificationEvents,
+] = await Promise.all([
+  rows('property_objects', 'object_type,id,property_id,payload'),
   rows('property_assets', 'resource_type,id,property_id,storage_path,original_file_name,mime_type,file_size'),
   rows('property_verification_candidates', 'id,property_id,decision_status'),
   rows('property_verifications', 'id,property_id'),
   rows('report_snapshots', 'id,property_id,status'),
+  rows('property_media_policies', 'property_id,allow_interior_photos,allow_exterior_photos,allow_roadview,allow_public_map,allow_ai_visualization'),
+  rows('floor_plans', 'id,property_id,extraction_status,verification_status,deleted_at'),
+  rows('property_spaces_spatial', 'id,property_id,floor_id,space_name,verification_status,deleted_at'),
+  rows('media_assets', 'id,property_id,media_type,origin,verification_status,deleted_at'),
+  rows('media_space_links', 'id,property_id,match_status,verification_status,deleted_at'),
+  rows('viewer_scenes', 'id,property_id,scene_type,generation_status,verification_status,deleted_at'),
+  rows('viewer_nodes', 'id,property_id,scene_id,space_id,node_type,verification_status,deleted_at'),
+  rows('viewer_edges', 'id,property_id,scene_id,from_node_id,to_node_id'),
+  rows('walkthrough_routes', 'id,property_id,route_type,deleted_at'),
+  rows('walkthrough_steps', 'id,property_id,route_id,space_id,verification_status,deleted_at'),
+  rows('verification_events', 'id,property_id,target_type,target_id,new_status,verification_level'),
 ]);
 
 const storageChecks = [];
@@ -79,6 +107,62 @@ for (const asset of assets) {
   });
 }
 
+const active = (rows) => rows.filter((item) => !item.deleted_at);
+const comparableSource = objects.find((item) =>
+  item.object_type === 'propertyDataSources' &&
+  item.payload?.resourceType === 'comparable_transaction_set' &&
+  item.payload?.fieldKey === 'nearbyTransactions'
+);
+const exteriorEvidence = objects.find((item) =>
+  item.object_type === 'propertyDataSources' &&
+  item.payload?.resourceType === 'exterior_photo_embedded_report_evidence'
+);
+const comparableRows = Array.isArray(comparableSource?.payload?.metadata?.rows)
+  ? comparableSource.payload.metadata.rows
+  : [];
+const comparableProvenance = comparableSource?.payload?.metadata?.provenance;
+
+const bangbaeContract = propertyId === 'sample-bangbae-815-11'
+  ? {
+      mediaPolicyPresent: mediaPolicies.length === 1,
+      interiorPhotosProhibited: mediaPolicies.length === 1 && mediaPolicies[0].allow_interior_photos === false,
+      typedSpaces: active(spatialSpaces).length,
+      viewerScenes: active(viewerScenes).length,
+      viewerNodes: active(viewerNodes).length,
+      viewerEdges: viewerEdges.length,
+      walkthroughRoutes: active(walkthroughRoutes).length,
+      walkthroughSteps: active(walkthroughSteps).length,
+      verificationEvents: verificationEvents.length,
+      comparableRows: comparableRows.length,
+      comparableProvenanceComplete: comparableProvenance?.status === 'complete' &&
+        Number(comparableProvenance?.completeCount) === 6 &&
+        Number(comparableProvenance?.missingCount) === 0,
+      exteriorEvidencePresent: Boolean(exteriorEvidence),
+      exteriorOnlyEvidence: exteriorEvidence?.payload?.metadata?.interiorMediaExcluded === true &&
+        exteriorEvidence?.payload?.metadata?.directMediaAssetConnected === false,
+      actualFloorPlans: active(floorPlans).length,
+      actualMediaAssets: active(mediaAssets).length,
+      reportSnapshots: snapshots.length,
+    }
+  : undefined;
+
+const bangbaePassed = !bangbaeContract || (
+  bangbaeContract.mediaPolicyPresent &&
+  bangbaeContract.interiorPhotosProhibited &&
+  bangbaeContract.typedSpaces === 5 &&
+  bangbaeContract.viewerScenes >= 1 &&
+  bangbaeContract.viewerNodes === 5 &&
+  bangbaeContract.viewerEdges === 4 &&
+  bangbaeContract.walkthroughRoutes >= 1 &&
+  bangbaeContract.walkthroughSteps === 5 &&
+  bangbaeContract.verificationEvents >= 11 &&
+  bangbaeContract.comparableRows === 6 &&
+  bangbaeContract.comparableProvenanceComplete &&
+  bangbaeContract.exteriorEvidencePresent &&
+  bangbaeContract.exteriorOnlyEvidence &&
+  bangbaeContract.reportSnapshots >= 1
+);
+
 const summary = {
   propertyId,
   writesPerformed: 0,
@@ -90,9 +174,21 @@ const summary = {
     verifications: verifications.length,
     reportSnapshots: snapshots.length,
     storageObjectsVerified: storageChecks.length,
+    mediaPolicies: mediaPolicies.length,
+    floorPlans: active(floorPlans).length,
+    spatialSpaces: active(spatialSpaces).length,
+    mediaAssets: active(mediaAssets).length,
+    mediaSpaceLinks: active(mediaSpaceLinks).length,
+    viewerScenes: active(viewerScenes).length,
+    viewerNodes: active(viewerNodes).length,
+    viewerEdges: viewerEdges.length,
+    walkthroughRoutes: active(walkthroughRoutes).length,
+    walkthroughSteps: active(walkthroughSteps).length,
+    verificationEvents: verificationEvents.length,
   },
+  bangbaeContract,
   storageChecks,
-  passed: propertyRows.length === 1 && storageChecks.length === assets.length,
+  passed: propertyRows.length === 1 && storageChecks.length === assets.length && bangbaePassed,
 };
 
 console.log(JSON.stringify(summary, null, 2));
