@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import ProductionAuthGate from './components/ProductionAuthGate';
 import PropertyList from './pages/PropertyList';
 const PropertyForm = lazy(() => import('./pages/PropertyForm'));
+const PropertyDiscoveryPage = lazy(() => import('./pages/PropertyDiscoveryPage'));
 const PropertyHubPage = lazy(() => import('./pages/PropertyHubPage'));
 const ExcelImport = lazy(() => import('./pages/ExcelImport'));
 const BulkIntakePage = lazy(() => import('./pages/BulkIntakePage'));
@@ -104,6 +105,7 @@ function AppContent() {
     <Route element={<Layout />}>
       <Route index element={<PropertyList />} />
       <Route path="control-center" element={<AgentControlCenterPage />} />
+      <Route path="discover" element={<PropertyDiscoveryPage />} />
       <Route path="agents/:agentId" element={<AgentWorkspacePage />} />
       <Route path="property/new" element={<PropertyForm settings={settings} />} />
       <Route path="property/:id" element={<PropertyHubPage />} />
