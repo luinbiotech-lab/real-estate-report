@@ -1,5 +1,5 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AddRounded, ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, SaveRounded } from '@mui/icons-material';
 import { Button, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/material';
 import MapAutomationPanel from '../components/MapAutomationPanel';
@@ -24,11 +24,21 @@ const sections: Record<string, Field[]> = {
 const analysisFields: Field[] = [{ label: '특징', key: 'features' }, { label: '투자포인트', key: 'investmentPoints' }, { label: '입지분석', key: 'locationAnalysis' }, { label: '개발계획', key: 'developmentPlan' }, { label: '추천용도', key: 'recommendedUse' }, { label: '리스크', key: 'risks' }, { label: '종합의견', key: 'overallOpinion' }, { label: '인근거래사례', key: 'nearbyTransactions' }];
 
 export default function PropertyForm({ settings }: { settings: Settings }) {
-  const { id } = useParams(); const navigate = useNavigate();
+  const { id } = useParams(); const navigate = useNavigate(); const location = useLocation();
   const [property, setProperty] = useState<Property>({ ...emptyProperty, managerName: settings.defaultManager, managerPhone: settings.phone, managerEmail: settings.email, companyName: settings.companyName });
   const [error, setError] = useState('');
   const [discoveryResult, setDiscoveryResult] = useState<PropertyDiscoveryResult>();
-  useEffect(() => { if (id) propertyRepository.getById(id).then((value) => value && setProperty({ ...emptyProperty, ...value, briefingItems: value.briefingItems ?? [] })); }, [id]);
+  useEffect(() => {
+    if (id) {
+      propertyRepository.getById(id).then((value) => value && setProperty({ ...emptyProperty, ...value, briefingItems: value.briefingItems ?? [] }));
+      return;
+    }
+    const state = location.state as { discoveryResult?: PropertyDiscoveryResult; discoveryPatch?: Partial<Property> } | null;
+    if (state?.discoveryResult) {
+      setDiscoveryResult(state.discoveryResult);
+      setProperty((previous) => ({ ...previous, ...(state.discoveryPatch ?? publicPropertyDiscoveryService.patchFrom(state.discoveryResult!)) }));
+    }
+  }, [id, location.state]);
   const change = (key: keyof Property, value: ChangeValue) => setProperty((previous) => { const next = { ...previous, [key]: value }; if (key === 'landAreaPyeong') next.landAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'landAreaSqm') next.landAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; if (key === 'totalFloorAreaPyeong') next.totalFloorAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'totalFloorAreaSqm') next.totalFloorAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; return next; });
   const upload = (key: 'mainImage' | 'mapImage' | 'locationAnalysisImage' | 'additionalImages', event: ChangeEvent<HTMLInputElement>) => { const files = [...(event.target.files || [])]; Promise.all(files.map((file) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); }))).then((urls) => change(key, key === 'additionalImages' ? [...property.additionalImages, ...urls] : urls[0] || '')); };
   const makeAdditionalPrimary = (index: number) => { const selected = property.additionalImages[index]; if (!selected) return; const remaining = property.additionalImages.filter((_, itemIndex) => itemIndex !== index); change('additionalImages', property.mainImage ? [property.mainImage, ...remaining] : remaining); change('mainImage', selected); };
