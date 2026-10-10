@@ -122,7 +122,7 @@ export default function PropertyPublicDiscoveryPanel({
       {result.operatingBusinessEvidence?.sameAddress?.length ? <Box sx={{ mt: 1.5 }}>
         <strong>동일 주소 영업 업소 관측</strong>
         <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
-          {result.operatingBusinessEvidence.sameAddress.slice(0, 8).map((business) => <div key={business.businessId || business.businessName} style={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr 110px' }, gap: 8, padding: '8px 10px', border: '1px solid #e4e7ec', borderRadius: 8, fontSize: 13 }}>
+          {result.operatingBusinessEvidence.sameAddress.slice(0, 8).map((business) => <div key={business.businessId || business.businessName} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) 110px', gap: 8, padding: '8px 10px', border: '1px solid #e4e7ec', borderRadius: 8, fontSize: 13 }}>
             <strong>{business.businessName}{business.branchName ? ` · ${business.branchName}` : ''}</strong>
             <span>{business.industrySmall || business.industryMiddle || business.industryLarge || '-'}</span>
             <span>{business.floor ? `${business.floor}층` : business.unit || '-'}</span>
