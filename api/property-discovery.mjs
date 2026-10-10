@@ -11,6 +11,7 @@ const asArray = (value) => value == null ? [] : Array.isArray(value) ? value : [
 const num = (value) => { const n = Number(String(value ?? '').replaceAll(',', '').trim()); return Number.isFinite(n) ? n : undefined; };
 const ymd = (value) => { const s=String(value??'').replace(/\D/g,''); return s.length===8 ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : ''; };
 const pyeong = (sqm) => sqm == null ? undefined : Math.round((sqm / 3.3058) * 100) / 100;
+const normalizedServiceKey = (value='') => { try { return decodeURIComponent(String(value).trim()); } catch { return String(value).trim(); } };
 
 function decodeXml(value='') {
   return String(value).replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g,'$1').replaceAll('&lt;','<').replaceAll('&gt;','>').replaceAll('&amp;','&').replaceAll('&quot;','"').trim();
@@ -242,7 +243,7 @@ export default async function handler(request,response){
   try{
     const address=await kakaoResolve(query);
     if(!address) return sendJson(response,200,{status:'not_found',query,publicDataConfigured:Boolean(process.env.DATA_GO_KR_SERVICE_KEY)},origin);
-    const key=String(process.env.DATA_GO_KR_SERVICE_KEY||'').trim();
+    const key=normalizedServiceKey(process.env.DATA_GO_KR_SERVICE_KEY||'');
     if(!key) return sendJson(response,200,{status:'partial',publicDataConfigured:false,address,building:null,floors:[],market:{commercial:[],land:[]},usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]},operatingBusinessEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',sameAddress:[],nearby:[]}},origin);
 
     const months=monthsBack(6);
