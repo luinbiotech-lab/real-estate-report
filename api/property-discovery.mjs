@@ -94,6 +94,14 @@ function normalizeTitle(row={}) {
 function normalizeFloor(row={}) {
   return { floorType:row.flrGbCdNm||'', floor:row.flrNoNm||'', areaSqm:num(row.area), mainUse:row.mainPurpsCdNm||row.etcPurps||'', structure:row.strctCdNm||row.etcStrct||'' };
 }
+function normalizeZone(row={}) {
+  return {
+    type: String(row.jijiguGbCdNm||row.jijiguGbCd||''),
+    code: String(row.jijiguCd||''),
+    name: String(row.jijiguCdNm||row.etcJijigu||''),
+    representativeYn: String(row.reprYn||row.representativeYn||'')
+  };
+}
 function monthsBack(count=6){
   const d=new Date(); const out=[];
   for(let i=0;i<count;i++){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(`${x.getFullYear()}${String(x.getMonth()+1).padStart(2,'0')}`);}
@@ -217,20 +225,51 @@ async function tradeRows(base,path,lawdCd,key,months) {
   }
   return results;
 }
-function normalizeTrade(row,type){
+function normalizeTrade(row,type,resolved){
   const amount=num(row.dealAmount||row.거래금액);
+  const legalDong=String(row.umdNm||row.법정동||'').trim();
+  const jibun=String(row.jibun||row.지번||'').trim();
+  const buildingName=String(row.buildingName||row.건물명||'').trim();
+  const buildingAreaSqm=num(row.buildingArea||row.건물면적);
+  const landAreaSqm=num(row.landArea||row.대지면적);
+  const targetJibun=`${Number(resolved.bun)}${Number(resolved.ji)>0?'-'+Number(resolved.ji):''}`;
+  const masked=/\*|X|x/.test(jibun);
+  const matchLevel=!masked && jibun===targetJibun
+    ? 'exact_lot'
+    : masked
+      ? 'masked_address_candidate'
+      : legalDong && legalDong.includes(resolved.region3)
+        ? 'same_dong_candidate'
+        : 'regional_candidate';
+  const basisArea=type==='land' ? landAreaSqm : buildingAreaSqm || landAreaSqm;
   return {
     type,
     dealAmount:amount,
     dealDate:[row.dealYear||row.년,row.dealMonth||row.월,row.dealDay||row.일].filter(Boolean).join('-'),
-    legalDong:row.umdNm||row.법정동||'',
-    jibun:row.jibun||row.지번||'',
-    buildingName:row.buildingName||row.건물명||'',
-    buildingAreaSqm:num(row.buildingArea||row.건물면적),
-    landAreaSqm:num(row.landArea||row.대지면적),
+    legalDong,
+    jibun,
+    buildingName,
+    buildingAreaSqm,
+    landAreaSqm,
     floor:row.floor||row.층||'',
     buildingUse:row.buildingUse||row.건물용도||'',
+    matchLevel,
+    pricePerSqm: amount && basisArea ? Math.round(amount / basisArea) : undefined,
+    pricePerPyeong: amount && basisArea ? Math.round(amount / (basisArea / 3.3058)) : undefined,
     raw:row
+  };
+}
+function marketSummary(rows){
+  const exact=rows.filter(row=>row.matchLevel==='exact_lot');
+  const prices=rows.map(row=>row.dealAmount).filter(value=>Number.isFinite(value)).sort((a,b)=>a-b);
+  const unitPrices=rows.map(row=>row.pricePerPyeong).filter(value=>Number.isFinite(value)).sort((a,b)=>a-b);
+  const median=(values)=>values.length ? values[Math.floor((values.length-1)/2)] : undefined;
+  return {
+    totalCandidates: rows.length,
+    exactLotCount: exact.length,
+    latestDealDate: rows.map(row=>row.dealDate).filter(Boolean).sort().at(-1),
+    medianDealAmount: median(prices),
+    medianPricePerPyeong: median(unitPrices)
   };
 }
 
@@ -247,9 +286,10 @@ export default async function handler(request,response){
     if(!key) return sendJson(response,200,{status:'partial',publicDataConfigured:false,address,building:null,floors:[],market:{commercial:[],land:[]},usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]},operatingBusinessEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',sameAddress:[],nearby:[]}},origin);
 
     const months=monthsBack(6);
-    const [titles,floors,commercialRaw,landRaw,electricityRaw,gasRaw,businessEvidence]=await Promise.all([
+    const [titles,floors,zones,commercialRaw,landRaw,electricityRaw,gasRaw,businessEvidence]=await Promise.all([
       building('getBrTitleInfo',address,key),
       building('getBrFlrOulnInfo',address,key),
+      building('getBrJijiguInfo',address,key),
       tradeRows(NRG_BASE,'getRTMSDataSvcNrgTrade',address.sigunguCd,key,months),
       tradeRows(LAND_BASE,'getRTMSDataSvcLandTrade',address.sigunguCd,key,months),
       energyRows('getBeElctyUsgInfo',address,key,months),
@@ -257,13 +297,15 @@ export default async function handler(request,response){
       operatingBusinesses(address,key)
     ]);
     const buildingTitle=titles[0] ? normalizeTitle(titles[0]) : null;
-    const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial')).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
-    const land=landRaw.map(r=>normalizeTrade(r,'land')).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
+    const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial',address)).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
+    const land=landRaw.map(r=>normalizeTrade(r,'land',address)).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
+    const marketRows=[...commercial,...land].sort((a,b)=>b.dealDate.localeCompare(a.dealDate));
+    const landUseZones=zones.map(normalizeZone).filter(zone=>zone.name);
     const usageEvidence=normalizeEnergy(electricityRaw,gasRaw,months);
     return sendJson(response,200,{
       status:'ok',publicDataConfigured:true,address,building:buildingTitle,
-      buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),
-      market:{commercial:commercial.slice(0,40),land:land.slice(0,40)},
+      buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),landUseZones,
+      market:{commercial:commercial.slice(0,40),land:land.slice(0,40),summary:marketSummary(marketRows),exactLot:marketRows.filter(row=>row.matchLevel==='exact_lot').slice(0,20)},
       usageEvidence,
       operatingBusinessEvidence:businessEvidence,
       sources:{
