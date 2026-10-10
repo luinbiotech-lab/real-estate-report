@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
+import { AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -70,6 +70,7 @@ export default function Layout() {
     <nav aria-label="DA:ON main navigation">
       <div className="side-primary">
         <NavLink to="/control-center" className="side-primary-link" title="A0 Control Center"><HubRounded /><span><strong>운영 홈</strong><small>오늘의 상태와 다음 작업</small></span></NavLink>
+        <NavLink to="/discover" className="side-primary-link"><SearchRounded /><span><strong>물건 조회</strong><small>주소·지번으로 건물 먼저 확인</small></span></NavLink>
         <NavLink to="/" end className="side-primary-link"><ApartmentRounded /><span><strong>물건 · Data Room</strong><small>물건과 자료 한곳에서 관리</small></span></NavLink>
       </div>
       <div className="side-category-list">{navGroups.map((group) => {
