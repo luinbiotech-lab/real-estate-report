@@ -72,6 +72,14 @@ export default function PropertyDiscoveryPage() {
         <div><small>물건번호</small><strong>{existing.propertyNumber || '-'}</strong></div>
         <div><small>주소</small><strong>{existing.address}</strong></div>
         <div><small>현재 매물상태</small><strong>{LISTING_STATUS_LABEL[existing.listingStatus || 'unknown'] || '미확인'}</strong></div>
+        <div><small>매매가</small><strong>{existing.salePrice ? new Intl.NumberFormat('ko-KR').format(existing.salePrice) + '원' : '-'}</strong></div>
+        <div><small>대지면적</small><strong>{existing.landAreaSqm ? existing.landAreaSqm.toLocaleString('ko-KR') + '㎡' : existing.landAreaPyeong ? existing.landAreaPyeong.toLocaleString('ko-KR') + '평' : '-'}</strong></div>
+        <div><small>연면적</small><strong>{existing.totalFloorAreaSqm ? existing.totalFloorAreaSqm.toLocaleString('ko-KR') + '㎡' : existing.totalFloorAreaPyeong ? existing.totalFloorAreaPyeong.toLocaleString('ko-KR') + '평' : '-'}</strong></div>
+        <div><small>주용도</small><strong>{existing.mainUse || '-'}</strong></div>
+        <div><small>구조</small><strong>{existing.structure || '-'}</strong></div>
+        <div><small>층수</small><strong>지상 {existing.groundFloors || 0} / 지하 {existing.basementFloors || 0}</strong></div>
+        <div><small>사용승인일</small><strong>{existing.completionDate || '-'}</strong></div>
+        <div><small>점유/명도</small><strong>{existing.occupancyStatus || '미확인'}</strong></div>
       </div>
     </section>}
 
