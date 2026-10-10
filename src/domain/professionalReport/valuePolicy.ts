@@ -27,7 +27,6 @@ function contextFor(fieldKey: string, verifications: PropertyVerification[], sou
   const verification = [...verifications].reverse().find((item) => item.fieldKey === fieldKey);
   const relatedSources = sources.filter((item) => {
     if (item.fieldKey === fieldKey || item.resourceType === fieldKey) return true;
-    if (item.sourceType !== 'excel_import' || item.resourceType !== 'property_import') return false;
     const explicitFields = item.metadata?.explicitFields;
     return Array.isArray(explicitFields) && explicitFields.some((value) => String(value) === fieldKey);
   });
