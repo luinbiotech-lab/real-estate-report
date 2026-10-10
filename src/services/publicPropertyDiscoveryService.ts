@@ -18,6 +18,12 @@ export interface DiscoveredFloor { floorType: string; floor: string; areaSqm?: n
 export interface DiscoveredTrade {
   type: 'commercial' | 'land'; dealAmount?: number; dealDate: string; legalDong: string; jibun: string;
   buildingName: string; buildingAreaSqm?: number; landAreaSqm?: number; floor: string; buildingUse: string;
+  matchLevel?: 'exact_lot' | 'masked_address_candidate' | 'same_dong_candidate' | 'regional_candidate';
+  pricePerSqm?: number; pricePerPyeong?: number;
+}
+export interface LandUseZone { type: string; code: string; name: string; representativeYn: string }
+export interface MarketSummary {
+  totalCandidates: number; exactLotCount: number; latestDealDate?: string; medianDealAmount?: number; medianPricePerPyeong?: number;
 }
 export interface BuildingUsageEvidence {
   state: 'energy_usage_observed' | 'no_public_record' | 'not_configured';
@@ -41,7 +47,8 @@ export interface OperatingBusinessEvidence {
 export interface PropertyDiscoveryResult {
   status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; address?: DiscoveredAddress;
   building?: DiscoveredBuilding | null; buildingCandidates?: DiscoveredBuilding[]; floors?: DiscoveredFloor[];
-  market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[] };
+  landUseZones?: LandUseZone[];
+  market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[]; summary?: MarketSummary; exactLot?: DiscoveredTrade[] };
   usageEvidence?: BuildingUsageEvidence;
   operatingBusinessEvidence?: OperatingBusinessEvidence;
   sources?: Record<string,string>; collectedAt?: string;
@@ -80,6 +87,7 @@ export const publicPropertyDiscoveryService = {
       floorAreaRatio: building?.floorAreaRatio || 0,
       structure: building?.structure || '',
       mainUse: building?.mainUse || '',
+      zoning: (result.landUseZones || []).map((zone) => zone.name).filter(Boolean).join(', '),
       groundFloors: building?.groundFloors || 0,
       basementFloors: building?.basementFloors || 0,
       completionDate: building?.completionDate || '',
@@ -104,7 +112,7 @@ export const publicPropertyDiscoveryService = {
         sourceType: 'public_api', sourceName: result.sources?.building || '국토교통부 건축HUB 건축물대장정보',
         sourceReference: result.building.rawPk || result.address.lotAddress, collectedAt: now,
         verificationStatus: 'confirmed',
-        metadata: { building: result.building, floors: result.floors || [], explicitFields: fieldList }, createdAt: now,
+        metadata: { building: result.building, floors: result.floors || [], landUseZones: result.landUseZones || [], explicitFields: fieldList }, createdAt: now,
       });
     }
     if ((result.market?.commercial.length || 0) + (result.market?.land.length || 0) > 0) {
