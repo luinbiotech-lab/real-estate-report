@@ -230,12 +230,13 @@ async function tradeRows(base,path,lawdCd,key,months) {
   return results;
 }
 function normalizeTrade(row,type,resolved){
-  const amount=num(row.dealAmount||row.거래금액);
+  const sourceDealAmountTenThousandWon=num(row.dealAmount||row.거래금액);
+  const amount=sourceDealAmountTenThousandWon!=null ? sourceDealAmountTenThousandWon*10000 : undefined;
   const legalDong=String(row.umdNm||row.법정동||'').trim();
   const jibun=String(row.jibun||row.지번||'').trim();
   const buildingName=String(row.buildingName||row.건물명||'').trim();
-  const buildingAreaSqm=num(row.buildingArea||row.건물면적);
-  const landAreaSqm=num(row.landArea||row.대지면적);
+  const buildingAreaSqm=num(row.buildingArea||row.buildingAr||row.excluUseAr||row.totalFloorAr||row.건물면적);
+  const landAreaSqm=num(row.landArea||row.landAr||row.dealArea||row.대지면적||row.거래면적);
   const targetJibun=`${Number(resolved.bun)}${Number(resolved.ji)>0?'-'+Number(resolved.ji):''}`;
   const masked=/\*|X|x/.test(jibun);
   const matchLevel=!masked && jibun===targetJibun
@@ -246,10 +247,16 @@ function normalizeTrade(row,type,resolved){
         ? 'same_dong_candidate'
         : 'regional_candidate';
   const basisArea=type==='land' ? landAreaSqm : buildingAreaSqm || landAreaSqm;
+  const year=String(row.dealYear||row.년||'').trim();
+  const month=String(row.dealMonth||row.월||'').trim().padStart(2,'0');
+  const day=String(row.dealDay||row.일||'').trim().padStart(2,'0');
   return {
     type,
     dealAmount:amount,
-    dealDate:[row.dealYear||row.년,row.dealMonth||row.월,row.dealDay||row.일].filter(Boolean).join('-'),
+    sourceDealAmountTenThousandWon,
+    dealAmountSourceUnit:'만원',
+    currency:'KRW',
+    dealDate:year ? `${year}-${month}-${day}` : '',
     legalDong,
     jibun,
     buildingName,
