@@ -5,6 +5,7 @@ const BLD_BASE = 'https://apis.data.go.kr/1613000/BldRgstHubService';
 const NRG_BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcNrgTrade';
 const LAND_BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcLandTrade';
 const ENERGY_BASE = 'https://apis.data.go.kr/1613000/BldEngyHubService';
+const SBIZ_RADIUS_URL = 'https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius';
 
 const asArray = (value) => value == null ? [] : Array.isArray(value) ? value : [value];
 const num = (value) => { const n = Number(String(value ?? '').replaceAll(',', '').trim()); return Number.isFinite(n) ? n : undefined; };
@@ -149,6 +150,60 @@ function normalizeEnergy(electricityRows,gasRows,months){
     monthly
   };
 }
+function normalizeAddressText(value=''){
+  return String(value).replace(/\s+/g,'').replace(/[()]/g,'').toLowerCase();
+}
+async function operatingBusinesses(resolved,key){
+  try{
+    const params=new URLSearchParams({
+      serviceKey:key,
+      radius:'40',
+      cx:String(resolved.longitude),
+      cy:String(resolved.latitude),
+      numOfRows:'100',
+      pageNo:'1',
+      type:'json'
+    });
+    const response=await fetch(`${SBIZ_RADIUS_URL}?${params}`);
+    if(!response.ok) return {state:'provider_unavailable',interpretation:`상가업소 공개 API 요청 실패 (${response.status})`,nearby:[],sameAddress:[]};
+    const body=await response.json();
+    const rawItems=asArray(body?.body?.items || body?.response?.body?.items?.item || body?.response?.body?.items);
+    const nearby=rawItems.map(row=>({
+      businessId:String(row.bizesId||''),
+      businessName:String(row.bizesNm||''),
+      branchName:String(row.brchNm||''),
+      industryLarge:String(row.indsLclsNm||''),
+      industryMiddle:String(row.indsMclsNm||''),
+      industrySmall:String(row.indsSclsNm||''),
+      lotAddress:String(row.lnoAdr||''),
+      roadAddress:String(row.rdnmAdr||''),
+      buildingName:String(row.bldNm||''),
+      floor:String(row.flrNo||''),
+      unit:String(row.hoNo||''),
+      longitude:num(row.lon),
+      latitude:num(row.lat)
+    }));
+    const targetLot=normalizeAddressText(resolved.lotAddress);
+    const targetRoad=normalizeAddressText(resolved.roadAddress);
+    const sameAddress=nearby.filter(item=>{
+      const lot=normalizeAddressText(item.lotAddress);
+      const road=normalizeAddressText(item.roadAddress);
+      return Boolean((targetLot && lot===targetLot) || (targetRoad && road===targetRoad));
+    });
+    return {
+      state:sameAddress.length ? 'operating_business_observed' : nearby.length ? 'nearby_business_observed' : 'no_public_record',
+      interpretation:sameAddress.length
+        ? `동일 주소에서 영업 중 상가업소 ${sameAddress.length}건이 관측되지만 건물 전체 점유를 확정하지 않음`
+        : nearby.length
+          ? '인근 영업 업소는 관측되지만 동일 주소 업소는 확인되지 않음'
+          : '공개 상가업소 기록이 없으며 공실을 의미하지 않음',
+      sameAddress:sameAddress.slice(0,30),
+      nearby:nearby.slice(0,50)
+    };
+  }catch(error){
+    return {state:'provider_unavailable',interpretation:error instanceof Error?error.message:'상가업소 공개 API 조회 실패',nearby:[],sameAddress:[]};
+  }
+}
 async function tradeRows(base,path,lawdCd,key,months) {
   const results=[];
   for(const ym of months){
@@ -188,16 +243,17 @@ export default async function handler(request,response){
     const address=await kakaoResolve(query);
     if(!address) return sendJson(response,200,{status:'not_found',query,publicDataConfigured:Boolean(process.env.DATA_GO_KR_SERVICE_KEY)},origin);
     const key=String(process.env.DATA_GO_KR_SERVICE_KEY||'').trim();
-    if(!key) return sendJson(response,200,{status:'partial',publicDataConfigured:false,address,building:null,floors:[],market:{commercial:[],land:[]},usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]}},origin);
+    if(!key) return sendJson(response,200,{status:'partial',publicDataConfigured:false,address,building:null,floors:[],market:{commercial:[],land:[]},usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]},operatingBusinessEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',sameAddress:[],nearby:[]}},origin);
 
     const months=monthsBack(6);
-    const [titles,floors,commercialRaw,landRaw,electricityRaw,gasRaw]=await Promise.all([
+    const [titles,floors,commercialRaw,landRaw,electricityRaw,gasRaw,businessEvidence]=await Promise.all([
       building('getBrTitleInfo',address,key),
       building('getBrFlrOulnInfo',address,key),
       tradeRows(NRG_BASE,'getRTMSDataSvcNrgTrade',address.sigunguCd,key,months),
       tradeRows(LAND_BASE,'getRTMSDataSvcLandTrade',address.sigunguCd,key,months),
       energyRows('getBeElctyUsgInfo',address,key,months),
-      energyRows('getBeGasUsgInfo',address,key,months)
+      energyRows('getBeGasUsgInfo',address,key,months),
+      operatingBusinesses(address,key)
     ]);
     const buildingTitle=titles[0] ? normalizeTitle(titles[0]) : null;
     const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial')).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
@@ -208,12 +264,14 @@ export default async function handler(request,response){
       buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),
       market:{commercial:commercial.slice(0,40),land:land.slice(0,40)},
       usageEvidence,
+      operatingBusinessEvidence:businessEvidence,
       sources:{
         address:'Kakao Local Address API',
         building:'국토교통부 건축HUB 건축물대장정보',
         commercial:'국토교통부 상업업무용 부동산 매매 실거래가',
         land:'국토교통부 토지 매매 실거래가',
-        energy:'국토교통부 건축HUB 건물에너지정보'
+        energy:'국토교통부 건축HUB 건물에너지정보',
+        operatingBusinesses:'소상공인시장진흥공단 상가(상권)정보'
       },
       collectedAt:new Date().toISOString()
     },origin);
