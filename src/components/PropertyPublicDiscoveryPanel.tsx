@@ -88,6 +88,12 @@ export default function PropertyPublicDiscoveryPanel({
       {!result.publicDataConfigured && <Alert severity="info" sx={{ mt: 1.25 }}>
         주소·좌표 식별은 완료했습니다. 건축물대장/국토부 실거래 자동조회는 공공데이터포털 서비스키 등록 후 활성화됩니다.
       </Alert>}
+      {result.publicDataConfigured && result.status === 'partial' && <Alert severity="warning" sx={{ mt: 1.25 }}>
+        공공데이터 서비스키는 연결됐지만 일부 공급원 응답 또는 활용권한이 부족합니다. 성공한 항목은 유지하며 실패 공급원만 재확인합니다.
+        {result.providerStatus ? <div style={{ marginTop: 6, fontSize: 12 }}>
+          {Object.entries(result.providerStatus).filter(([, state]) => !state.ok).map(([name, state]) => <div key={name}>· {name}: {state.error || '응답 없음'}</div>)}
+        </div> : null}
+      </Alert>}
 
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1, mt: 1.25 }}>
         <div style={{ background: '#f8fafc', border: '1px solid #e4e7ec', borderRadius: 8, padding: 10 }}>
