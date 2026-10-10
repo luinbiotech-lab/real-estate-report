@@ -19,10 +19,18 @@ export interface DiscoveredTrade {
   type: 'commercial' | 'land'; dealAmount?: number; dealDate: string; legalDong: string; jibun: string;
   buildingName: string; buildingAreaSqm?: number; landAreaSqm?: number; floor: string; buildingUse: string;
 }
+export interface BuildingUsageEvidence {
+  state: 'energy_usage_observed' | 'no_public_record' | 'not_configured';
+  interpretation: string;
+  positiveMonths: number;
+  latestObservedMonth?: string;
+  monthly: Array<{ useYm: string; electricityKwh?: number; gasKwh?: number }>;
+}
 export interface PropertyDiscoveryResult {
   status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; address?: DiscoveredAddress;
   building?: DiscoveredBuilding | null; buildingCandidates?: DiscoveredBuilding[]; floors?: DiscoveredFloor[];
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[] };
+  usageEvidence?: BuildingUsageEvidence;
   sources?: Record<string,string>; collectedAt?: string;
 }
 
@@ -92,6 +100,20 @@ export const publicPropertyDiscoveryService = {
         sourceType: 'market_data', sourceName: '국토교통부 실거래가 공개자료',
         sourceReference: `${result.address.region2} 최근 6개월`, collectedAt: now,
         verificationStatus: 'confirmed', metadata: { market: result.market, explicitFields: ['nearbyTransactions'] }, createdAt: now,
+      });
+    }
+    if (result.usageEvidence && result.usageEvidence.state !== 'not_configured') {
+      await propertyDataRoomRepository.saveDataSource({
+        id: `building-energy:${propertyId}`, propertyId, fieldKey: 'occupancyStatus', resourceType: 'building_energy_usage_evidence',
+        sourceType: 'public_api', sourceName: result.sources?.energy || '국토교통부 건축HUB 건물에너지정보',
+        sourceReference: result.address.lotAddress, collectedAt: now,
+        verificationStatus: 'imported',
+        metadata: {
+          usageEvidence: result.usageEvidence,
+          evidenceSemantics: 'occupancy_supporting_evidence_only',
+          occupancyConfirmed: false,
+        },
+        createdAt: now,
       });
     }
   },
