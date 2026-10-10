@@ -95,8 +95,17 @@ export default function PropertyPublicDiscoveryPanel({
         </div>
         <div style={{ background: '#f8fafc', border: '1px solid #e4e7ec', borderRadius: 8, padding: 10 }}>
           <small style={{ color: '#667085' }}>실제 사용 / 점유 상태</small>
-          <div style={{ fontWeight: 700, marginTop: 3 }}>미확인</div>
-          <div style={{ color: '#667085', fontSize: 12, marginTop: 3 }}>건축물대장의 용도와 실제 점유·영업 상태는 다를 수 있어 현장/별도 데이터로 확인합니다.</div>
+          <div style={{ fontWeight: 700, marginTop: 3 }}>
+            {result.usageEvidence?.state === 'energy_usage_observed'
+              ? '에너지 사용 흔적 있음'
+              : result.usageEvidence?.state === 'no_public_record'
+                ? '공개 사용량 자료 없음'
+                : '미확인'}
+          </div>
+          <div style={{ color: '#667085', fontSize: 12, marginTop: 3 }}>
+            {result.usageEvidence?.interpretation || '건축물대장의 용도와 실제 점유·영업 상태는 다를 수 있어 현장/별도 데이터로 확인합니다.'}
+            {result.usageEvidence?.latestObservedMonth ? ` · 최근 관측 ${result.usageEvidence.latestObservedMonth}` : ''}
+          </div>
         </div>
       </Box>
 
