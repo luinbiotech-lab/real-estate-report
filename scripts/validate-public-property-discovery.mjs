@@ -6,6 +6,9 @@ const panel = read('src/components/PropertyPublicDiscoveryPanel.tsx');
 const service = read('src/services/publicPropertyDiscoveryService.ts');
 const form = read('src/pages/PropertyForm.tsx');
 const valuePolicy = read('src/domain/professionalReport/valuePolicy.ts');
+const discoveryPage = read('src/pages/PropertyDiscoveryPage.tsx');
+const app = read('src/App.tsx');
+const layout = read('src/components/Layout.tsx');
 
 for (const marker of [
   "KAKAO_ADDRESS",
@@ -58,6 +61,10 @@ for (const marker of [
 
 if (!form.includes('<PropertyPublicDiscoveryPanel')) throw new Error('PropertyForm public discovery panel 연결 누락');
 if (!form.includes('publicPropertyDiscoveryService.persist')) throw new Error('PropertyForm discovery provenance 저장 연결 누락');
+if (!form.includes('location.state')) throw new Error('Discovery → PropertyForm state 전달 연결 누락');
+if (!discoveryPage.includes('주소 · 지번으로 물건 조회') || !discoveryPage.includes('이 물건 등록')) throw new Error('Address-first discovery workspace contract 누락');
+if (!app.includes('path="discover"')) throw new Error('Discovery route 누락');
+if (!layout.includes('to="/discover"')) throw new Error('Discovery primary navigation 누락');
 if (!valuePolicy.includes('Array.isArray(explicitFields)')) throw new Error('Report public-source explicitFields provenance 연결 누락');
 
 console.log('PASS public property discovery contract');
