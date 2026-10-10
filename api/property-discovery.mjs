@@ -107,6 +107,10 @@ function monthsBack(count=6){
   for(let i=0;i<count;i++){const x=new Date(d.getFullYear(),d.getMonth()-i,1);out.push(`${x.getFullYear()}${String(x.getMonth()+1).padStart(2,'0')}`);}
   return out;
 }
+async function safeProvider(label, task){
+  try { return { label, ok:true, value:await task(), error:undefined }; }
+  catch(error){ return { label, ok:false, value:[], error:error instanceof Error?error.message:String(error) }; }
+}
 async function energyRows(path,resolved,key,months){
   const rows=[];
   for(const useYm of months){
@@ -286,16 +290,25 @@ export default async function handler(request,response){
     if(!key) return sendJson(response,200,{status:'partial',publicDataConfigured:false,address,building:null,floors:[],market:{commercial:[],land:[]},usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]},operatingBusinessEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',sameAddress:[],nearby:[]}},origin);
 
     const months=monthsBack(6);
-    const [titles,floors,zones,commercialRaw,landRaw,electricityRaw,gasRaw,businessEvidence]=await Promise.all([
-      building('getBrTitleInfo',address,key),
-      building('getBrFlrOulnInfo',address,key),
-      building('getBrJijiguInfo',address,key),
-      tradeRows(NRG_BASE,'getRTMSDataSvcNrgTrade',address.sigunguCd,key,months),
-      tradeRows(LAND_BASE,'getRTMSDataSvcLandTrade',address.sigunguCd,key,months),
-      energyRows('getBeElctyUsgInfo',address,key,months),
-      energyRows('getBeGasUsgInfo',address,key,months),
-      operatingBusinesses(address,key)
+    const [titleResult,floorResult,zoneResult,commercialResult,landResult,electricityResult,gasResult,businessResult]=await Promise.all([
+      safeProvider('buildingTitle',()=>building('getBrTitleInfo',address,key)),
+      safeProvider('buildingFloors',()=>building('getBrFlrOulnInfo',address,key)),
+      safeProvider('landUseZones',()=>building('getBrJijiguInfo',address,key)),
+      safeProvider('commercialTrades',()=>tradeRows(NRG_BASE,'getRTMSDataSvcNrgTrade',address.sigunguCd,key,months)),
+      safeProvider('landTrades',()=>tradeRows(LAND_BASE,'getRTMSDataSvcLandTrade',address.sigunguCd,key,months)),
+      safeProvider('electricityUsage',()=>energyRows('getBeElctyUsgInfo',address,key,months)),
+      safeProvider('gasUsage',()=>energyRows('getBeGasUsgInfo',address,key,months)),
+      safeProvider('operatingBusinesses',()=>operatingBusinesses(address,key))
     ]);
+    const titles=titleResult.value, floors=floorResult.value, zones=zoneResult.value;
+    const commercialRaw=commercialResult.value, landRaw=landResult.value;
+    const electricityRaw=electricityResult.value, gasRaw=gasResult.value;
+    const businessEvidence=businessResult.ok
+      ? businessResult.value
+      : {state:'provider_unavailable',interpretation:businessResult.error||'상가업소 공급원 조회 실패',nearby:[],sameAddress:[]};
+    const providerStatus=Object.fromEntries([
+      titleResult,floorResult,zoneResult,commercialResult,landResult,electricityResult,gasResult,businessResult
+    ].map(result=>[result.label,{ok:result.ok,error:result.error}]));
     const buildingTitle=titles[0] ? normalizeTitle(titles[0]) : null;
     const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial',address)).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
     const land=landRaw.map(r=>normalizeTrade(r,'land',address)).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
@@ -303,7 +316,7 @@ export default async function handler(request,response){
     const landUseZones=zones.map(normalizeZone).filter(zone=>zone.name);
     const usageEvidence=normalizeEnergy(electricityRaw,gasRaw,months);
     return sendJson(response,200,{
-      status:'ok',publicDataConfigured:true,address,building:buildingTitle,
+      status:Object.values(providerStatus).every((item)=>item.ok) ? 'ok' : 'partial',publicDataConfigured:true,address,building:buildingTitle,providerStatus,
       buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),landUseZones,
       market:{commercial:commercial.slice(0,40),land:land.slice(0,40),summary:marketSummary(marketRows),exactLot:marketRows.filter(row=>row.matchLevel==='exact_lot').slice(0,20)},
       usageEvidence,
