@@ -5,9 +5,11 @@ import { Button, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/ma
 import MapAutomationPanel from '../components/MapAutomationPanel';
 import ExteriorVerificationPanel from '../components/ExteriorVerificationPanel';
 import BrandMapEditor from '../components/BrandMapEditor';
+import PropertyPublicDiscoveryPanel from '../components/PropertyPublicDiscoveryPanel';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { BRIEFING_CATEGORIES } from '../services/briefingService';
 import { streetViewProvenanceService } from '../services/streetViewProvenanceService';
+import { publicPropertyDiscoveryService, type PropertyDiscoveryResult } from '../services/publicPropertyDiscoveryService';
 import { emptyProperty, type BriefingItem, type BrandMapSettings, type Property, type Settings, type StreetViewVerification } from '../types';
 
 type Field = { label: string; key: keyof Property; type?: string };
@@ -25,6 +27,7 @@ export default function PropertyForm({ settings }: { settings: Settings }) {
   const { id } = useParams(); const navigate = useNavigate();
   const [property, setProperty] = useState<Property>({ ...emptyProperty, managerName: settings.defaultManager, managerPhone: settings.phone, managerEmail: settings.email, companyName: settings.companyName });
   const [error, setError] = useState('');
+  const [discoveryResult, setDiscoveryResult] = useState<PropertyDiscoveryResult>();
   useEffect(() => { if (id) propertyRepository.getById(id).then((value) => value && setProperty({ ...emptyProperty, ...value, briefingItems: value.briefingItems ?? [] })); }, [id]);
   const change = (key: keyof Property, value: ChangeValue) => setProperty((previous) => { const next = { ...previous, [key]: value }; if (key === 'landAreaPyeong') next.landAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'landAreaSqm') next.landAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; if (key === 'totalFloorAreaPyeong') next.totalFloorAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'totalFloorAreaSqm') next.totalFloorAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; return next; });
   const upload = (key: 'mainImage' | 'mapImage' | 'locationAnalysisImage' | 'additionalImages', event: ChangeEvent<HTMLInputElement>) => { const files = [...(event.target.files || [])]; Promise.all(files.map((file) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); }))).then((urls) => change(key, key === 'additionalImages' ? [...property.additionalImages, ...urls] : urls[0] || '')); };
@@ -32,8 +35,13 @@ export default function PropertyForm({ settings }: { settings: Settings }) {
   const addBriefingItem = () => change('briefingItems', [...property.briefingItems, { category: 'fashion', name: '', description: '', source: 'manual' }]);
   const updateBriefingItem = (index: number, patch: Partial<BriefingItem>) => change('briefingItems', property.briefingItems.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const removeBriefingItem = (index: number) => change('briefingItems', property.briefingItems.filter((_, itemIndex) => itemIndex !== index));
-  const save = async () => { if (!property.name || !property.address || !property.tradeType) { setError('물건명, 주소, 거래유형은 필수입니다.'); return; } const now = new Date().toISOString(); const data = { ...property, id: property.id || crypto.randomUUID(), briefingItems: property.briefingItems ?? [], briefingUpdatedAt: property.briefingItems.length ? now : property.briefingUpdatedAt || '', createdAt: property.createdAt || now, updatedAt: now }; await (id ? propertyRepository.update(data) : propertyRepository.create(data)); await streetViewProvenanceService.ensure(data); navigate('/'); };
+  const save = async () => { if (!property.name || !property.address || !property.tradeType) { setError('물건명, 주소, 거래유형은 필수입니다.'); return; } setError(''); try { const now = new Date().toISOString(); const data = { ...property, id: property.id || crypto.randomUUID(), briefingItems: property.briefingItems ?? [], briefingUpdatedAt: property.briefingItems.length ? now : property.briefingUpdatedAt || '', createdAt: property.createdAt || now, updatedAt: now }; await (id ? propertyRepository.update(data) : propertyRepository.create(data)); if (discoveryResult) await publicPropertyDiscoveryService.persist(data.id, discoveryResult); await streetViewProvenanceService.ensure(data); navigate('/'); } catch (reason) { setError(reason instanceof Error ? reason.message : '물건 저장에 실패했습니다.'); } };
   return <><header className="page-header compact"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>목록으로</Button><h1>{id ? '물건 수정' : '개별 물건 등록'}</h1><p>입력한 하나의 물건 데이터가 보고서·제안서·입지 브리핑에 함께 반영됩니다.</p></div><Button variant="contained" startIcon={<SaveRounded />} onClick={save}>저장하기</Button></header>{error && <div className="error-banner">{error}</div>}<div className="form-layout"><div>
+    <PropertyPublicDiscoveryPanel
+      property={property}
+      onResolved={setDiscoveryResult}
+      onApply={(patch) => setProperty((previous) => ({ ...previous, ...patch }))}
+    />
     {Object.entries(sections).map(([title, fields]) => <section className="form-section" key={title}><h2>{title}</h2><div className="field-grid">{fields.map((field) => field.key === 'tradeType' ? <TextField select key={field.key} label={field.label} value={property.tradeType} onChange={(event) => change(field.key, event.target.value)}>{['매매', '전세', '월세'].map((value) => <MenuItem key={value} value={value}>{value}</MenuItem>)}</TextField> : <TextField key={field.key} label={field.label} type={field.type || 'text'} value={String(property[field.key] ?? '')} InputLabelProps={field.type === 'date' ? { shrink: true } : undefined} onChange={(event) => change(field.key, field.type === 'number' ? Number(event.target.value) : event.target.value)} />)}</div>{title === '거래정보' && <FormControlLabel control={<Checkbox checked={property.negotiable} onChange={(event) => change('negotiable', event.target.checked)} />} label="가격 협의 가능" />}</section>)}
     <MapAutomationPanel property={property} change={change} />
     <section className="form-section"><h2>분석 / 설명</h2><div className="field-grid textareas">{analysisFields.map((field) => <TextField key={field.key} multiline minRows={3} label={field.label} value={String(property[field.key])} onChange={(event) => change(field.key, event.target.value)} />)}</div></section>
