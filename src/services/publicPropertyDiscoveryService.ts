@@ -45,6 +45,7 @@ export const publicPropertyDiscoveryService = {
     const building = result.building;
     if (!address) return {};
     return {
+      name: building?.buildingName || address.lotAddress || address.officialAddress,
       address: address.officialAddress || address.lotAddress,
       latitude: address.latitude,
       longitude: address.longitude,
