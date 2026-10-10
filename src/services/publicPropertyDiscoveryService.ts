@@ -51,6 +51,7 @@ export interface PropertyDiscoveryResult {
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[]; summary?: MarketSummary; exactLot?: DiscoveredTrade[] };
   usageEvidence?: BuildingUsageEvidence;
   operatingBusinessEvidence?: OperatingBusinessEvidence;
+  providerStatus?: Record<string, { ok: boolean; error?: string }>;
   sources?: Record<string,string>; collectedAt?: string;
 }
 
