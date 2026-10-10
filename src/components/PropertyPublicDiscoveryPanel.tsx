@@ -42,9 +42,11 @@ export default function PropertyPublicDiscoveryPanel({
   };
 
   const building = result?.building;
-  const trades = [...(result?.market?.commercial || []), ...(result?.market?.land || [])]
+  const trades = [...(result?.market?.exactLot || []), ...(result?.market?.commercial || []), ...(result?.market?.land || [])]
+    .filter((trade, index, rows) => rows.findIndex((candidate) => candidate.type === trade.type && candidate.dealDate === trade.dealDate && candidate.jibun === trade.jibun && candidate.dealAmount === trade.dealAmount) === index)
     .sort((a, b) => b.dealDate.localeCompare(a.dealDate))
     .slice(0, 6);
+  const marketSummary = result?.market?.summary;
 
   return <section className="form-section">
     <div className="section-heading-row">
@@ -140,6 +142,7 @@ export default function PropertyPublicDiscoveryPanel({
             ['건축면적', sqm(building.buildingAreaSqm)],
             ['층수', `지상 ${building.groundFloors} / 지하 ${building.basementFloors}`],
             ['주용도', building.mainUse || '-'],
+            ['용도지역·지구', result.landUseZones?.map((zone) => zone.name).filter(Boolean).join(', ') || '-'],
             ['구조', building.structure || '-'],
             ['건폐율', building.buildingCoverageRate != null ? building.buildingCoverageRate + '%' : '-'],
             ['용적률', building.floorAreaRatio != null ? building.floorAreaRatio + '%' : '-'],
@@ -158,13 +161,24 @@ export default function PropertyPublicDiscoveryPanel({
         주소는 식별됐지만 해당 지번에서 건축물대장 표제부를 찾지 못했습니다. 나대지/부속지번/집합건물 여부를 추가 확인해야 합니다.
       </Alert>}
 
+      {marketSummary && <Box sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1 }}>
+        {[
+          ['최근 6개월 후보', marketSummary.totalCandidates + '건'],
+          ['동일 지번', marketSummary.exactLotCount + '건'],
+          ['거래가 중앙값', won(marketSummary.medianDealAmount)],
+          ['평당가 중앙값', won(marketSummary.medianPricePerPyeong)],
+        ].map(([label, value]) => <div key={label} style={{ background: '#f8fafc', border: '1px solid #e4e7ec', borderRadius: 8, padding: 10 }}>
+          <small style={{ color: '#667085' }}>{label}</small><div style={{ fontWeight: 700, marginTop: 4 }}>{value}</div>
+        </div>)}
+      </Box>}
+
       {trades.length > 0 && <Box sx={{ mt: 1.5 }}>
         <strong>최근 실거래 후보</strong>
         <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
           {trades.map((trade, index) => <div key={index} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 130px', gap: 8, padding: '8px 10px', border: '1px solid #e4e7ec', borderRadius: 8, fontSize: 13 }}>
             <span>{trade.dealDate || '-'}</span>
-            <span>{trade.legalDong} {trade.jibun} {trade.buildingName}</span>
-            <strong style={{ textAlign: 'right' }}>{won(trade.dealAmount)}</strong>
+            <span>{trade.matchLevel === 'exact_lot' ? '● 동일 지번 · ' : ''}{trade.legalDong} {trade.jibun} {trade.buildingName}</span>
+            <strong style={{ textAlign: 'right' }}>{won(trade.dealAmount)}{trade.pricePerPyeong ? <small style={{ display: 'block', fontWeight: 400 }}>{won(trade.pricePerPyeong)}/평</small> : null}</strong>
           </div>)}
         </div>
         <small style={{ display: 'block', marginTop: 7, color: '#667085' }}>동일 건물 확정 거래가 아니라 법정동·최근기간 기준 후보입니다. 지번/면적/용도 일치도를 추가 검증해 비교거래로 승격합니다.</small>
