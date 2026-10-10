@@ -87,6 +87,25 @@ export default function PropertyPublicDiscoveryPanel({
         주소·좌표 식별은 완료했습니다. 건축물대장/국토부 실거래 자동조회는 공공데이터포털 서비스키 등록 후 활성화됩니다.
       </Alert>}
 
+      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 1, mt: 1.25 }}>
+        <div style={{ background: '#f8fafc', border: '1px solid #e4e7ec', borderRadius: 8, padding: 10 }}>
+          <small style={{ color: '#667085' }}>현재 매물 여부</small>
+          <div style={{ fontWeight: 700, marginTop: 3 }}>미확인</div>
+          <div style={{ color: '#667085', fontSize: 12, marginTop: 3 }}>국토부 공공데이터는 현재 매물 등록 여부를 제공하지 않습니다. 별도 매물 공급원 연동이 필요합니다.</div>
+        </div>
+        <div style={{ background: '#f8fafc', border: '1px solid #e4e7ec', borderRadius: 8, padding: 10 }}>
+          <small style={{ color: '#667085' }}>실제 사용 / 점유 상태</small>
+          <div style={{ fontWeight: 700, marginTop: 3 }}>미확인</div>
+          <div style={{ color: '#667085', fontSize: 12, marginTop: 3 }}>건축물대장의 용도와 실제 점유·영업 상태는 다를 수 있어 현장/별도 데이터로 확인합니다.</div>
+        </div>
+      </Box>
+
+      <Button sx={{ mt: 1.25 }} variant={building ? 'text' : 'outlined'} onClick={() => onApply({
+        address: result.address!.officialAddress || result.address!.lotAddress,
+        latitude: result.address!.latitude,
+        longitude: result.address!.longitude,
+      })}>주소·좌표 적용</Button>
+
       {building && <Box sx={{ mt: 1.5 }}>
         <h3 style={{ margin: '0 0 8px' }}>{building.buildingName || '건축물대장 조회 건물'}</h3>
         <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1 }}>
