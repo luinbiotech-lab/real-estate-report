@@ -32,6 +32,12 @@ for (const marker of [
   "publicDataConfigured",
   "sigunguCd",
   "bjdongCd",
+  "getBrJijiguInfo",
+  "exact_lot",
+  "medianPricePerPyeong",
+  "safeProvider",
+  "providerStatus",
+  "normalizedServiceKey",
 ]) if (!api.includes(marker)) throw new Error(`Property discovery API marker missing: ${marker}`);
 
 for (const marker of [
@@ -42,6 +48,9 @@ for (const marker of [
   '공개 사용량 자료 없음',
   '동일 주소 영업 업소 관측',
   '건물 전체 사용상태 확정값으로 사용하지 않습니다',
+  '동일 지번',
+  '평당가 중앙값',
+  '일부 공급원 응답 또는 활용권한이 부족합니다',
   '공적정보 적용',
   '주소·좌표 적용',
   '건축물대장/국토부 실거래 자동조회',
