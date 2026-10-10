@@ -37,7 +37,7 @@ if (!text.onePage.includes('propertyDataRoomRepository.getBundle(id)') || !text.
 if (!text.snapshotPage.includes('DaonProfessionalReportMaster') || !text.snapshotPage.includes('최신 데이터로 다시 생성')) throw new Error('Snapshot 화면은 DAON PROFESSIONAL MASTER와 최신 데이터 재생성 경로를 제공해야 합니다.');
 if (!text.professionalMaster.includes('DaonReportOpeningPage') || !text.professionalMaster.includes('DaonDetail7PageMaster') || !text.professionalMaster.includes('DaonReportClosingPage')) throw new Error('DAON PROFESSIONAL MASTER는 OPENING 1P + DAON_DETAIL_7P_MASTER 7P + CLOSING 1P 구조를 유지해야 합니다.');
 if (!text.snapshotPage.includes('applySnapshotMediaPolicy') || !text.snapshotPage.includes("item.id !== 'property-main'") || !text.snapshotPage.includes("item.category !== 'additional'")) throw new Error('7P Snapshot 경계는 내부사진 제외 물건의 미분류 직접 대표이미지와 추가이미지를 제거해야 합니다.');
-if (!text.snapshotPage.includes('disabled={confirming || !reportReady}')) throw new Error('검증 미완료 보고서의 확정 버튼은 비활성화되어야 합니다.');
+if (!text.snapshotPage.includes("disabled={confirming || !reportReady || freshness?.isStale}")) throw new Error('검증 미완료 또는 stale 보고서의 확정 버튼은 비활성화되어야 합니다.');
 if (!text.snapshotPage.includes('comparables: snapshot.snapshotData.investment.comparables ?? []')) throw new Error('기존 immutable Snapshot은 신규 비교거래 배열 누락 시 안전하게 정규화되어야 합니다.');
 if (!text.snapshotService.includes('viewModel.dataQuality.reportReady')) throw new Error('서비스 계층에서도 검증 미완료 보고서 확정을 차단해야 합니다.');
 if (!text.dataBuilder.includes("dataPolicy: 'property-and-data-room-only'")) throw new Error('보고서 데이터 정책은 Property + Data Room only를 유지해야 합니다.');
