@@ -1,5 +1,6 @@
 import http from 'node:http';
 import { serverEnv } from './env.mjs';
+import propertyDiscoveryHandler from '../api/property-discovery.mjs';
 
 const HOST = serverEnv.mapProxyHost;
 const PORT = serverEnv.mapProxyPort;
@@ -118,8 +119,15 @@ const server = http.createServer(async (request, response) => {
     if (url.pathname === '/api/status') return json(response, 200, {
       naverConfigured: naverConfigured(),
       kakaoConfigured: kakaoConfigured(),
+      publicDataConfigured: Boolean(serverEnv.dataGoKrServiceKey),
       allowedOriginCount: serverEnv.mapProxyAllowedOrigins.length,
     }, allowedOrigin);
+    if (url.pathname === '/api/property-discovery') {
+      if (!process.env.KAKAO_REST_API_KEY && serverEnv.kakaoRestApiKey) process.env.KAKAO_REST_API_KEY = serverEnv.kakaoRestApiKey;
+      if (!process.env.DATA_GO_KR_SERVICE_KEY && serverEnv.dataGoKrServiceKey) process.env.DATA_GO_KR_SERVICE_KEY = serverEnv.dataGoKrServiceKey;
+      if (!process.env.MAP_PROXY_ALLOWED_ORIGINS) process.env.MAP_PROXY_ALLOWED_ORIGINS = serverEnv.mapProxyAllowedOrigins.join(',');
+      return await propertyDiscoveryHandler(request, response);
+    }
     if (url.pathname === '/api/maps/geocode') return await geocode(url, response, allowedOrigin);
     if (url.pathname === '/api/maps/static') return await staticMap(url, response, allowedOrigin);
     if (url.pathname === '/api/poi/search') return await poiSearch(url, response, allowedOrigin);
