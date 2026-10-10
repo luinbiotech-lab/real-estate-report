@@ -96,15 +96,19 @@ export default function PropertyPublicDiscoveryPanel({
         <div style={{ background: '#f8fafc', border: '1px solid #e4e7ec', borderRadius: 8, padding: 10 }}>
           <small style={{ color: '#667085' }}>실제 사용 / 점유 상태</small>
           <div style={{ fontWeight: 700, marginTop: 3 }}>
-            {result.usageEvidence?.state === 'energy_usage_observed'
-              ? '에너지 사용 흔적 있음'
-              : result.usageEvidence?.state === 'no_public_record'
-                ? '공개 사용량 자료 없음'
-                : '미확인'}
+            {result.operatingBusinessEvidence?.state === 'operating_business_observed'
+              ? `동일 주소 영업 업소 ${result.operatingBusinessEvidence.sameAddress.length}건 관측`
+              : result.usageEvidence?.state === 'energy_usage_observed'
+                ? '에너지 사용 흔적 있음'
+                : result.usageEvidence?.state === 'no_public_record'
+                  ? '공개 사용량 자료 없음'
+                  : '미확인'}
           </div>
           <div style={{ color: '#667085', fontSize: 12, marginTop: 3 }}>
-            {result.usageEvidence?.interpretation || '건축물대장의 용도와 실제 점유·영업 상태는 다를 수 있어 현장/별도 데이터로 확인합니다.'}
-            {result.usageEvidence?.latestObservedMonth ? ` · 최근 관측 ${result.usageEvidence.latestObservedMonth}` : ''}
+            {result.operatingBusinessEvidence?.state === 'operating_business_observed'
+              ? result.operatingBusinessEvidence.interpretation
+              : result.usageEvidence?.interpretation || '건축물대장의 용도와 실제 점유·영업 상태는 다를 수 있어 현장/별도 데이터로 확인합니다.'}
+            {result.usageEvidence?.latestObservedMonth ? ` · 최근 에너지 관측 ${result.usageEvidence.latestObservedMonth}` : ''}
           </div>
         </div>
       </Box>
@@ -114,6 +118,18 @@ export default function PropertyPublicDiscoveryPanel({
         latitude: result.address!.latitude,
         longitude: result.address!.longitude,
       })}>주소·좌표 적용</Button>
+
+      {result.operatingBusinessEvidence?.sameAddress?.length ? <Box sx={{ mt: 1.5 }}>
+        <strong>동일 주소 영업 업소 관측</strong>
+        <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+          {result.operatingBusinessEvidence.sameAddress.slice(0, 8).map((business) => <div key={business.businessId || business.businessName} style={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1.2fr 1fr 110px' }, gap: 8, padding: '8px 10px', border: '1px solid #e4e7ec', borderRadius: 8, fontSize: 13 }}>
+            <strong>{business.businessName}{business.branchName ? ` · ${business.branchName}` : ''}</strong>
+            <span>{business.industrySmall || business.industryMiddle || business.industryLarge || '-'}</span>
+            <span>{business.floor ? `${business.floor}층` : business.unit || '-'}</span>
+          </div>)}
+        </div>
+        <small style={{ display: 'block', marginTop: 7, color: '#667085' }}>소상공인시장진흥공단의 영업 중 상가업소 관측값입니다. 미등록 사업자·공실·주거·사무실 점유를 모두 설명하지 않으므로 건물 전체 사용상태 확정값으로 사용하지 않습니다.</small>
+      </Box> : null}
 
       {building && <Box sx={{ mt: 1.5 }}>
         <h3 style={{ margin: '0 0 8px' }}>{building.buildingName || '건축물대장 조회 건물'}</h3>
