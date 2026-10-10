@@ -1,4 +1,5 @@
 export type TradeType = '매매' | '전세' | '월세';
+export type ListingStatus = 'unknown' | 'daon_exclusive' | 'daon_active' | 'external_observed' | 'off_market_confirmed';
 export type BriefingCategory = 'fashion' | 'beauty' | 'food' | 'officeCulture' | 'transport' | 'development' | 'other';
 export interface BriefingItem {
   category: BriefingCategory; name: string; description: string;
@@ -13,6 +14,7 @@ export interface StreetViewVerification {
 export interface Property {
   id: string; propertyNumber: string; name: string; buildingName: string; tradeType: TradeType;
   salePrice: number; deposit: number; monthlyRent: number; negotiable: boolean; occupancyStatus: string;
+  listingStatus?: ListingStatus; listingStatusSource?: string; listingStatusCheckedAt?: string; listingStatusNote?: string;
   address: string; detailAddress: string; latitude?: number; longitude?: number; nearbyStation: string; stationDistance: string; roadCondition: string;
   landAreaPyeong: number; landAreaSqm: number; totalFloorAreaPyeong: number; totalFloorAreaSqm: number; buildingAreaPyeong: number;
   zoning: string; mainUse: string; structure: string; basementFloors: number; groundFloors: number; completionDate: string;
@@ -48,7 +50,7 @@ export interface Settings {
 
 export const emptyProperty: Property = {
   id: '', propertyNumber: '', name: '', buildingName: '', tradeType: '매매', salePrice: 0, deposit: 0, monthlyRent: 0,
-  negotiable: false, occupancyStatus: '', address: '', detailAddress: '', nearbyStation: '', stationDistance: '', roadCondition: '',
+  negotiable: false, occupancyStatus: '', listingStatus: 'unknown', listingStatusSource: '', listingStatusCheckedAt: '', listingStatusNote: '', address: '', detailAddress: '', nearbyStation: '', stationDistance: '', roadCondition: '',
   landAreaPyeong: 0, landAreaSqm: 0, totalFloorAreaPyeong: 0, totalFloorAreaSqm: 0, buildingAreaPyeong: 0,
   zoning: '', mainUse: '', structure: '', basementFloors: 0, groundFloors: 0, completionDate: '', buildingCoverageRate: 0,
   floorAreaRatio: 0, elevator: '', parkingSpaces: 0, features: '', investmentPoints: '', locationAnalysis: '', developmentPlan: '',
