@@ -5,16 +5,23 @@ import { useNavigate } from 'react-router-dom';
 import PropertyPublicDiscoveryPanel from '../components/PropertyPublicDiscoveryPanel';
 import { emptyProperty, type Property } from '../types';
 import { publicPropertyDiscoveryService, type PropertyDiscoveryResult } from '../services/publicPropertyDiscoveryService';
+import { propertyRepository } from '../repositories/propertyRepository';
+import { LISTING_STATUS_LABEL } from '../services/marketPresenceService';
 
 export default function PropertyDiscoveryPage() {
   const navigate = useNavigate();
   const [preview, setPreview] = useState<Property>({ ...emptyProperty });
   const [result, setResult] = useState<PropertyDiscoveryResult>();
+  const [existing, setExisting] = useState<Property>();
 
   const patch = useMemo(() => result ? publicPropertyDiscoveryService.patchFrom(result) : undefined, [result]);
   const canRegister = Boolean(result?.address);
 
   const goRegister = () => {
+    if (existing) {
+      navigate(`/property/${existing.id}`);
+      return;
+    }
     if (!result || !patch) return;
     navigate('/property/new', {
       state: {
@@ -22,6 +29,14 @@ export default function PropertyDiscoveryPage() {
         discoveryPatch: patch,
       },
     });
+  };
+
+  const resolveExisting = async (value: PropertyDiscoveryResult) => {
+    if (!value.address) { setExisting(undefined); return; }
+    const normalize = (text: string) => text.replace(/\s+/g, '').toLowerCase();
+    const targets = [value.address.officialAddress, value.address.roadAddress, value.address.lotAddress].filter(Boolean).map(normalize);
+    const rows = await propertyRepository.getAll();
+    setExisting(rows.find((item) => targets.includes(normalize(item.address))));
   };
 
   return <>
@@ -33,7 +48,7 @@ export default function PropertyDiscoveryPage() {
       </div>
       <div className="actions">
         <Chip icon={<SearchRounded />} label="주소 우선 탐색" />
-        <Button variant="contained" endIcon={<ArrowForwardRounded />} disabled={!canRegister} onClick={goRegister}>이 물건 등록</Button>
+        <Button variant="contained" endIcon={<ArrowForwardRounded />} disabled={!canRegister} onClick={goRegister}>{existing ? '기존 Data Room 열기' : '이 물건 등록'}</Button>
       </div>
     </header>
 
@@ -42,9 +57,23 @@ export default function PropertyDiscoveryPage() {
       onResolved={(value) => {
         setResult(value);
         setPreview((previous) => ({ ...previous, ...publicPropertyDiscoveryService.patchFrom(value) }));
+        void resolveExisting(value);
       }}
       onApply={(value) => setPreview((previous) => ({ ...previous, ...value }))}
     />
+
+    {existing && <section className="panel">
+      <div className="section-heading-row">
+        <div><p className="eyebrow">EXISTING PROPERTY</p><h2>이미 등록된 물건입니다</h2><p>중복 생성하지 않고 기존 Data Room과 최신 검증자료를 사용합니다.</p></div>
+        <Chip size="small" color="primary" label={LISTING_STATUS_LABEL[existing.listingStatus || 'unknown'] || '미확인'} />
+      </div>
+      <div className="detail-grid">
+        <div><small>물건명</small><strong>{existing.name}</strong></div>
+        <div><small>물건번호</small><strong>{existing.propertyNumber || '-'}</strong></div>
+        <div><small>주소</small><strong>{existing.address}</strong></div>
+        <div><small>현재 매물상태</small><strong>{LISTING_STATUS_LABEL[existing.listingStatus || 'unknown'] || '미확인'}</strong></div>
+      </div>
+    </section>}
 
     {result?.address && <section className="panel">
       <div className="section-heading-row">
