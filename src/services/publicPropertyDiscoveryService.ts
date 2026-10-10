@@ -26,11 +26,24 @@ export interface BuildingUsageEvidence {
   latestObservedMonth?: string;
   monthly: Array<{ useYm: string; electricityKwh?: number; gasKwh?: number }>;
 }
+export interface OperatingBusiness {
+  businessId: string; businessName: string; branchName: string;
+  industryLarge: string; industryMiddle: string; industrySmall: string;
+  lotAddress: string; roadAddress: string; buildingName: string; floor: string; unit: string;
+  longitude?: number; latitude?: number;
+}
+export interface OperatingBusinessEvidence {
+  state: 'operating_business_observed' | 'nearby_business_observed' | 'no_public_record' | 'provider_unavailable' | 'not_configured';
+  interpretation: string;
+  sameAddress: OperatingBusiness[];
+  nearby: OperatingBusiness[];
+}
 export interface PropertyDiscoveryResult {
   status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; address?: DiscoveredAddress;
   building?: DiscoveredBuilding | null; buildingCandidates?: DiscoveredBuilding[]; floors?: DiscoveredFloor[];
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[] };
   usageEvidence?: BuildingUsageEvidence;
+  operatingBusinessEvidence?: OperatingBusinessEvidence;
   sources?: Record<string,string>; collectedAt?: string;
 }
 
@@ -111,6 +124,20 @@ export const publicPropertyDiscoveryService = {
         metadata: {
           usageEvidence: result.usageEvidence,
           evidenceSemantics: 'occupancy_supporting_evidence_only',
+          occupancyConfirmed: false,
+        },
+        createdAt: now,
+      });
+    }
+    if (result.operatingBusinessEvidence && !['not_configured', 'provider_unavailable'].includes(result.operatingBusinessEvidence.state)) {
+      await propertyDataRoomRepository.saveDataSource({
+        id: `operating-businesses:${propertyId}`, propertyId, fieldKey: 'occupancyStatus', resourceType: 'operating_business_evidence',
+        sourceType: 'public_api', sourceName: result.sources?.operatingBusinesses || '소상공인시장진흥공단 상가(상권)정보',
+        sourceReference: result.address.lotAddress, collectedAt: now,
+        verificationStatus: 'imported',
+        metadata: {
+          evidence: result.operatingBusinessEvidence,
+          evidenceSemantics: 'commercial_activity_supporting_evidence_only',
           occupancyConfirmed: false,
         },
         createdAt: now,
