@@ -4,8 +4,8 @@
 
 - Repository: `luinbiotech-lab/real-estate-report`
 - Release branch: `feat/daon-master-code-lock`
-- Release candidate HEAD: `e16cfba8d68cec78d09ea9ea23429b35bc713e24`
-- Current public Production commit: `e16cfba8d68cec78d09ea9ea23429b35bc713e24`
+- Release candidate HEAD: `3d9ead4cc84104e88cdafc992a4857ad5f75d9fe`
+- Current public Production commit: `3d9ead4cc84104e88cdafc992a4857ad5f75d9fe`
 - Public Production alias: `https://real-estate-report-lime.vercel.app`
 - Production Supabase project: `neeqcfxjwotyiodrlzvq`
 
@@ -23,6 +23,14 @@ Production deployment completed on 2026-10-08. Public alias is serving the relea
 - Supabase remote data adapter validation: PASS
 - Production readiness validator: PASS
 - Supabase Security Advisor: 0 lints
+
+### Snapshot freshness guard
+
+- Snapshot 생성 이후 Property / Data Room / Spatial 데이터 변경을 감지한다.
+- stale draft는 보고서 확정 버튼을 비활성화한다.
+- 서비스 계층에서도 stale snapshot의 ready 전환을 차단한다.
+- 기존 snapshot은 immutable하게 보존하고 최신 데이터로 새 버전을 생성한다.
+- E2E: old snapshot stale=true / regenerated snapshot stale=false / stale UI warning visible / confirm button disabled / browser errors 0.
 
 ### Report master
 
@@ -86,10 +94,10 @@ Excel, Digital Twin, report and Three.js code load as separate route/runtime chu
 
 ### Deployment
 
-- Production deployment ID: `dpl_EmPYJbTUet2LKnzBUeaWHuR2w39g`
+- Production deployment ID: `dpl_8spSzgmQv2XcfQ2Zzho8YB7epQ2o`
 - State: `READY`
 - Public alias: `https://real-estate-report-lime.vercel.app`
-- Production HEAD: `e16cfba8d68cec78d09ea9ea23429b35bc713e24`
+- Production HEAD: `3d9ead4cc84104e88cdafc992a4857ad5f75d9fe`
 - Recent Vercel runtime errors after deployment: 0
 - Production root HTTP: 200
 - Auth Gate is active on protected routes.
