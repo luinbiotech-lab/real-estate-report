@@ -66,7 +66,7 @@ const fieldList = [
   'address','buildingName','latitude','longitude','landAreaSqm','landAreaPyeong','buildingAreaPyeong',
   'totalFloorAreaSqm','totalFloorAreaPyeong','buildingCoverageRate','floorAreaRatio','structure','mainUse',
   'groundFloors','basementFloors','completionDate','parkingOfficial','parkingSpaces','elevator',
-  'officialLandPricePerSqm','officialLandValue','officialLandPriceYear','landCategory','landUseSituation','zoning'
+  'officialLandPricePerSqm','estimatedOfficialLandValue','officialLandPriceYear','landCategory','landUseSituation','zoning'
 ];
 
 export const publicPropertyDiscoveryService = {
@@ -104,7 +104,7 @@ export const publicPropertyDiscoveryService = {
       mainUse: building?.mainUse || '',
       zoning,
       officialLandPricePerSqm: landProfile?.officialLandPricePerSqm || 0,
-      officialLandValue: landProfile?.estimatedOfficialLandValue || 0,
+      estimatedOfficialLandValue: landProfile?.estimatedOfficialLandValue || 0,
       officialLandPriceYear: landProfile?.standardYear || '',
       landCategory: landProfile?.landCategory || '',
       landUseSituation: landProfile?.landUseSituation || '',
@@ -148,7 +148,7 @@ export const publicPropertyDiscoveryService = {
       );
       if (duplicate) continue;
       const addressField = ['address', 'latitude', 'longitude'].includes(fieldKey);
-      const landProfileField = ['officialLandPricePerSqm','officialLandValue','officialLandPriceYear','landCategory','landUseSituation'].includes(fieldKey)
+      const landProfileField = ['officialLandPricePerSqm','estimatedOfficialLandValue','officialLandPriceYear','landCategory','landUseSituation'].includes(fieldKey)
         || (fieldKey === 'zoning' && Boolean(result.landProfile));
       const candidate = {
         id: crypto.randomUUID(),
@@ -196,7 +196,7 @@ export const publicPropertyDiscoveryService = {
         verificationStatus: 'confirmed',
         metadata: {
           landProfile: result.landProfile,
-          explicitFields: ['officialLandPricePerSqm','officialLandValue','officialLandPriceYear','landCategory','landUseSituation','landAreaSqm','landAreaPyeong','zoning'],
+          explicitFields: ['officialLandPricePerSqm','estimatedOfficialLandValue','officialLandPriceYear','landCategory','landUseSituation','landAreaSqm','landAreaPyeong','zoning'],
         },
         createdAt: now,
       });
