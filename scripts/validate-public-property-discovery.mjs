@@ -38,6 +38,9 @@ for (const marker of [
   "safeProvider",
   "providerStatus",
   "normalizedServiceKey",
+  "currency:'KRW'",
+  "dealAmountSourceUnit:'만원'",
+  "sourceDealAmountTenThousandWon",
 ]) if (!api.includes(marker)) throw new Error(`Property discovery API marker missing: ${marker}`);
 
 for (const marker of [
