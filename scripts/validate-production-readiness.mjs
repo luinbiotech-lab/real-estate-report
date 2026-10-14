@@ -44,7 +44,7 @@ for (const file of Object.values(files)) {
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'DATA_GO_KR_SERVICE_KEY=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'VITE_REMOTE_OPERATIONAL_MODE=', 'VITE_REQUIRE_REMOTE_AUTH=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=', 'VITE_API_BASE_URL=', 'FRONTEND_HOST=', 'FRONTEND_PORT=', 'MAP_PROXY_INTERNAL_URL=']) {
+for (const key of ['NAVER_MAP_CLIENT_ID=', 'NAVER_MAP_CLIENT_SECRET=', 'KAKAO_REST_API_KEY=', 'DATA_GO_KR_SERVICE_KEY=', 'VWORLD_API_KEY=', 'VWORLD_API_DOMAIN=', 'VITE_KAKAO_JAVASCRIPT_KEY=', 'VITE_REMOTE_OPERATIONAL_MODE=', 'VITE_REQUIRE_REMOTE_AUTH=', 'MAP_PROXY_HOST=', 'MAP_PROXY_PORT=', 'MAP_PROXY_ALLOWED_ORIGINS=', 'VITE_API_BASE_URL=', 'FRONTEND_HOST=', 'FRONTEND_PORT=', 'MAP_PROXY_INTERNAL_URL=']) {
   if (!text.envExample.includes(key)) throw new Error(`환경변수 예시 누락: ${key}`);
 }
 if (!text.envExample.includes('Server-only credentials. Never commit real values.')) throw new Error('서버 전용 지도 credential 보안 경계를 명시해야 합니다.');
@@ -204,6 +204,10 @@ for (const marker of ['MAP_PROXY_ALLOWED_ORIGINS', 'VERCEL_PROJECT_PRODUCTION_UR
 
 for (const marker of [
   'DATA_GO_KR_SERVICE_KEY',
+  'VWORLD_API_KEY',
+  'getIndvdLandPriceAttr',
+  'getLandCharacteristics',
+  'getLandUseAttr',
   'BldRgstHubService',
   'RTMSDataSvcNrgTrade',
   'RTMSDataSvcLandTrade',
@@ -280,7 +284,8 @@ const status = {
   protectedBackendProxy: 'VERCEL_SERVERLESS_CONFIGURED',
   publicPropertyDiscoveryAddressLayer: 'READY_KAKAO_ADDRESS_RESOLUTION',
   publicPropertyDiscoveryOfficialDataLayer: 'SERVICE_KEY_REQUIRED_IN_PRODUCTION',
-  publicPropertyDiscoveryProviders: 'BUILDING_REGISTER_TRANSACTIONS_ZONING_ENERGY_OPERATING_BUSINESS_CODE_READY',
+  publicPropertyDiscoveryVWorldLayer: 'VWORLD_KEY_REQUIRED_IN_PRODUCTION',
+  publicPropertyDiscoveryProviders: 'BUILDING_REGISTER_TRANSACTIONS_ZONING_ENERGY_OPERATING_BUSINESS_VWORLD_LAND_PROFILE_CODE_READY',
   productionDomainAllowlist: 'VERCEL_EXACT_ORIGIN_AUTO_PLUS_OPTIONAL_ALLOWLIST',
   spreadsheetParserDependency,
   spreadsheetParserKnownAdvisoryFloor: '>=0.20.2',
