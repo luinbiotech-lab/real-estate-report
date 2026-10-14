@@ -12,6 +12,7 @@ const layout = read('src/components/Layout.tsx');
 const marketPanel = read('src/components/MarketPresencePanel.tsx');
 const marketService = read('src/services/marketPresenceService.ts');
 const types = read('src/types.ts');
+const vercel = read('vercel.json');
 
 for (const marker of [
   "KAKAO_ADDRESS",
@@ -80,6 +81,7 @@ if (!form.includes('location.state')) throw new Error('Discovery → PropertyFor
 if (!discoveryPage.includes('주소 · 지번으로 물건 조회') || !discoveryPage.includes('이 물건 등록')) throw new Error('Address-first discovery workspace contract 누락');
 if (!app.includes('path="discover"')) throw new Error('Discovery route 누락');
 if (!layout.includes('to="/discover"')) throw new Error('Discovery primary navigation 누락');
+if (!vercel.includes('"source": "/discover"') || !vercel.includes('"destination": "/index.html"')) throw new Error('Discovery Vercel SPA rewrite 누락');
 if (!valuePolicy.includes('Array.isArray(explicitFields)')) throw new Error('Report public-source explicitFields provenance 연결 누락');
 for (const marker of ['ListingStatus', 'daon_exclusive', 'external_observed', 'off_market_confirmed']) if (!types.includes(marker)) throw new Error(`Listing status model missing: ${marker}`);
 if (!marketPanel.includes('현재 매물 상태') || !marketPanel.includes('외부 공급원이 연결되기 전에는 자동으로 매물이라고 판단하지 않습니다')) throw new Error('Market presence UI contract 누락');
