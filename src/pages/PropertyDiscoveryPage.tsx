@@ -126,7 +126,13 @@ export default function PropertyDiscoveryPage() {
         <div><small>건축물대장</small><strong>{result.building ? '조회됨' : result.publicDataConfigured ? '해당 표제부 없음' : '공공데이터 키 필요'}</strong></div>
         <div><small>최근 실거래 후보</small><strong>{(result.market?.commercial.length || 0) + (result.market?.land.length || 0)}건</strong></div>
         <div><small>매물 여부</small><strong>미확인 · 별도 공급원 필요</strong></div>
-        <div><small>점유/사용</small><strong>{result.operatingBusinessEvidence?.state === 'operating_business_observed' ? '영업 업소 evidence 있음' : result.usageEvidence?.state === 'energy_usage_observed' ? '에너지 사용 evidence 있음' : '미확인'}</strong></div>
+        <div><small>점유/사용</small><strong>{result.operatingBusinessEvidence?.state === 'operating_business_observed'
+          ? '공공 영업업소 evidence 있음'
+          : result.kakaoPoiEvidence?.state === 'same_address_poi_observed'
+            ? `Kakao 동일주소 POI ${result.kakaoPoiEvidence.sameAddress.length}건`
+            : result.usageEvidence?.state === 'energy_usage_observed'
+              ? '에너지 사용 evidence 있음'
+              : '미확인'}</strong></div>
       </div>
     </section>}
   </>;
