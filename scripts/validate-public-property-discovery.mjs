@@ -39,6 +39,12 @@ for (const marker of [
   "safeProvider",
   "providerStatus",
   "normalizedServiceKey",
+  "vworldLandProfile",
+  "parcelPnu",
+  "getLandUseAttr",
+  "getLandCharacteristics",
+  "getIndvdLandPriceAttr",
+  "VWORLD_BASE",
   "currency:'KRW'",
   "dealAmountSourceUnit:'만원'",
   "sourceDealAmountTenThousandWon",
@@ -56,6 +62,9 @@ for (const marker of [
   '평당가 중앙값',
   '일부 공급원 응답 또는 활용권한이 부족합니다',
   '공적정보 적용',
+  '토지 공적정보 적용',
+  '개별공시지가',
+  '감정가·시세가 아닙니다',
   '주소·좌표 적용',
   '건축물대장/국토부 실거래 자동조회',
 ]) if (!panel.includes(marker)) throw new Error(`Property discovery panel marker missing: ${marker}`);
@@ -65,6 +74,8 @@ for (const marker of [
   'building-register:',
   'public-market:',
   'building-energy:',
+  'official-land-profile:',
+  'official_land_profile',
   'building_energy_usage_evidence',
   'occupancy_supporting_evidence_only',
   'operating-businesses:',
@@ -79,6 +90,7 @@ if (!form.includes('<PropertyPublicDiscoveryPanel')) throw new Error('PropertyFo
 if (!form.includes('publicPropertyDiscoveryService.persist')) throw new Error('PropertyForm discovery provenance 저장 연결 누락');
 if (!service.includes('async refreshExisting') || !service.includes('saveVerificationCandidate')) throw new Error('기존 물건 공공자료 비파괴 refresh/verification candidate 연결 누락');
 if (!service.includes("fieldKey === 'name'") || !service.includes('equivalentAddresses.includes(currentAddress)')) throw new Error('공공자료 refresh 검증후보 노이즈 억제 규칙 누락');
+if (!service.includes('const patch: Partial<Property>') || service.includes("buildingName: building?.buildingName || ''")) throw new Error('부분 공공조회가 기존 Property를 빈값/0으로 덮어쓰지 않도록 sparse patch를 유지해야 합니다.');
 if (!discoveryPage.includes('공공자료 Data Room 저장') || !discoveryPage.includes('refreshExisting(existing, result)')) throw new Error('기존 물건 공공자료 refresh UI 연결 누락');
 if (!form.includes('location.state')) throw new Error('Discovery → PropertyForm state 전달 연결 누락');
 if (!discoveryPage.includes('주소 · 지번으로 물건 조회') || !discoveryPage.includes('이 물건 등록')) throw new Error('Address-first discovery workspace contract 누락');
