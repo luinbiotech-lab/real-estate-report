@@ -38,9 +38,9 @@ requireContains(excelPage, 'if (!propertiesSaved) await propertyRepository.creat
 requireContains(propertyRepository, 'remoteDataGateway.bulkInsertProperties', 'Remote Property bulk insert 연결이 누락되었습니다.');
 requireContains(dataRoomRepository, 'async saveDataSourcesBulk', 'PropertyDataSource bulk 저장 repository가 누락되었습니다.');
 
-requireContains(valuePolicy, "item.sourceType !== 'excel_import'", 'Report value policy의 Excel provenance 연결이 누락되었습니다.');
-requireContains(valuePolicy, "item.resourceType !== 'property_import'", 'Report value policy의 property_import 연결이 누락되었습니다.');
-requireContains(valuePolicy, "explicitFields.some", 'Report field별 Excel sourceIds 연결이 누락되었습니다.');
+requireContains(valuePolicy, 'const explicitFields = item.metadata?.explicitFields', 'Report value policy의 generic explicitFields 연결이 누락되었습니다.');
+requireContains(valuePolicy, 'Array.isArray(explicitFields)', 'Report value policy의 explicitFields 배열 검증이 누락되었습니다.');
+requireContains(valuePolicy, 'explicitFields.some', 'Report field별 sourceIds 연결이 누락되었습니다.');
 
 requireContains(bulkPage, 'const CANDIDATE_PAGE_SIZE = 50', 'Bulk 검증 후보 50건 pagination 상수가 누락되었습니다.');
 requireContains(bulkPage, 'pending.slice((candidatePage - 1) * CANDIDATE_PAGE_SIZE', 'Bulk 검증 후보 slice pagination이 누락되었습니다.');
