@@ -120,6 +120,7 @@ const server = http.createServer(async (request, response) => {
       naverConfigured: naverConfigured(),
       kakaoConfigured: kakaoConfigured(),
       publicDataConfigured: Boolean(serverEnv.dataGoKrServiceKey),
+      vworldConfigured: Boolean(serverEnv.vworldApiKey),
       allowedOriginCount: serverEnv.mapProxyAllowedOrigins.length,
     }, allowedOrigin);
     if (url.pathname === '/api/property-discovery') {
