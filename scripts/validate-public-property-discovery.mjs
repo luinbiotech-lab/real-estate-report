@@ -12,6 +12,8 @@ const layout = read('src/components/Layout.tsx');
 const marketPanel = read('src/components/MarketPresencePanel.tsx');
 const marketService = read('src/services/marketPresenceService.ts');
 const types = read('src/types.ts');
+const settingsPage = read('src/pages/SettingsPage.tsx');
+const proxyClient = read('src/services/maps/proxyClient.ts');
 const vercel = read('vercel.json');
 const reportDataBuilder = read('src/services/reportEngine/reportDataBuilder.ts');
 const reportTypes = read('src/domain/professionalReport/types.ts');
@@ -119,5 +121,13 @@ if (!form.includes('marketPresenceService.persist')) throw new Error('PropertyFo
 if (!reportDataBuilder.includes("officialLandPricePerSqm: number('officialLandPricePerSqm'") || !reportDataBuilder.includes("context('estimatedOfficialLandValue', { calculated: true")) throw new Error('공시지가/계산토지가액 Report Snapshot 연결 누락');
 if (!reportTypes.includes('officialLandPricePerSqm: ReportValue<number>') || !reportTypes.includes('estimatedOfficialLandValue: ReportValue<number>')) throw new Error('Report land public-data type 계약 누락');
 if (!propertyHub.includes('개별공시지가') || !propertyHub.includes('공시지가 기준 토지가액')) throw new Error('Property Hub 공시지가 노출 누락');
+
+if (!settingsPage.includes('외부 데이터 공급원')) throw new Error('Settings data provider readiness UI 누락');
+for (const marker of ['DATA_GO_KR_SERVICE_KEY가 없습니다', 'VWORLD_API_KEY가 없습니다', 'Vercel 서버 환경변수']) {
+  if (!settingsPage.includes(marker)) throw new Error(`Settings provider readiness marker missing: ${marker}`);
+}
+for (const marker of ['publicDataConfigured', 'vworldConfigured']) {
+  if (!proxyClient.includes(marker)) throw new Error(`Proxy provider readiness contract missing: ${marker}`);
+}
 
 console.log('PASS public property discovery contract');
