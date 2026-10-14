@@ -98,6 +98,52 @@ export const publicPropertyDiscoveryService = {
     };
   },
 
+  async refreshExisting(property: Property, result: PropertyDiscoveryResult) {
+    await this.persist(property.id, result);
+    const patch = this.patchFrom(result);
+    const existingCandidates = await propertyDataRoomRepository.getVerificationCandidates(property.id);
+    const created = [];
+    const now = result.collectedAt || new Date().toISOString();
+    const isMeaningful = (value: unknown) => value !== undefined && value !== null && value !== '' && !(typeof value === 'number' && value === 0);
+    const same = (a: unknown, b: unknown) => {
+      if (typeof a === 'number' || typeof b === 'number') return Number(a || 0) === Number(b || 0);
+      return String(a ?? '').trim() === String(b ?? '').trim();
+    };
+    for (const [fieldKey, candidateValue] of Object.entries(patch)) {
+      if (!isMeaningful(candidateValue)) continue;
+      const currentValue = property[fieldKey as keyof Property];
+      if (same(currentValue, candidateValue)) continue;
+      const duplicate = existingCandidates.some((candidate) =>
+        candidate.fieldKey === fieldKey &&
+        candidate.decisionStatus === 'pending' &&
+        same(candidate.candidateValue, candidateValue)
+      );
+      if (duplicate) continue;
+      const addressField = ['address', 'latitude', 'longitude'].includes(fieldKey);
+      const candidate = {
+        id: crypto.randomUUID(),
+        propertyId: property.id,
+        fieldKey,
+        currentValue,
+        candidateValue,
+        sourceType: addressField ? 'map_provider' as const : 'public_api' as const,
+        sourceName: addressField
+          ? result.sources?.address || 'Kakao Local Address API'
+          : result.sources?.building || '국토교통부 건축HUB 건축물대장정보',
+        sourceReference: addressField
+          ? result.address?.lotAddress || result.address?.officialAddress
+          : result.building?.rawPk || result.address?.lotAddress,
+        confidence: addressField ? 0.99 : 0.95,
+        decisionStatus: 'pending' as const,
+        note: '공공데이터 자동조회 결과가 현재 Property 값과 달라 검토가 필요합니다.',
+        createdAt: now,
+      };
+      await propertyDataRoomRepository.saveVerificationCandidate(candidate);
+      created.push(candidate);
+    }
+    return { persisted: true, candidateCount: created.length, candidates: created };
+  },
+
   async persist(propertyId: string, result: PropertyDiscoveryResult) {
     if (!result.address) return;
     const now = result.collectedAt || new Date().toISOString();
