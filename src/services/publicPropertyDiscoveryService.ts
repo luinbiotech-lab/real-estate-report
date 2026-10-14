@@ -80,41 +80,56 @@ export const publicPropertyDiscoveryService = {
   patchFrom(result: PropertyDiscoveryResult): Partial<Property> {
     const address = result.address;
     const building = result.building;
-    if (!address) return {};
     const landProfile = result.landProfile;
-    const landAreaSqm = building?.landAreaSqm || landProfile?.landAreaSqm || 0;
-    const zoning = (result.landUseZones || []).map((zone) => zone.name).filter(Boolean).join(', ')
-      || landProfile?.useZones?.join(', ')
-      || landProfile?.primaryUseZone
-      || '';
-    return {
+    if (!address) return {};
+
+    const patch: Partial<Property> = {
       name: building?.buildingName || address.lotAddress || address.officialAddress,
       address: address.officialAddress || address.lotAddress,
       latitude: address.latitude,
       longitude: address.longitude,
-      buildingName: building?.buildingName || '',
-      landAreaSqm,
-      landAreaPyeong: landAreaSqm ? Math.round((landAreaSqm / 3.3058) * 100) / 100 : 0,
-      buildingAreaPyeong: building?.buildingAreaPyeong || 0,
-      totalFloorAreaSqm: building?.totalFloorAreaSqm || 0,
-      totalFloorAreaPyeong: building?.totalFloorAreaPyeong || 0,
-      buildingCoverageRate: building?.buildingCoverageRate || 0,
-      floorAreaRatio: building?.floorAreaRatio || 0,
-      structure: building?.structure || '',
-      mainUse: building?.mainUse || '',
-      zoning,
-      officialLandPricePerSqm: landProfile?.officialLandPricePerSqm || 0,
-      estimatedOfficialLandValue: landProfile?.estimatedOfficialLandValue || 0,
-      officialLandPriceYear: landProfile?.standardYear || '',
-      landCategory: landProfile?.landCategory || '',
-      landUseSituation: landProfile?.landUseSituation || '',
-      groundFloors: building?.groundFloors || 0,
-      basementFloors: building?.basementFloors || 0,
-      completionDate: building?.completionDate || '',
-      parkingOfficial: building?.parkingOfficial,
-      parkingSpaces: building?.parkingOfficial || 0,
-      elevator: building?.elevatorCount != null ? String(building.elevatorCount) : '',
     };
+
+    if (building) {
+      if (building.buildingName) patch.buildingName = building.buildingName;
+      if (building.landAreaSqm) {
+        patch.landAreaSqm = building.landAreaSqm;
+        patch.landAreaPyeong = Math.round((building.landAreaSqm / 3.3058) * 100) / 100;
+      }
+      if (building.buildingAreaPyeong) patch.buildingAreaPyeong = building.buildingAreaPyeong;
+      if (building.totalFloorAreaSqm) patch.totalFloorAreaSqm = building.totalFloorAreaSqm;
+      if (building.totalFloorAreaPyeong) patch.totalFloorAreaPyeong = building.totalFloorAreaPyeong;
+      if (building.buildingCoverageRate != null) patch.buildingCoverageRate = building.buildingCoverageRate;
+      if (building.floorAreaRatio != null) patch.floorAreaRatio = building.floorAreaRatio;
+      if (building.structure) patch.structure = building.structure;
+      if (building.mainUse) patch.mainUse = building.mainUse;
+      if (building.groundFloors) patch.groundFloors = building.groundFloors;
+      if (building.basementFloors) patch.basementFloors = building.basementFloors;
+      if (building.completionDate) patch.completionDate = building.completionDate;
+      if (building.parkingOfficial != null) {
+        patch.parkingOfficial = building.parkingOfficial;
+        patch.parkingSpaces = building.parkingOfficial;
+      }
+      if (building.elevatorCount != null) patch.elevator = String(building.elevatorCount);
+    }
+
+    if (!patch.landAreaSqm && landProfile?.landAreaSqm) {
+      patch.landAreaSqm = landProfile.landAreaSqm;
+      patch.landAreaPyeong = Math.round((landProfile.landAreaSqm / 3.3058) * 100) / 100;
+    }
+    if (landProfile?.officialLandPricePerSqm) patch.officialLandPricePerSqm = landProfile.officialLandPricePerSqm;
+    if (landProfile?.estimatedOfficialLandValue) patch.estimatedOfficialLandValue = landProfile.estimatedOfficialLandValue;
+    if (landProfile?.standardYear) patch.officialLandPriceYear = landProfile.standardYear;
+    if (landProfile?.landCategory) patch.landCategory = landProfile.landCategory;
+    if (landProfile?.landUseSituation) patch.landUseSituation = landProfile.landUseSituation;
+
+    const zoning = (result.landUseZones || []).map((zone) => zone.name).filter(Boolean).join(', ')
+      || landProfile?.useZones?.join(', ')
+      || landProfile?.primaryUseZone
+      || '';
+    if (zoning) patch.zoning = zoning;
+
+    return patch;
   },
 
   async refreshExisting(property: Property, result: PropertyDiscoveryResult) {
