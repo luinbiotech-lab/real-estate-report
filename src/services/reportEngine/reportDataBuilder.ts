@@ -150,6 +150,11 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     landAreaSqm: numericReportValue(landSqm, context('landAreaSqm', { calculated: landSqmCalculated, formatter: ((value: number) => formatNullableArea(value, '㎡')) as (value: never) => string })),
     landAreaPyeong: numericReportValue(landPyeong, context('landAreaPyeong', { calculated: landPyeongCalculated, formatter: ((value: number) => formatNullableArea(value, '평')) as (value: never) => string })),
     zoning: text('zoning'), roadCondition: text('roadCondition'),
+    officialLandPricePerSqm: number('officialLandPricePerSqm', formatNullableWon),
+    estimatedOfficialLandValue: numericReportValue(property.estimatedOfficialLandValue, context('estimatedOfficialLandValue', { calculated: true, formatter: formatNullableWon as (value: never) => string })),
+    officialLandPriceYear: text('officialLandPriceYear'),
+    landCategory: text('landCategory'),
+    landUseSituation: text('landUseSituation'),
   };
   const location = {
     latitude: numericReportValue(property.latitude, context('latitude')), longitude: numericReportValue(property.longitude, context('longitude')),
