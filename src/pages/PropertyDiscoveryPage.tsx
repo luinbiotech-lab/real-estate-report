@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Button, Chip } from '@mui/material';
-import { ArrowForwardRounded, SearchRounded } from '@mui/icons-material';
+import { Alert, Button, Chip } from '@mui/material';
+import { ArrowForwardRounded, RefreshRounded, SearchRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import PropertyPublicDiscoveryPanel from '../components/PropertyPublicDiscoveryPanel';
 import { emptyProperty, type Property } from '../types';
@@ -13,6 +13,8 @@ export default function PropertyDiscoveryPage() {
   const [preview, setPreview] = useState<Property>({ ...emptyProperty });
   const [result, setResult] = useState<PropertyDiscoveryResult>();
   const [existing, setExisting] = useState<Property>();
+  const [refreshing, setRefreshing] = useState(false);
+  const [refreshMessage, setRefreshMessage] = useState('');
 
   const patch = useMemo(() => result ? publicPropertyDiscoveryService.patchFrom(result) : undefined, [result]);
   const canRegister = Boolean(result?.address);
@@ -37,6 +39,22 @@ export default function PropertyDiscoveryPage() {
     const targets = [value.address.officialAddress, value.address.roadAddress, value.address.lotAddress].filter(Boolean).map(normalize);
     const rows = await propertyRepository.getAll();
     setExisting(rows.find((item) => targets.includes(normalize(item.address))));
+  };
+
+  const refreshExisting = async () => {
+    if (!existing || !result) return;
+    setRefreshing(true);
+    setRefreshMessage('');
+    try {
+      const outcome = await publicPropertyDiscoveryService.refreshExisting(existing, result);
+      setRefreshMessage(outcome.candidateCount
+        ? `공공자료를 Data Room에 저장했고 현재값과 다른 ${outcome.candidateCount}개 필드를 검증후보로 생성했습니다.`
+        : '공공자료를 Data Room에 저장했습니다. 현재 Property와 다른 신규 검증후보는 없습니다.');
+    } catch (reason) {
+      setRefreshMessage(reason instanceof Error ? reason.message : '공공자료 저장에 실패했습니다.');
+    } finally {
+      setRefreshing(false);
+    }
   };
 
   return <>
@@ -65,8 +83,14 @@ export default function PropertyDiscoveryPage() {
     {existing && <section className="panel">
       <div className="section-heading-row">
         <div><p className="eyebrow">EXISTING PROPERTY</p><h2>이미 등록된 물건입니다</h2><p>중복 생성하지 않고 기존 Data Room과 최신 검증자료를 사용합니다.</p></div>
-        <Chip size="small" color="primary" label={LISTING_STATUS_LABEL[existing.listingStatus || 'unknown'] || '미확인'} />
+        <div className="actions">
+          <Chip size="small" color="primary" label={LISTING_STATUS_LABEL[existing.listingStatus || 'unknown'] || '미확인'} />
+          <Button size="small" variant="outlined" startIcon={<RefreshRounded />} disabled={refreshing || !result} onClick={() => void refreshExisting()}>
+            {refreshing ? '저장 중' : '공공자료 Data Room 저장'}
+          </Button>
+        </div>
       </div>
+      {refreshMessage && <Alert severity={refreshMessage.includes('실패') ? 'error' : 'success'} sx={{ mb: 1.5 }}>{refreshMessage}</Alert>}
       <div className="detail-grid">
         <div><small>물건명</small><strong>{existing.name}</strong></div>
         <div><small>물건번호</small><strong>{existing.propertyNumber || '-'}</strong></div>
