@@ -47,6 +47,12 @@ export default function PropertyPublicDiscoveryPanel({
     .sort((a, b) => b.dealDate.localeCompare(a.dealDate))
     .slice(0, 6);
   const marketSummary = result?.market?.summary;
+  const applyPublicFacts = () => {
+    if (!result) return;
+    const patch = publicPropertyDiscoveryService.patchFrom(result);
+    if (property.name) patch.name = property.name;
+    onApply(patch);
+  };
 
   return <section className="form-section">
     <div className="section-heading-row">
@@ -87,6 +93,9 @@ export default function PropertyPublicDiscoveryPanel({
 
       {!result.publicDataConfigured && <Alert severity="info" sx={{ mt: 1.25 }}>
         주소·좌표 식별은 완료했습니다. 건축물대장/국토부 실거래 자동조회는 공공데이터포털 서비스키 등록 후 활성화됩니다.
+      </Alert>}
+      {!result.vworldConfigured && <Alert severity="info" sx={{ mt: 1.25 }}>
+        개별공시지가·토지특성·토지이용계획은 VWorld 키 등록 후 활성화됩니다.
       </Alert>}
       {result.publicDataConfigured && result.status === 'partial' && <Alert severity="warning" sx={{ mt: 1.25 }}>
         공공데이터 서비스키는 연결됐지만 일부 공급원 응답 또는 활용권한이 부족합니다. 성공한 항목은 유지하며 실패 공급원만 재확인합니다.
@@ -160,7 +169,7 @@ export default function PropertyPublicDiscoveryPanel({
             <small style={{ color: '#667085' }}>{label}</small><div style={{ marginTop: 3, fontWeight: 700 }}>{value}</div>
           </div>)}
         </Box>
-        <Button sx={{ mt: 1.5 }} variant="outlined" onClick={() => onApply(publicPropertyDiscoveryService.patchFrom(result))}>공적정보 적용</Button>
+        <Button sx={{ mt: 1.5 }} variant="outlined" onClick={applyPublicFacts}>공적정보 적용</Button>
       </Box>}
 
       {result.publicDataConfigured && !building && <Alert severity="warning" sx={{ mt: 1.25 }}>
