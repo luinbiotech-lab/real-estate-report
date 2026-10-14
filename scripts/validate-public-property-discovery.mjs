@@ -18,6 +18,7 @@ const vercel = read('vercel.json');
 const reportDataBuilder = read('src/services/reportEngine/reportDataBuilder.ts');
 const reportTypes = read('src/domain/professionalReport/types.ts');
 const propertyHub = read('src/pages/PropertyHubPage.tsx');
+const listingSupplyService = read('src/services/listingSupplyService.ts');
 
 for (const marker of [
   "KAKAO_ADDRESS",
@@ -126,6 +127,10 @@ if (!form.includes('marketPresenceService.persist')) throw new Error('PropertyFo
 if (!reportDataBuilder.includes("officialLandPricePerSqm: number('officialLandPricePerSqm'") || !reportDataBuilder.includes("context('estimatedOfficialLandValue', { calculated: true")) throw new Error('공시지가/계산토지가액 Report Snapshot 연결 누락');
 if (!reportTypes.includes('officialLandPricePerSqm: ReportValue<number>') || !reportTypes.includes('estimatedOfficialLandValue: ReportValue<number>')) throw new Error('Report land public-data type 계약 누락');
 if (!propertyHub.includes('개별공시지가') || !propertyHub.includes('공시지가 기준 토지가액')) throw new Error('Property Hub 공시지가 노출 누락');
+for (const marker of ['sourceDealAmountTenThousandWon?: number', "dealAmountSourceUnit?: '만원'", "currency?: 'KRW'"]) if (!service.includes(marker)) throw new Error(`실거래 원문 단위 TypeScript 계약 누락: ${marker}`);
+for (const marker of ['market_listing_observation', 'listing_observation_not_property_status_confirmation', 'propertyStatusAutoUpdated: false', 'offMarketConfirmed: false', 'saveVerificationCandidate', "candidateValue: 'external_observed'"]) if (!listingSupplyService.includes(marker)) throw new Error(`실제 매물 공급원 정규화 계약 누락: ${marker}`);
+for (const marker of ['통합 정보 판정', '공적정보', '시장정보', '사용상태', '매물상태', '동일지번도 동일건물 확정 거래로 승격하지 않음', '점유 확정값이 아니며 현장확인 필요']) if (!discoveryPage.includes(marker)) throw new Error(`Discovery 통합 정보계층 UI 누락: ${marker}`);
+if (!reportTypes.includes('listingStatus: ReportValue<string>') || !reportDataBuilder.includes("context('listingStatus'")) throw new Error('매물상태 Report 데이터 자동 반영 계약 누락');
 
 if (!settingsPage.includes('외부 데이터 공급원')) throw new Error('Settings data provider readiness UI 누락');
 for (const marker of ['DATA_GO_KR_SERVICE_KEY가 없습니다', 'VWORLD_API_KEY가 없습니다', 'Vercel 서버 환경변수']) {
