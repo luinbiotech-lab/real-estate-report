@@ -1,6 +1,7 @@
 import { allowedOrigin, fail, securityHeaders, sendJson } from './_lib/providerProxy.mjs';
 
 const KAKAO_ADDRESS = 'https://dapi.kakao.com/v2/local/search/address.json';
+const KAKAO_CATEGORY = 'https://dapi.kakao.com/v2/local/search/category.json';
 const BLD_BASE = 'https://apis.data.go.kr/1613000/BldRgstHubService';
 const NRG_BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcNrgTrade';
 const LAND_BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcLandTrade';
@@ -52,6 +53,59 @@ async function kakaoResolve(query) {
     mountainYn: a?.mountain_yn || 'N',
     bun: String(a?.main_address_no||'').padStart(4,'0'),
     ji: String(a?.sub_address_no||'0').padStart(4,'0'),
+  };
+}
+async function kakaoPoiEvidence(resolved) {
+  const key=process.env.KAKAO_REST_API_KEY;
+  if (!key) return {state:'not_configured',interpretation:'Kakao REST API 설정 없음',sameAddress:[],nearby:[]};
+  const categories=['FD6','CE7','CS2','BK9','HP8','PM9','AG2'];
+  const all=[];
+  for(const categoryGroupCode of categories){
+    try{
+      const params=new URLSearchParams({
+        category_group_code:categoryGroupCode,
+        x:String(resolved.longitude),
+        y:String(resolved.latitude),
+        radius:'80',
+        size:'15',
+        sort:'distance'
+      });
+      const response=await fetch(`${KAKAO_CATEGORY}?${params}`,{headers:{Authorization:`KakaoAK ${key}`}});
+      if(!response.ok) continue;
+      const body=await response.json();
+      for(const doc of body.documents||[]) all.push({
+        placeId:String(doc.id||''),
+        placeName:String(doc.place_name||''),
+        categoryName:String(doc.category_name||''),
+        categoryGroupCode:String(doc.category_group_code||categoryGroupCode),
+        categoryGroupName:String(doc.category_group_name||''),
+        phone:String(doc.phone||''),
+        lotAddress:String(doc.address_name||''),
+        roadAddress:String(doc.road_address_name||''),
+        distanceMeters:num(doc.distance),
+        longitude:num(doc.x),
+        latitude:num(doc.y),
+        placeUrl:String(doc.place_url||'')
+      });
+    }catch{}
+  }
+  const unique=[...new Map(all.map(item=>[item.placeId||`${item.placeName}:${item.roadAddress}`,item])).values()];
+  const targetLot=normalizeAddressText(resolved.lotAddress);
+  const targetRoad=normalizeAddressText(resolved.roadAddress);
+  const sameAddress=unique.filter(item=>{
+    const lot=normalizeAddressText(item.lotAddress);
+    const road=normalizeAddressText(item.roadAddress);
+    return Boolean((targetLot && lot===targetLot) || (targetRoad && road===targetRoad));
+  });
+  return {
+    state:sameAddress.length ? 'same_address_poi_observed' : unique.length ? 'nearby_poi_observed' : 'no_public_record',
+    interpretation:sameAddress.length
+      ? `Kakao Local에서 동일 주소 사업체/시설 ${sameAddress.length}건이 관측되지만 실제 점유·영업 지속 여부를 확정하지 않음`
+      : unique.length
+        ? '인근 사업체/시설 POI는 관측되지만 동일 주소 활동은 확인되지 않음'
+        : 'Kakao Local 반경 검색에서 관련 POI가 관측되지 않음',
+    sameAddress:sameAddress.slice(0,30),
+    nearby:unique.slice(0,50)
   };
 }
 async function building(path, resolved, key) {
@@ -367,6 +421,7 @@ export default async function handler(request,response){
   try{
     const address=await kakaoResolve(query);
     if(!address) return sendJson(response,200,{status:'not_found',query,publicDataConfigured:Boolean(process.env.DATA_GO_KR_SERVICE_KEY)},origin);
+    const kakaoEvidence=await kakaoPoiEvidence(address);
     const key=normalizedServiceKey(process.env.DATA_GO_KR_SERVICE_KEY||'');
     const vworldKey=String(process.env.VWORLD_API_KEY||'').trim();
     const vworldResult=vworldKey
@@ -380,7 +435,8 @@ export default async function handler(request,response){
       market:{commercial:[],land:[]},
       usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]},
       operatingBusinessEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',sameAddress:[],nearby:[]},
-      sources:{address:'Kakao Local Address API',landProfile:'국토교통부 VWorld NED 토지정보'}
+      kakaoPoiEvidence:kakaoEvidence,
+      sources:{address:'Kakao Local Address API',kakaoPoi:'Kakao Local Category Search',landProfile:'국토교통부 VWorld NED 토지정보'}
     },origin);
 
     const months=monthsBack(6);
@@ -415,6 +471,7 @@ export default async function handler(request,response){
       market:{commercial:commercial.slice(0,40),land:land.slice(0,40),summary:marketSummary(marketRows),exactLot:marketRows.filter(row=>row.matchLevel==='exact_lot').slice(0,20)},
       usageEvidence,
       operatingBusinessEvidence:businessEvidence,
+      kakaoPoiEvidence:kakaoEvidence,
       sources:{
         address:'Kakao Local Address API',
         building:'국토교통부 건축HUB 건축물대장정보',
@@ -422,6 +479,7 @@ export default async function handler(request,response){
         land:'국토교통부 토지 매매 실거래가',
         energy:'국토교통부 건축HUB 건물에너지정보',
         operatingBusinesses:'소상공인시장진흥공단 상가(상권)정보',
+        kakaoPoi:'Kakao Local Category Search',
         landProfile:'국토교통부 VWorld NED 토지정보'
       },
       collectedAt:new Date().toISOString()
