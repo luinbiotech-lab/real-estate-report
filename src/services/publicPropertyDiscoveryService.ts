@@ -110,8 +110,17 @@ export const publicPropertyDiscoveryService = {
       return String(a ?? '').trim() === String(b ?? '').trim();
     };
     for (const [fieldKey, candidateValue] of Object.entries(patch)) {
+      if (fieldKey === 'name') continue;
       if (!isMeaningful(candidateValue)) continue;
       const currentValue = property[fieldKey as keyof Property];
+      if (fieldKey === 'address' && result.address) {
+        const normalizeAddress = (value: unknown) => String(value ?? '').replace(/\s+/g, '').toLowerCase();
+        const currentAddress = normalizeAddress(currentValue);
+        const equivalentAddresses = [result.address.officialAddress, result.address.roadAddress, result.address.lotAddress]
+          .filter(Boolean)
+          .map(normalizeAddress);
+        if (equivalentAddresses.includes(currentAddress)) continue;
+      }
       if (same(currentValue, candidateValue)) continue;
       const duplicate = existingCandidates.some((candidate) =>
         candidate.fieldKey === fieldKey &&
