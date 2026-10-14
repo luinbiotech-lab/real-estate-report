@@ -163,7 +163,8 @@ export const publicPropertyDiscoveryService = {
       );
       if (duplicate) continue;
       const addressField = ['address', 'latitude', 'longitude'].includes(fieldKey);
-      const landProfileField = ['officialLandPricePerSqm','estimatedOfficialLandValue','officialLandPriceYear','landCategory','landUseSituation'].includes(fieldKey)
+      const calculatedField = fieldKey === 'estimatedOfficialLandValue';
+      const landProfileField = ['officialLandPricePerSqm','officialLandPriceYear','landCategory','landUseSituation'].includes(fieldKey)
         || (fieldKey === 'zoning' && Boolean(result.landProfile));
       const candidate = {
         id: crypto.randomUUID(),
@@ -171,15 +172,17 @@ export const publicPropertyDiscoveryService = {
         fieldKey,
         currentValue,
         candidateValue,
-        sourceType: addressField ? 'map_provider' as const : 'public_api' as const,
+        sourceType: addressField ? 'map_provider' as const : calculatedField ? 'calculated' as const : 'public_api' as const,
         sourceName: addressField
           ? result.sources?.address || 'Kakao Local Address API'
-          : landProfileField
-            ? result.sources?.landProfile || '국토교통부 VWorld NED 토지정보'
-            : result.sources?.building || '국토교통부 건축HUB 건축물대장정보',
+          : calculatedField
+            ? '개별공시지가 × 공개 토지면적 계산'
+            : landProfileField
+              ? result.sources?.landProfile || '국토교통부 VWorld NED 토지정보'
+              : result.sources?.building || '국토교통부 건축HUB 건축물대장정보',
         sourceReference: addressField
           ? result.address?.lotAddress || result.address?.officialAddress
-          : landProfileField
+          : calculatedField || landProfileField
             ? result.landProfile?.pnu || result.address?.lotAddress
             : result.building?.rawPk || result.address?.lotAddress,
         confidence: addressField ? 0.99 : 0.95,
@@ -211,7 +214,26 @@ export const publicPropertyDiscoveryService = {
         verificationStatus: 'confirmed',
         metadata: {
           landProfile: result.landProfile,
-          explicitFields: ['officialLandPricePerSqm','estimatedOfficialLandValue','officialLandPriceYear','landCategory','landUseSituation','landAreaSqm','landAreaPyeong','zoning'],
+          explicitFields: ['officialLandPricePerSqm','officialLandPriceYear','landCategory','landUseSituation','landAreaSqm','landAreaPyeong','zoning'],
+        },
+        createdAt: now,
+      });
+    }
+    if (result.landProfile?.estimatedOfficialLandValue) {
+      await propertyDataRoomRepository.saveDataSource({
+        id: `official-land-value-calculation:${propertyId}`, propertyId, fieldKey: 'estimatedOfficialLandValue',
+        resourceType: 'official_land_value_calculation', sourceType: 'calculated',
+        sourceName: '개별공시지가 × 공개 토지면적 계산',
+        sourceReference: result.landProfile.pnu || result.address.lotAddress, collectedAt: now,
+        sourceDate: result.landProfile.standardYear ? `${result.landProfile.standardYear}-01-01` : undefined,
+        verificationStatus: 'calculated',
+        metadata: {
+          formula: 'officialLandPricePerSqm * landAreaSqm',
+          officialLandPricePerSqm: result.landProfile.officialLandPricePerSqm,
+          landAreaSqm: result.landProfile.landAreaSqm,
+          estimatedOfficialLandValue: result.landProfile.estimatedOfficialLandValue,
+          explicitFields: ['estimatedOfficialLandValue'],
+          semantics: 'derived_value_not_appraisal_or_market_value',
         },
         createdAt: now,
       });
