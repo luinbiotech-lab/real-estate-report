@@ -52,6 +52,8 @@ export const serverEnv = {
   naverClientSecret: envValue('NAVER_MAP_CLIENT_SECRET'),
   kakaoRestApiKey: envValue('KAKAO_REST_API_KEY'),
   dataGoKrServiceKey: envValue('DATA_GO_KR_SERVICE_KEY'),
+  vworldApiKey: envValue('VWORLD_API_KEY'),
+  vworldApiDomain: envValue('VWORLD_API_DOMAIN', 'localhost'),
   mapProxyHost: envValue('MAP_PROXY_HOST', '127.0.0.1'),
   mapProxyPort: port(envValue('MAP_PROXY_PORT', '5175'), 'MAP_PROXY_PORT'),
   mapProxyAllowedOrigins: exactOrigins(envValue('MAP_PROXY_ALLOWED_ORIGINS', 'http://localhost:5174')),
