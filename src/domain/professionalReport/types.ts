@@ -142,6 +142,7 @@ export interface ProfessionalReportViewModel {
   pricing: {
     salePrice: ReportValue<number>; deposit: ReportValue<number>; monthlyRent: ReportValue<number>;
     landUnitPrice: ReportValue<number>; negotiable: ReportValue<boolean>; occupancyStatus: ReportValue<string>;
+    listingStatus: ReportValue<string>;
   };
   building: {
     totalFloorAreaSqm: ReportValue<number>; totalFloorAreaPyeong: ReportValue<number>; buildingAreaPyeong: ReportValue<number>;
