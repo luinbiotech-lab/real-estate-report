@@ -136,6 +136,32 @@ export default function PropertyPublicDiscoveryPanel({
         longitude: result.address!.longitude,
       })}>주소·좌표 적용</Button>
 
+      {result.landProfile && <Box sx={{ mt: 1.5 }}>
+        <div className="section-heading-row">
+          <div>
+            <strong>토지 공적정보</strong>
+            <div style={{ color: '#667085', fontSize: 12, marginTop: 3 }}>VWorld NED · PNU {result.landProfile.pnu}</div>
+          </div>
+          <Chip size="small" color="success" label={result.landProfile.standardYear ? `${result.landProfile.standardYear} 기준` : '공적자료'} />
+        </div>
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1, mt: 1 }}>
+          {[
+            ['개별공시지가', result.landProfile.officialLandPricePerSqm ? won(result.landProfile.officialLandPricePerSqm) + '/㎡' : '-'],
+            ['공시지가 기준 토지가액', result.landProfile.estimatedOfficialLandValue ? won(result.landProfile.estimatedOfficialLandValue) + ' · 계산값' : '-'],
+            ['토지면적', sqm(result.landProfile.landAreaSqm)],
+            ['지목', result.landProfile.landCategory || '-'],
+            ['토지이용상황', result.landProfile.landUseSituation || '-'],
+            ['용도지역', result.landProfile.primaryUseZone || result.landProfile.useZones?.join(', ') || '-'],
+            ['지형', [result.landProfile.terrainHeight, result.landProfile.terrainShape].filter(Boolean).join(' · ') || '-'],
+            ['도로접면', result.landProfile.roadSide || '-'],
+          ].map(([label, value]) => <div key={label} style={{ background: '#f7f9fb', borderRadius: 8, padding: 10 }}>
+            <small style={{ color: '#667085' }}>{label}</small><div style={{ marginTop: 3, fontWeight: 700 }}>{value}</div>
+          </div>)}
+        </Box>
+        <small style={{ display: 'block', marginTop: 7, color: '#667085' }}>공시지가 기준 토지가액은 개별공시지가(원/㎡) × 공개 토지면적의 계산값이며 감정가·시세가 아닙니다.</small>
+        <Button sx={{ mt: 1.25 }} variant="outlined" onClick={applyPublicFacts}>토지 공적정보 적용</Button>
+      </Box>}
+
       {result.operatingBusinessEvidence?.sameAddress?.length ? <Box sx={{ mt: 1.5 }}>
         <strong>동일 주소 영업 업소 관측</strong>
         <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
