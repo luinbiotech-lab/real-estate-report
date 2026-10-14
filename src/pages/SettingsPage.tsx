@@ -1,8 +1,9 @@
-import { useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Alert, Button, Chip, TextField } from '@mui/material';
-import { BusinessRounded, ContactPhoneRounded, PolicyRounded, SaveRounded } from '@mui/icons-material';
+import { BusinessRounded, ContactPhoneRounded, PolicyRounded, SaveRounded, StorageRounded } from '@mui/icons-material';
 import { settingsRepository } from '../repositories/propertyRepository';
 import type { Settings } from '../types';
+import { refreshProxyStatus, type ProxyStatus } from '../services/maps/proxyClient';
 
 function normalizePhone(value: string) {
   return value.replace(/[^0-9]/g, '');
@@ -12,6 +13,8 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
   const [draft, setDraft] = useState(settings);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const [providerStatus, setProviderStatus] = useState<ProxyStatus>();
+  useEffect(() => { void refreshProxyStatus().then(setProviderStatus); }, []);
 
   const contactReady = useMemo(() => Boolean(draft.defaultManager.trim() && normalizePhone(draft.phone).length >= 9 && draft.email.includes('@')), [draft]);
 
@@ -74,6 +77,33 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
             <TextField label="휴대폰" value={draft.phone} onChange={(event) => setDraft((previous) => ({ ...previous, phone: event.target.value }))} />
             <TextField label="이메일" type="email" value={draft.email} onChange={(event) => setDraft((previous) => ({ ...previous, email: event.target.value }))} />
           </div>
+        </section>
+
+        <section className="form-section" style={{ margin: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <div><p className="eyebrow">DATA PROVIDERS</p><h2 style={{ margin: 0 }}>외부 데이터 공급원</h2></div><StorageRounded color="primary" />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0,1fr))', gap: 10 }}>
+            {[
+              ['NAVER Maps', providerStatus?.naverConfigured, '주소·정적지도'],
+              ['Kakao Local', providerStatus?.kakaoConfigured, '주소·POI·상업활동 evidence'],
+              ['국토부 공공데이터', providerStatus?.publicDataConfigured, '건축물대장·실거래·에너지·상가업소'],
+              ['VWorld', providerStatus?.vworldConfigured, '공시지가·토지특성'],
+            ].map(([name, ready, scope]) => <div key={String(name)} style={{ border: '1px solid #e4e7ec', borderRadius: 10, padding: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <strong>{String(name)}</strong>
+                <Chip size="small" color={ready ? 'success' : 'warning'} label={ready ? 'READY' : 'MISSING'} />
+              </div>
+              <div style={{ color: '#667085', fontSize: 12, marginTop: 5 }}>{String(scope)}</div>
+            </div>)}
+          </div>
+          {!providerStatus?.publicDataConfigured && <Alert severity="warning" sx={{ mt: 1.25 }}>
+            <strong>DATA_GO_KR_SERVICE_KEY가 없습니다.</strong> 주소·좌표·Kakao POI는 동작하지만 건축물대장, 국토부 실거래, 건물에너지, 상가업소 공공자료는 아직 자동조회되지 않습니다.
+          </Alert>}
+          {!providerStatus?.vworldConfigured && <Alert severity="info" sx={{ mt: 1.25 }}>
+            <strong>VWORLD_API_KEY가 없습니다.</strong> 공시지가·토지특성 자동조회는 키 등록 후 활성화됩니다.
+          </Alert>}
+          <small style={{ display: 'block', color: '#667085', marginTop: 10 }}>API 비밀키는 브라우저/DB에 저장하지 않고 Vercel 서버 환경변수로만 관리합니다.</small>
         </section>
 
         <section className="form-section" style={{ margin: 0 }}>
