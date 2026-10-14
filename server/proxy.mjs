@@ -125,6 +125,8 @@ const server = http.createServer(async (request, response) => {
     if (url.pathname === '/api/property-discovery') {
       if (!process.env.KAKAO_REST_API_KEY && serverEnv.kakaoRestApiKey) process.env.KAKAO_REST_API_KEY = serverEnv.kakaoRestApiKey;
       if (!process.env.DATA_GO_KR_SERVICE_KEY && serverEnv.dataGoKrServiceKey) process.env.DATA_GO_KR_SERVICE_KEY = serverEnv.dataGoKrServiceKey;
+      if (!process.env.VWORLD_API_KEY && serverEnv.vworldApiKey) process.env.VWORLD_API_KEY = serverEnv.vworldApiKey;
+      if (!process.env.VWORLD_API_DOMAIN && serverEnv.vworldApiDomain) process.env.VWORLD_API_DOMAIN = serverEnv.vworldApiDomain;
       if (!process.env.MAP_PROXY_ALLOWED_ORIGINS) process.env.MAP_PROXY_ALLOWED_ORIGINS = serverEnv.mapProxyAllowedOrigins.join(',');
       return await propertyDiscoveryHandler(request, response);
     }
