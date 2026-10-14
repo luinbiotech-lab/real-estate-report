@@ -21,8 +21,22 @@ function proxyUrl(path: string) {
   return `${PROXY_BASE_URL}${path}`;
 }
 
-export interface ProxyStatus { proxyConnected: boolean; naverConfigured: boolean; kakaoConfigured: boolean; kakaoRoadviewConfigured: boolean }
-let status: ProxyStatus = { proxyConnected: false, naverConfigured: false, kakaoConfigured: false, kakaoRoadviewConfigured: false };
+export interface ProxyStatus {
+  proxyConnected: boolean;
+  naverConfigured: boolean;
+  kakaoConfigured: boolean;
+  kakaoRoadviewConfigured: boolean;
+  publicDataConfigured: boolean;
+  vworldConfigured: boolean;
+}
+let status: ProxyStatus = {
+  proxyConnected: false,
+  naverConfigured: false,
+  kakaoConfigured: false,
+  kakaoRoadviewConfigured: false,
+  publicDataConfigured: false,
+  vworldConfigured: false,
+};
 
 export const getProxyStatus = () => status;
 export async function refreshProxyStatus(): Promise<ProxyStatus> {
@@ -30,9 +44,16 @@ export async function refreshProxyStatus(): Promise<ProxyStatus> {
     const response = await fetch(proxyUrl('/api/status'), { cache: 'no-store' });
     if (!response.ok) throw new Error();
     const data = await response.json() as Omit<ProxyStatus, 'proxyConnected'>;
-    status = { proxyConnected: true, naverConfigured: data.naverConfigured, kakaoConfigured: data.kakaoConfigured, kakaoRoadviewConfigured: Boolean(import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY?.trim()) };
+    status = {
+      proxyConnected: true,
+      naverConfigured: data.naverConfigured,
+      kakaoConfigured: data.kakaoConfigured,
+      kakaoRoadviewConfigured: Boolean(import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY?.trim()),
+      publicDataConfigured: Boolean(data.publicDataConfigured),
+      vworldConfigured: Boolean(data.vworldConfigured),
+    };
   } catch {
-    status = { proxyConnected: false, naverConfigured: false, kakaoConfigured: false, kakaoRoadviewConfigured: false };
+    status = { proxyConnected: false, naverConfigured: false, kakaoConfigured: false, kakaoRoadviewConfigured: false, publicDataConfigured: false, vworldConfigured: false };
   }
   return status;
 }
