@@ -110,6 +110,7 @@ if (!service.includes("const calculatedField = fieldKey === 'estimatedOfficialLa
 if (!discoveryPage.includes('공공자료 Data Room 저장') || !discoveryPage.includes('refreshExisting(existing, result)')) throw new Error('기존 물건 공공자료 refresh UI 연결 누락');
 if (!form.includes('location.state')) throw new Error('Discovery → PropertyForm state 전달 연결 누락');
 if (!discoveryPage.includes('주소 · 지번으로 물건 조회') || !discoveryPage.includes('이 물건 등록')) throw new Error('Address-first discovery workspace contract 누락');
+if (!discoveryPage.includes('Kakao 동일주소 POI')) throw new Error('Discovery summary Kakao evidence 연결 누락');
 if (!app.includes('path="discover"')) throw new Error('Discovery route 누락');
 if (!layout.includes('to="/discover"')) throw new Error('Discovery primary navigation 누락');
 if (!vercel.includes('"source": "/discover"') || !vercel.includes('"destination": "/index.html"')) throw new Error('Discovery Vercel SPA rewrite 누락');
