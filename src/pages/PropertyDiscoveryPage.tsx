@@ -80,6 +80,41 @@ export default function PropertyDiscoveryPage() {
       onApply={(value) => setPreview((previous) => ({ ...previous, ...value }))}
     />
 
+    {result?.address && <section className="panel">
+      <div className="section-heading-row">
+        <div><p className="eyebrow">INFORMATION LAYERS</p><h2>통합 정보 판정</h2><p>공적 사실·시장 관측·사용 evidence·매물 상태를 서로 다른 신뢰수준으로 분리합니다.</p></div>
+        <Chip size="small" label="과장 판정 방지" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 10 }}>
+        <div style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 12 }}>
+          <small style={{ color: '#667085' }}>공적정보</small>
+          <strong style={{ display: 'block', marginTop: 5 }}>{result.building || result.landProfile ? '공적자료 관측' : result.publicDataConfigured || result.vworldConfigured ? '조회 결과 없음/부분' : '공급원 키 필요'}</strong>
+          <span style={{ display: 'block', marginTop: 5, color: '#667085', fontSize: 12 }}>건축물대장·공시지가·토지특성·토지이용계획</span>
+        </div>
+        <div style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 12 }}>
+          <small style={{ color: '#667085' }}>시장정보</small>
+          <strong style={{ display: 'block', marginTop: 5 }}>{result.market?.summary ? `실거래 후보 ${result.market.summary.totalCandidates}건 · 동일지번 ${result.market.summary.exactLotCount}건` : result.publicDataConfigured ? '실거래 후보 없음' : '공급원 키 필요'}</strong>
+          <span style={{ display: 'block', marginTop: 5, color: '#667085', fontSize: 12 }}>동일지번도 동일건물 확정 거래로 승격하지 않음</span>
+        </div>
+        <div style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 12 }}>
+          <small style={{ color: '#667085' }}>사용상태</small>
+          <strong style={{ display: 'block', marginTop: 5 }}>{result.operatingBusinessEvidence?.state === 'operating_business_observed'
+            ? '영업업소 evidence 관측'
+            : result.kakaoPoiEvidence?.state === 'same_address_poi_observed'
+              ? '동일주소 POI evidence 관측'
+              : result.usageEvidence?.state === 'energy_usage_observed'
+                ? '에너지 사용 evidence 관측'
+                : '미확인'}</strong>
+          <span style={{ display: 'block', marginTop: 5, color: '#667085', fontSize: 12 }}>점유 확정값이 아니며 현장확인 필요</span>
+        </div>
+        <div style={{ border: '1px solid #d9e0e8', borderRadius: 10, padding: 12 }}>
+          <small style={{ color: '#667085' }}>매물상태</small>
+          <strong style={{ display: 'block', marginTop: 5 }}>{existing ? (LISTING_STATUS_LABEL[existing.listingStatus || 'unknown'] || '미확인') : '미확인'}</strong>
+          <span style={{ display: 'block', marginTop: 5, color: '#667085', fontSize: 12 }}>{existing?.listingStatusSource ? `출처: ${existing.listingStatusSource}` : '외부 매물 공급원 관측은 검증후보로만 반영'}</span>
+        </div>
+      </div>
+    </section>}
+
     {existing && <section className="panel">
       <div className="section-heading-row">
         <div><p className="eyebrow">EXISTING PROPERTY</p><h2>이미 등록된 물건입니다</h2><p>중복 생성하지 않고 기존 Data Room과 최신 검증자료를 사용합니다.</p></div>
