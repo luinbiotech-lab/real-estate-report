@@ -62,8 +62,7 @@ async function kakaoPoiEvidence(resolved) {
   const key=process.env.KAKAO_REST_API_KEY;
   if (!key) return {state:'not_configured',interpretation:'Kakao REST API 설정 없음',sameAddress:[],nearby:[]};
   const categories=['FD6','CE7','CS2','BK9','HP8','PM9','AG2'];
-  const all=[];
-  for(const categoryGroupCode of categories){
+  const batches=await Promise.all(categories.map(async (categoryGroupCode)=>{
     try{
       const params=new URLSearchParams({
         category_group_code:categoryGroupCode,
@@ -74,9 +73,9 @@ async function kakaoPoiEvidence(resolved) {
         sort:'distance'
       });
       const response=await fetchWithTimeout(`${KAKAO_CATEGORY}?${params}`,{headers:{Authorization:`KakaoAK ${key}`}});
-      if(!response.ok) continue;
+      if(!response.ok) return [];
       const body=await response.json();
-      for(const doc of body.documents||[]) all.push({
+      return (body.documents||[]).map(doc=>({
         placeId:String(doc.id||''),
         placeName:String(doc.place_name||''),
         categoryName:String(doc.category_name||''),
@@ -89,9 +88,10 @@ async function kakaoPoiEvidence(resolved) {
         longitude:num(doc.x),
         latitude:num(doc.y),
         placeUrl:String(doc.place_url||'')
-      });
-    }catch{}
-  }
+      }));
+    }catch{return [];}
+  }));
+  const all=batches.flat();
   const unique=[...new Map(all.map(item=>[item.placeId||`${item.placeName}:${item.roadAddress}`,item])).values()];
   const targetLot=normalizeAddressText(resolved.lotAddress);
   const targetRoad=normalizeAddressText(resolved.roadAddress);
@@ -243,19 +243,18 @@ async function safeProvider(label, task){
   catch(error){ return { label, ok:false, value:[], error:error instanceof Error?error.message:String(error) }; }
 }
 async function energyRows(path,resolved,key,months){
-  const rows=[];
-  for(const useYm of months){
+  const batches=await Promise.all(months.map(async (useYm)=>{
     try{
       const params=new URLSearchParams({
         serviceKey:key,sigunguCd:resolved.sigunguCd,bjdongCd:resolved.bjdongCd,
         bun:resolved.bun,ji:resolved.ji,useYm,numOfRows:'100',pageNo:'1'
       });
       const response=await fetchWithTimeout(`${ENERGY_BASE}/${path}?${params}`);
-      if(!response.ok) continue;
-      for(const item of xmlItems(await response.text())) rows.push({...item,_useYm:useYm});
-    }catch{}
-  }
-  return rows;
+      if(!response.ok) return [];
+      return xmlItems(await response.text()).map(item=>({...item,_useYm:useYm}));
+    }catch{return [];}
+  }));
+  return batches.flat();
 }
 function energyValue(row,type){
   const candidates=type==='electricity'
