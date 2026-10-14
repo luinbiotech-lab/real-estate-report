@@ -7,6 +7,7 @@ export default async function handler(request, response) {
     naverConfigured: naverConfigured(),
     kakaoConfigured: kakaoConfigured(),
     publicDataConfigured: Boolean(process.env.DATA_GO_KR_SERVICE_KEY),
+    vworldConfigured: Boolean(process.env.VWORLD_API_KEY),
     allowedOriginCount: String(process.env.MAP_PROXY_ALLOWED_ORIGINS || '').split(',').map((v) => v.trim()).filter(Boolean).length,
     runtime: 'vercel-serverless',
   }, state.origin);
