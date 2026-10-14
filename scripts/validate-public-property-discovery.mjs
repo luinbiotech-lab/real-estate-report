@@ -13,6 +13,9 @@ const marketPanel = read('src/components/MarketPresencePanel.tsx');
 const marketService = read('src/services/marketPresenceService.ts');
 const types = read('src/types.ts');
 const vercel = read('vercel.json');
+const reportDataBuilder = read('src/services/reportEngine/reportDataBuilder.ts');
+const reportTypes = read('src/domain/professionalReport/types.ts');
+const propertyHub = read('src/pages/PropertyHubPage.tsx');
 
 for (const marker of [
   "KAKAO_ADDRESS",
@@ -106,5 +109,8 @@ for (const marker of ['ListingStatus', 'daon_exclusive', 'external_observed', 'o
 if (!marketPanel.includes('현재 매물 상태') || !marketPanel.includes('외부 공급원이 연결되기 전에는 자동으로 매물이라고 판단하지 않습니다')) throw new Error('Market presence UI contract 누락');
 for (const marker of ['listing-status:', 'market_listing_status', 'externalProviderConnected: false']) if (!marketService.includes(marker)) throw new Error(`Market presence provenance missing: ${marker}`);
 if (!form.includes('marketPresenceService.persist')) throw new Error('PropertyForm market presence provenance 연결 누락');
+if (!reportDataBuilder.includes("officialLandPricePerSqm: number('officialLandPricePerSqm'") || !reportDataBuilder.includes("context('estimatedOfficialLandValue', { calculated: true")) throw new Error('공시지가/계산토지가액 Report Snapshot 연결 누락');
+if (!reportTypes.includes('officialLandPricePerSqm: ReportValue<number>') || !reportTypes.includes('estimatedOfficialLandValue: ReportValue<number>')) throw new Error('Report land public-data type 계약 누락');
+if (!propertyHub.includes('개별공시지가') || !propertyHub.includes('공시지가 기준 토지가액')) throw new Error('Property Hub 공시지가 노출 누락');
 
 console.log('PASS public property discovery contract');
