@@ -114,17 +114,21 @@ export default function PropertyPublicDiscoveryPanel({
           <small style={{ color: '#667085' }}>실제 사용 / 점유 상태</small>
           <div style={{ fontWeight: 700, marginTop: 3 }}>
             {result.operatingBusinessEvidence?.state === 'operating_business_observed'
-              ? `동일 주소 영업 업소 ${result.operatingBusinessEvidence.sameAddress.length}건 관측`
-              : result.usageEvidence?.state === 'energy_usage_observed'
-                ? '에너지 사용 흔적 있음'
-                : result.usageEvidence?.state === 'no_public_record'
-                  ? '공개 사용량 자료 없음'
-                  : '미확인'}
+              ? `공공 상가업소 ${result.operatingBusinessEvidence.sameAddress.length}건 관측`
+              : result.kakaoPoiEvidence?.state === 'same_address_poi_observed'
+                ? `Kakao 동일주소 POI ${result.kakaoPoiEvidence.sameAddress.length}건 관측`
+                : result.usageEvidence?.state === 'energy_usage_observed'
+                  ? '에너지 사용 흔적 있음'
+                  : result.usageEvidence?.state === 'no_public_record'
+                    ? '공개 사용량 자료 없음'
+                    : '미확인'}
           </div>
           <div style={{ color: '#667085', fontSize: 12, marginTop: 3 }}>
             {result.operatingBusinessEvidence?.state === 'operating_business_observed'
               ? result.operatingBusinessEvidence.interpretation
-              : result.usageEvidence?.interpretation || '건축물대장의 용도와 실제 점유·영업 상태는 다를 수 있어 현장/별도 데이터로 확인합니다.'}
+              : result.kakaoPoiEvidence?.state === 'same_address_poi_observed'
+                ? result.kakaoPoiEvidence.interpretation
+                : result.usageEvidence?.interpretation || '건축물대장의 용도와 실제 점유·영업 상태는 다를 수 있어 현장/별도 데이터로 확인합니다.'}
             {result.usageEvidence?.latestObservedMonth ? ` · 최근 에너지 관측 ${result.usageEvidence.latestObservedMonth}` : ''}
           </div>
         </div>
@@ -161,6 +165,18 @@ export default function PropertyPublicDiscoveryPanel({
         <small style={{ display: 'block', marginTop: 7, color: '#667085' }}>공시지가 기준 토지가액은 개별공시지가(원/㎡) × 공개 토지면적의 계산값이며 감정가·시세가 아닙니다.</small>
         <Button sx={{ mt: 1.25 }} variant="outlined" onClick={applyPublicFacts}>토지 공적정보 적용</Button>
       </Box>}
+
+      {result.kakaoPoiEvidence?.sameAddress?.length ? <Box sx={{ mt: 1.5 }}>
+        <strong>Kakao Local 동일 주소 활동</strong>
+        <div style={{ display: 'grid', gap: 6, marginTop: 8 }}>
+          {result.kakaoPoiEvidence.sameAddress.slice(0, 8).map((place) => <div key={place.placeId || place.placeName} style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(0, 1fr) 90px', gap: 8, padding: '8px 10px', border: '1px solid #e4e7ec', borderRadius: 8, fontSize: 13 }}>
+            <strong>{place.placeName}</strong>
+            <span>{place.categoryGroupName || place.categoryName || '-'}</span>
+            <span>{place.distanceMeters != null ? `${place.distanceMeters}m` : '-'}</span>
+          </div>)}
+        </div>
+        <small style={{ display: 'block', marginTop: 7, color: '#667085' }}>Kakao Local POI 관측값입니다. 사업체/시설 존재의 보조 evidence이며 실제 점유율·임대차·영업 지속 여부를 확정하지 않습니다.</small>
+      </Box> : null}
 
       {result.operatingBusinessEvidence?.sameAddress?.length ? <Box sx={{ mt: 1.5 }}>
         <strong>동일 주소 영업 업소 관측</strong>
