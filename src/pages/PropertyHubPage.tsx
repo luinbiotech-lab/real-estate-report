@@ -94,6 +94,9 @@ export default function PropertyHubPage() {
           {[
             ['매매가', formatWon(property.salePrice)], ['대지면적', formatArea(property.landAreaPyeong)],
             ['연면적', property.totalFloorAreaSqm ? `${property.totalFloorAreaSqm.toFixed(2)}㎡` : '-'], ['용도지역', property.zoning || '-'],
+            ['개별공시지가', property.officialLandPricePerSqm ? `${property.officialLandPricePerSqm.toLocaleString('ko-KR')}원/㎡` : '-'],
+            ['공시지가 기준 토지가액', property.estimatedOfficialLandValue ? `${formatWon(property.estimatedOfficialLandValue)} · 계산값` : '-'],
+            ['지목 · 이용상황', [property.landCategory, property.landUseSituation].filter(Boolean).join(' · ') || '-'],
             ['주용도', property.mainUse || '-'], ['구조', property.structure || '-'],
             ['층수', `지하 ${property.basementFloors || 0}층 · 지상 ${property.groundFloors || 0}층`], ['인근역', property.nearbyStation || '-'],
           ].map(([label, value]) => <div key={label} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', borderTop: '1px solid #edf0f4', padding: '10px 0' }}><dt style={{ color: '#667085', fontSize: 13 }}>{label}</dt><dd style={{ margin: 0, fontWeight: 700 }}>{value}</dd></div>)}
