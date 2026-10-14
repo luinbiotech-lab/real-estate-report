@@ -75,6 +75,9 @@ for (const marker of [
   'public-market:',
   'building-energy:',
   'official-land-profile:',
+  'official-land-value-calculation:',
+  'official_land_value_calculation',
+  'derived_value_not_appraisal_or_market_value',
   'official_land_profile',
   'building_energy_usage_evidence',
   'occupancy_supporting_evidence_only',
@@ -91,6 +94,7 @@ if (!form.includes('publicPropertyDiscoveryService.persist')) throw new Error('P
 if (!service.includes('async refreshExisting') || !service.includes('saveVerificationCandidate')) throw new Error('기존 물건 공공자료 비파괴 refresh/verification candidate 연결 누락');
 if (!service.includes("fieldKey === 'name'") || !service.includes('equivalentAddresses.includes(currentAddress)')) throw new Error('공공자료 refresh 검증후보 노이즈 억제 규칙 누락');
 if (!service.includes('const patch: Partial<Property>') || service.includes("buildingName: building?.buildingName || ''")) throw new Error('부분 공공조회가 기존 Property를 빈값/0으로 덮어쓰지 않도록 sparse patch를 유지해야 합니다.');
+if (!service.includes("const calculatedField = fieldKey === 'estimatedOfficialLandValue'") || !service.includes("sourceType: addressField ? 'map_provider' as const : calculatedField ? 'calculated' as const")) throw new Error('공시지가 계산값 provenance는 public_api가 아니라 calculated여야 합니다.');
 if (!discoveryPage.includes('공공자료 Data Room 저장') || !discoveryPage.includes('refreshExisting(existing, result)')) throw new Error('기존 물건 공공자료 refresh UI 연결 누락');
 if (!form.includes('location.state')) throw new Error('Discovery → PropertyForm state 전달 연결 누락');
 if (!discoveryPage.includes('주소 · 지번으로 물건 조회') || !discoveryPage.includes('이 물건 등록')) throw new Error('Address-first discovery workspace contract 누락');
