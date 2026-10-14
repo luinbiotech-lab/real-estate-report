@@ -358,8 +358,10 @@ async function tradeRows(base,path,lawdCd,key,months) {
   }));
   return batches.flat();
 }
-function normalizeTrade(row,type,resolved){
-  const sourceDealAmountTenThousandWon=num(row.dealAmount||row.거래금액);
+// MOLIT dealAmount is supplied in 만원 (10,000 KRW). Blank/whitespace/non-numeric upstream values stay missing (never 0 KRW).
+const sourceDealAmount = (value) => String(value ?? '').replaceAll(',', '').trim() === '' ? undefined : num(value);
+export function normalizeTrade(row,type,resolved){
+  const sourceDealAmountTenThousandWon=sourceDealAmount(row.dealAmount||row.거래금액);
   const amount=sourceDealAmountTenThousandWon!=null ? sourceDealAmountTenThousandWon*10000 : undefined;
   const legalDong=String(row.umdNm||row.법정동||'').trim();
   const jibun=String(row.jibun||row.지번||'').trim();
