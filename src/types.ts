@@ -17,6 +17,8 @@ export interface Property {
   listingStatus?: ListingStatus; listingStatusSource?: string; listingStatusCheckedAt?: string; listingStatusNote?: string;
   address: string; detailAddress: string; latitude?: number; longitude?: number; nearbyStation: string; stationDistance: string; roadCondition: string;
   landAreaPyeong: number; landAreaSqm: number; totalFloorAreaPyeong: number; totalFloorAreaSqm: number; buildingAreaPyeong: number;
+  officialLandPricePerSqm?: number; officialLandValue?: number; officialLandPriceYear?: string;
+  landCategory?: string; landUseSituation?: string;
   zoning: string; mainUse: string; structure: string; basementFloors: number; groundFloors: number; completionDate: string;
   buildingCoverageRate: number; floorAreaRatio: number; elevator: string;
   /** Legacy parking field retained for backward compatibility. */
@@ -52,6 +54,7 @@ export const emptyProperty: Property = {
   id: '', propertyNumber: '', name: '', buildingName: '', tradeType: '매매', salePrice: 0, deposit: 0, monthlyRent: 0,
   negotiable: false, occupancyStatus: '', listingStatus: 'unknown', listingStatusSource: '', listingStatusCheckedAt: '', listingStatusNote: '', address: '', detailAddress: '', nearbyStation: '', stationDistance: '', roadCondition: '',
   landAreaPyeong: 0, landAreaSqm: 0, totalFloorAreaPyeong: 0, totalFloorAreaSqm: 0, buildingAreaPyeong: 0,
+  officialLandPricePerSqm: 0, officialLandValue: 0, officialLandPriceYear: '', landCategory: '', landUseSituation: '',
   zoning: '', mainUse: '', structure: '', basementFloors: 0, groundFloors: 0, completionDate: '', buildingCoverageRate: 0,
   floorAreaRatio: 0, elevator: '', parkingSpaces: 0, features: '', investmentPoints: '', locationAnalysis: '', developmentPlan: '',
   recommendedUse: '', risks: '', overallOpinion: '', nearbyTransactions: '', managerName: '', managerPhone: '', managerEmail: '',
