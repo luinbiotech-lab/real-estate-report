@@ -110,6 +110,17 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     landUnitPrice: numericReportValue(unitPrice, context('landUnitPrice', { calculated: unitPrice !== null, formatter: formatNullableWon as (value: never) => string })),
     negotiable: reportValue(property.negotiable, context('negotiable', { formatter: ((value: boolean) => value ? '협의 가능' : '협의 없음') as (value: never) => string })),
     occupancyStatus: text('occupancyStatus'),
+    listingStatus: reportValue(
+      property.listingStatus && property.listingStatus !== 'unknown' ? property.listingStatus : null,
+      context('listingStatus', {
+        formatter: ((value: string) => ({
+          daon_exclusive: 'DA:ON 전속',
+          daon_active: 'DA:ON 매물',
+          external_observed: '외부 매물 확인',
+          off_market_confirmed: '비매물 확인',
+        }[value] || value)) as (value: never) => string,
+      }),
+    ),
   };
   const floorSpaces = [...(bundle.spaces ?? [])]
     .filter((space) => space.floor)
