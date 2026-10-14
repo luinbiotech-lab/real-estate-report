@@ -6,6 +6,7 @@ const NRG_BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcNrgTrade';
 const LAND_BASE = 'https://apis.data.go.kr/1613000/RTMSDataSvcLandTrade';
 const ENERGY_BASE = 'https://apis.data.go.kr/1613000/BldEngyHubService';
 const SBIZ_RADIUS_URL = 'https://apis.data.go.kr/B553077/api/open/sdsc2/storeListInRadius';
+const VWORLD_BASE = 'https://api.vworld.kr/ned/data';
 
 const asArray = (value) => value == null ? [] : Array.isArray(value) ? value : [value];
 const num = (value) => { const n = Number(String(value ?? '').replaceAll(',', '').trim()); return Number.isFinite(n) ? n : undefined; };
@@ -101,6 +102,79 @@ function normalizeZone(row={}) {
     name: String(row.jijiguCdNm||row.etcJijigu||''),
     representativeYn: String(row.reprYn||row.representativeYn||'')
   };
+}
+function parcelPnu(resolved){
+  return `${resolved.bCode}${resolved.mountainYn==='Y'?'2':'1'}${resolved.bun}${resolved.ji}`;
+}
+function vworldDomain(){
+  const raw=String(process.env.VWORLD_API_DOMAIN||process.env.VERCEL_PROJECT_PRODUCTION_URL||'localhost').trim();
+  return raw.replace(/^https?:\/\//,'').split('/')[0]||'localhost';
+}
+function findFieldRows(value){
+  if(!value || typeof value!=='object') return [];
+  if(Array.isArray(value)) {
+    for(const item of value){const rows=findFieldRows(item); if(rows.length) return rows;}
+    return [];
+  }
+  if(Object.prototype.hasOwnProperty.call(value,'field')) return asArray(value.field).filter((item)=>item && typeof item==='object');
+  for(const item of Object.values(value)){const rows=findFieldRows(item); if(rows.length) return rows;}
+  return [];
+}
+async function vworldRows(path,resolved,key,{year}={}){
+  const params=new URLSearchParams({
+    key,
+    domain:vworldDomain(),
+    pnu:parcelPnu(resolved),
+    format:'json',
+    numOfRows:'1000',
+    pageNo:'1'
+  });
+  if(year) params.set('stdrYear',String(year));
+  const response=await fetch(`${VWORLD_BASE}/${path}?${params}`);
+  if(!response.ok) throw new Error(`VWorld ${path} 요청 실패 (${response.status})`);
+  const body=await response.json();
+  return findFieldRows(body);
+}
+async function vworldLatestYearRows(path,resolved,key){
+  const year=new Date().getFullYear();
+  for(let offset=0;offset<4;offset+=1){
+    const candidateYear=year-offset;
+    const rows=await vworldRows(path,resolved,key,{year:candidateYear});
+    if(rows.length) return {year:String(candidateYear),rows};
+  }
+  return {year:String(year),rows:[]};
+}
+function normalizeLandProfile(priceResult,characteristicResult,useRows,resolved){
+  const price=priceResult.rows?.[0]||{};
+  const characteristic=characteristicResult.rows?.[0]||{};
+  const officialLandPricePerSqm=num(price.pblntfPclnd||price.pblntfPcInd||price.indvdLandPrice);
+  const landAreaSqm=num(characteristic.lndpclAr||characteristic.ladAr||characteristic.area);
+  const zones=useRows.map((row)=>String(
+    row.prposAreaDstrcCodeNm||row.prposAreaDstrcNm||row.jijiguNm||row.zoneName||''
+  ).trim()).filter(Boolean);
+  return {
+    pnu:parcelPnu(resolved),
+    standardYear:String(price.stdrYear||priceResult.year||characteristic.stdrYear||characteristicResult.year||''),
+    officialLandPricePerSqm,
+    estimatedOfficialLandValue:officialLandPricePerSqm && landAreaSqm ? Math.round(officialLandPricePerSqm*landAreaSqm) : undefined,
+    landAreaSqm,
+    landCategory:String(characteristic.lndcgrCodeNm||characteristic.lndcgrNm||characteristic.jimokNm||''),
+    landUseSituation:String(characteristic.ladUseSittnNm||characteristic.landUseSittnNm||''),
+    terrainHeight:String(characteristic.tpgrphHgCodeNm||''),
+    terrainShape:String(characteristic.tpgrphFrmCodeNm||''),
+    roadSide:String(characteristic.roadSideCodeNm||''),
+    primaryUseZone:String(characteristic.prposArea1Nm||characteristic.prposAreaDstrc1Nm||zones[0]||''),
+    useZones:[...new Set(zones)],
+    raw:{price,characteristic,useRows}
+  };
+}
+async function vworldLandProfile(resolved,key){
+  const [priceResult,characteristicResult,useRows]=await Promise.all([
+    vworldLatestYearRows('getIndvdLandPriceAttr',resolved,key),
+    vworldLatestYearRows('getLandCharacteristics',resolved,key),
+    vworldRows('getLandUseAttr',resolved,key)
+  ]);
+  return normalizeLandProfile(priceResult,characteristicResult,useRows,resolved);
 }
 function monthsBack(count=6){
   const d=new Date(); const out=[];
@@ -294,7 +368,20 @@ export default async function handler(request,response){
     const address=await kakaoResolve(query);
     if(!address) return sendJson(response,200,{status:'not_found',query,publicDataConfigured:Boolean(process.env.DATA_GO_KR_SERVICE_KEY)},origin);
     const key=normalizedServiceKey(process.env.DATA_GO_KR_SERVICE_KEY||'');
-    if(!key) return sendJson(response,200,{status:'partial',publicDataConfigured:false,address,building:null,floors:[],market:{commercial:[],land:[]},usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]},operatingBusinessEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',sameAddress:[],nearby:[]}},origin);
+    const vworldKey=String(process.env.VWORLD_API_KEY||'').trim();
+    const vworldResult=vworldKey
+      ? await safeProvider('vworldLandProfile',()=>vworldLandProfile(address,vworldKey))
+      : {label:'vworldLandProfile',ok:false,value:null,error:'VWORLD_API_KEY 미설정'};
+    const landProfile=vworldResult.ok ? vworldResult.value : null;
+    if(!key) return sendJson(response,200,{
+      status:'partial',publicDataConfigured:false,vworldConfigured:Boolean(vworldKey),address,building:null,floors:[],
+      landProfile,
+      providerStatus:{vworldLandProfile:{ok:vworldResult.ok,error:vworldResult.error}},
+      market:{commercial:[],land:[]},
+      usageEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',positiveMonths:0,monthly:[]},
+      operatingBusinessEvidence:{state:'not_configured',interpretation:'공공데이터포털 서비스키 등록 후 조회',sameAddress:[],nearby:[]},
+      sources:{address:'Kakao Local Address API',landProfile:'국토교통부 VWorld NED 토지정보'}
+    },origin);
 
     const months=monthsBack(6);
     const [titleResult,floorResult,zoneResult,commercialResult,landResult,electricityResult,gasResult,businessResult]=await Promise.all([
@@ -314,7 +401,7 @@ export default async function handler(request,response){
       ? businessResult.value
       : {state:'provider_unavailable',interpretation:businessResult.error||'상가업소 공급원 조회 실패',nearby:[],sameAddress:[]};
     const providerStatus=Object.fromEntries([
-      titleResult,floorResult,zoneResult,commercialResult,landResult,electricityResult,gasResult,businessResult
+      titleResult,floorResult,zoneResult,commercialResult,landResult,electricityResult,gasResult,businessResult,vworldResult
     ].map(result=>[result.label,{ok:result.ok,error:result.error}]));
     const buildingTitle=titles[0] ? normalizeTitle(titles[0]) : null;
     const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial',address)).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
@@ -323,7 +410,7 @@ export default async function handler(request,response){
     const landUseZones=zones.map(normalizeZone).filter(zone=>zone.name);
     const usageEvidence=normalizeEnergy(electricityRaw,gasRaw,months);
     return sendJson(response,200,{
-      status:Object.values(providerStatus).every((item)=>item.ok) ? 'ok' : 'partial',publicDataConfigured:true,address,building:buildingTitle,providerStatus,
+      status:Object.values(providerStatus).every((item)=>item.ok) ? 'ok' : 'partial',publicDataConfigured:true,vworldConfigured:Boolean(vworldKey),address,building:buildingTitle,providerStatus,landProfile,
       buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),landUseZones,
       market:{commercial:commercial.slice(0,40),land:land.slice(0,40),summary:marketSummary(marketRows),exactLot:marketRows.filter(row=>row.matchLevel==='exact_lot').slice(0,20)},
       usageEvidence,
@@ -334,7 +421,8 @@ export default async function handler(request,response){
         commercial:'국토교통부 상업업무용 부동산 매매 실거래가',
         land:'국토교통부 토지 매매 실거래가',
         energy:'국토교통부 건축HUB 건물에너지정보',
-        operatingBusinesses:'소상공인시장진흥공단 상가(상권)정보'
+        operatingBusinesses:'소상공인시장진흥공단 상가(상권)정보',
+        landProfile:'국토교통부 VWorld NED 토지정보'
       },
       collectedAt:new Date().toISOString()
     },origin);
