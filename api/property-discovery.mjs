@@ -13,6 +13,9 @@ const asArray = (value) => value == null ? [] : Array.isArray(value) ? value : [
 const num = (value) => { const n = Number(String(value ?? '').replaceAll(',', '').trim()); return Number.isFinite(n) ? n : undefined; };
 const ymd = (value) => { const s=String(value??'').replace(/\D/g,''); return s.length===8 ? `${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}` : ''; };
 const pyeong = (sqm) => sqm == null ? undefined : Math.round((sqm / 3.3058) * 100) / 100;
+function fetchWithTimeout(url, init={}, timeoutMs=8000) {
+  return fetch(url, { ...init, signal: AbortSignal.timeout(timeoutMs) });
+}
 const normalizedServiceKey = (value='') => { try { return decodeURIComponent(String(value).trim()); } catch { return String(value).trim(); } };
 
 function decodeXml(value='') {
@@ -29,7 +32,7 @@ function xmlItems(xml) {
 async function kakaoResolve(query) {
   const key=process.env.KAKAO_REST_API_KEY;
   if (!key) throw new Error('Kakao REST API 설정이 없습니다.');
-  const res=await fetch(`${KAKAO_ADDRESS}?${new URLSearchParams({query,size:'5'})}`,{headers:{Authorization:`KakaoAK ${key}`}});
+  const res=await fetchWithTimeout(`${KAKAO_ADDRESS}?${new URLSearchParams({query,size:'5'})}`,{headers:{Authorization:`KakaoAK ${key}`}});
   if (!res.ok) throw new Error(`Kakao 주소검색 실패 (${res.status})`);
   const data=await res.json();
   const doc=data.documents?.[0];
@@ -70,7 +73,7 @@ async function kakaoPoiEvidence(resolved) {
         size:'15',
         sort:'distance'
       });
-      const response=await fetch(`${KAKAO_CATEGORY}?${params}`,{headers:{Authorization:`KakaoAK ${key}`}});
+      const response=await fetchWithTimeout(`${KAKAO_CATEGORY}?${params}`,{headers:{Authorization:`KakaoAK ${key}`}});
       if(!response.ok) continue;
       const body=await response.json();
       for(const doc of body.documents||[]) all.push({
@@ -115,7 +118,7 @@ async function building(path, resolved, key) {
     numOfRows:'100',pageNo:'1'
   };
   const jsonParams=new URLSearchParams({...baseParams,_type:'json'});
-  const jsonResponse=await fetch(`${BLD_BASE}/${path}?${jsonParams}`);
+  const jsonResponse=await fetchWithTimeout(`${BLD_BASE}/${path}?${jsonParams}`);
   if(jsonResponse.ok){
     try{
       const body=await jsonResponse.json();
@@ -123,7 +126,7 @@ async function building(path, resolved, key) {
       if(rows.length) return rows;
     }catch{}
   }
-  const xmlResponse=await fetch(`${BLD_BASE}/${path}?${new URLSearchParams(baseParams)}`);
+  const xmlResponse=await fetchWithTimeout(`${BLD_BASE}/${path}?${new URLSearchParams(baseParams)}`);
   if(!xmlResponse.ok) throw new Error(`건축HUB 요청 실패 (${xmlResponse.status})`);
   return xmlItems(await xmlResponse.text());
 }
@@ -184,7 +187,7 @@ async function vworldRows(path,resolved,key,{year}={}){
     pageNo:'1'
   });
   if(year) params.set('stdrYear',String(year));
-  const response=await fetch(`${VWORLD_BASE}/${path}?${params}`);
+  const response=await fetchWithTimeout(`${VWORLD_BASE}/${path}?${params}`);
   if(!response.ok) throw new Error(`VWorld ${path} 요청 실패 (${response.status})`);
   const body=await response.json();
   return findFieldRows(body);
@@ -247,7 +250,7 @@ async function energyRows(path,resolved,key,months){
         serviceKey:key,sigunguCd:resolved.sigunguCd,bjdongCd:resolved.bjdongCd,
         bun:resolved.bun,ji:resolved.ji,useYm,numOfRows:'100',pageNo:'1'
       });
-      const response=await fetch(`${ENERGY_BASE}/${path}?${params}`);
+      const response=await fetchWithTimeout(`${ENERGY_BASE}/${path}?${params}`);
       if(!response.ok) continue;
       for(const item of xmlItems(await response.text())) rows.push({...item,_useYm:useYm});
     }catch{}
@@ -305,7 +308,7 @@ async function operatingBusinesses(resolved,key){
       pageNo:'1',
       type:'json'
     });
-    const response=await fetch(`${SBIZ_RADIUS_URL}?${params}`);
+    const response=await fetchWithTimeout(`${SBIZ_RADIUS_URL}?${params}`);
     if(!response.ok) return {state:'provider_unavailable',interpretation:`상가업소 공개 API 요청 실패 (${response.status})`,nearby:[],sameAddress:[]};
     const body=await response.json();
     const rawItems=asArray(body?.body?.items || body?.response?.body?.items?.item || body?.response?.body?.items);
@@ -346,16 +349,15 @@ async function operatingBusinesses(resolved,key){
   }
 }
 async function tradeRows(base,path,lawdCd,key,months) {
-  const results=[];
-  for(const ym of months){
+  const batches=await Promise.all(months.map(async (ym)=>{
     try{
       const params=new URLSearchParams({serviceKey:key,LAWD_CD:lawdCd,DEAL_YMD:ym,numOfRows:'1000',pageNo:'1'});
-      const res=await fetch(`${base}/${path}?${params}`);
-      if(!res.ok) continue;
-      for(const item of xmlItems(await res.text())) results.push({...item,_dealYmd:ym});
-    } catch {}
-  }
-  return results;
+      const res=await fetchWithTimeout(`${base}/${path}?${params}`);
+      if(!res.ok) return [];
+      return xmlItems(await res.text()).map(item=>({...item,_dealYmd:ym}));
+    } catch { return []; }
+  }));
+  return batches.flat();
 }
 function normalizeTrade(row,type,resolved){
   const sourceDealAmountTenThousandWon=num(row.dealAmount||row.거래금액);
