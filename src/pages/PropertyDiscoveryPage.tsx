@@ -120,6 +120,9 @@ export default function PropertyDiscoveryPage() {
         <div><small>도로명주소</small><strong>{result.address.roadAddress || '-'}</strong></div>
         <div><small>지번주소</small><strong>{result.address.lotAddress || '-'}</strong></div>
         <div><small>법정동코드</small><strong>{result.address.bCode || '-'}</strong></div>
+        <div><small>PNU</small><strong>{result.landProfile?.pnu || 'VWorld 키 필요'}</strong></div>
+        <div><small>개별공시지가</small><strong>{result.landProfile?.officialLandPricePerSqm ? new Intl.NumberFormat('ko-KR').format(result.landProfile.officialLandPricePerSqm) + '원/㎡' : '-'}</strong></div>
+        <div><small>지목 / 토지이용</small><strong>{[result.landProfile?.landCategory, result.landProfile?.landUseSituation].filter(Boolean).join(' · ') || '-'}</strong></div>
         <div><small>건축물대장</small><strong>{result.building ? '조회됨' : result.publicDataConfigured ? '해당 표제부 없음' : '공공데이터 키 필요'}</strong></div>
         <div><small>최근 실거래 후보</small><strong>{(result.market?.commercial.length || 0) + (result.market?.land.length || 0)}건</strong></div>
         <div><small>매물 여부</small><strong>미확인 · 별도 공급원 필요</strong></div>
