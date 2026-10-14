@@ -133,7 +133,7 @@ for (const marker of ['통합 정보 판정', '공적정보', '시장정보', '�
 if (!reportTypes.includes('listingStatus: ReportValue<string>') || !reportDataBuilder.includes("context('listingStatus'")) throw new Error('매물상태 Report 데이터 자동 반영 계약 누락');
 
 if (!settingsPage.includes('외부 데이터 공급원')) throw new Error('Settings data provider readiness UI 누락');
-for (const marker of ['DATA_GO_KR_SERVICE_KEY가 없습니다', 'VWORLD_API_KEY가 없습니다', 'Vercel 서버 환경변수']) {
+for (const marker of ['DATA_GO_KR_SERVICE_KEY가 없습니다', 'VWORLD_API_KEY가 없습니다', 'Vercel 서버 환경변수', '건축HUB 건축물대장정보', '상업업무용 부동산 매매 실거래가', '토지 매매 실거래가', '건축HUB 건물에너지정보', '소상공인시장진흥공단 상가(상권)정보 API', '공시지가·토지특성·토지이용계획']) {
   if (!settingsPage.includes(marker)) throw new Error(`Settings provider readiness marker missing: ${marker}`);
 }
 for (const marker of ['publicDataConfigured', 'vworldConfigured']) {
