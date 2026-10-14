@@ -22,6 +22,12 @@ export interface DiscoveredTrade {
   pricePerSqm?: number; pricePerPyeong?: number;
 }
 export interface LandUseZone { type: string; code: string; name: string; representativeYn: string }
+export interface LandProfile {
+  pnu: string; standardYear: string;
+  officialLandPricePerSqm?: number; estimatedOfficialLandValue?: number; landAreaSqm?: number;
+  landCategory: string; landUseSituation: string; terrainHeight: string; terrainShape: string; roadSide: string;
+  primaryUseZone: string; useZones: string[];
+}
 export interface MarketSummary {
   totalCandidates: number; exactLotCount: number; latestDealDate?: string; medianDealAmount?: number; medianPricePerPyeong?: number;
 }
@@ -45,9 +51,10 @@ export interface OperatingBusinessEvidence {
   nearby: OperatingBusiness[];
 }
 export interface PropertyDiscoveryResult {
-  status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; address?: DiscoveredAddress;
+  status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; vworldConfigured?: boolean; address?: DiscoveredAddress;
   building?: DiscoveredBuilding | null; buildingCandidates?: DiscoveredBuilding[]; floors?: DiscoveredFloor[];
   landUseZones?: LandUseZone[];
+  landProfile?: LandProfile | null;
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[]; summary?: MarketSummary; exactLot?: DiscoveredTrade[] };
   usageEvidence?: BuildingUsageEvidence;
   operatingBusinessEvidence?: OperatingBusinessEvidence;
@@ -58,7 +65,8 @@ export interface PropertyDiscoveryResult {
 const fieldList = [
   'address','buildingName','latitude','longitude','landAreaSqm','landAreaPyeong','buildingAreaPyeong',
   'totalFloorAreaSqm','totalFloorAreaPyeong','buildingCoverageRate','floorAreaRatio','structure','mainUse',
-  'groundFloors','basementFloors','completionDate','parkingOfficial','parkingSpaces','elevator'
+  'groundFloors','basementFloors','completionDate','parkingOfficial','parkingSpaces','elevator',
+  'officialLandPricePerSqm','officialLandValue','officialLandPriceYear','landCategory','landUseSituation','zoning'
 ];
 
 export const publicPropertyDiscoveryService = {
@@ -73,14 +81,20 @@ export const publicPropertyDiscoveryService = {
     const address = result.address;
     const building = result.building;
     if (!address) return {};
+    const landProfile = result.landProfile;
+    const landAreaSqm = building?.landAreaSqm || landProfile?.landAreaSqm || 0;
+    const zoning = (result.landUseZones || []).map((zone) => zone.name).filter(Boolean).join(', ')
+      || landProfile?.useZones?.join(', ')
+      || landProfile?.primaryUseZone
+      || '';
     return {
       name: building?.buildingName || address.lotAddress || address.officialAddress,
       address: address.officialAddress || address.lotAddress,
       latitude: address.latitude,
       longitude: address.longitude,
       buildingName: building?.buildingName || '',
-      landAreaSqm: building?.landAreaSqm || 0,
-      landAreaPyeong: building?.landAreaPyeong || 0,
+      landAreaSqm,
+      landAreaPyeong: landAreaSqm ? Math.round((landAreaSqm / 3.3058) * 100) / 100 : 0,
       buildingAreaPyeong: building?.buildingAreaPyeong || 0,
       totalFloorAreaSqm: building?.totalFloorAreaSqm || 0,
       totalFloorAreaPyeong: building?.totalFloorAreaPyeong || 0,
@@ -88,7 +102,12 @@ export const publicPropertyDiscoveryService = {
       floorAreaRatio: building?.floorAreaRatio || 0,
       structure: building?.structure || '',
       mainUse: building?.mainUse || '',
-      zoning: (result.landUseZones || []).map((zone) => zone.name).filter(Boolean).join(', '),
+      zoning,
+      officialLandPricePerSqm: landProfile?.officialLandPricePerSqm || 0,
+      officialLandValue: landProfile?.estimatedOfficialLandValue || 0,
+      officialLandPriceYear: landProfile?.standardYear || '',
+      landCategory: landProfile?.landCategory || '',
+      landUseSituation: landProfile?.landUseSituation || '',
       groundFloors: building?.groundFloors || 0,
       basementFloors: building?.basementFloors || 0,
       completionDate: building?.completionDate || '',
@@ -129,6 +148,8 @@ export const publicPropertyDiscoveryService = {
       );
       if (duplicate) continue;
       const addressField = ['address', 'latitude', 'longitude'].includes(fieldKey);
+      const landProfileField = ['officialLandPricePerSqm','officialLandValue','officialLandPriceYear','landCategory','landUseSituation'].includes(fieldKey)
+        || (fieldKey === 'zoning' && Boolean(result.landProfile));
       const candidate = {
         id: crypto.randomUUID(),
         propertyId: property.id,
@@ -138,10 +159,14 @@ export const publicPropertyDiscoveryService = {
         sourceType: addressField ? 'map_provider' as const : 'public_api' as const,
         sourceName: addressField
           ? result.sources?.address || 'Kakao Local Address API'
-          : result.sources?.building || '국토교통부 건축HUB 건축물대장정보',
+          : landProfileField
+            ? result.sources?.landProfile || '국토교통부 VWorld NED 토지정보'
+            : result.sources?.building || '국토교통부 건축HUB 건축물대장정보',
         sourceReference: addressField
           ? result.address?.lotAddress || result.address?.officialAddress
-          : result.building?.rawPk || result.address?.lotAddress,
+          : landProfileField
+            ? result.landProfile?.pnu || result.address?.lotAddress
+            : result.building?.rawPk || result.address?.lotAddress,
         confidence: addressField ? 0.99 : 0.95,
         decisionStatus: 'pending' as const,
         note: '공공데이터 자동조회 결과가 현재 Property 값과 달라 검토가 필요합니다.',
@@ -162,6 +187,20 @@ export const publicPropertyDiscoveryService = {
       sourceReference: result.address.lotAddress || result.address.officialAddress, collectedAt: now,
       verificationStatus: 'confirmed', metadata: { ...result.address, explicitFields: ['address','latitude','longitude'] }, createdAt: now,
     });
+    if (result.landProfile) {
+      await propertyDataRoomRepository.saveDataSource({
+        id: `official-land-profile:${propertyId}`, propertyId, resourceType: 'official_land_profile',
+        sourceType: 'public_api', sourceName: result.sources?.landProfile || '국토교통부 VWorld NED 토지정보',
+        sourceReference: result.landProfile.pnu || result.address.lotAddress, collectedAt: now,
+        sourceDate: result.landProfile.standardYear ? `${result.landProfile.standardYear}-01-01` : undefined,
+        verificationStatus: 'confirmed',
+        metadata: {
+          landProfile: result.landProfile,
+          explicitFields: ['officialLandPricePerSqm','officialLandValue','officialLandPriceYear','landCategory','landUseSituation','landAreaSqm','landAreaPyeong','zoning'],
+        },
+        createdAt: now,
+      });
+    }
     if (result.building) {
       await propertyDataRoomRepository.saveDataSource({
         id: `building-register:${propertyId}`, propertyId, resourceType: 'building_register_title',
