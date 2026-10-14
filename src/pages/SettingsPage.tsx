@@ -88,7 +88,7 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
               ['NAVER Maps', providerStatus?.naverConfigured, '주소·정적지도'],
               ['Kakao Local', providerStatus?.kakaoConfigured, '주소·POI·상업활동 evidence'],
               ['국토부 공공데이터', providerStatus?.publicDataConfigured, '건축물대장·실거래·에너지·상가업소'],
-              ['VWorld', providerStatus?.vworldConfigured, '공시지가·토지특성'],
+              ['VWorld', providerStatus?.vworldConfigured, '공시지가·토지특성·토지이용계획'],
             ].map(([name, ready, scope]) => <div key={String(name)} style={{ border: '1px solid #e4e7ec', borderRadius: 10, padding: 12 }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
                 <strong>{String(name)}</strong>
@@ -99,6 +99,9 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
           </div>
           {!providerStatus?.publicDataConfigured && <Alert severity="warning" sx={{ mt: 1.25 }}>
             <strong>DATA_GO_KR_SERVICE_KEY가 없습니다.</strong> 주소·좌표·Kakao POI는 동작하지만 건축물대장, 국토부 실거래, 건물에너지, 상가업소 공공자료는 아직 자동조회되지 않습니다.
+            <div style={{ marginTop: 6, fontSize: 12 }}>
+              활용신청 필요: 국토교통부 건축HUB 건축물대장정보 · 상업업무용 부동산 매매 실거래가 · 토지 매매 실거래가 · 건축HUB 건물에너지정보 · 소상공인시장진흥공단 상가(상권)정보 API
+            </div>
           </Alert>}
           {!providerStatus?.vworldConfigured && <Alert severity="info" sx={{ mt: 1.25 }}>
             <strong>VWORLD_API_KEY가 없습니다.</strong> 공시지가·토지특성 자동조회는 키 등록 후 활성화됩니다.
