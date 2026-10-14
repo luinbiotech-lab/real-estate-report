@@ -16,7 +16,8 @@ export interface DiscoveredBuilding {
 }
 export interface DiscoveredFloor { floorType: string; floor: string; areaSqm?: number; mainUse: string; structure: string }
 export interface DiscoveredTrade {
-  type: 'commercial' | 'land'; dealAmount?: number; dealDate: string; legalDong: string; jibun: string;
+  type: 'commercial' | 'land'; dealAmount?: number; sourceDealAmountTenThousandWon?: number;
+  dealAmountSourceUnit?: '만원'; currency?: 'KRW'; dealDate: string; legalDong: string; jibun: string;
   buildingName: string; buildingAreaSqm?: number; landAreaSqm?: number; floor: string; buildingUse: string;
   matchLevel?: 'exact_lot' | 'masked_address_candidate' | 'same_dong_candidate' | 'regional_candidate';
   pricePerSqm?: number; pricePerPyeong?: number;
