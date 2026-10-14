@@ -50,6 +50,16 @@ export interface OperatingBusinessEvidence {
   sameAddress: OperatingBusiness[];
   nearby: OperatingBusiness[];
 }
+export interface KakaoPoiItem {
+  placeId: string; placeName: string; categoryName: string; categoryGroupCode: string; categoryGroupName: string;
+  phone: string; lotAddress: string; roadAddress: string; distanceMeters?: number; longitude?: number; latitude?: number; placeUrl: string;
+}
+export interface KakaoPoiEvidence {
+  state: 'same_address_poi_observed' | 'nearby_poi_observed' | 'no_public_record' | 'not_configured';
+  interpretation: string;
+  sameAddress: KakaoPoiItem[];
+  nearby: KakaoPoiItem[];
+}
 export interface PropertyDiscoveryResult {
   status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; vworldConfigured?: boolean; address?: DiscoveredAddress;
   building?: DiscoveredBuilding | null; buildingCandidates?: DiscoveredBuilding[]; floors?: DiscoveredFloor[];
@@ -58,6 +68,7 @@ export interface PropertyDiscoveryResult {
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[]; summary?: MarketSummary; exactLot?: DiscoveredTrade[] };
   usageEvidence?: BuildingUsageEvidence;
   operatingBusinessEvidence?: OperatingBusinessEvidence;
+  kakaoPoiEvidence?: KakaoPoiEvidence;
   providerStatus?: Record<string, { ok: boolean; error?: string }>;
   sources?: Record<string,string>; collectedAt?: string;
 }
@@ -277,6 +288,20 @@ export const publicPropertyDiscoveryService = {
         verificationStatus: 'imported',
         metadata: {
           evidence: result.operatingBusinessEvidence,
+          evidenceSemantics: 'commercial_activity_supporting_evidence_only',
+          occupancyConfirmed: false,
+        },
+        createdAt: now,
+      });
+    }
+    if (result.kakaoPoiEvidence && result.kakaoPoiEvidence.state !== 'not_configured') {
+      await propertyDataRoomRepository.saveDataSource({
+        id: `kakao-poi-activity:${propertyId}`, propertyId, fieldKey: 'occupancyStatus', resourceType: 'kakao_poi_activity_evidence',
+        sourceType: 'map_provider', sourceName: result.sources?.kakaoPoi || 'Kakao Local Category Search',
+        sourceReference: result.address.roadAddress || result.address.lotAddress, collectedAt: now,
+        verificationStatus: 'imported',
+        metadata: {
+          evidence: result.kakaoPoiEvidence,
           evidenceSemantics: 'commercial_activity_supporting_evidence_only',
           occupancyConfirmed: false,
         },
