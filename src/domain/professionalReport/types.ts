@@ -158,6 +158,8 @@ export interface ProfessionalReportViewModel {
   };
   land: {
     landAreaSqm: ReportValue<number>; landAreaPyeong: ReportValue<number>; zoning: ReportValue<string>; roadCondition: ReportValue<string>;
+    officialLandPricePerSqm: ReportValue<number>; estimatedOfficialLandValue: ReportValue<number>; officialLandPriceYear: ReportValue<string>;
+    landCategory: ReportValue<string>; landUseSituation: ReportValue<string>;
   };
   location: {
     latitude: ReportValue<number>; longitude: ReportValue<number>; nearbyStation: ReportValue<string>;
