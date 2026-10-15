@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import assert from 'node:assert/strict';
 
 const read = (path) => readFileSync(new URL('../' + path, import.meta.url), 'utf8');
 const api = read('api/property-discovery.mjs');
@@ -140,4 +141,43 @@ for (const marker of ['publicDataConfigured', 'vworldConfigured']) {
   if (!proxyClient.includes(marker)) throw new Error(`Proxy provider readiness contract missing: ${marker}`);
 }
 
+// Executable MOLIT transaction normalization regression (upstream dealAmount is 만원; normalized dealAmount is KRW).
+const { normalizeTrade } = await import(new URL('../api/property-discovery.mjs', import.meta.url).href);
+if (typeof normalizeTrade !== 'function') throw new Error('normalizeTrade export 누락');
+const tradeResolved = { bun: '0815', ji: '0011', region3: '방배동' };
+const tradeRow = (overrides = {}) => ({ dealYear: '2026', dealMonth: '3', dealDay: '7', umdNm: '방배동', jibun: '815-11', buildingArea: '100', ...overrides });
+
+const one = normalizeTrade(tradeRow({ dealAmount: '1' }), 'commercial', tradeResolved);
+assert.strictEqual(one.dealAmount, 10_000, '1 만원 → 10,000 KRW');
+assert.strictEqual(one.sourceDealAmountTenThousandWon, 1);
+assert.strictEqual(one.dealAmountSourceUnit, '만원');
+assert.strictEqual(one.currency, 'KRW');
+
+const large = normalizeTrade(tradeRow({ dealAmount: '123,456' }), 'commercial', tradeResolved);
+assert.strictEqual(large.dealAmount, 1_234_560_000, '123,456 만원 → 1,234,560,000 KRW');
+assert.strictEqual(large.sourceDealAmountTenThousandWon, 123_456);
+assert.strictEqual(large.dealAmountSourceUnit, '만원');
+assert.strictEqual(large.currency, 'KRW');
+assert.strictEqual(large.dealDate, '2026-03-07', 'dealDate YYYY-MM-DD');
+assert.match(large.dealDate, /^\d{4}-\d{2}-\d{2}$/);
+assert.strictEqual(large.matchLevel, 'exact_lot');
+
+const korean = normalizeTrade({ 거래금액: ' 123,456 ', 년: '2025', 월: '12', 일: '31', 법정동: '방배동', 지번: '8**' }, 'land', tradeResolved);
+assert.strictEqual(korean.dealAmount, 1_234_560_000, 'Korean-key 거래금액 만원 → KRW');
+assert.strictEqual(korean.sourceDealAmountTenThousandWon, 123_456);
+assert.strictEqual(korean.dealDate, '2025-12-31');
+assert.strictEqual(korean.matchLevel, 'masked_address_candidate');
+
+for (const blank of ['', '   ', 'abc', '거래취소', undefined, null]) {
+  const row = normalizeTrade(tradeRow({ dealAmount: blank }), 'commercial', tradeResolved);
+  assert.strictEqual(row.dealAmount, undefined, `blank/non-numeric dealAmount (${JSON.stringify(blank)}) must stay missing, not 0 KRW`);
+  assert.strictEqual(row.sourceDealAmountTenThousandWon, undefined);
+  assert.notStrictEqual(row.dealAmount, 0);
+  assert.strictEqual(row.pricePerSqm, undefined);
+  assert.strictEqual(row.pricePerPyeong, undefined);
+  assert.strictEqual(row.dealAmountSourceUnit, '만원');
+  assert.strictEqual(row.currency, 'KRW');
+}
+
 console.log('PASS public property discovery contract');
+console.log('PASS MOLIT dealAmount 만원→KRW normalization regression');
