@@ -96,7 +96,8 @@ async function uploadBangbaeExteriorMedia(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=media`, { waitUntil: 'domcontentloaded' });
   await waitForText(page, '보고서 미디어 연결');
   await page.getByLabel('캡션').fill('QA 방배동 코너 외관');
-  const input = page.locator('input[type="file"][accept="image/jpeg,image/png,image/webp"]');
+  // Scope to the report-media panel; since 9497665 its uploader also accepts video, so match by included image type.
+  const input = page.locator('section').filter({ has: page.getByRole('heading', { name: '보고서 미디어 연결' }) }).last().locator('input[type="file"][accept*="image/png"]');
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
   await input.setInputFiles({ name: 'bangbae-815-11-exterior.png', mimeType: 'image/png', buffer: png });
   await waitForText(page, 'QA 방배동 코너 외관');
