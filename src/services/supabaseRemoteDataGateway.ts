@@ -87,7 +87,7 @@ class SupabaseRestClient {
   constructor(private readonly config: SupabaseRemoteDataGatewayConfig) {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
     this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
-    this.fetchImpl = config.fetchImpl ?? fetch;
+    this.fetchImpl = config.fetchImpl ?? ((input, init) => window.fetch(input, init));
   }
 
   async actorId() {
