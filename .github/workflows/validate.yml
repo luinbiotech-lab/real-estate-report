@@ -4,7 +4,16 @@ on:
   push:
     branches:
       - feat/daon-master-code-lock
+  # PRs into the working branch or master must run the same gate before review/merge. No secrets are used by
+  # this job (build env values are CI sentinels), so fork PRs get a read-only token and nothing to exfiltrate.
+  pull_request:
+    branches:
+      - feat/daon-master-code-lock
+      - master
   workflow_dispatch:
+
+permissions:
+  contents: read
 
 concurrency:
   group: validate-${{ github.ref }}
@@ -104,6 +113,9 @@ jobs:
 
       - name: Validate prepared Supabase remote auth adapter
         run: node scripts/validate-supabase-remote-auth-adapter.mjs
+
+      - name: Validate IndexedDB schema check
+        run: node scripts/validate-indexeddb-schema-check.mjs
 
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs

@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { assertIndexedDbSchema } from './lib/indexeddb-schema-check.mjs';
 
 const engine = readFileSync('src/services/geometryMutationEngineService.ts', 'utf8');
 const tx = readFileSync('src/services/geometryMutationTransactionService.ts', 'utf8');
@@ -35,7 +36,7 @@ if (!state.includes("ProductionCandidateState = 'none' | 'current' | 'stale' | '
 if (!audit.includes('GeometryPromotionAuditRow') || !audit.includes('rolledBack') || !audit.includes('sourceChanged') || !audit.includes('delta:')) throw new Error('Production candidate promotion audit/diff is incomplete.');
 if (!buildingGate.includes("BUILDING_PRODUCTION_CANDIDATE_VERSION = 'daon-building-production-candidate-v1'") || !buildingGate.includes('productionCandidateReady') || !buildingGate.includes('staleCandidateCount') || !buildingGate.includes('constructionReady: false') || !buildingGate.includes('legalBimReady: false')) throw new Error('Building production release gate is incomplete.');
 if (!release.includes("BUILDING_RELEASE_SNAPSHOT_VERSION = 'daon-building-release-snapshot-v1'") || !release.includes("checksumAlgorithm: 'SHA-256'") || !release.includes("signatureAlgorithm: 'ECDSA_P256_SHA256'") || !release.includes("add('buildingReleaseSnapshots'") || !release.includes('verifyBuildingReleaseSnapshot')) throw new Error('Immutable checksum/signature release snapshot flow is incomplete.');
-if (!/DATABASE_VERSION\s*=\s*(\d+)/.test(database) && Number(database.match(/DATABASE_VERSION\s*=\s*(\d+)/)?.[1]) >= 13 || !database.includes("'roomEvidencePositions'") || !database.includes("'roomConditionHistory'") || !database.includes("'roomRenovationHistory'")) throw new Error('Room intelligence IndexedDB version >=13 or required stores are incomplete.');
+assertIndexedDbSchema(database, { minVersion: 13, requiredStores: ['roomEvidencePositions', 'roomConditionHistory', 'roomRenovationHistory'], context: 'Room intelligence IndexedDB' });
 if (!repository.includes('getRoomEvidencePositions') || !repository.includes('getRoomConditionHistory') || !repository.includes('getRoomRenovationHistory')) throw new Error('Room evidence/history repository bindings are incomplete.');
 if (!collaboration.includes("ReleaseLifecycleStatus = 'current' | 'superseded' | 'archived'") || !collaboration.includes("access: 'read_only'") || !collaboration.includes('allowDownload') || !collaboration.includes('expiresAt') || !collaboration.includes('buildShareManifest')) throw new Error('External share/lifecycle foundation is incomplete.');
 if (!compare.includes('compareBuildingReleaseSnapshots') || !compare.includes('checksumChanged') || !compare.includes('floorCountDelta')) throw new Error('Release snapshot comparison is incomplete.');
