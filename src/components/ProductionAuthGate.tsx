@@ -1,4 +1,5 @@
 import { LockPersonRounded } from '@mui/icons-material';
+import './ProductionAuthGate.css';
 import { Alert, Button, CircularProgress, TextField } from '@mui/material';
 import { useEffect, useState, type ReactNode } from 'react';
 import { remoteAuthGateway, type AuthSession } from '../services/authProviderService';
@@ -38,11 +39,11 @@ export default function ProductionAuthGate({ children }: { children: ReactNode }
     }
   };
 
-  if (checking) return <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center' }}><CircularProgress /></main>;
+  if (checking) return <main className="daon-auth-screen daon-auth-loading"><CircularProgress /></main>;
   if (session) return <>{children}</>;
 
-  return <main style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24, background: '#f3f5f8' }}>
-    <section style={{ width: 'min(460px,100%)', background: '#fff', border: '1px solid #d9e0e8', borderRadius: 16, padding: 24, boxShadow: '0 18px 50px rgba(16,36,63,.08)' }}>
+  return <main className="daon-auth-screen">
+    <section className="daon-auth-card">
       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 12 }}><LockPersonRounded color="primary" /><div><p className="eyebrow" style={{ margin: 0 }}>DA:ON PRODUCTION ACCESS</p><h1 style={{ margin: '4px 0 0', fontSize: 24 }}>운영자 로그인</h1></div></div>
       <p style={{ color: '#667085', lineHeight: 1.6 }}>Production 운영 화면은 Supabase Auth의 active profile을 가진 사용자만 접근할 수 있습니다.</p>
       {error && <Alert severity="error" sx={{ mb: 1.5 }}>{error}</Alert>}
