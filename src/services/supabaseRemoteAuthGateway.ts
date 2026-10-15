@@ -148,7 +148,7 @@ export class SupabaseRemoteAuthGateway implements RemoteAuthGateway {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
     this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
     this.tokenStore = config.tokenStore ?? createBrowserSessionRemoteAuthTokenStore();
-    this.fetchImpl = config.fetchImpl ?? fetch;
+    this.fetchImpl = config.fetchImpl ?? ((input, init) => window.fetch(input, init));
     this.adminFunctionName = config.adminFunctionName?.trim() || 'remote-auth-admin';
     if (!/^[A-Za-z0-9_-]+$/.test(this.adminFunctionName)) throw new Error('유효하지 않은 Auth admin function name입니다.');
   }
