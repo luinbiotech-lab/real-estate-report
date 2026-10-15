@@ -42,12 +42,14 @@ async function verifyPropertyHub(page) {
 
 async function verifyDataRoomDeepLinks(page) {
   const cases = [
-    ['media', '사진'],
+    // Tab labels follow the spatial-media Data Room grouping (f6f38a4, docs/spatial-media-walkthrough-contract-2026-10-06.md).
+    ['media', '사진/영상'],
+    ['spatial', '도면/공간'],
     ['documents', '문서'],
     ['official', '공적자료'],
     ['market', '비교거래'],
     ['reports', '보고서'],
-    ['digitalTwin', '3D'],
+    ['digitalTwin', '3D/Walkthrough'],
   ];
   for (const [tab, label] of cases) {
     await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=${tab}`, { waitUntil: 'domcontentloaded' });
