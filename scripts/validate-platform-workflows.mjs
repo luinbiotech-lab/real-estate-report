@@ -100,6 +100,16 @@ for (const marker of ["const [searchParams, setSearchParams] = useSearchParams()
 for (const marker of ['도면 · 3D 자료 등록/추가', 'Room Intelligence 열기', 'Interior Intelligence 열기', '/room-ops?propertyId=', '/interior?propertyId=']) {
   if (!text.dataRoom.includes(marker)) throw new Error(`Data Room 3D 탭 workspace handoff 누락: ${marker}`);
 }
+// The 3D-tab intake label must be an actual clickable control (not a dead text marker) that carries the encoded propertyId.
+{
+  const intakeButton = text.dataRoom.match(/<Button\b[^\n]*?onClick=\{\(\) => navigate\(`\/digital-twin-intake\?propertyId=\$\{encodeURIComponent\(id\)\}`\)\}>도면 · 3D 자료 등록\/추가<\/Button>/);
+  if (!intakeButton) throw new Error('Data Room 3D 탭은 propertyId를 유지하는 클릭 가능한 "도면 · 3D 자료 등록/추가" Digital Twin Intake 버튼을 제공해야 합니다.');
+  const intakeLabelCount = (text.dataRoom.match(/도면 · 3D 자료 등록\/추가/g) ?? []).length;
+  if (intakeLabelCount !== 1 || text.dataRoom.includes('onOpenDigitalTwinIntake=')) throw new Error('Data Room 3D 탭 Digital Twin Intake 진입 버튼은 하나만 노출해야 합니다 (중복 intake 버튼 금지).');
+  for (const marker of ['navigate(`/room-ops?propertyId=${encodeURIComponent(id)}`)', 'navigate(`/interior?propertyId=${encodeURIComponent(id)}`)']) {
+    if (!text.dataRoom.includes(marker)) throw new Error(`Data Room 3D 탭 Room/Interior handoff는 인코딩된 propertyId를 유지해야 합니다: ${marker}`);
+  }
+}
 
 if (!text.twinIntakeService.includes("queueDigitalTwin(saved, 'upload')") || !text.orchestrator.includes('async queueDigitalTwin')) throw new Error('Digital Twin 업로드는 Agent Human Review 흐름에 연결되어야 합니다.');
 if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntakePage.includes("navigate('/digital-twin')")) throw new Error('Digital Twin Intake 화면은 업로드와 Workspace handoff를 제공해야 합니다.');
