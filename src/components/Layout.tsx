@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
+import { AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, MenuRounded, CloseRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -63,11 +63,12 @@ export default function Layout() {
   const propertyId = editMatch?.[1];
   const activeGroup = useMemo(() => navGroups.find((group) => group.items.some((item) => location.pathname === item.to || location.pathname.startsWith(item.to + '/')))?.label ?? '', [location.pathname]);
   const [openGroup, setOpenGroup] = useState(activeGroup);
-  useEffect(() => { if (activeGroup) setOpenGroup(activeGroup); }, [activeGroup]);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  useEffect(() => { if (activeGroup) setOpenGroup(activeGroup); setMobileNavOpen(false); }, [activeGroup, location.pathname]);
 
-  return <div className="app-shell"><aside>
+  return <div className="app-shell"><button type="button" className="mobile-menu-toggle" aria-label={mobileNavOpen ? "메뉴 닫기" : "메뉴 열기"} aria-expanded={mobileNavOpen} onClick={() => setMobileNavOpen(v => !v)}>{mobileNavOpen ? <CloseRounded /> : <MenuRounded />}</button>{mobileNavOpen && <button type="button" className="mobile-nav-backdrop" aria-label="메뉴 닫기" onClick={() => setMobileNavOpen(false)} />}<aside className={mobileNavOpen ? "mobile-nav-open" : ""}>
     <div className="brand"><span>DA</span><div>DA:ON ASSET<small>PROPERTY DATA & AGENT PLATFORM</small></div></div>
-    <nav aria-label="DA:ON main navigation">
+    <nav aria-label="DA:ON main navigation" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMobileNavOpen(false); }}>
       <div className="side-primary">
         <NavLink to="/control-center" className="side-primary-link" title="A0 Control Center"><HubRounded /><span><strong>운영 홈</strong><small>오늘의 상태와 다음 작업</small></span></NavLink>
         <NavLink to="/discover" className="side-primary-link"><SearchRounded /><span><strong>물건 조회</strong><small>주소·지번으로 건물 먼저 확인</small></span></NavLink>
