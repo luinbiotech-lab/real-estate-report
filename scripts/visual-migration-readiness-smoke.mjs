@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { annotateFailure, waitForVisibleText } from './lib/qa-annotate.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const ARTIFACT_DIR = 'artifacts/agent-qa';
@@ -10,9 +11,7 @@ const QA_INLINE_PROPERTY_ID = 'qa-inline-property';
 const QA_INLINE_BINARY_ID = 'qa-inline-binary-risk';
 const QA_BINARY_PAYLOAD_SENTINEL = 'DAON_QA_SENSITIVE_BINARY_PAYLOAD_SENTINEL_20260916';
 
-async function waitForText(page, text, timeout = 30_000) {
-  await page.waitForFunction((expected) => document.body?.innerText.toLowerCase().includes(String(expected).toLowerCase()), text, { timeout });
-}
+const waitForText = waitForVisibleText;
 
 async function writeQaRows(page) {
   await page.evaluate(async ({ propertyId, riskId, binaryPayload }) => new Promise((resolve, reject) => {
@@ -239,6 +238,7 @@ try {
   await page.screenshot({ path: `${ARTIFACT_DIR}/remote-migration-readiness-failure.png`, fullPage: true });
   console.error('Rendered remote migration readiness QA: FAIL');
   console.error(error);
+  annotateFailure('Rendered migration readiness dry run QA', error);
   throw error;
 } finally {
   try { await cleanupQaRows(page); } catch { /* best-effort QA cleanup */ }

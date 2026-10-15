@@ -1,17 +1,10 @@
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { annotateFailure, waitForVisibleText } from './lib/qa-annotate.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const ARTIFACT_DIR = 'artifacts/agent-qa';
-async function waitForText(page, text, timeout = 30_000) {
-  try {
-    await page.waitForFunction((expected) => document.body?.innerText.toLowerCase().includes(String(expected).toLowerCase()), text, { timeout });
-  } catch (error) {
-    // Name the missing text and page so CI annotations say what broke, not just "Timeout exceeded".
-    const visible = ((await page.evaluate(() => document.body?.innerText || '').catch(() => '')) || '').replace(/\s+/g, ' ').slice(0, 400);
-    throw new Error(`Text not found: "${text}" at ${new URL(page.url()).pathname}${new URL(page.url()).search} — visible: ${visible}`, { cause: error });
-  }
-}
+const waitForText = waitForVisibleText;
 async function verifyPage(page, path, requiredTexts, screenshotName) { await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' }); for (const text of requiredTexts) await waitForText(page, text); await page.screenshot({ path: `${ARTIFACT_DIR}/${screenshotName}.png`, fullPage: true }); console.log(`[PASS] ${path}: ${requiredTexts.join(' | ')}`); }
 
 async function verifyDigitalTwinIntake(page) {
@@ -132,4 +125,4 @@ try {
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
   console.log('Rendered core platform + property hub deep links + Data Room + financial/review workspaces smoke QA: PASS');
-} catch (error) { await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }); console.error('Rendered modular agent contract architecture smoke QA: FAIL'); console.error(error); if (process.env.GITHUB_ACTIONS) console.log(`::error title=Rendered Agent and Spatial smoke QA::${String(error?.message || error).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A')}`); throw error; } finally { await browser.close(); }
+} catch (error) { await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }); console.error('Rendered modular agent contract architecture smoke QA: FAIL'); console.error(error); annotateFailure('Rendered Agent and Spatial smoke QA', error); throw error; } finally { await browser.close(); }
