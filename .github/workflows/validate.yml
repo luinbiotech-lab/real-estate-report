@@ -105,6 +105,9 @@ jobs:
       - name: Validate prepared Supabase remote auth adapter
         run: node scripts/validate-supabase-remote-auth-adapter.mjs
 
+      - name: Validate browser fetch receiver binding
+        run: node scripts/validate-browser-fetch-binding.mjs
+
       - name: Validate actual geometry mutation flow
         run: node scripts/validate-geometry-mutation.mjs
 

@@ -9,6 +9,7 @@ import type {
   RemoteReportSnapshotInput,
 } from './remoteDataGateway';
 import { requireBrowserSafeSupabaseKey } from './supabaseBrowserCredential';
+import { resolveBrowserFetch } from './browserFetch';
 
 export interface SupabaseRemoteDataGatewayConfig {
   projectUrl: string;
@@ -87,7 +88,7 @@ class SupabaseRestClient {
   constructor(private readonly config: SupabaseRemoteDataGatewayConfig) {
     this.projectUrl = cleanProjectUrl(config.projectUrl);
     this.anonKey = requireBrowserSafeSupabaseKey(config.anonKey);
-    this.fetchImpl = config.fetchImpl ?? fetch;
+    this.fetchImpl = resolveBrowserFetch(config.fetchImpl);
   }
 
   async actorId() {
