@@ -1,0 +1,27 @@
+/* Mobile navigation shell. Scope to app, not locked print/PDF masters. */
+.mobile-menu-toggle,.mobile-nav-backdrop{display:none}
+@media(max-width:900px){
+  html,body,#root{width:100%;min-width:0;max-width:100%}
+  body{overflow-x:hidden}
+  .app-shell{display:block;min-height:100dvh;min-width:0}
+  .app-shell>main{width:100%;max-width:100%;min-width:0;padding:74px 16px 28px;overflow-x:clip}
+  .app-shell>aside{position:fixed;top:0;bottom:0;left:0;right:auto;width:min(300px,85vw);max-height:100dvh;z-index:1202;overflow-y:auto;transform:translateX(-105%);transition:transform .2s ease;padding:22px 16px}
+  .app-shell>aside.mobile-nav-open{transform:translateX(0)}
+  .mobile-menu-toggle{position:fixed;display:grid;place-items:center;left:16px;top:calc(12px + env(safe-area-inset-top));z-index:1203;width:44px;height:44px;border:1px solid #c8d1dd;background:#fff;color:#10243d;border-radius:10px;box-shadow:0 3px 12px #10243d18}
+  .mobile-nav-backdrop{position:fixed;display:block;inset:0;z-index:1201;background:#09172b99;border:0;padding:0}
+  .app-shell .page-header{display:flex;flex-direction:column;align-items:stretch;gap:14px}
+  .app-shell .page-header .actions{display:flex;flex-wrap:wrap}
+  .app-shell .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-shell .toolbar{flex-wrap:wrap}
+  .app-shell .toolbar .MuiTextField-root{width:min(100%,320px)}
+  .app-shell .form-layout,.app-shell .field-grid,.app-shell .settings-card{grid-template-columns:minmax(0,1fr)}
+  .app-shell .upload-panel{position:static}
+  .app-shell .import-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-shell .data-room-summary{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .app-shell h1{overflow-wrap:anywhere}
+  .app-shell .table-wrap{max-width:100%;overflow-x:auto}
+}
+@media(max-width:480px){
+ .app-shell>main{padding:70px 12px 24px}
+ .app-shell .stats,.app-shell .import-summary{grid-template-columns:minmax(0,1fr)}
+}
