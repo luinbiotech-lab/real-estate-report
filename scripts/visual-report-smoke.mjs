@@ -43,7 +43,7 @@ try {
   await page.waitForSelector('body', { timeout: 30_000 });
   await page.waitForFunction(async () => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('real-estate-report', 13);
+      const request = indexedDB.open('real-estate-report');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -61,7 +61,7 @@ try {
 
   await page.evaluate(async ({ mainImage, mapImage }) => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('real-estate-report', 13);
+      const request = indexedDB.open('real-estate-report');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
