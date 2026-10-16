@@ -1,9 +1,10 @@
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { annotateFailure, waitForVisibleText } from './lib/qa-annotate.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const ARTIFACT_DIR = 'artifacts/agent-qa';
-async function waitForText(page, text, timeout = 30_000) { await page.waitForFunction((expected) => document.body?.innerText.toLowerCase().includes(String(expected).toLowerCase()), text, { timeout }); }
+const waitForText = waitForVisibleText;
 async function verifyPage(page, path, requiredTexts, screenshotName) { await page.goto(`${BASE_URL}${path}`, { waitUntil: 'domcontentloaded' }); for (const text of requiredTexts) await waitForText(page, text); await page.screenshot({ path: `${ARTIFACT_DIR}/${screenshotName}.png`, fullPage: true }); console.log(`[PASS] ${path}: ${requiredTexts.join(' | ')}`); }
 
 async function verifyDigitalTwinIntake(page) {
@@ -34,12 +35,14 @@ async function verifyPropertyHub(page) {
 
 async function verifyDataRoomDeepLinks(page) {
   const cases = [
-    ['media', '사진'],
+    // Tab labels follow the spatial-media Data Room grouping (f6f38a4, docs/spatial-media-walkthrough-contract-2026-10-06.md).
+    ['media', '사진/영상'],
+    ['spatial', '도면/공간'],
     ['documents', '문서'],
     ['official', '공적자료'],
     ['market', '비교거래'],
     ['reports', '보고서'],
-    ['digitalTwin', '3D'],
+    ['digitalTwin', '3D/Walkthrough'],
   ];
   for (const [tab, label] of cases) {
     await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=${tab}`, { waitUntil: 'domcontentloaded' });
@@ -122,4 +125,4 @@ try {
   await verifyPage(page, '/agents', ['Agent Operations', 'Human Review Gate', 'Interior Vision Agent', 'Floor Plan Agent', 'Space Agent', 'Renovation Agent', 'Risk / Compliance Agent'], 'agent-operations');
   await verifyPage(page, '/risk', ['Risk / Compliance Workspace', '사전 점검 실행', '확정 판단'], 'risk-workspace');
   console.log('Rendered core platform + property hub deep links + Data Room + financial/review workspaces smoke QA: PASS');
-} catch (error) { await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }); console.error('Rendered modular agent contract architecture smoke QA: FAIL'); console.error(error); throw error; } finally { await browser.close(); }
+} catch (error) { await page.screenshot({ path: `${ARTIFACT_DIR}/failure.png`, fullPage: true }); console.error('Rendered modular agent contract architecture smoke QA: FAIL'); console.error(error); annotateFailure('Rendered Agent and Spatial smoke QA', error); throw error; } finally { await browser.close(); }
