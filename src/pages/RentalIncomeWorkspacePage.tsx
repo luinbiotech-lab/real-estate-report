@@ -29,8 +29,8 @@ export default function RentalIncomeWorkspacePage() {
     (async () => {
       const rows = await propertyRepository.getAll(); setProperties(rows);
       const requestedId = searchParams.get('propertyId');
-      const first = rows.find((item) => item.id === requestedId) || rows.find((item) => item.id === 'daon-bangbae-815-11') || rows[0];
-      if (first) { setPropertyId(first.id); loadScenarios(first.id, first); }
+      const first = (requestedId ? rows.find((item) => item.id === requestedId) : undefined) || (!requestedId ? rows[0] : undefined);
+      if (first) { setPropertyId(first.id); loadScenarios(first.id, first); } else if (requestedId) { setNotice('요청한 물건을 현재 운영 목록에서 찾을 수 없습니다. 다른 물건을 선택해 주세요.'); }
       setLoading(false);
     })();
   }, []);
