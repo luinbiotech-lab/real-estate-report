@@ -160,10 +160,13 @@ try {
   const professional = await page.evaluate(() => {
     const master = document.querySelector('.daon-professional-report-master');
     const images = [...master.querySelectorAll('img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
-    const pages = [...master.querySelectorAll('.daon-frame-page, .daon-core-page')].map((node) => {
+    // Render order of the locked flow restored in 8e8692d: Opening (.daon-frame-page) → 7 detail sheets
+    // (article.daon-detail-page.daon-detail-page-N) → Closing (.daon-frame-page). Issue #10.
+    const pages = [...master.querySelectorAll(':scope > .daon-frame-page, :scope .daon-detail-page, :scope .daon-core-page')].map((node) => {
       const el = node;
+      const detail = /\bdaon-detail-page-(\d+)\b/.exec(el.className);
       return {
-        masterPage: el.getAttribute('data-master-page') || '',
+        masterPage: el.getAttribute('data-master-page') || (detail ? `detail-${detail[1]}` : el.classList.contains('daon-core-page') ? 'legacy-core' : ''),
         className: el.className,
         scrollWidth: el.scrollWidth,
         scrollHeight: el.scrollHeight,
@@ -186,10 +189,9 @@ try {
   assert(professional.templateVersion === 'daon-professional-master-v3', `Professional template version mismatch: ${professional.templateVersion}`);
   assert(professional.visualMaster === 'DAON_VISUAL_MASTER_2026_09_22', `Visual master mismatch: ${professional.visualMaster}`);
   const pageNames = professional.pages.map((item) => item.masterPage);
-  assert(pageNames[0] === 'opening', `Opening page missing: ${pageNames.join(',')}`);
-  assert(pageNames.includes('property-summary'), `Property summary page missing: ${pageNames.join(',')}`);
-  assert(pageNames.includes('investment-analysis'), `Investment analysis page missing: ${pageNames.join(',')}`);
-  assert(pageNames.at(-1) === 'closing', `Closing page missing: ${pageNames.join(',')}`);
+  const expectedFlow = ['opening', 'detail-1', 'detail-2', 'detail-3', 'detail-4', 'detail-5', 'detail-6', 'detail-7', 'closing'];
+  assert(JSON.stringify(pageNames) === JSON.stringify(expectedFlow), `Locked 7P MASTER flow mismatch: got ${pageNames.join(',')} expected ${expectedFlow.join(',')}`);
+  assert(!pageNames.includes('legacy-core'), 'Removed pre-8e8692d core pages must not be rendered');
   for (const [index, item] of professional.pages.entries()) {
     assert(item.scrollHeight <= item.clientHeight + 2, `Professional page ${index + 1} vertical overflow: ${item.scrollHeight}/${item.clientHeight}`);
     assert(item.scrollWidth <= item.clientWidth + 2, `Professional page ${index + 1} horizontal overflow: ${item.scrollWidth}/${item.clientWidth}`);
@@ -199,6 +201,15 @@ try {
   assert(professional.text.includes('DAON 소개'), 'Professional MASTER closing content missing');
   assert(!professional.text.includes('확인 필요'), 'Professional MASTER must omit empty-value placeholders');
   await page.screenshot({ path: `${OUT_DIR}/daon-professional-master.png`, fullPage: true });
+
+  // Mobile preview reachability (Issue #9 review): every report sheet's left edge must be scrollable into view.
+  for (const width of [390, 768]) {
+    await page.setViewportSize({ width, height: 844 });
+    const unreachable = await page.evaluate(() => [...document.querySelectorAll('.daon-professional-report-master .daon-frame-page, .daon-professional-report-master .daon-detail-page')]
+      .map((el) => Math.round(el.getBoundingClientRect().left + (document.scrollingElement?.scrollLeft || 0)))
+      .filter((left) => left < 0));
+    assert(unreachable.length === 0, `Report preview clipped at ${width}px: ${unreachable.length} sheet(s) start left of the scrollable area (min left ${Math.min(...unreachable)}px)`);
+  }
 
   console.log('Rendered DA:ON professional report smoke QA: PASS');
 } catch (error) {
