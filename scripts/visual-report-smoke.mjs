@@ -1,5 +1,6 @@
 import { mkdir } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { annotateFailure } from './lib/qa-annotate.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const OUT_DIR = process.env.REPORT_QA_OUT_DIR || 'artifacts/report-qa';
@@ -42,7 +43,7 @@ try {
   await page.waitForSelector('body', { timeout: 30_000 });
   await page.waitForFunction(async () => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('real-estate-report', 13);
+      const request = indexedDB.open('real-estate-report');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -60,7 +61,7 @@ try {
 
   await page.evaluate(async ({ mainImage, mapImage }) => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('real-estate-report', 13);
+      const request = indexedDB.open('real-estate-report');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -200,6 +201,11 @@ try {
   await page.screenshot({ path: `${OUT_DIR}/daon-professional-master.png`, fullPage: true });
 
   console.log('Rendered DA:ON professional report smoke QA: PASS');
+} catch (error) {
+  console.error('Rendered DA:ON report smoke QA: FAIL');
+  console.error(error);
+  annotateFailure('Rendered report smoke QA (design advisory)', error);
+  throw error;
 } finally {
   await browser.close();
 }
