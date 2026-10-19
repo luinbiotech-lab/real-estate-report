@@ -14,7 +14,8 @@ for (const file of Object.values(files)) {
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
 if (!text.list.includes('PortfolioOperationsHub') || !text.list.includes('<PortfolioOperationsHub items={items} />')) throw new Error('첫 화면에 Portfolio Operations Hub를 연결해야 합니다.');
-for (const label of ['PORTFOLIO OPERATIONS HUB', '전체 물건', '기본정보 입력완료', '최근 7일 업데이트', '매매 물건']) {
+// Labels follow the Korean-first operations hub (0afc7e4). Each KPI label must stay bound to its metric below.
+for (const label of ['DA:ON PROPERTY OPERATIONS', '등록 물건', '기본정보 입력', '7일 내 변경', '매매 물건']) {
   if (!text.hub.includes(label)) throw new Error(`Portfolio Hub KPI/표시 누락: ${label}`);
 }
 for (const label of ['Intake · Verification', '임대 · 수익', '검토 이력', '외부 공유', '보고서 이력', '3D · 도면', '사용자 · 권한', '엑셀 대량 등록']) {
@@ -23,7 +24,11 @@ for (const label of ['Intake · Verification', '임대 · 수익', '검토 이�
 for (const path of ['/bulk-intake', '/income', '/review-history', '/external-shares', '/report-history', '/digital-twin-intake', '/access', '/import']) {
   if (!text.hub.includes(`path: '${path}'`)) throw new Error(`Portfolio Hub route 누락: ${path}`);
 }
-if (!text.hub.includes('AUTH CONNECTED') || !text.hub.includes('REMOTE SHARE READY')) throw new Error('첫 화면은 Auth/Remote Share production 연결 상태를 명확히 표시해야 합니다.');
+for (const [label, metric] of [['등록 물건', 'metrics.total'], ['기본정보 입력', 'metrics.coreReady'], ['7일 내 변경', 'metrics.recent'], ['매매 물건', 'metrics.sale']]) {
+  if (!text.hub.includes(`['${label}', ${metric},`)) throw new Error(`Portfolio Hub KPI가 지표에 연결되지 않았습니다: ${label} → ${metric}`);
+}
+// Connection chips must be driven by the real flags, not static text.
+if (!text.hub.includes("AUTH_BACKEND_CONNECTED ? '인증 연결'") || !text.hub.includes("remoteShare.availability === 'ready' ? '외부 공유 연결'")) throw new Error('첫 화면은 Auth/Remote Share production 연결 상태를 실제 상태 값으로 표시해야 합니다.');
 if (!text.hub.includes('property.address?.trim()') || !text.hub.includes('property.landAreaSqm > 0') || !text.hub.includes('property.totalFloorAreaSqm > 0') || !text.hub.includes('property.managerName?.trim()')) throw new Error('기본정보 입력완료 KPI는 실제 Property 필드 기준이어야 합니다.');
 if (!text.access.includes('AUTH_BACKEND_CONNECTED = true')) throw new Error('Auth 상태 기준이 production connected 상태여야 합니다.');
 if (!text.shareProvider.includes("availability: 'ready'")) throw new Error('Remote Share 상태 기준이 production ready 상태여야 합니다.');

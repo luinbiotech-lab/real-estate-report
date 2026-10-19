@@ -59,3 +59,11 @@
 .portfolio-workspace-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
 @media(max-width:1100px){.portfolio-focus-hero{flex-direction:column}.portfolio-focus-system{justify-content:flex-start;max-width:100%}.portfolio-focus-actions,.portfolio-workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:650px){.portfolio-focus-hero{padding:20px 18px}.portfolio-focus-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.portfolio-focus-metric{padding:13px}.portfolio-focus-actions,.portfolio-workspace-grid{grid-template-columns:minmax(0,1fr)}.portfolio-section-label small{display:block;margin:3px 0 0}.portfolio-focus-action{min-height:74px}}
+/* Report preview (/document, /briefing) on narrow screens: the A4 sheet is wider than the viewport. Centering an
+   overflowing flex child pushes its left edge off-screen where it cannot be scrolled to (Issue #9 review), and body
+   overflow-x is hidden above. Let the preview shell scroll horizontally and fall back to start alignment on
+   overflow. Screen only, so print/PDF output of the locked masters is unchanged. */
+@media screen and (max-width:900px){
+  .preview-shell{max-width:100vw;overflow-x:auto}
+  .preview-shell .paper-stage{width:max-content;min-width:100%;box-sizing:border-box;justify-content:safe center}
+}
