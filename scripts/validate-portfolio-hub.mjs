@@ -13,12 +13,12 @@ for (const file of Object.values(files)) {
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-if (!text.list.includes('PortfolioOperationsHub') || !text.list.includes('<PortfolioOperationsHub items={items} />')) throw new Error('첫 화면에 Portfolio Operations Hub를 연결해야 합니다.');
+if (!text.list.includes('PortfolioOperationsHub') || !/<PortfolioOperationsHub items=\{items\}[ />]/.test(text.list)) throw new Error('첫 화면에 Portfolio Operations Hub를 연결해야 합니다.');
 // Labels follow the Korean-first operations hub (0afc7e4). Each KPI label must stay bound to its metric below.
 for (const label of ['DA:ON PROPERTY OPERATIONS', '등록 물건', '기본정보 입력', '7일 내 변경', '매매 물건']) {
   if (!text.hub.includes(label)) throw new Error(`Portfolio Hub KPI/표시 누락: ${label}`);
 }
-for (const label of ['Intake · Verification', '임대 · 수익', '검토 이력', '외부 공유', '보고서 이력', '3D · 도면', '사용자 · 권한', '엑셀 대량 등록']) {
+for (const label of ['대량 자료 검증', '임대 · 수익', '검토 이력', '외부 공유', '보고서 이력', '3D · 도면', '사용자 · 권한', '엑셀 대량 등록']) {
   if (!text.hub.includes(label)) throw new Error(`Portfolio Hub Workspace 진입 항목 누락: ${label}`);
 }
 for (const path of ['/bulk-intake', '/income', '/review-history', '/external-shares', '/report-history', '/digital-twin-intake', '/access', '/import']) {

@@ -1,10 +1,11 @@
 import { AdminPanelSettingsRounded, FactCheckRounded, HistoryRounded, PaidRounded, PlaylistAddCheckRounded, RateReviewRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded } from '@mui/icons-material';
-import { Button, Chip } from '@mui/material';
+import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { SearchRounded, AddRounded, ArrowForwardRounded, ExpandMoreRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { AUTH_BACKEND_CONNECTED } from '../services/accessControlService';
 import { externalShareProviderService } from '../services/externalShareProviderService';
 import type { Property } from '../types';
+import { splitSampleProperties } from '../domain/sampleProperty';
 
 function isCoreProfileReady(property: Property) {
   return Boolean(
@@ -21,19 +22,24 @@ function isRecentlyUpdated(property: Property) {
   return Date.now() - updatedAt <= 7 * 24 * 60 * 60 * 1000;
 }
 
-export default function PortfolioOperationsHub({ items }: { items: Property[] }) {
+export type PortfolioLoadState = 'loading' | 'ready' | 'error';
+
+export default function PortfolioOperationsHub({ items, loadState = 'ready', loadError = '', onRetry }: { items: Property[]; loadState?: PortfolioLoadState; loadError?: string; onRetry?: () => void }) {
   const navigate = useNavigate();
   const remoteShare = externalShareProviderService.getRemote();
+  // KPIs describe the operator's real inventory only; sample/demo records are reported separately (Issue #9).
+  const { real: realItems, samples } = splitSampleProperties(items);
   const metrics = {
-    total: items.length,
-    coreReady: items.filter(isCoreProfileReady).length,
-    recent: items.filter(isRecentlyUpdated).length,
-    sale: items.filter((item) => item.tradeType === '매매').length,
+    total: realItems.length,
+    coreReady: realItems.filter(isCoreProfileReady).length,
+    recent: realItems.filter(isRecentlyUpdated).length,
+    sale: realItems.filter((item) => item.tradeType === '매매').length,
   };
+  const loaded = loadState === 'ready';
 
   const workspaces = [
     { label: '준비도 센터', detail: '물건별 7단계 보완 항목 점검', path: '/readiness', icon: <PlaylistAddCheckRounded /> },
-    { label: 'Intake · Verification', detail: '대량 자료 등록과 검증', path: '/bulk-intake', icon: <FactCheckRounded /> },
+    { label: '대량 자료 검증', detail: 'Intake · Verification · 일괄 등록 자료 확인', path: '/bulk-intake', icon: <FactCheckRounded /> },
     { label: '임대 · 수익', detail: 'NOI · Cap Rate · 시나리오', path: '/income', icon: <PaidRounded /> },
     { label: '검토 이력', detail: '자료·Agent·보고서 감사 타임라인', path: '/review-history', icon: <RateReviewRounded /> },
     { label: '외부 공유', detail: '공유·만료·회수 감사대장', path: '/external-shares', icon: <ShareRounded /> },
@@ -63,9 +69,17 @@ export default function PortfolioOperationsHub({ items }: { items: Property[] })
       </div>
     </div>
 
-    {items.length === 0 && <div className="portfolio-empty-state" role="status">
-      <strong>현재 목록에 등록된 물건이 없습니다.</strong>
-      <p>이 화면은 조회된 운영 물건 수를 표시합니다. 다른 화면의 샘플 자료가 실제 등록 물건이라는 의미는 아닙니다.</p>
+    {loadState === 'loading' && <div className="portfolio-load-state" role="status" aria-live="polite">
+      <CircularProgress size={18} /> <span>물건 목록을 불러오는 중입니다…</span>
+    </div>}
+
+    {loadState === 'error' && <Alert severity="error" className="portfolio-load-state" action={onRetry ? <Button color="inherit" size="small" onClick={onRetry}>다시 불러오기</Button> : undefined}>
+      <strong>물건 목록을 불러오지 못했습니다.</strong> 운영 수치를 표시할 수 없습니다.{loadError ? ` (${loadError})` : ''}
+    </Alert>}
+
+    {loaded && realItems.length === 0 && <div className="portfolio-empty-state" role="status">
+      <strong>등록된 실제 운영 물건이 없습니다.</strong>
+      <p>{samples.length > 0 ? `현재 목록의 ${samples.length}건은 시연·검증용 샘플이며 운영 물건 수에 포함하지 않습니다.` : '주소 조회로 건물을 확인한 뒤 첫 물건을 등록하세요.'}</p>
       <Button size="small" variant="contained" onClick={() => navigate('/discover')}>주소 조회부터 시작 <ArrowForwardRounded fontSize="small" /></Button>
     </div>}
 
@@ -75,8 +89,9 @@ export default function PortfolioOperationsHub({ items }: { items: Property[] })
         ['기본정보 입력', metrics.coreReady, '건'],
         ['7일 내 변경', metrics.recent, '건'],
         ['매매 물건', metrics.sale, '건'],
-      ].map(([label, value, unit]) => <div className="portfolio-focus-metric" key={String(label)}><small>{label}</small><div><strong>{value}</strong><span>{unit}</span></div></div>)}
+      ].map(([label, value, unit]) => <div className="portfolio-focus-metric" key={String(label)}><small>{label}</small><div><strong>{loaded ? value : '—'}</strong><span>{loaded ? unit : ''}</span></div></div>)}
     </div>
+    {loaded && samples.length > 0 && <p className="portfolio-sample-note">샘플 {samples.length}건은 위 운영 수치에서 제외했습니다. 목록에서는 ‘샘플’ 표시로 구분됩니다.</p>}
 
     <div className="portfolio-section-label">주요 작업 <small>먼저 필요한 업무를 선택하세요</small></div>
     <div className="portfolio-focus-actions">

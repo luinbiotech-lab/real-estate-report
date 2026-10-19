@@ -67,3 +67,32 @@
   .preview-shell{max-width:100vw;overflow-x:auto}
   .preview-shell .paper-stage{width:max-content;min-width:100%;box-sizing:border-box;justify-content:safe center}
 }
+/* Tablet / small laptop (901–1179px): the desktop body min-width (1180px) made the whole page — sidebar included —
+   scroll sideways at 1024px. Let the shell fit the viewport; wide tables keep their own horizontal scroll
+   (content scroll), the page itself does not (Issue #9). Screen only. */
+@media screen and (min-width:901px) and (max-width:1179px){
+  body{min-width:0}
+  .app-shell{grid-template-columns:224px minmax(0,1fr)}
+  .app-shell>aside{width:224px;padding:22px 12px}
+  .app-shell>main{min-width:0;padding:28px 24px}
+  .app-shell .table-wrap{max-width:100%;overflow-x:auto}
+  .app-shell .page-header{flex-wrap:wrap;gap:14px}
+}
+/* App shell context bar: breadcrumbs + explicit back target for nested pages. */
+.shell-context-bar{display:flex;align-items:center;flex-wrap:wrap;gap:6px 12px;margin:-12px 0 14px;min-height:32px}
+.shell-context-bar .shell-back{color:#173652;font-weight:700;text-transform:none;padding:4px 10px;border:1px solid #d6dfe9;background:#fff;border-radius:999px}
+.shell-breadcrumbs ol{display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin:0;padding:0;list-style:none;font-size:12px;color:#6a7788}
+.shell-breadcrumbs li{display:flex;align-items:center;gap:4px;min-width:0}
+.shell-breadcrumbs li+li::before{content:'›';color:#a3adba}
+.app-shell nav.shell-breadcrumbs{display:block;margin:0}
+.app-shell nav.shell-breadcrumbs a{display:inline;padding:0;border-radius:0;background:none;color:#2b5f8f;text-decoration:none;font-size:12px;font-weight:600}
+.app-shell nav.shell-breadcrumbs a:hover,.app-shell nav.shell-breadcrumbs a:focus-visible{background:none;color:#173652;text-decoration:underline}
+.shell-breadcrumbs [aria-current=page]{color:#152b45;font-weight:700;overflow-wrap:anywhere}
+.side-category.has-active:not(.open) .side-category-copy strong::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#d7b46a;margin-left:6px;vertical-align:middle}
+.app-shell nav a:focus-visible,.side-category-trigger:focus-visible,.mobile-menu-toggle:focus-visible{outline:2px solid #d7b46a;outline-offset:2px}
+/* Home: loading / error / sample states must be unmistakable and never read as an empty portfolio. */
+.portfolio-load-state{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:12px;padding:14px 18px;font-size:13px;color:#3d4c60}
+.portfolio-sample-note{margin:-12px 0 20px;font-size:12px;color:#8a5a12}
+.sample-badge{margin-left:6px;height:20px;font-size:11px}
+@media(max-width:900px){.shell-context-bar{margin:-6px 0 12px}}
