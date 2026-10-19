@@ -25,3 +25,37 @@
  .app-shell>main{padding:70px 12px 24px}
  .app-shell .stats,.app-shell .import-summary{grid-template-columns:minmax(0,1fr)}
 }
+
+/* Focused dashboard: business workflow is primary; specialist tools remain available on demand. */
+.portfolio-focus{margin-bottom:24px}
+.portfolio-focus-hero{display:flex;justify-content:space-between;gap:24px;align-items:flex-start;background:#10243f;border-radius:16px;color:white;padding:26px;margin-bottom:14px}
+.portfolio-focus-eyebrow{font-size:11px;letter-spacing:.16em;color:#d7c8a7;font-weight:700}
+.portfolio-focus-hero h2{font-size:clamp(19px,2.3vw,26px);line-height:1.35;margin:10px 0 8px;letter-spacing:-.035em}
+.portfolio-focus-hero p{font-size:13px;color:#c4d0df;margin:0;line-height:1.65}
+.portfolio-focus-system{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:6px;max-width:280px}
+.portfolio-focus-system .MuiChip-root{color:#f4f7fb}
+.portfolio-empty-state{display:flex;flex-direction:column;align-items:flex-start;background:#fff;border:1px solid #d5dfe9;border-radius:12px;padding:18px 20px;margin-bottom:14px}
+.portfolio-empty-state strong{font-size:15px;color:#152b45}
+.portfolio-empty-state p{font-size:13px;color:#657084;line-height:1.55;margin:7px 0 12px}
+.portfolio-focus-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:22px}
+.portfolio-focus-metric{background:white;border:1px solid #d9e1ea;border-radius:12px;padding:16px 18px}
+.portfolio-focus-metric small{display:block;color:#667085;font-size:12px}
+.portfolio-focus-metric div{display:flex;gap:5px;align-items:baseline;margin-top:6px}
+.portfolio-focus-metric strong{font-size:29px;letter-spacing:-.04em;color:#10243f}
+.portfolio-focus-metric span{font-size:12px;color:#8291a2}
+.portfolio-section-label{font-size:17px;font-weight:800;color:#152b45;margin:0 0 12px}
+.portfolio-section-label small{font-size:12px;color:#758293;font-weight:400;margin-left:10px}
+.portfolio-focus-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.portfolio-focus-action{width:100%;display:flex;gap:12px;align-items:center;text-align:left;border:1px solid #d3dfe9;border-radius:12px;background:#fff;padding:18px 15px;cursor:pointer;color:#12304e}
+.portfolio-focus-action:hover,.portfolio-focus-action:focus-visible{border-color:#2b6598;box-shadow:0 5px 18px #15395712}
+.portfolio-focus-action-icon{display:grid;place-items:center;flex:none;width:39px;height:39px;background:#edf3f8;border-radius:10px}
+.portfolio-focus-action>span:nth-child(2){flex:1;min-width:0}
+.portfolio-focus-action strong,.portfolio-focus-action small{display:block}
+.portfolio-focus-action strong{font-size:14px}
+.portfolio-focus-action small{font-size:11px;line-height:1.5;color:#657488;margin-top:4px}
+.portfolio-focus-more{margin-top:22px}
+.portfolio-focus-more>summary{cursor:pointer;list-style:none;padding:13px 15px;border:1px solid #d6dfe9;border-radius:10px;background:#fff;color:#173652;font-size:13px;font-weight:700;display:flex;justify-content:space-between;align-items:center}
+.portfolio-focus-more>summary::-webkit-details-marker{display:none}
+.portfolio-workspace-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:12px}
+@media(max-width:1100px){.portfolio-focus-hero{flex-direction:column}.portfolio-focus-system{justify-content:flex-start;max-width:100%}.portfolio-focus-actions,.portfolio-workspace-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:650px){.portfolio-focus-hero{padding:20px 18px}.portfolio-focus-metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.portfolio-focus-metric{padding:13px}.portfolio-focus-actions,.portfolio-workspace-grid{grid-template-columns:minmax(0,1fr)}.portfolio-section-label small{display:block;margin:3px 0 0}.portfolio-focus-action{min-height:74px}}

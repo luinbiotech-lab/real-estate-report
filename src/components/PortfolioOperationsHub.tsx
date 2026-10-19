@@ -1,5 +1,6 @@
 import { AdminPanelSettingsRounded, FactCheckRounded, HistoryRounded, PaidRounded, PlaylistAddCheckRounded, RateReviewRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded } from '@mui/icons-material';
 import { Button, Chip } from '@mui/material';
+import { SearchRounded, AddRounded, ArrowForwardRounded, ExpandMoreRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { AUTH_BACKEND_CONNECTED } from '../services/accessControlService';
 import { externalShareProviderService } from '../services/externalShareProviderService';
@@ -42,36 +43,58 @@ export default function PortfolioOperationsHub({ items }: { items: Property[] })
     { label: '엑셀 대량 등록', detail: '물건 데이터 일괄 Intake', path: '/import', icon: <UploadFileRounded /> },
   ];
 
-  return <section style={{ marginBottom: 18 }}>
-    <div style={{ background: '#10243f', color: '#fff', borderRadius: 14, padding: 20, marginBottom: 12 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div>
-          <small style={{ color: '#d7c8a7', letterSpacing: '.12em' }}>PORTFOLIO OPERATIONS HUB</small>
-          <h2 style={{ margin: '6px 0 4px' }}>전체 물건 · Data Room · 분석 · 공유 운영</h2>
-          <p style={{ margin: 0, color: '#d7dee8', fontSize: 13 }}>첫 화면에서 물건 현황을 확인하고 각 전문 Workspace로 바로 이동합니다.</p>
-        </div>
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-          <Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label="LOCAL POLICY READY" />
-          <Chip size="small" color={AUTH_BACKEND_CONNECTED ? 'success' : 'warning'} label={AUTH_BACKEND_CONNECTED ? 'AUTH CONNECTED' : 'AUTH NOT CONNECTED'} />
-          <Chip size="small" color={remoteShare.availability === 'ready' ? 'success' : 'warning'} label={remoteShare.availability === 'ready' ? 'REMOTE SHARE READY' : 'REMOTE SHARE NOT CONFIGURED'} />
-        </div>
+  const primaryActions = [
+    { title: '주소로 물건 조회', description: '도로명·지번 확인 후 Data Room 연결', path: '/discover', icon: <SearchRounded /> },
+    { title: '새 물건 등록', description: '기본정보를 입력하고 자료 수집 시작', path: '/property/new', icon: <AddRounded /> },
+    { title: '자료 검증', description: '출처와 검증 대기 자료 확인', path: '/readiness', icon: <FactCheckRounded /> },
+  ];
+
+  return <section className="portfolio-focus" aria-label="물건 운영 현황">
+    <div className="portfolio-focus-hero">
+      <div>
+        <span className="portfolio-focus-eyebrow">DA:ON PROPERTY OPERATIONS</span>
+        <h2>물건을 확인하고, 검증하고, 보고합니다.</h2>
+        <p>주소 확인부터 Data Room과 전문 보고서까지 한 흐름으로 관리합니다.</p>
+      </div>
+      <div className="portfolio-focus-system" aria-label="시스템 연결 상태">
+        <Chip size="small" variant="outlined" label="로컬 정책 적용" />
+        <Chip size="small" color={AUTH_BACKEND_CONNECTED ? 'success' : 'warning'} label={AUTH_BACKEND_CONNECTED ? '인증 연결' : '인증 확인 필요'} />
+        <Chip size="small" color={remoteShare.availability === 'ready' ? 'success' : 'warning'} label={remoteShare.availability === 'ready' ? '외부 공유 연결' : '외부 공유 점검 필요'} />
       </div>
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(140px,1fr))', gap: 10, marginBottom: 12 }}>
+    {items.length === 0 && <div className="portfolio-empty-state" role="status">
+      <strong>현재 목록에 등록된 물건이 없습니다.</strong>
+      <p>이 화면은 조회된 운영 물건 수를 표시합니다. 다른 화면의 샘플 자료가 실제 등록 물건이라는 의미는 아닙니다.</p>
+      <Button size="small" variant="contained" onClick={() => navigate('/discover')}>주소 조회부터 시작 <ArrowForwardRounded fontSize="small" /></Button>
+    </div>}
+
+    <div className="portfolio-focus-metrics">
       {[
-        ['전체 물건', metrics.total, '건'],
-        ['기본정보 입력완료', metrics.coreReady, '건'],
-        ['최근 7일 업데이트', metrics.recent, '건'],
+        ['등록 물건', metrics.total, '건'],
+        ['기본정보 입력', metrics.coreReady, '건'],
+        ['7일 내 변경', metrics.recent, '건'],
         ['매매 물건', metrics.sale, '건'],
-      ].map(([label, value, unit]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}><strong style={{ fontSize: 28 }}>{value}</strong><span style={{ color: '#98a2b3' }}>{unit}</span></div></div>)}
+      ].map(([label, value, unit]) => <div className="portfolio-focus-metric" key={String(label)}><small>{label}</small><div><strong>{value}</strong><span>{unit}</span></div></div>)}
     </div>
 
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(190px,1fr))', gap: 9 }}>
-      {workspaces.map((workspace) => <Button key={workspace.path} variant="outlined" onClick={() => navigate(workspace.path)} sx={{ justifyContent: 'flex-start', textAlign: 'left', p: 1.3, minHeight: 68, bgcolor: '#fff', textTransform: 'none' }}>
-        <span style={{ marginRight: 10, display: 'inline-flex' }}>{workspace.icon}</span>
-        <span><strong style={{ display: 'block', fontSize: 13 }}>{workspace.label}</strong><small style={{ color: '#667085', fontWeight: 400 }}>{workspace.detail}</small></span>
-      </Button>)}
+    <div className="portfolio-section-label">주요 작업 <small>먼저 필요한 업무를 선택하세요</small></div>
+    <div className="portfolio-focus-actions">
+      {primaryActions.map(action => <button key={action.path} type="button" className="portfolio-focus-action" onClick={() => navigate(action.path)}>
+        <span className="portfolio-focus-action-icon">{action.icon}</span>
+        <span><strong>{action.title}</strong><small>{action.description}</small></span>
+        <ArrowForwardRounded fontSize="small" />
+      </button>)}
     </div>
+
+    <details className="portfolio-focus-more">
+      <summary>전문 업무 전체 보기 <ExpandMoreRounded fontSize="small" /></summary>
+      <div className="portfolio-workspace-grid">
+        {workspaces.map(workspace => <Button key={workspace.path} variant="outlined" onClick={() => navigate(workspace.path)} sx={{ justifyContent: 'flex-start', textAlign: 'left', p: 1.3, minHeight: 68, bgcolor: '#fff', textTransform: 'none' }}>
+          <span style={{ marginRight: 10, display: 'inline-flex' }}>{workspace.icon}</span>
+          <span><strong style={{ display: 'block', fontSize: 13 }}>{workspace.label}</strong><small style={{ color: '#667085', fontWeight: 400 }}>{workspace.detail}</small></span>
+        </Button>)}
+      </div>
+    </details>
   </section>;
 }

@@ -49,7 +49,8 @@ const navGroups = [
   { label: '공유 · 관리', icon: <ShareRounded />, summary: '공유·권한·운영 설정', items: [
     { to: '/external-shares', title: '외부 공유 센터', icon: <ShareRounded /> },
     { to: '/access', title: '사용자 · 권한 관리', icon: <AdminPanelSettingsRounded /> },
-    { to: '/agents', title: 'Agent Operations', icon: <AutoAwesomeRounded /> },
+    { to: '/agents', title: 'AI 운영 상세', icon: <AutoAwesomeRounded /> },
+    { to: '/control-center', title: 'AI 에이전트 관제', icon: <HubRounded /> },
     { to: '/backup', title: '데이터 백업 · 복원', icon: <BackupRounded /> },
     { to: '/migration-readiness', title: 'Remote Migration', icon: <CloudSyncRounded /> },
     { to: '/settings', title: '회사 설정', icon: <SettingsRounded /> },
@@ -70,9 +71,9 @@ export default function Layout() {
     <div className="brand"><span>DA</span><div>DA:ON ASSET<small>PROPERTY DATA & AGENT PLATFORM</small></div></div>
     <nav aria-label="DA:ON main navigation" onClick={(event) => { if ((event.target as HTMLElement).closest("a")) setMobileNavOpen(false); }}>
       <div className="side-primary">
-        <NavLink to="/control-center" className="side-primary-link" title="A0 Control Center"><HubRounded /><span><strong>운영 홈</strong><small>오늘의 상태와 다음 작업</small></span></NavLink>
+        <NavLink to="/" end className="side-primary-link" title="DA:ON 부동산 홈"><HubRounded /><span><strong>부동산 홈</strong><small>물건 현황과 다음 작업</small></span></NavLink>
         <NavLink to="/discover" className="side-primary-link"><SearchRounded /><span><strong>물건 조회</strong><small>주소·지번으로 건물 먼저 확인</small></span></NavLink>
-        <NavLink to="/" end className="side-primary-link"><ApartmentRounded /><span><strong>물건 · Data Room</strong><small>물건과 자료 한곳에서 관리</small></span></NavLink>
+        <NavLink to="/readiness" className="side-primary-link"><ApartmentRounded /><span><strong>자료 검증</strong><small>물건과 자료 한곳에서 관리</small></span></NavLink>
       </div>
       <div className="side-category-list">{navGroups.map((group) => {
         const open = openGroup === group.label;
