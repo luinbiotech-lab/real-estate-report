@@ -43,12 +43,20 @@ export default function ReviewHistoryPage() {
 
   useEffect(() => {
     (async () => {
-      const rows = await propertyRepository.getAll();
-      setProperties(rows);
-      const requestedId = searchParams.get('propertyId');
-      const first = rows.find((item) => item.id === requestedId) || rows.find((item) => item.id === 'daon-bangbae-815-11') || rows[0];
-      if (first) { setPropertyId(first.id); await loadEvents(first.id); }
-      setLoading(false);
+      try {
+        const rows = await propertyRepository.getAll();
+        setProperties(rows);
+        const requestedId = searchParams.get('propertyId');
+        // An explicit propertyId must match exactly; never silently substitute another property (Production IDs differ
+        // from the legacy local 'daon-bangbae-815-11'). Without a request, open the first property in the list.
+        const first = requestedId ? rows.find((item) => item.id === requestedId) : rows[0];
+        if (first) { setPropertyId(first.id); await loadEvents(first.id); }
+        else if (requestedId) setError('요청한 물건을 현재 운영 목록에서 찾을 수 없습니다. 다른 물건을 선택해 주세요.');
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : '물건 목록을 불러오지 못했습니다.');
+      } finally {
+        setLoading(false);
+      }
     })();
   }, []);
 
