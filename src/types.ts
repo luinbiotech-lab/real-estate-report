@@ -11,6 +11,13 @@ export interface StreetViewVerification {
   provider?: 'naver' | 'kakao'; panoId?: string; checkedAt?: string; photoDate?: string;
 }
 
+/**
+ * Provenance class of a Property record (Issue #9/#12). Optional for backward compatibility: records written before
+ * this field existed (IndexedDB and the remote `properties.payload` jsonb) are classified by legacy markers instead.
+ * operational = the operator's real inventory; sample = demo/showcase record; qa_fixture = automated test data.
+ */
+export type PropertyRecordClass = 'operational' | 'sample' | 'qa_fixture';
+
 export interface Property {
   id: string; propertyNumber: string; name: string; buildingName: string; tradeType: TradeType;
   salePrice: number; deposit: number; monthlyRent: number; negotiable: boolean; occupancyStatus: string;
@@ -36,6 +43,10 @@ export interface Property {
   streetViewVerification?: StreetViewVerification;
   briefingItems: BriefingItem[]; briefingUpdatedAt: string;
   brandMapSettings?: BrandMapSettings;
+  /** Explicit provenance class; when absent, see classifyPropertyRecord(). */
+  recordClass?: PropertyRecordClass;
+  /** Who/what set recordClass (e.g. 'local-bootstrap', 'owner'), for audit. */
+  recordClassSource?: string;
   createdAt: string; updatedAt: string;
 }
 
