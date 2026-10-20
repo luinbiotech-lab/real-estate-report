@@ -2,6 +2,7 @@ import type { Property, Settings } from '../types';
 import { REMOTE_OPERATIONAL_MODE } from '../services/operationalDataMode';
 import { remoteDataGateway } from '../services/remoteDataGateway';
 import { database as dbp } from './database';
+import { partitionPropertyRecords, type RejectedPropertyRecord } from '../domain/propertyRecordGuard';
 
 export interface PropertyRepository {
   create(p: Property): Promise<Property>;
@@ -9,6 +10,8 @@ export interface PropertyRepository {
   delete(id: string): Promise<void>;
   getById(id: string): Promise<Property | undefined>;
   getAll(): Promise<Property[]>;
+  /** Same as getAll(), plus stored records that are not usable properties (reported, never deleted). */
+  getAllWithDiagnostics(): Promise<{ items: Property[]; rejected: RejectedPropertyRecord[] }>;
   bulkCreate(items: Property[]): Promise<Property[]>;
   search(query: string): Promise<Property[]>;
 }
@@ -33,8 +36,11 @@ export const propertyRepository: PropertyRepository = {
     return (await dbp).get('properties', id);
   },
   async getAll() {
-    if (REMOTE_OPERATIONAL_MODE) return remoteDataGateway.listProperties();
-    return (await dbp).getAll('properties');
+    return (await this.getAllWithDiagnostics()).items;
+  },
+  async getAllWithDiagnostics() {
+    const raw: unknown[] = REMOTE_OPERATIONAL_MODE ? await remoteDataGateway.listProperties() : await (await dbp).getAll('properties');
+    return partitionPropertyRecords(raw);
   },
   async bulkCreate(items) {
     if (REMOTE_OPERATIONAL_MODE) {
@@ -52,7 +58,7 @@ export const propertyRepository: PropertyRepository = {
     const search = query.toLowerCase();
     return (await this.getAll()).filter((property) =>
       [property.name, property.address, property.buildingName, property.propertyNumber, property.managerName]
-        .some((value) => value.toLowerCase().includes(search)),
+        .some((value) => String(value ?? '').toLowerCase().includes(search)),
     );
   },
 };

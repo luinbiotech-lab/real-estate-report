@@ -6,6 +6,7 @@ import { AUTH_BACKEND_CONNECTED } from '../services/accessControlService';
 import { externalShareProviderService } from '../services/externalShareProviderService';
 import type { Property } from '../types';
 import { splitSampleProperties } from '../domain/sampleProperty';
+import type { RejectedPropertyRecord } from '../domain/propertyRecordGuard';
 
 function isCoreProfileReady(property: Property) {
   return Boolean(
@@ -24,7 +25,7 @@ function isRecentlyUpdated(property: Property) {
 
 export type PortfolioLoadState = 'loading' | 'ready' | 'error';
 
-export default function PortfolioOperationsHub({ items, loadState = 'ready', loadError = '', onRetry }: { items: Property[]; loadState?: PortfolioLoadState; loadError?: string; onRetry?: () => void }) {
+export default function PortfolioOperationsHub({ items, loadState = 'ready', loadError = '', rejected = [], onRetry }: { items: Property[]; loadState?: PortfolioLoadState; loadError?: string; rejected?: RejectedPropertyRecord[]; onRetry?: () => void }) {
   const navigate = useNavigate();
   const remoteShare = externalShareProviderService.getRemote();
   // KPIs describe the operator's real inventory only; sample/demo records are reported separately (Issue #9).
@@ -75,6 +76,10 @@ export default function PortfolioOperationsHub({ items, loadState = 'ready', loa
 
     {loadState === 'error' && <Alert severity="error" className="portfolio-load-state" action={onRetry ? <Button color="inherit" size="small" onClick={onRetry}>다시 불러오기</Button> : undefined}>
       <strong>물건 목록을 불러오지 못했습니다.</strong> 운영 수치를 표시할 수 없습니다.{loadError ? ` (${loadError})` : ''}
+    </Alert>}
+
+    {loaded && rejected.length > 0 && <Alert severity="warning" className="portfolio-load-state">
+      <strong>형식이 맞지 않는 저장 레코드 {rejected.length}건을 목록에서 제외했습니다.</strong> 물건 ID가 없어 열거나 보고서로 만들 수 없는 자료입니다({rejected.slice(0, 3).map((record) => record.label).join(', ')}{rejected.length > 3 ? ' 외' : ''}). 저장된 원본은 변경하지 않았습니다.
     </Alert>}
 
     {loaded && realItems.length === 0 && <div className="portfolio-empty-state" role="status">
