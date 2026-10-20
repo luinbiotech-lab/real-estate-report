@@ -79,7 +79,7 @@ export default function PortfolioOperationsHub({ items, loadState = 'ready', loa
 
     {loaded && realItems.length === 0 && <div className="portfolio-empty-state" role="status">
       <strong>등록된 실제 운영 물건이 없습니다.</strong>
-      <p>{samples.length > 0 ? `현재 목록의 ${samples.length}건은 시연·검증용 샘플이며 운영 물건 수에 포함하지 않습니다.` : '주소 조회로 건물을 확인한 뒤 첫 물건을 등록하세요.'}</p>
+      <p>{samples.length > 0 ? `현재 목록의 ${samples.length}건은 샘플·테스트 자료로 분류되어 운영 물건 수에 포함하지 않습니다.` : '주소 조회로 건물을 확인한 뒤 첫 물건을 등록하세요.'}</p>
       <Button size="small" variant="contained" onClick={() => navigate('/discover')}>주소 조회부터 시작 <ArrowForwardRounded fontSize="small" /></Button>
     </div>}
 
@@ -91,7 +91,7 @@ export default function PortfolioOperationsHub({ items, loadState = 'ready', loa
         ['매매 물건', metrics.sale, '건'],
       ].map(([label, value, unit]) => <div className="portfolio-focus-metric" key={String(label)}><small>{label}</small><div><strong>{loaded ? value : '—'}</strong><span>{loaded ? unit : ''}</span></div></div>)}
     </div>
-    {loaded && samples.length > 0 && <p className="portfolio-sample-note">샘플 {samples.length}건은 위 운영 수치에서 제외했습니다. 목록에서는 ‘샘플’ 표시로 구분됩니다.</p>}
+    {loaded && samples.length > 0 && <p className="portfolio-sample-note">샘플·테스트 자료 {samples.length}건은 위 운영 수치에서 제외했습니다. 목록에서는 배지로 구분되며, 배지에 분류 근거가 표시됩니다.</p>}
 
     <div className="portfolio-section-label">주요 작업 <small>먼저 필요한 업무를 선택하세요</small></div>
     <div className="portfolio-focus-actions">

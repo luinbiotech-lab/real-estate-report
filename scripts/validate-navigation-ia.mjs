@@ -4,10 +4,10 @@
 //  3. breadcrumbs/back targets resolve for nested pages,
 //  4. user-facing menu titles are Korean-first (English module names only as secondary text),
 //  5. the home KPIs exclude explicitly marked sample records.
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { dirname, join, relative, resolve, sep } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
 const require = createRequire(import.meta.url);
@@ -19,12 +19,30 @@ function loadTypeScript() {
 }
 const ts = loadTypeScript();
 
-async function importTs(path) {
-  const out = ts.transpileModule(readFileSync(path, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+// Transpile a TS module and its relative TS imports into a temp dir so plain Node can import it (no tsx needed in CI).
+async function importTs(entry) {
   const dir = mkdtempSync(join(tmpdir(), 'daon-nav-'));
-  const file = join(dir, 'module.mjs');
-  writeFileSync(file, out);
-  try { return await import(pathToFileURL(file).href); } finally { rmSync(dir, { recursive: true, force: true }); }
+  const seen = new Map();
+  const emit = (path) => {
+    const abs = resolve(path);
+    if (seen.has(abs)) return seen.get(abs);
+    const target = join(dir, relative(process.cwd(), abs).replace(/\.tsx?$/, '.mjs'));
+    seen.set(abs, target);
+    let code = ts.transpileModule(readFileSync(abs, 'utf8'), { compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
+    code = code.replace(/from\s+['"](\.{1,2}\/[^'"]+)['"]/g, (_, spec) => {
+      const base = resolve(dirname(abs), spec);
+      const source = [base + '.ts', base + '.tsx', join(base, 'index.ts')].find((candidate) => existsSync(candidate));
+      if (!source) throw new Error(`import 해석 실패: ${spec} (${path})`);
+      const out = emit(source);
+      let rel = relative(dirname(target), out).split(sep).join('/');
+      if (!rel.startsWith('.')) rel = './' + rel;
+      return `from '${rel}'`;
+    });
+    mkdirSync(dirname(target), { recursive: true });
+    writeFileSync(target, code);
+    return target;
+  };
+  try { return await import(pathToFileURL(emit(entry)).href); } finally { rmSync(dir, { recursive: true, force: true }); }
 }
 
 const app = readFileSync('src/App.tsx', 'utf8');
@@ -76,16 +94,40 @@ for (const marker of ['navGroups.map', 'primaryNav.map', 'resolveRouteContext(lo
   if (!layout.includes(marker)) throw new Error(`Layout IA 계약 누락: ${marker}`);
 }
 
-// Sample markers: explicit prefixes only, never inferred from address/name.
+// Record provenance classification: explicit metadata first, legacy markers only for records without it (Issue #9/#12).
 const cases = [
-  [{ id: 'sample-bangbae-815-11', propertyNumber: 'SAMPLE-BB-815-11' }, true],
-  [{ id: 'sample-seongsu', propertyNumber: 'SS-2026-001' }, true],
-  [{ id: 'p-1', propertyNumber: 'SAMPLE-X' }, true],
-  [{ id: 'daon-bangbae-815-11', propertyNumber: 'DA-001' }, false],
-  [{ id: 'p-2', propertyNumber: '' }, false],
-  [{ id: 'resample-1', propertyNumber: 'X-SAMPLE' }, false],
+  // Legacy records (no recordClass) — migration compatibility, no data rewrite needed.
+  [{ id: 'sample-bangbae-815-11', propertyNumber: 'SAMPLE-BB-815-11' }, 'sample', 'legacy-id-prefix'],
+  [{ id: 'p-1', propertyNumber: 'SAMPLE-X' }, 'sample', 'legacy-number-prefix'],
+  // Reproduction of the PR #14 (52c251a) defect: the local QA bootstrap seed has no marker and was counted as real inventory.
+  [{ id: 'daon-bangbae-815-11', propertyNumber: '방배동 815-11' }, 'sample', 'local-bootstrap-seed'],
+  [{ id: 'sample-seongsu', propertyNumber: 'SS-2026-001' }, 'sample', 'legacy-id-prefix'],
+  [{ id: 'p-2', propertyNumber: '' }, 'operational', 'default'],
+  [{ id: 'resample-1', propertyNumber: 'X-SAMPLE' }, 'operational', 'default'],
+  // Explicit metadata wins in both directions.
+  [{ id: 'sample-bangbae-815-11', propertyNumber: 'SAMPLE-BB-815-11', recordClass: 'operational' }, 'operational', 'explicit'],
+  [{ id: 'p-3', propertyNumber: 'DA-3', recordClass: 'qa_fixture' }, 'qa_fixture', 'explicit'],
+  [{ id: 'p-4', propertyNumber: 'DA-4', recordClass: 'sample' }, 'sample', 'explicit'],
+  // Unknown explicit values never silently promote a record; legacy rules apply and the bad value is reported.
+  [{ id: 'sample-x', propertyNumber: '', recordClass: 'real' }, 'sample', 'legacy-id-prefix'],
+  [{ id: 'p-5', propertyNumber: '', recordClass: 'real' }, 'operational', 'default'],
+  [{ id: 'p-6', propertyNumber: '', recordClass: '' }, 'operational', 'default'],
 ];
-for (const [input, expected] of cases) if (sample.isSampleProperty(input) !== expected) throw new Error(`샘플 판별 오류: ${JSON.stringify(input)} → ${!expected}`);
+for (const [input, expectedClass, expectedBasis] of cases) {
+  const result = sample.classifyPropertyRecord(input);
+  if (result.recordClass !== expectedClass || result.basis !== expectedBasis) throw new Error(`레코드 분류 오류: ${JSON.stringify(input)} → ${JSON.stringify(result)} (기대 ${expectedClass}/${expectedBasis})`);
+  if (input.recordClass === 'real' && result.invalidExplicitValue !== 'real') throw new Error('알 수 없는 recordClass 값은 보고되어야 합니다.');
+  if (sample.isSampleProperty(input) !== (expectedClass !== 'operational')) throw new Error(`isSampleProperty 불일치: ${JSON.stringify(input)}`);
+}
+const split = sample.splitSampleProperties(cases.map(([input]) => input));
+if (split.real.length + split.samples.length !== cases.length || split.real.some((item) => sample.isSampleProperty(item))) throw new Error('splitSampleProperties가 레코드를 잃거나 잘못 분류했습니다.');
+const identity = await importTs('src/domain/propertyDataRoom/bangbaeIdentity.ts');
+if (!sample.LOCAL_BOOTSTRAP_SEED_IDS.includes(identity.BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID)) throw new Error('로컬 방배동 seed ID가 샘플 목록에 없습니다.');
+if (sample.LOCAL_BOOTSTRAP_SEED_IDS.includes(identity.BANGBAE_815_11_PRODUCTION_PROPERTY_ID)) throw new Error('Production 방배동 ID를 로컬 seed 목록으로 하드코딩하지 마세요(분류는 표식/metadata로).');
+const bootstrap = readFileSync('src/services/localBootstrapService.ts', 'utf8');
+if ((bootstrap.match(/recordClass: 'sample', recordClassSource: 'local-bootstrap'/g) ?? []).length < 2) throw new Error('로컬 bootstrap seed는 생성 시 recordClass를 명시해야 합니다.');
+const types = readFileSync('src/types.ts', 'utf8');
+if (!types.includes('recordClass?: PropertyRecordClass;')) throw new Error('recordClass는 하위 호환을 위해 optional이어야 합니다.');
 const hub = readFileSync('src/components/PortfolioOperationsHub.tsx', 'utf8');
 if (!hub.includes('splitSampleProperties(items)') || !hub.includes('total: realItems.length')) throw new Error('홈 KPI는 샘플을 제외한 실제 물건 기준이어야 합니다.');
 if (!hub.includes("loadState === 'loading'") || !hub.includes("loadState === 'error'")) throw new Error('홈은 로딩/오류 상태를 빈 목록과 구분해야 합니다.');
