@@ -15,6 +15,7 @@ const requiredFiles = [
   'src/domain/professionalReport/templateIds.ts',
   'src/services/reportEngine/reportSnapshotService.ts',
   'src/domain/professionalReport/reportAccessPolicy.ts',
+  'scripts/visual-report-smoke.mjs',
 ];
 
 const forbiddenFiles = [
@@ -51,6 +52,7 @@ const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx'
 const templateIds = readFileSync('src/domain/professionalReport/templateIds.ts', 'utf8');
 const snapshotService = readFileSync('src/services/reportEngine/reportSnapshotService.ts', 'utf8');
 const accessPolicy = readFileSync('src/domain/professionalReport/reportAccessPolicy.ts', 'utf8');
+const reportSmoke = readFileSync('scripts/visual-report-smoke.mjs', 'utf8');
 
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
@@ -137,6 +139,15 @@ if (!snapshotPage.includes('DaonProfessionalReportMaster') || snapshotPage.inclu
 }
 if (!professionalMaster.includes('DaonReportOpeningPage') || !professionalMaster.includes('DaonDetail7PageMaster') || !professionalMaster.includes('DaonReportClosingPage')) {
   throw new Error('DAON PROFESSIONAL MASTER는 OPENING + DAON_DETAIL_7P_MASTER + CLOSING 구조를 유지해야 합니다.');
+}
+// Keep rendered QA aligned with the approved nine-page MASTER. The previous
+// smoke looked for removed core-page selectors and failed after the Opening.
+if (!detail.includes('daon-detail-page-${page}') ||
+    !reportSmoke.includes("master.querySelectorAll('.daon-frame-page, .daon-detail-page')") ||
+    !reportSmoke.includes('pageNames.length === 9') ||
+    !reportSmoke.includes('pageNames[pageNumber] === `detail-${pageNumber}`') ||
+    reportSmoke.includes("master.querySelectorAll('.daon-frame-page, .daon-core-page')")) {
+  throw new Error('렌더링 QA는 OPENING + 상세 7P + CLOSING의 실제 DOM 구조와 순서를 검증해야 합니다.');
 }
 if (professionalMaster.includes('DaonApprovedCorePages') || professionalMaster.includes('DaonPropertySummaryMasterPage') || professionalMaster.includes('DaonInvestmentAnalysisMasterPage') || professionalMaster.includes('DaonDevelopmentDeepDiveMasterPage')) {
   throw new Error('잠금된 DAON_DETAIL_7P_MASTER를 우회하는 별도 core page 조합을 사용하면 안 됩니다.');
