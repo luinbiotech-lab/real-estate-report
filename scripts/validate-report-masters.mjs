@@ -164,3 +164,6 @@ if (!refinementCss.includes('.d1-map>img') || !refinementCss.includes('.dd-image
 }
 
 console.log('DA:ON report master integrity: PASS');
+
+// Validate privacy restrictions using the executable report policy module.
+await import('./validate-bangbae-internal-media-guard.mjs');
