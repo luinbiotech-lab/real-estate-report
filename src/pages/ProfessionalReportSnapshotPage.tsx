@@ -21,9 +21,9 @@ function isViewModel(value: unknown): value is ProfessionalReportViewModel {
   return Boolean(candidate.identity?.name && candidate.pricing?.salePrice && candidate.generated?.generatedAt && candidate.dataQuality);
 }
 
-function applySnapshotMediaPolicy(model: ProfessionalReportViewModel): ProfessionalReportViewModel {
+function applySnapshotMediaPolicy(model: ProfessionalReportViewModel, propertyId: string): ProfessionalReportViewModel {
   const allowInternal = reportSnapshotInternalPhotoAllowed({
-    id: model.identity.id,
+    id: propertyId,
     name: model.identity.name.value,
     address: model.identity.address.value,
     detailAddress: model.identity.detailAddress.value,
@@ -116,7 +116,7 @@ export default function ProfessionalReportSnapshotPage() {
       ...snapshot.snapshotData.investment,
       comparables: snapshot.snapshotData.investment.comparables ?? [],
     },
-  });
+  }, snapshot.propertyId);
   const reportReady = model.dataQuality.reportReady;
   const report = <DaonProfessionalReportMaster snapshot={snapshot} model={model} />;
 
