@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { CloudUploadOutlined, OpenInNewRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -31,17 +31,21 @@ export default function DigitalTwinIntakePage() {
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const assetRequest = useRef(0);
   const [notice, setNotice] = useState('');
 
   const selectedProperty = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
 
   const loadAssets = async (id: string) => {
+    const requestId = ++assetRequest.current;
+    setAssets([]); setSourceDocuments([]); setFloorOptions([]);
     if (!id) { setAssets([]); setSourceDocuments([]); setFloorOptions([]); return; }
     const [rows, documents, spaces] = await Promise.all([
       propertyDataRoomRepository.getDigitalTwinAssets(id),
       propertyDataRoomRepository.getDocuments(id),
       propertyDataRoomRepository.getSpaces(id),
     ]);
+    if (requestId !== assetRequest.current) return;
     setAssets([...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setSourceDocuments(documents.filter((document) => document.documentType === 'floor_plan'));
     const floors = [...new Set(spaces.map((space) => space.floor?.trim().toUpperCase()).filter((value): value is string => Boolean(value)))];
@@ -64,7 +68,8 @@ export default function DigitalTwinIntakePage() {
       const list = await propertyRepository.getAll();
       setProperties(list);
       const requestedExists = requestedPropertyId && list.some((item) => item.id === requestedPropertyId);
-      const nextId = propertyId || (requestedExists ? requestedPropertyId : '') || list[0]?.id || '';
+      const nextId = requestedPropertyId ? (requestedExists ? requestedPropertyId : '') : (propertyId && list.some((item) => item.id === propertyId) ? propertyId : list[0]?.id || '');
+      if (requestedPropertyId && !requestedExists) setError('요청한 물건을 찾을 수 없습니다. 다른 물건을 선택해 주세요.');
       setPropertyId(nextId);
       await loadAssets(nextId);
     } catch (reason) {
