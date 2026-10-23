@@ -2,6 +2,8 @@ import type { ProfessionalReportViewModel } from '../../domain/professionalRepor
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
+import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
+import { assessRequiredDocumentReadiness } from '../propertyReadinessService';
 import { reportSnapshotFreshnessService } from './reportSnapshotFreshnessService';
 import {
   PROFESSIONAL_REPORT_TEMPLATE_ID,
@@ -60,6 +62,17 @@ export const reportSnapshotService = {
       const missingDocuments = viewModel.dataQuality.requiredDocumentsMissing.length;
       const missingFields = viewModel.dataQuality.missingFields.length;
       throw new Error(`검증이 완료되지 않아 보고서를 확정할 수 없습니다. 필수자료 ${missingDocuments}건 · 확인 필요 필드 ${missingFields}건을 먼저 검토해 주세요.`);
+    }
+    // Recheck live Data Room evidence: an older Snapshot may have been generated
+    // when user-confirmed documents were incorrectly accepted as officially verified.
+    const bundle = await propertyDataRoomRepository.getBundle(current.propertyId);
+    const required = assessRequiredDocumentReadiness(bundle);
+    const unresolvedCandidates = bundle.verificationCandidates.some(
+      (candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held',
+    );
+    if (required.connected.length !== REQUIRED_DOCUMENT_TYPES.length ||
+        required.verified.length !== REQUIRED_DOCUMENT_TYPES.length || unresolvedCandidates) {
+      throw new Error('현재 Data Room의 필수 원본·공식 검증 또는 미처리 후보가 남아 있어 보고서를 확정할 수 없습니다.');
     }
     const freshness = await reportSnapshotFreshnessService.evaluate(current);
     if (freshness.isStale) {
