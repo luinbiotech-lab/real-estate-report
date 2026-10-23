@@ -4,7 +4,7 @@ import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { DaonProfessionalReportMaster } from '../components/professionalReport/DaonProfessionalReportMaster';
-import { reportMediaCategoryAllowed } from '../domain/professionalReport/reportAccessPolicy';
+import { reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
@@ -22,11 +22,18 @@ function isViewModel(value: unknown): value is ProfessionalReportViewModel {
 }
 
 function applySnapshotMediaPolicy(model: ProfessionalReportViewModel): ProfessionalReportViewModel {
-  if (model.media.internalPhotoAllowed) return model;
+  const allowInternal = reportSnapshotInternalPhotoAllowed({
+    id: model.identity.id,
+    name: model.identity.name.value,
+    address: model.identity.address.value,
+    detailAddress: model.identity.detailAddress.value,
+  }, model.media.internalPhotoAllowed);
+  if (allowInternal) return model;
   return {
     ...model,
     media: {
       ...model.media,
+      internalPhotoAllowed: false,
       mainImage: { ...model.media.mainImage, value: null, display: '미연결', state: 'missing', sourceIds: [] },
       additionalImages: { ...model.media.additionalImages, value: [], display: '미연결', state: 'missing', sourceIds: [] },
       items: model.media.items.filter((item) => item.id !== 'property-main' && item.category !== 'additional' && reportMediaCategoryAllowed(item.category, false)),
