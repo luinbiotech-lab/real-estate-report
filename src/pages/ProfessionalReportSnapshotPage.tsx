@@ -24,9 +24,9 @@ function isViewModel(value: unknown): value is ProfessionalReportViewModel {
 function applySnapshotMediaPolicy(model: ProfessionalReportViewModel, propertyId: string): ProfessionalReportViewModel {
   const allowInternal = reportSnapshotInternalPhotoAllowed({
     id: propertyId,
-    name: model.identity.name.value,
-    address: model.identity.address.value,
-    detailAddress: model.identity.detailAddress.value,
+    name: model.identity.name.value ?? '',
+    address: model.identity.address.value ?? '',
+    detailAddress: model.identity.detailAddress.value ?? '',
   }, model.media.internalPhotoAllowed);
   if (allowInternal) return model;
   return {
