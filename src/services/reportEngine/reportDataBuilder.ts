@@ -3,6 +3,7 @@ import type { ProfessionalReportComparable, ProfessionalReportMedia, Professiona
 import { numericReportValue, reportValue } from '../../domain/professionalReport/valuePolicy';
 import { calculateUnitPrice, roundArea, sqmToPyeong, pyeongToSqm } from '../../domain/professionalReport/calculations';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
+import { assessRequiredDocumentReadiness } from '../propertyReadinessService';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
@@ -201,10 +202,11 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const values = collectValues(partial);
   const qualityCounts = emptyCounts(['actual', 'missing', 'disconnected', 'estimated', 'calculated', 'ai_analysis', 'unverified'] as const);
   values.forEach(({ value }) => { qualityCounts[value.state] += 1; });
-  const presentDocuments = new Set(bundle.documents.map((document) => document.documentType));
-  const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !presentDocuments.has(type));
-  const requiredDocumentsVerified = REQUIRED_DOCUMENT_TYPES.every((type) => bundle.documents.some((document) =>
-    document.documentType === type && (document.verificationStatus === 'verified' || document.verificationStatus === 'confirmed')));
+  // Use the same official-verification policy as the Data Room readiness indicator.
+  // A user-confirmed source alone is not an officially verified document.
+  const requiredDocumentReadiness = assessRequiredDocumentReadiness(bundle);
+  const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !requiredDocumentReadiness.connected.includes(type));
+  const requiredDocumentsVerified = requiredDocumentReadiness.verified.length === REQUIRED_DOCUMENT_TYPES.length;
   const unresolvedCandidates = bundle.verificationCandidates.some((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held');
   const dataQuality = {
     counts: qualityCounts,
