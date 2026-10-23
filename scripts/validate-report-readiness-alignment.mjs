@@ -97,3 +97,6 @@ await check('snapshot already not report-ready', bundle(), false, false);
 stale = true;
 await check('stale snapshot', bundle(), false);
 console.log('PASS report readiness alignment: 10 service scenarios + distinct document types + shared policy + builder guards');
+
+// Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
+await import('./validate-report-snapshot-freshness.mjs');
