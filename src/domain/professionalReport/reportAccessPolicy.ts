@@ -28,6 +28,21 @@ export function internalPhotoAllowed(property: PropertyMediaPolicyLike): boolean
   return !isBangbae81511(property);
 }
 
+// Stored snapshots may predate a property-specific privacy restriction.
+// A saved media flag is not an authorization to show restricted interiors.
+export function reportSnapshotInternalPhotoAllowed(
+  identity: Partial<Pick<Property, 'id' | 'name' | 'address' | 'detailAddress'>>,
+  storedFlag: boolean,
+): boolean {
+  if (!storedFlag) return false;
+  return !isBangbae81511({
+    id: identity.id,
+    name: identity.name ?? '',
+    address: identity.address ?? '',
+    detailAddress: identity.detailAddress ?? '',
+  });
+}
+
 export function isInternalMediaCategory(category: string): boolean {
   return INTERNAL_MEDIA_CATEGORIES.has(category);
 }
