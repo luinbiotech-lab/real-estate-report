@@ -32,6 +32,7 @@ export default function DigitalTwinIntakePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const assetRequest = useRef(0);
+  const activePropertyId = useRef('');
   const [notice, setNotice] = useState('');
 
   const selectedProperty = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
@@ -40,7 +41,8 @@ export default function DigitalTwinIntakePage() {
     const requestId = ++assetRequest.current;
     setAssets([]); setSourceDocuments([]); setFloorOptions([]);
     if (!id) { setAssets([]); setSourceDocuments([]); setFloorOptions([]); return; }
-    const [rows, documents, spaces] = await Promise.all([
+    try {
+      const [rows, documents, spaces] = await Promise.all([
       propertyDataRoomRepository.getDigitalTwinAssets(id),
       propertyDataRoomRepository.getDocuments(id),
       propertyDataRoomRepository.getSpaces(id),
@@ -59,7 +61,10 @@ export default function DigitalTwinIntakePage() {
       return rank(left) - rank(right) || left.localeCompare(right);
     });
     setFloorOptions(floors);
-    if (floor && !floors.includes(floor)) setFloor('');
+      if (floor && !floors.includes(floor)) setFloor('');
+    } catch (reason) {
+      if (requestId === assetRequest.current && activePropertyId.current === id) setError(reason instanceof Error ? reason.message : 'Digital Twin 자료 조회 실패');
+    }
   };
 
   const load = async () => {
@@ -70,6 +75,8 @@ export default function DigitalTwinIntakePage() {
       const requestedExists = requestedPropertyId && list.some((item) => item.id === requestedPropertyId);
       const nextId = requestedPropertyId ? (requestedExists ? requestedPropertyId : '') : (propertyId && list.some((item) => item.id === propertyId) ? propertyId : list[0]?.id || '');
       if (requestedPropertyId && !requestedExists) setError('요청한 물건을 찾을 수 없습니다. 다른 물건을 선택해 주세요.');
+      if (activePropertyId.current !== nextId) setFloor('');
+      activePropertyId.current = nextId;
       setPropertyId(nextId);
       await loadAssets(nextId);
     } catch (reason) {
@@ -80,6 +87,8 @@ export default function DigitalTwinIntakePage() {
   useEffect(() => { void load(); }, []);
 
   const selectProperty = async (id: string) => {
+    if (activePropertyId.current !== id) setFloor('');
+    activePropertyId.current = id;
     setPropertyId(id); setNotice(''); setError('');
     setSearchParams(id ? { propertyId: id } : {});
     await loadAssets(id);
@@ -88,15 +97,17 @@ export default function DigitalTwinIntakePage() {
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !propertyId) return;
+    const uploadPropertyId = propertyId; const uploadFloor = floor;
     const detected = digitalTwinAssetIntakeService.detectAssetType(file.name);
     if (detected) setAssetType(detected);
     setUploading(true); setError(''); setNotice('');
     try {
-      const result = await digitalTwinAssetIntakeService.upload(propertyId, file, { assetType: detected || assetType, floor, queueAgent: true });
+      const result = await digitalTwinAssetIntakeService.upload(uploadPropertyId, file, { assetType: detected || assetType, floor: uploadFloor, queueAgent: true });
+      if (activePropertyId.current !== uploadPropertyId) return;
       setNotice(`${file.name} 등록 완료 · ${ASSET_LABELS[result.asset.assetType]} v${result.asset.version}${result.jobId ? ' · Agent 검토 큐 연결' : ''}`);
-      await loadAssets(propertyId);
+      await loadAssets(uploadPropertyId);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Digital Twin 자산을 등록하지 못했습니다.');
+      if (activePropertyId.current === uploadPropertyId) setError(reason instanceof Error ? reason.message : 'Digital Twin 자산을 등록하지 못했습니다.');
     } finally {
       setUploading(false); event.target.value = '';
     }
@@ -104,13 +115,15 @@ export default function DigitalTwinIntakePage() {
 
   const reuseSourceDocument = async (document: PropertyDocument) => {
     if (!propertyId) return;
+    const linkingPropertyId = propertyId; const linkingFloor = floor;
     setLinkingDocumentId(document.id); setError(''); setNotice('');
     try {
-      const result = await digitalTwinAssetIntakeService.uploadFromDocument(propertyId, document, { floor, queueAgent: true });
+      const result = await digitalTwinAssetIntakeService.uploadFromDocument(linkingPropertyId, document, { floor: linkingFloor, queueAgent: true });
+      if (activePropertyId.current !== linkingPropertyId) return;
       setNotice(`${document.originalFileName} Data Room 원본 재사용 완료 · ${ASSET_LABELS[result.asset.assetType]} v${result.asset.version}${result.jobId ? ' · Agent 검토 큐 연결' : ''}`);
-      await loadAssets(propertyId);
+      await loadAssets(linkingPropertyId);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Data Room 도면을 Digital Twin 자산으로 연결하지 못했습니다.');
+      if (activePropertyId.current === linkingPropertyId) setError(reason instanceof Error ? reason.message : 'Data Room 도면을 Digital Twin 자산으로 연결하지 못했습니다.');
     } finally {
       setLinkingDocumentId('');
     }
