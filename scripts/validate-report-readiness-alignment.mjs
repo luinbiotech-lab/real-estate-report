@@ -28,6 +28,7 @@ const docs = (status = 'verified') => REQUIRED_DOCUMENT_TYPES.map((documentType,
 const bundle = (documents = docs(), verificationCandidates = [], verifications = []) => ({
   documents, verificationCandidates, verifications, dataSources: [],
 });
+const mediaPolicy = loadTs('src/domain/professionalReport/reportAccessPolicy.ts');
 const assessed = readiness.assessRequiredDocumentReadiness(bundle());
 assert.equal(assessed.connected.length, 4);
 assert.equal(assessed.verified.length, 4);
@@ -52,7 +53,7 @@ const repository = {
   async updateReportSnapshotStatus(id, status) { statusWrites += 1; return { id, status }; },
 };
 const snapshotService = loadTs('src/services/reportEngine/reportSnapshotService.ts', {
-  '../../domain/professionalReport/reportAccessPolicy': { reportMediaCategoryAllowed: () => true },
+  '../../domain/professionalReport/reportAccessPolicy': mediaPolicy,
   '../../repositories/propertyDataRoomRepository': { propertyDataRoomRepository: repository },
   '../propertyReadinessService': { assessRequiredDocumentReadiness: readiness.assessRequiredDocumentReadiness },
   '../../domain/propertyDataRoom/labels': { REQUIRED_DOCUMENT_TYPES },
@@ -70,6 +71,7 @@ async function check(label, dataRoom, expectPass, reportReady = true, mutate = (
       identity: { id: 'daon-bangbae-815-11' },
       generated: { templateId: 'master', templateVersion: 'v3', engineVersion: '1', generatedAt: '2026-10-23T01:00:00Z' },
       dataQuality: { reportReady, requiredDocumentsMissing: [], missingFields: [] },
+      media: { internalPhotoAllowed: false, mainImage: { value: null }, additionalImages: { value: [] }, items: [] },
     },
   };
   mutate(currentSnapshot);
@@ -114,9 +116,25 @@ await check('wrong payload template ID', bundle(), false, true, (s) => { s.snaps
 await check('wrong payload template version', bundle(), false, true, (s) => { s.snapshotData.generated.templateVersion = 'v2'; });
 await check('wrong payload engine version', bundle(), false, true, (s) => { s.snapshotData.generated.engineVersion = 'old'; });
 await check('payload generation time mismatch', bundle(), false, true, (s) => { s.snapshotData.generated.generatedAt = '2026-10-23T02:00:00Z'; });
+// A stored legacy payload can still contain forbidden media even when the
+// preview sanitizes it. Final immutable Snapshot must not preserve that payload.
+await check('legacy stored interior flag must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.internalPhotoAllowed = true; });
+await check('unclassified main hero must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.mainImage.value = 'legacy-interior.jpg'; });
+await check('legacy additional image must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.additionalImages.value = ['legacy.jpg']; });
+await check('interior item must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.items = [{ id: 'interior-1', category: 'interior' }]; });
+await check('unknown item category must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.items = [{ id: 'unknown-1', category: 'other' }]; });
+await check('legacy property main item must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.items = [{ id: 'property-main', category: 'exterior' }]; });
+await check('missing media section must be rejected', bundle(), false, true, (s) => { delete s.snapshotData.media; });
+await check('explicit exterior media remains permitted', bundle(), true, true, (s) => { s.snapshotData.media.items = [{ id: 'exterior-1', category: 'exterior' }]; });
+await check('unrelated property retains its own media policy', bundle(), true, true, (s) => {
+  s.propertyId = 'unrelated-property';
+  s.snapshotData.identity.id = 'unrelated-property';
+  s.snapshotData.media.internalPhotoAllowed = true;
+  s.snapshotData.media.mainImage.value = 'allowed.jpg';
+});
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 20 service scenarios + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 29 service scenarios + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
