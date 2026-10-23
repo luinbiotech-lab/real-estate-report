@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { CloudUploadOutlined, OpenInNewRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -37,7 +37,7 @@ export default function DigitalTwinIntakePage() {
 
   const selectedProperty = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
 
-  const loadAssets = async (id: string) => {
+  const loadAssets = useCallback(async (id: string) => {
     const requestId = ++assetRequest.current;
     setAssets([]); setSourceDocuments([]); setFloorOptions([]);
     if (!id) { setAssets([]); setSourceDocuments([]); setFloorOptions([]); return; }
@@ -61,11 +61,11 @@ export default function DigitalTwinIntakePage() {
       return rank(left) - rank(right) || left.localeCompare(right);
     });
     setFloorOptions(floors);
-      if (floor && !floors.includes(floor)) setFloor('');
+      setFloor((current) => current && !floors.includes(current) ? '' : current);
     } catch (reason) {
       if (requestId === assetRequest.current && activePropertyId.current === id) setError(reason instanceof Error ? reason.message : 'Digital Twin 자료 조회 실패');
     }
-  };
+  }, []);
 
   const load = async () => {
     setLoading(true); setError('');
@@ -85,6 +85,28 @@ export default function DigitalTwinIntakePage() {
   };
 
   useEffect(() => { void load(); }, []);
+
+  // React Router can preserve this component while Back/Forward changes ?propertyId.
+  // Reject invalid IDs before the same-ID shortcut, including invalid -> invalid.
+  useEffect(() => {
+    if (loading) return;
+    if (requestedPropertyId && !properties.some((item) => item.id === requestedPropertyId)) {
+      setError('요청한 물건을 찾을 수 없습니다. 다른 물건을 선택해 주세요.');
+      if (activePropertyId.current === '') return;
+      activePropertyId.current = '';
+      setPropertyId(''); setFloor(''); setNotice('');
+      void loadAssets(''); // invalidate pending reads and clear assets
+      return;
+    }
+    const nextId = requestedPropertyId || properties[0]?.id || '';
+    if (activePropertyId.current === nextId) return;
+    activePropertyId.current = nextId;
+    setPropertyId(nextId); setFloor(''); setNotice(''); setError('');
+    void loadAssets(nextId);
+  }, [requestedPropertyId, loading, properties, loadAssets]);
+
+  // An unmounted screen must never accept an earlier asset response.
+  useEffect(() => () => { ++assetRequest.current; activePropertyId.current = ''; }, []);
 
   const selectProperty = async (id: string) => {
     if (activePropertyId.current !== id) setFloor('');
