@@ -37,6 +37,8 @@ assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 
 assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 1' }, false), false, 'explicit deny remains denied');
 const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
 assert.match(snapshotPage, /reportSnapshotInternalPhotoAllowed\(\{/, 'snapshot preview must re-evaluate current property privacy');
+assert.match(snapshotPage, /id: propertyId/, 'authoritative snapshot property ID must override untrusted stored identity');
+assert.match(snapshotPage, /\}, snapshot\.propertyId\);/, 'snapshot preview must pass authoritative property ID');
 assert.match(snapshotPage, /internalPhotoAllowed: false/, 'snapshot preview must pass the effective restriction to the 7P renderer');
 assert.match(snapshotPage, /item\.id !== 'property-main'/, 'unclassified primary image must fail closed');
 assert.match(snapshotPage, /reportMediaCategoryAllowed\(item\.category, false\)/, 'only explicitly non-interior media remains');
