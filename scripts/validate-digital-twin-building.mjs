@@ -60,3 +60,6 @@ if (!readinessPanel.includes('Geometry Readiness · Remote Inspection') || !read
 for (const component of ['WallModelPanel', 'WallJunctionPanel', 'OpeningCutPanel', 'FloorPlacementPanel', 'SlabGeometryPanel', 'VerticalCorePanel', 'BuildingStackPanel']) if (!twinPage.includes(component)) throw new Error(`Digital Twin Workspace missing ${component}.`);
 
 console.log('DA:ON geometry engine boundary + dry run + production mutation + operation plan + remote inspection integrity: PASS');
+
+// Keep URL/property-switch regressions in the existing CI Digital Twin validation step.
+await import('./repro-digital-twin-url-property-sync.mjs');
