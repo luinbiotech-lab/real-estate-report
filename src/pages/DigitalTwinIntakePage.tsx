@@ -47,7 +47,7 @@ export default function DigitalTwinIntakePage() {
       propertyDataRoomRepository.getDocuments(id),
       propertyDataRoomRepository.getSpaces(id),
     ]);
-    if (requestId !== assetRequest.current) return;
+    if (requestId !== assetRequest.current || activePropertyId.current !== id) return;
     setAssets([...rows].sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
     setSourceDocuments(documents.filter((document) => document.documentType === 'floor_plan'));
     const floors = [...new Set(spaces.map((space) => space.floor?.trim().toUpperCase()).filter((value): value is string => Boolean(value)))];
@@ -152,6 +152,18 @@ export default function DigitalTwinIntakePage() {
   };
 
   if (loading) return <div className="center"><CircularProgress /><p>Digital Twin Intake를 준비하는 중입니다.</p></div>;
+
+  // Route changes render before the synchronizing effect executes. Never show
+  // the previous property's assets or upload actions under a new property URL.
+  if (requestedPropertyId && !properties.some((item) => item.id === requestedPropertyId)) {
+    return <Box sx={{ p: 3 }}>
+      <Alert severity="error">요청한 물건을 찾을 수 없습니다. 다른 물건을 선택해 주세요.</Alert>
+      <Button sx={{ mt: 2 }} onClick={() => setSearchParams({})}>물건 선택으로 돌아가기</Button>
+    </Box>;
+  }
+  if (requestedPropertyId && propertyId !== requestedPropertyId) {
+    return <div className="center"><CircularProgress /><p>선택한 물건의 Digital Twin 자료를 불러오는 중입니다.</p></div>;
+  }
 
   return <Box sx={{ p: 3, maxWidth: 1280, mx: 'auto' }}>
     <Stack direction={{ xs: 'column', lg: 'row' }} justifyContent="space-between" spacing={2} sx={{ mb: 3 }}>
