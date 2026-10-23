@@ -120,3 +120,4 @@ console.log('PASS report readiness alignment: 20 service scenarios + distinct do
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
+await import('./validate-report-final-provenance.mjs');
