@@ -183,7 +183,7 @@ await import('./validate-bangbae-internal-media-guard.mjs');
 // Execute the actual 1P preview route predicate to prevent cross-property
 // preview/print regressions when React Router reuses DocumentPreview.
 // This tests synchronous render gating; it is not a browser/PDF E2E test.
-const routePredicate = documentPreview.match(/const current = ([\\s\\S]*?) as PreviewState;/);
+const routePredicate = documentPreview.match(/const current = ([\s\S]*?) as PreviewState;/);
 if (!routePredicate) throw new Error('1P 미리보기 경로 격리 조건이 누락되었습니다.');
 const currentForRoute = new Function('view', 'routeKey', 'kind', 'id', `return (${routePredicate[1]});`);
 const previous = { routeKey: 'proposal:A', phase: 'ready', property: { id: 'A' } };
