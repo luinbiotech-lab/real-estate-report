@@ -24,7 +24,8 @@ function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalRep
   const items: ProfessionalReportMedia[] = [];
   const allowInternal = internalPhotoAllowed(property);
 
-  if (property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
+  // Legacy primary photos have no exterior classification: fail closed when restricted.
+  if (allowInternal && property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
   if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
@@ -173,7 +174,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     briefingItems: reportValue(property.briefingItems ?? [], context('briefingItems', { disconnected: !property.briefingItems })),
   };
   const mediaGroup = {
-    mainImage: reportValue(property.mainImage, context('mainImage', { disconnected: false })),
+    mainImage: reportValue(allowInternal ? property.mainImage : null, context('mainImage', { disconnected: false })),
     mapImage: reportValue(property.mapImage, context('mapImage', { disconnected: !property.latitude || !property.longitude })),
     locationAnalysisImage: reportValue(property.locationAnalysisImage, context('locationAnalysisImage')),
     additionalImages: reportValue(allowInternal ? property.additionalImages ?? [] : [], context('additionalImages')),
