@@ -33,6 +33,16 @@ export default function DigitalTwinIntakePage() {
   const [error, setError] = useState('');
   const assetRequest = useRef(0);
   const activePropertyId = useRef('');
+  // Upload/reuse operations may outlive a property switch. An epoch prevents
+  // completion of A from clearing B's busy state (including A → B → A).
+  const uploadEpoch = useRef(0);
+  const linkEpoch = useRef(0);
+  const resetPendingActions = useCallback(() => {
+    ++uploadEpoch.current;
+    ++linkEpoch.current;
+    setUploading(false);
+    setLinkingDocumentId('');
+  }, []);
   const [notice, setNotice] = useState('');
 
   const selectedProperty = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
@@ -75,7 +85,7 @@ export default function DigitalTwinIntakePage() {
       const requestedExists = requestedPropertyId && list.some((item) => item.id === requestedPropertyId);
       const nextId = requestedPropertyId ? (requestedExists ? requestedPropertyId : '') : (propertyId && list.some((item) => item.id === propertyId) ? propertyId : list[0]?.id || '');
       if (requestedPropertyId && !requestedExists) setError('요청한 물건을 찾을 수 없습니다. 다른 물건을 선택해 주세요.');
-      if (activePropertyId.current !== nextId) setFloor('');
+      if (activePropertyId.current !== nextId) { setFloor(''); resetPendingActions(); }
       activePropertyId.current = nextId;
       setPropertyId(nextId);
       await loadAssets(nextId);
@@ -94,6 +104,7 @@ export default function DigitalTwinIntakePage() {
       setError('요청한 물건을 찾을 수 없습니다. 다른 물건을 선택해 주세요.');
       if (activePropertyId.current === '') return;
       activePropertyId.current = '';
+      resetPendingActions();
       setPropertyId(''); setFloor(''); setNotice('');
       void loadAssets(''); // invalidate pending reads and clear assets
       return;
@@ -101,15 +112,16 @@ export default function DigitalTwinIntakePage() {
     const nextId = requestedPropertyId || properties[0]?.id || '';
     if (activePropertyId.current === nextId) return;
     activePropertyId.current = nextId;
+    resetPendingActions();
     setPropertyId(nextId); setFloor(''); setNotice(''); setError('');
     void loadAssets(nextId);
-  }, [requestedPropertyId, loading, properties, loadAssets]);
+  }, [requestedPropertyId, loading, properties, loadAssets, resetPendingActions]);
 
   // An unmounted screen must never accept an earlier asset response.
-  useEffect(() => () => { ++assetRequest.current; activePropertyId.current = ''; }, []);
+  useEffect(() => () => { ++assetRequest.current; ++uploadEpoch.current; ++linkEpoch.current; activePropertyId.current = ''; }, []);
 
   const selectProperty = async (id: string) => {
-    if (activePropertyId.current !== id) setFloor('');
+    if (activePropertyId.current !== id) { setFloor(''); resetPendingActions(); }
     activePropertyId.current = id;
     setPropertyId(id); setNotice(''); setError('');
     setSearchParams(id ? { propertyId: id } : {});
@@ -120,34 +132,37 @@ export default function DigitalTwinIntakePage() {
     const file = event.target.files?.[0];
     if (!file || !propertyId) return;
     const uploadPropertyId = propertyId; const uploadFloor = floor;
+    const uploadRequestId = ++uploadEpoch.current;
     const detected = digitalTwinAssetIntakeService.detectAssetType(file.name);
     if (detected) setAssetType(detected);
     setUploading(true); setError(''); setNotice('');
     try {
       const result = await digitalTwinAssetIntakeService.upload(uploadPropertyId, file, { assetType: detected || assetType, floor: uploadFloor, queueAgent: true });
-      if (activePropertyId.current !== uploadPropertyId) return;
+      if (uploadEpoch.current !== uploadRequestId || activePropertyId.current !== uploadPropertyId) return;
       setNotice(`${file.name} 등록 완료 · ${ASSET_LABELS[result.asset.assetType]} v${result.asset.version}${result.jobId ? ' · Agent 검토 큐 연결' : ''}`);
       await loadAssets(uploadPropertyId);
     } catch (reason) {
-      if (activePropertyId.current === uploadPropertyId) setError(reason instanceof Error ? reason.message : 'Digital Twin 자산을 등록하지 못했습니다.');
+      if (uploadEpoch.current === uploadRequestId && activePropertyId.current === uploadPropertyId) setError(reason instanceof Error ? reason.message : 'Digital Twin 자산을 등록하지 못했습니다.');
     } finally {
-      setUploading(false); event.target.value = '';
+      if (uploadEpoch.current === uploadRequestId && activePropertyId.current === uploadPropertyId) setUploading(false);
+      event.target.value = '';
     }
   };
 
   const reuseSourceDocument = async (document: PropertyDocument) => {
     if (!propertyId) return;
     const linkingPropertyId = propertyId; const linkingFloor = floor;
+    const linkRequestId = ++linkEpoch.current;
     setLinkingDocumentId(document.id); setError(''); setNotice('');
     try {
       const result = await digitalTwinAssetIntakeService.uploadFromDocument(linkingPropertyId, document, { floor: linkingFloor, queueAgent: true });
-      if (activePropertyId.current !== linkingPropertyId) return;
+      if (linkEpoch.current !== linkRequestId || activePropertyId.current !== linkingPropertyId) return;
       setNotice(`${document.originalFileName} Data Room 원본 재사용 완료 · ${ASSET_LABELS[result.asset.assetType]} v${result.asset.version}${result.jobId ? ' · Agent 검토 큐 연결' : ''}`);
       await loadAssets(linkingPropertyId);
     } catch (reason) {
-      if (activePropertyId.current === linkingPropertyId) setError(reason instanceof Error ? reason.message : 'Data Room 도면을 Digital Twin 자산으로 연결하지 못했습니다.');
+      if (linkEpoch.current === linkRequestId && activePropertyId.current === linkingPropertyId) setError(reason instanceof Error ? reason.message : 'Data Room 도면을 Digital Twin 자산으로 연결하지 못했습니다.');
     } finally {
-      setLinkingDocumentId('');
+      if (linkEpoch.current === linkRequestId && activePropertyId.current === linkingPropertyId) setLinkingDocumentId('');
     }
   };
 
