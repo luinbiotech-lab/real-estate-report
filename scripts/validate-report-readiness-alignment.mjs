@@ -78,6 +78,17 @@ async function check(label, dataRoom, expectPass, reportReady = true) {
 await check('verified four required documents', bundle(), true);
 await check('confirmed-only must be rejected', bundle(docs('confirmed')), false);
 await check('one required document missing', bundle(docs().slice(1)), false);
+// Bangbae's four source files include TWO registry copies, not a land-register
+// certificate. Document count alone must never satisfy four distinct types.
+const bangbaeFourFiles = [
+  { id: 'building', documentType: 'building_register', verificationStatus: 'verified' },
+  { id: 'land-registry', documentType: 'registry', verificationStatus: 'verified' },
+  { id: 'building-registry', documentType: 'registry', verificationStatus: 'verified' },
+  { id: 'land-use', documentType: 'land_use_plan', verificationStatus: 'verified' },
+];
+assert.equal(readiness.assessRequiredDocumentReadiness(bundle(bangbaeFourFiles)).connected.length, 3, 'duplicate registry is not land register');
+assert.equal(readiness.assessRequiredDocumentReadiness(bundle(bangbaeFourFiles)).verified.length, 3, 'four files do not equal four required document types');
+await check('two registry copies cannot substitute for land register', bundle(bangbaeFourFiles), false);
 await check('no connected original documents', bundle([]), false);
 await check('explicit verified document attestation', bundle(docs('confirmed'), [], docs('confirmed').map(d => ({ fieldKey: `document:${d.id}`, status: 'verified' }))), true);
 await check('pending verification candidate', bundle(docs(), [{ decisionStatus: 'pending' }]), false);
@@ -85,4 +96,4 @@ await check('held verification candidate', bundle(docs(), [{ decisionStatus: 'he
 await check('snapshot already not report-ready', bundle(), false, false);
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 9 service scenarios + shared policy + builder guards');
+console.log('PASS report readiness alignment: 10 service scenarios + distinct document types + shared policy + builder guards');
