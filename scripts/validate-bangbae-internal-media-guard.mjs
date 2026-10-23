@@ -11,7 +11,7 @@ const compiled = ts.transpileModule(source, {
 const module = { exports: {} };
 const execute = runInNewContext(`(function(require, module, exports) { ${compiled}\n})`, {});
 execute(() => { throw new Error('Unexpected runtime import in media policy'); }, module, module.exports);
-const { internalPhotoAllowed, isBangbae81511, reportMediaCategoryAllowed } = module.exports;
+const { internalPhotoAllowed, isBangbae81511, reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed } = module.exports;
 
 const cases = [
   ['parcel address / explicit true', { id: 'other', name: '', address: '서울 서초구 방배동 815-11', detailAddress: '', internalPhotoAllowed: true }, false],
@@ -30,4 +30,14 @@ for (const [label, property, expected] of cases) {
 }
 assert.equal(isBangbae81511(cases[2][1]), true, 'property ID must be sufficient even when address is unavailable');
 assert.equal(reportMediaCategoryAllowed('exterior', false), true, 'exterior photos remain allowed');
+// Historical snapshots can contain a stale 'true' flag. Never trust it for Bangbae.
+assert.equal(reportSnapshotInternalPhotoAllowed({ id: 'daon-bangbae-815-11' }, true), false, 'legacy ID-only snapshot must be denied');
+assert.equal(reportSnapshotInternalPhotoAllowed({ address: '방배동 815-11' }, true), false, 'legacy parcel snapshot must be denied');
+assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 1' }, true), true, 'unrelated snapshot must retain explicit permission');
+assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 1' }, false), false, 'explicit deny remains denied');
+const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+assert.match(snapshotPage, /reportSnapshotInternalPhotoAllowed\(\{/, 'snapshot preview must re-evaluate current property privacy');
+assert.match(snapshotPage, /internalPhotoAllowed: false/, 'snapshot preview must pass the effective restriction to the 7P renderer');
+assert.match(snapshotPage, /item\.id !== 'property-main'/, 'unclassified primary image must fail closed');
+assert.match(snapshotPage, /reportMediaCategoryAllowed\(item\.category, false\)/, 'only explicitly non-interior media remains');
 console.log('PASS: Bangbae hard-deny internal media, seven property cases and exterior allowance');
