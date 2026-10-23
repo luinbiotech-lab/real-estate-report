@@ -350,7 +350,8 @@ export const propertyDataRoomRepository = {
         ...current,
         id: crypto.randomUUID(),
         reportVersion: Math.max(0, ...existing.filter((item) => item.reportType === current.reportType).map((item) => item.reportVersion)) + 1,
-        generatedAt: now,
+        // Finalization creates a new immutable record, not a newly generated report.
+        // Preserve the generation timestamp bound to snapshotData.generated.generatedAt.
         status: 'ready',
         createdAt: now,
       };
