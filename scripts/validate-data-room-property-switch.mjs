@@ -34,7 +34,7 @@ function makeHarness(loaderSource) {
 
   function loadFor(id) {
     const module = { exports: {} };
-    runInNewContext(`(function(module) { ${compiled} })`, {
+    const wrapper = runInNewContext(`(function(module) { ${compiled} })`, {
       id, useCallback: (callback) => callback, loadRequestRef: requestRef,
       setLoading: (value) => { state.loading = value; },
       setError: (value) => { state.error = value; },
@@ -42,7 +42,8 @@ function makeHarness(loaderSource) {
       setBundle: (value) => { state.bundle = value; },
       propertyRepository: repository, propertyDataRoomService: service,
       emptyBundle: { documents: [], media: [] },
-    })(module);
+    });
+    wrapper(module);
     return module.exports;
   }
   return { state, loadFor, propertyRequests, bundleRequests };
