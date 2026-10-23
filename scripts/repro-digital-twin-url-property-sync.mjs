@@ -100,3 +100,70 @@ assert.deepEqual(visibleAssets('A', 'A', previousRows), { state: 'ready', rows: 
 assert.equal(previousRows[0].propertyId !== 'B', true, 'unguarded stale A asset must be detected');
 
 console.log('PASS: source guards + deterministic URL/property switch, render-before-effect isolation, invalid URL, stale request and unmount model regressions (NOT browser E2E).');
+
+
+// An earlier property's upload or Data Room reuse may complete while a new
+// property has a separate in-flight operation. The old completion must not
+// clear the new property's busy state, even after an A → B → A route cycle.
+// Deterministic state model; NOT a React/browser E2E.
+for (const pattern of [
+  /const uploadEpoch = useRef\(0\)/,
+  /const linkEpoch = useRef\(0\)/,
+  /resetPendingActions\(\)/,
+  /uploadEpoch\.current !== uploadRequestId \|\| activePropertyId\.current !== uploadPropertyId/,
+  /linkEpoch\.current !== linkRequestId \|\| activePropertyId\.current !== linkingPropertyId/,
+  /uploadEpoch\.current === uploadRequestId && activePropertyId\.current === uploadPropertyId\) setUploading\(false\)/,
+  /linkEpoch\.current === linkRequestId && activePropertyId\.current === linkingPropertyId\) setLinkingDocumentId\(''\)/,
+]) assert.match(source, pattern, 'in-flight mutation must be scoped to the active property and operation epoch');
+
+function operationEpochModel() {
+  let active = 'A', uploadEpoch = 0, linkEpoch = 0, uploading = false, linking = false;
+  function switchTo(id) {
+    active = id;
+    ++uploadEpoch;
+    ++linkEpoch;
+    uploading = false;
+    linking = false;
+  }
+  function startUpload() {
+    const capturedId = active, epoch = ++uploadEpoch;
+    uploading = true;
+    return () => { if (uploadEpoch === epoch && active === capturedId) uploading = false; };
+  }
+  function startLink() {
+    const capturedId = active, epoch = ++linkEpoch;
+    linking = true;
+    return () => { if (linkEpoch === epoch && active === capturedId) linking = false; };
+  }
+  return { switchTo, startUpload, startLink, get: () => ({ active, uploading, linking }) };
+}
+
+const busy = operationEpochModel();
+const finishUploadA = busy.startUpload();
+busy.switchTo('B');
+assert.equal(busy.get().uploading, false, 'new property must not inherit A busy state');
+const finishUploadB = busy.startUpload();
+finishUploadA();
+assert.equal(busy.get().uploading, true, 'A completion must not clear B upload');
+finishUploadB();
+assert.equal(busy.get().uploading, false, 'B completion must clear its own busy state');
+
+const cycle = operationEpochModel();
+const finishOldA = cycle.startUpload();
+cycle.switchTo('B');
+cycle.switchTo('A');
+const finishNewA = cycle.startUpload();
+finishOldA();
+assert.equal(cycle.get().uploading, true, 'old A epoch must not clear new A upload');
+finishNewA();
+assert.equal(cycle.get().uploading, false);
+
+const links = operationEpochModel();
+const finishLinkA = links.startLink();
+links.switchTo('B');
+const finishLinkB = links.startLink();
+finishLinkA();
+assert.equal(links.get().linking, true, 'A document reuse must not clear B reuse');
+finishLinkB();
+assert.equal(links.get().linking, false);
+console.log('PASS: mutation epoch isolation for overlapping uploads, A-B-A, and Data Room reuse (NOT browser E2E).');
