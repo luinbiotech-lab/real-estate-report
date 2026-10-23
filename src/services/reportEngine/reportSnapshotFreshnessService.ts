@@ -53,9 +53,12 @@ export const reportSnapshotFreshnessService = {
 
     const latest = candidates.sort((left, right) => right.time - left.time)[0];
     const snapshotTime = Date.parse(snapshot.generatedAt);
+    // Missing property and invalid/future-dated generation times must fail closed.
+    // Otherwise a forged timestamp could bypass the final Snapshot freshness gate.
+    const invalidSnapshotTime = !Number.isFinite(snapshotTime) || snapshotTime > Date.now() + 5 * 60 * 1000;
 
     return {
-      isStale: Boolean(latest && Number.isFinite(snapshotTime) && latest.time > snapshotTime),
+      isStale: !property || invalidSnapshotTime || Boolean(latest && latest.time > snapshotTime),
       snapshotGeneratedAt: snapshot.generatedAt,
       latestDataAt: latest?.at,
       latestDataLabel: latest?.label,
