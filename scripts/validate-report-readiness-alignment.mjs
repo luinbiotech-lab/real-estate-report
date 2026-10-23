@@ -11,7 +11,7 @@ function loadTs(path, imports = {}) {
     fileName: path,
   }).outputText;
   const module = { exports: {} };
-  const fn = runInNewContext(`(function(require, module, exports) { ${compiled}\n})`, {});
+  const fn = runInNewContext(`(function(require, module, exports) { ${compiled}\n})`, { Blob });
   fn((name) => {
     if (!Object.hasOwn(imports, name)) throw new Error(`Unexpected runtime import: ${name} in ${path}`);
     return imports[name];
@@ -24,6 +24,7 @@ const readiness = loadTs('src/services/propertyReadinessService.ts', {
 });
 const docs = (status = 'verified') => REQUIRED_DOCUMENT_TYPES.map((documentType, i) => ({
   id: `doc-${i}`, documentType, verificationStatus: status,
+  storagePath: `property/document/doc-${i}.pdf`, fileData: new Blob(['%PDF-1.7 test original']), fileSize: new Blob(['%PDF-1.7 test original']).size,
 }));
 const bundle = (documents = docs(), verificationCandidates = [], verifications = []) => ({
   documents, verificationCandidates, verifications, dataSources: [],
@@ -89,6 +90,19 @@ async function check(label, dataRoom, expectPass, reportReady = true, mutate = (
 await check('verified four required documents', bundle(), true);
 await check('confirmed-only must be rejected', bundle(docs('confirmed')), false);
 await check('one required document missing', bundle(docs().slice(1)), false);
+await check('verified metadata without original bytes', bundle(docs().map((document, i) =>
+  i === 0 ? { ...document, fileData: undefined } : document)), false);
+await check('zero-byte original', bundle(docs().map((document, i) =>
+  i === 0 ? { ...document, fileData: new Blob([]), fileSize: 0 } : document)), false);
+await check('deleted verified original', bundle(docs().map((document, i) =>
+  i === 0 ? { ...document, deletedAt: '2026-10-23T00:00:00Z' } : document)), false);
+await check('mismatched original binary size', bundle(docs().map((document, i) =>
+  i === 0 ? { ...document, fileSize: document.fileSize + 1 } : document)), false);
+await check('missing Storage path despite original bytes', bundle(docs().map((document, i) =>
+  i === 0 ? { ...document, storagePath: '' } : document)), false);
+await check('verified attestation cannot replace missing binary', bundle(
+  docs('confirmed').map((document, i) => i === 0 ? { ...document, fileData: undefined } : document),
+  [], [{ fieldKey: 'document:doc-0', status: 'verified' }]), false);
 // Bangbae's four source files include TWO registry copies, not a land-register
 // certificate. Document count alone must never satisfy four distinct types.
 const bangbaeFourFiles = [
@@ -96,7 +110,7 @@ const bangbaeFourFiles = [
   { id: 'land-registry', documentType: 'registry', verificationStatus: 'verified' },
   { id: 'building-registry', documentType: 'registry', verificationStatus: 'verified' },
   { id: 'land-use', documentType: 'land_use_plan', verificationStatus: 'verified' },
-];
+].map((document) => ({ ...document, storagePath: `property/document/${document.id}.pdf`, fileData: new Blob(['%PDF-1.7 test original']), fileSize: new Blob(['%PDF-1.7 test original']).size }));
 assert.equal(readiness.assessRequiredDocumentReadiness(bundle(bangbaeFourFiles)).connected.length, 3, 'duplicate registry is not land register');
 assert.equal(readiness.assessRequiredDocumentReadiness(bundle(bangbaeFourFiles)).verified.length, 3, 'four files do not equal four required document types');
 await check('two registry copies cannot substitute for land register', bundle(bangbaeFourFiles), false);
@@ -134,7 +148,7 @@ await check('unrelated property retains its own media policy', bundle(), true, t
 });
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 29 service scenarios + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 35 service scenarios + binary integrity + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
