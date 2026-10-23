@@ -60,10 +60,19 @@ const snapshotService = loadTs('src/services/reportEngine/reportSnapshotService.
   './reportDataBuilder': { PROFESSIONAL_REPORT_TEMPLATE_ID: 'master', PROFESSIONAL_REPORT_TEMPLATE_VERSION: 'v3', REPORT_ENGINE_VERSION: '1', reportDataBuilder: {} },
 }).reportSnapshotService;
 
-async function check(label, dataRoom, expectPass, reportReady = true) {
+async function check(label, dataRoom, expectPass, reportReady = true, mutate = () => {}) {
   currentBundle = dataRoom;
-  currentSnapshot = { id: 'snapshot-1', propertyId: 'daon-bangbae-815-11', status: 'draft', generatedAt: '2026-10-23T01:00:00Z',
-    snapshotData: { generated: { templateId: 'master' }, dataQuality: { reportReady, requiredDocumentsMissing: [], missingFields: [] } } };
+  currentSnapshot = {
+    id: 'snapshot-1', propertyId: 'daon-bangbae-815-11', reportType: 'professional_report',
+    templateId: 'master', templateVersion: 'v3', engineVersion: '1',
+    status: 'draft', generatedAt: '2026-10-23T01:00:00Z',
+    snapshotData: {
+      identity: { id: 'daon-bangbae-815-11' },
+      generated: { templateId: 'master', templateVersion: 'v3', engineVersion: '1', generatedAt: '2026-10-23T01:00:00Z' },
+      dataQuality: { reportReady, requiredDocumentsMissing: [], missingFields: [] },
+    },
+  };
+  mutate(currentSnapshot);
   const before = statusWrites;
   if (expectPass) {
     const result = await snapshotService.markReady(currentSnapshot.id);
@@ -94,9 +103,20 @@ await check('explicit verified document attestation', bundle(docs('confirmed'), 
 await check('pending verification candidate', bundle(docs(), [{ decisionStatus: 'pending' }]), false);
 await check('held verification candidate', bundle(docs(), [{ decisionStatus: 'held' }]), false);
 await check('snapshot already not report-ready', bundle(), false, false);
+// A verified Data Room must not finalize a mismatched or legacy report payload.
+await check('wrong Property identity', bundle(), false, true, (s) => { s.snapshotData.identity.id = 'another-property'; });
+await check('missing Property identity', bundle(), false, true, (s) => { delete s.snapshotData.identity.id; });
+await check('wrong report type', bundle(), false, true, (s) => { s.reportType = 'other'; });
+await check('wrong Snapshot template ID', bundle(), false, true, (s) => { s.templateId = 'legacy'; });
+await check('wrong Snapshot template version', bundle(), false, true, (s) => { s.templateVersion = 'v2'; });
+await check('wrong Snapshot engine version', bundle(), false, true, (s) => { s.engineVersion = 'old'; });
+await check('wrong payload template ID', bundle(), false, true, (s) => { s.snapshotData.generated.templateId = 'legacy'; });
+await check('wrong payload template version', bundle(), false, true, (s) => { s.snapshotData.generated.templateVersion = 'v2'; });
+await check('wrong payload engine version', bundle(), false, true, (s) => { s.snapshotData.generated.engineVersion = 'old'; });
+await check('payload generation time mismatch', bundle(), false, true, (s) => { s.snapshotData.generated.generatedAt = '2026-10-23T02:00:00Z'; });
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 10 service scenarios + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 20 service scenarios + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');

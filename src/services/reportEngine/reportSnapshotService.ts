@@ -58,6 +58,19 @@ export const reportSnapshotService = {
     if (current.status !== 'draft') throw new Error('초안 상태의 보고서만 확정할 수 있습니다.');
     const viewModel = snapshotViewModel(current);
     if (!viewModel) throw new Error('현재 MASTER 형식으로 다시 생성한 뒤 보고서를 확정해 주세요.');
+    // A ready report must be bound to its authoritative Property and approved MASTER.
+    // Checking only the stored reportReady flag can finalize a legacy or cross-property payload.
+    if (current.reportType !== 'professional_report' ||
+        current.templateId !== PROFESSIONAL_REPORT_TEMPLATE_ID ||
+        current.templateVersion !== PROFESSIONAL_REPORT_TEMPLATE_VERSION ||
+        current.engineVersion !== REPORT_ENGINE_VERSION ||
+        viewModel.identity?.id !== current.propertyId ||
+        viewModel.generated.templateId !== current.templateId ||
+        viewModel.generated.templateVersion !== current.templateVersion ||
+        viewModel.generated.engineVersion !== current.engineVersion ||
+        viewModel.generated.generatedAt !== current.generatedAt) {
+      throw new Error('Snapshot 물건 ID·MASTER 버전·생성시각이 일치하지 않습니다. 현재 MASTER로 새 초안을 생성해 주세요.');
+    }
     if (!viewModel.dataQuality.reportReady) {
       const missingDocuments = viewModel.dataQuality.requiredDocumentsMissing.length;
       const missingFields = viewModel.dataQuality.missingFields.length;
