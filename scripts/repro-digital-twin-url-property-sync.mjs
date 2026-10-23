@@ -11,6 +11,9 @@ for (const pattern of [
   /\+\+assetRequest\.current; activePropertyId\.current = ''/,
   /activePropertyId\.current !== uploadPropertyId/,
   /activePropertyId\.current !== linkingPropertyId/,
+  /requestId !== assetRequest\.current \|\| activePropertyId\.current !== id/,
+  /requestedPropertyId && propertyId !== requestedPropertyId/,
+  /requestedPropertyId && !properties\.some\(\(item\) => item\.id === requestedPropertyId\)/,
 ]) assert.match(source, pattern);
 assert.ok(
   source.indexOf('if (requestedPropertyId && !properties.some') <
@@ -82,4 +85,18 @@ delayed.resolve([{ propertyId: 'A' }]);
 await pendingClosed;
 assert.equal(closed.get().assets.length, 0);
 
-console.log('PASS: source guards + deterministic URL/property switch, invalid URL, stale request and unmount model regressions (NOT browser E2E).');
+// A URL update can render before useEffect has synchronized selected property.
+// The route gate must not render A's assets or permit A uploads under B's URL.
+function visibleAssets(routeId, selectedId, rows, knownIds = ['A', 'B']) {
+  if (routeId && !knownIds.includes(routeId)) return { state: 'not-found', rows: [] };
+  if (routeId && routeId !== selectedId) return { state: 'loading', rows: [] };
+  return { state: 'ready', rows };
+}
+const previousRows = [{ propertyId: 'A' }];
+assert.deepEqual(visibleAssets('B', 'A', previousRows), { state: 'loading', rows: [] });
+assert.deepEqual(visibleAssets('unknown', 'A', previousRows), { state: 'not-found', rows: [] });
+assert.deepEqual(visibleAssets('A', 'A', previousRows), { state: 'ready', rows: previousRows });
+// Negative control: the old unguarded render would expose A under route B.
+assert.equal(previousRows[0].propertyId !== 'B', true, 'unguarded stale A asset must be detected');
+
+console.log('PASS: source guards + deterministic URL/property switch, render-before-effect isolation, invalid URL, stale request and unmount model regressions (NOT browser E2E).');
