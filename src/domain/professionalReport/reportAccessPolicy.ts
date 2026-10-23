@@ -47,6 +47,13 @@ export function isInternalMediaCategory(category: string): boolean {
   return INTERNAL_MEDIA_CATEGORIES.has(category);
 }
 
+// Unknown or mixed categories do not establish that a photo is exterior.
+// Preserve only explicitly classified non-interior assets for restricted reports.
+const NON_INTERIOR_MEDIA_CATEGORIES = new Set([
+  'exterior', 'road', 'surroundings', 'facade_detail', 'aerial',
+  'rooftop', 'roof', 'floor_plan', 'map', 'location_analysis',
+]);
+
 export function reportMediaCategoryAllowed(category: string, allowInternal: boolean): boolean {
-  return allowInternal || !isInternalMediaCategory(category);
+  return allowInternal || NON_INTERIOR_MEDIA_CATEGORIES.has(category);
 }
