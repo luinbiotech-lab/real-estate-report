@@ -51,44 +51,74 @@ export default function ProfessionalReportSnapshotPage() {
   const [confirming, setConfirming] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [freshness, setFreshness] = useState<ReportSnapshotFreshness>();
+  const currentRouteSnapshotId = useRef(snapshotId);
+  currentRouteSnapshotId.current = snapshotId;
   const print = useReactToPrint({ contentRef, documentTitle: snapshot ? `DAON_Professional_Report_MASTER_v${snapshot.reportVersion}` : 'DAON_Professional_Report_MASTER' });
 
   useEffect(() => {
+    // React Router reuses this component when only :snapshotId changes.
+    // A late response for A must never replace B's report, freshness, or PDF.
+    let active = true;
+    setLoading(true);
+    setSnapshot(undefined);
+    setError('');
     setFreshness(undefined);
-    propertyDataRoomRepository.getReportSnapshot(snapshotId).then(async (value) => {
-      if (!value) {
-        setError('요청한 보고서 Snapshot을 찾을 수 없습니다.');
-        return;
-      }
-      setSnapshot(value);
+    setConfirming(false);
+    setRegenerating(false);
+    void (async () => {
       try {
-        setFreshness(await reportSnapshotFreshnessService.evaluate(value));
-      } catch {
-        setFreshness(undefined);
+        const value = await propertyDataRoomRepository.getReportSnapshot(snapshotId);
+        if (!active) return;
+        if (!value || value.id !== snapshotId) {
+          setError('요청한 보고서 Snapshot을 찾을 수 없습니다.');
+          return;
+        }
+        setSnapshot(value);
+        try {
+          const nextFreshness = await reportSnapshotFreshnessService.evaluate(value);
+          if (active) setFreshness(nextFreshness);
+        } catch {
+          if (active) setFreshness(undefined);
+        }
+      } catch (reason) {
+        if (active) setError(reason instanceof Error ? reason.message : 'Snapshot을 불러오지 못했습니다.');
+      } finally {
+        if (active) setLoading(false);
       }
-    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Snapshot을 불러오지 못했습니다.')).finally(() => setLoading(false));
+    })();
+    return () => { active = false; };
   }, [snapshotId]);
 
   const markReady = async () => {
+    const requestedId = snapshotId;
     setConfirming(true); setError('');
-    try { setSnapshot(await reportSnapshotService.markReady(snapshotId)); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : '보고서를 확정하지 못했습니다.'); }
-    finally { setConfirming(false); }
-  };
-
-  const regenerateWithMaster = async () => {
-    if (!snapshot) return;
-    setRegenerating(true); setError('');
     try {
-      const next = await reportSnapshotService.createDraft(snapshot.propertyId);
-      navigate(`/professional-report/snapshot/${next.id}`, { replace: true });
+      const ready = await reportSnapshotService.markReady(requestedId);
+      if (currentRouteSnapshotId.current === requestedId) setSnapshot(ready);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '현재 DA:ON MASTER 보고서를 생성하지 못했습니다.');
-      setRegenerating(false);
+      if (currentRouteSnapshotId.current === requestedId) setError(reason instanceof Error ? reason.message : '보고서를 확정하지 못했습니다.');
+    } finally {
+      if (currentRouteSnapshotId.current === requestedId) setConfirming(false);
     }
   };
 
-  if (loading) return <div className="center"><CircularProgress /><p>저장된 보고서를 불러오는 중입니다.</p></div>;
+  const regenerateWithMaster = async () => {
+    if (!snapshot || snapshot.id !== snapshotId) return;
+    const requestedId = snapshotId;
+    setRegenerating(true); setError('');
+    try {
+      const next = await reportSnapshotService.createDraft(snapshot.propertyId);
+      if (currentRouteSnapshotId.current === requestedId) navigate(`/professional-report/snapshot/${next.id}`, { replace: true });
+    } catch (reason) {
+      if (currentRouteSnapshotId.current === requestedId) setError(reason instanceof Error ? reason.message : '현재 DA:ON MASTER 보고서를 생성하지 못했습니다.');
+    } finally {
+      if (currentRouteSnapshotId.current === requestedId) setRegenerating(false);
+    }
+  };
+
+  // Guard the render *before* useEffect resets state: navigation may render
+  // with the previous snapshot for one frame, exposing its Print/PDF action.
+  if (loading || (snapshot && snapshot.id !== snapshotId)) return <div className="center"><CircularProgress /><p>저장된 보고서를 불러오는 중입니다.</p></div>;
   if (!snapshot || !isViewModel(snapshot.snapshotData)) return <main className="snapshot-error"><Alert severity="error">{error || '저장된 Snapshot 형식이 올바르지 않습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
 
   const templateId = resolveProfessionalTemplate(snapshot);
