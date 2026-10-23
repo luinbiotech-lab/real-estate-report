@@ -30,6 +30,22 @@ for (const [label, property, expected] of cases) {
 }
 assert.equal(isBangbae81511(cases[2][1]), true, 'property ID must be sufficient even when address is unavailable');
 assert.equal(reportMediaCategoryAllowed('exterior', false), true, 'exterior photos remain allowed');
+// Unclassified and mixed media must never bypass a no-interior policy.
+for (const category of ['main', 'additional', 'other', '360', 'parking', 'entrance', 'interior', 'office']) {
+  assert.equal(reportMediaCategoryAllowed(category, false), false, `restricted ${category} must fail closed`);
+}
+for (const category of ['exterior', 'road', 'surroundings', 'facade_detail', 'aerial', 'floor_plan', 'map', 'location_analysis']) {
+  assert.equal(reportMediaCategoryAllowed(category, false), true, `classified ${category} remains available`);
+}
+// Regression guard for new reports AND stored Snapshot renderers.
+const builderSource = readFileSync('src/services/reportEngine/reportDataBuilder.ts', 'utf8');
+assert.match(builderSource, /if \(allowInternal && property\.mainImage\) items\.push/, 'new report cannot add unclassified main media');
+assert.match(builderSource, /mainImage: reportValue\(allowInternal \? property\.mainImage : null,/, 'new report hero must be gated');
+const openingSource = readFileSync('src/components/professionalReport/DaonReportOpeningPage.tsx', 'utf8');
+const detailSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+assert.match(openingSource, /model\.media\.internalPhotoAllowed \? model\.media\.mainImage\.value : null/, 'Opening must not trust restricted hero');
+assert.match(detailSource, /model\.media\.internalPhotoAllowed \? model\.media\.mainImage\.value : null/, '7P must not trust restricted hero');
+
 // Historical snapshots can contain a stale 'true' flag. Never trust it for Bangbae.
 assert.equal(reportSnapshotInternalPhotoAllowed({ id: 'daon-bangbae-815-11' }, true), false, 'legacy ID-only snapshot must be denied');
 assert.equal(reportSnapshotInternalPhotoAllowed({ address: '방배동 815-11' }, true), false, 'legacy parcel snapshot must be denied');
