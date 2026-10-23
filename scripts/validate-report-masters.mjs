@@ -178,3 +178,33 @@ console.log('DA:ON report master integrity: PASS');
 
 // Validate privacy restrictions using the executable report policy module.
 await import('./validate-bangbae-internal-media-guard.mjs');
+
+
+// Execute the actual 1P preview route predicate to prevent cross-property
+// preview/print regressions when React Router reuses DocumentPreview.
+// This tests synchronous render gating; it is not a browser/PDF E2E test.
+const routePredicate = documentPreview.match(/const current = ([\\s\\S]*?) as PreviewState;/);
+if (!routePredicate) throw new Error('1P 미리보기 경로 격리 조건이 누락되었습니다.');
+const currentForRoute = new Function('view', 'routeKey', 'kind', 'id', `return (${routePredicate[1]});`);
+const previous = { routeKey: 'proposal:A', phase: 'ready', property: { id: 'A' } };
+const routeCases = [
+  ['matching property', previous, 'proposal:A', 'proposal', 'A', 'ready'],
+  ['A to B before effect', previous, 'proposal:B', 'proposal', 'B', 'loading'],
+  ['proposal to report', previous, 'report:A', 'report', 'A', 'loading'],
+  ['mismatched property', { routeKey: 'proposal:B', phase: 'ready', property: { id: 'A' } }, 'proposal:B', 'proposal', 'B', 'loading'],
+  ['report cannot print 1P', { routeKey: 'report:A', phase: 'ready', property: { id: 'A' } }, 'report:A', 'report', 'A', 'loading'],
+  ['stale error suppressed', { routeKey: 'proposal:A', phase: 'error', error: 'old' }, 'proposal:B', 'proposal', 'B', 'loading'],
+  ['current error retained', { routeKey: 'proposal:B', phase: 'error', error: 'current' }, 'proposal:B', 'proposal', 'B', 'error'],
+  ['loading retained', { routeKey: 'proposal:B', phase: 'loading' }, 'proposal:B', 'proposal', 'B', 'loading'],
+];
+for (const [name, view, key, kind, id, expected] of routeCases) {
+  const actual = currentForRoute(view, key, kind, id);
+  if (actual.phase !== expected) throw new Error(`1P route isolation ${name}: ${actual.phase} != ${expected}`);
+}
+if (!documentPreview.includes('if (cancelled) return;') ||
+    !documentPreview.includes('value.id !== id') ||
+    !documentPreview.includes("current.phase === 'ready'") ||
+    !documentPreview.includes("setView({ routeKey, phase: 'loading' })")) {
+  throw new Error('1P 비동기 요청 취소·Property ID·인쇄·로딩 가드가 누락되었습니다.');
+}
+console.log('DA:ON 1P route isolation: PASS (8 executable predicate scenarios; browser E2E still required)');
