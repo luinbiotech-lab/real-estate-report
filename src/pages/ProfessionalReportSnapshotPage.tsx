@@ -46,6 +46,13 @@ function applySnapshotMediaPolicy(model: ProfessionalReportViewModel, propertyId
   };
 }
 
+// Never display or print a Snapshot whose embedded Property differs from its owner.
+// markReady() already rejects this mismatch, but historical drafts are printable.
+function snapshotMatchesProperty(snapshot: ReportSnapshot): boolean {
+  const identity = (snapshot.snapshotData as Partial<ProfessionalReportViewModel>).identity;
+  return typeof snapshot.propertyId === 'string' && snapshot.propertyId.length > 0 && identity?.id === snapshot.propertyId;
+}
+
 export default function ProfessionalReportSnapshotPage() {
   const { snapshotId = '' } = useParams();
   const navigate = useNavigate();
@@ -130,6 +137,8 @@ export default function ProfessionalReportSnapshotPage() {
   // with the previous snapshot for one frame, exposing its Print/PDF action.
   if (loading || (snapshot && snapshot.id !== snapshotId)) return <div className="center"><CircularProgress /><p>저장된 보고서를 불러오는 중입니다.</p></div>;
   if (!snapshot || !isViewModel(snapshot.snapshotData)) return <main className="snapshot-error"><Alert severity="error">{error || '저장된 Snapshot 형식이 올바르지 않습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
+
+  if (!snapshotMatchesProperty(snapshot)) return <main className="snapshot-error"><Alert severity="error">Snapshot의 물건 ID와 보고서 본문의 물건 ID가 일치하지 않습니다. 다른 물건의 보고서 표시·인쇄를 차단했습니다.</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
 
   const templateId = resolveProfessionalTemplate(snapshot);
   if (!templateId) return <main className="snapshot-error"><Alert severity="warning">지원되지 않는 보고서 템플릿입니다: {snapshot.templateId || snapshot.templateVersion}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
