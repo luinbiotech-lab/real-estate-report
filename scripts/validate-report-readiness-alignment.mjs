@@ -233,6 +233,15 @@ await check('unknown item category must be rejected', bundle(), false, true, (s)
 await check('legacy property main item must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.items = [{ id: 'property-main', category: 'exterior' }]; });
 await check('missing media section must be rejected', bundle(), false, true, (s) => { delete s.snapshotData.media; });
 await check('explicit exterior media remains permitted', bundle(), true, true, (s) => { s.snapshotData.media.items = [{ id: 'exterior-1', category: 'exterior' }]; });
+await check('legacy spatial interior photo cannot be finalized', bundle(), false, true, (s) => {
+  s.snapshotData.spatial = { media: [{ id: 'interior', mediaType: 'photo', sourceOrigin: 'owner_provided' }] };
+});
+await check('legacy spatial sample map cannot be finalized', bundle(), false, true, (s) => {
+  s.snapshotData.spatial = { media: [{ id: 'sample', mediaType: 'map_capture', sourceOrigin: 'sample' }] };
+});
+await check('verified spatial roadview remains permitted', bundle(), true, true, (s) => {
+  s.snapshotData.spatial = { media: [{ id: 'roadview', mediaType: 'roadview_capture', sourceOrigin: 'roadview' }] };
+});
 await check('unrelated property retains its own media policy', bundle(docs().map((document) => ({ ...document, propertyId: 'unrelated-property' }))), true, true, (s) => {
   s.propertyId = 'unrelated-property';
   s.snapshotData.identity.id = 'unrelated-property';
@@ -241,8 +250,62 @@ await check('unrelated property retains its own media policy', bundle(docs().map
 });
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 39 service scenarios + full Data Room Property isolation + binary integrity + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 42 service scenarios + full Data Room Property isolation + binary integrity + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
 await import('./validate-report-final-provenance.mjs');
+
+// Spatial media has no exterior/interior category. A generic photo is not proof
+// of exterior origin; sample/unknown/AI media must never enter the report.
+// Run the actual TS service with its real policy (not a reimplemented predicate).
+const spatialView = loadTs('src/services/spatialMediaViewService.ts', {
+  '../domain/propertyDataRoom/spatialMediaModel': {
+    getSpatialVerificationLevel: (status) => ({
+      unknown: 0, estimated: 1, ai_estimated: 1, source_provided: 2,
+      document_verified: 3, field_checked: 4, owner_confirmed: 5, agent_verified: 5,
+      conflict: 0, rejected: 0,
+    })[status] ?? 0,
+    isReportSafeMedia: (asset) =>
+      asset.sourceOrigin !== 'ai_generated' &&
+      !['conflict', 'rejected'].includes(asset.verificationStatus) &&
+      ['report', 'public_share'].includes(asset.visibilityScope),
+  },
+  '../domain/professionalReport/reportAccessPolicy': mediaPolicy,
+}).spatialMediaViewService;
+const spatialAsset = (id, mediaType, sourceOrigin) => ({
+  id, mediaType, sourceOrigin, visibilityScope: 'report',
+  verificationStatus: 'source_provided', originalFilename: id + '.jpg',
+});
+const spatialBundle = {
+  floorPlans: [], spaces: [], mediaSpaceLinks: [], viewerScenes: [], viewerNodes: [],
+  viewerEdges: [], walkthroughRoutes: [], walkthroughSteps: [], verificationEvents: [],
+  mediaAssets: [
+    spatialAsset('generic-photo', 'photo', 'owner_provided'),
+    spatialAsset('roadview', 'roadview_capture', 'roadview'),
+    spatialAsset('floorplan', 'floorplan_image', 'owner_provided'),
+    spatialAsset('sample-map', 'map_capture', 'sample'),
+    spatialAsset('unknown-map', 'map_capture', 'unknown'),
+    spatialAsset('ai-map', 'map_capture', 'ai_generated'),
+  ],
+};
+const mediaIds = (result) => result.media.map((item) => item.id);
+assert.deepEqual(mediaIds(spatialView.buildReportSpatialSnapshot(spatialBundle, false)), ['roadview', 'floorplan'],
+  'Bangbae restricted report must not expose generic, sample, unknown, or AI media');
+assert.deepEqual(mediaIds(spatialView.buildReportSpatialSnapshot(spatialBundle, true)), ['generic-photo', 'roadview', 'floorplan'],
+  'unrestricted report must still reject sample/unknown/AI media');
+assert.equal(spatialView.summarize(spatialBundle, false).reportSafeMedia, 2,
+  'spatial readiness count must match the restricted report media payload');
+assert.equal(spatialView.summarize(spatialBundle, true).reportSafeMedia, 3);
+assert.deepEqual(mediaIds(spatialView.buildReportSpatialSnapshot({
+  ...spatialBundle, mediaPolicy: { allowInteriorPhotos: false },
+}, true)), ['roadview', 'floorplan'],
+  'Data Room media policy must not be bypassed by an unrestricted caller');
+assert.match(builder, /buildReportSpatialSnapshot\(spatialBundle,\s*internalPhotoAllowed\(property\)\)/,
+  'report builder must propagate authoritative Property media restriction');
+const snapshotPageSource = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+assert.match(snapshotPageSource, /spatial:\s*model\.spatial\s*\?/,
+  'legacy Snapshot preview/print must sanitize spatial media before rendering');
+assert.match(snapshotSource, /spatial:\s*viewModel\.spatial\s*\?/,
+  'new Snapshot persistence must sanitize spatial media');
+console.log('PASS typed spatial media privacy: restricted/unrestricted/legacy/policy/sample consistency');
