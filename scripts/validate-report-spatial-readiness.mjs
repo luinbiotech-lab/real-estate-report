@@ -29,8 +29,8 @@ function load(code) {
 const service = load(source);
 const clone = (value) => JSON.parse(JSON.stringify(value));
 const baseline = {
-  floorPlans: [{ id: 'plan', scaleStatus: 'unknown', extractionStatus: 'uploaded', verificationStatus: 'estimated' }],
-  spaces: [{ id: 'space', verificationStatus: 'estimated' }],
+  floorPlans: [{ id: 'plan', floorId: 'floor-1', scaleStatus: 'unknown', extractionStatus: 'uploaded', verificationStatus: 'estimated' }],
+  spaces: [{ id: 'space', floorId: 'floor-1', verificationStatus: 'estimated' }],
   mediaAssets: [{ id: 'media', mediaType: 'floorplan_image', sourceOrigin: 'public_source', visibilityScope: 'report', verificationStatus: 'estimated' }],
   mediaSpaceLinks: [], viewerScenes: [], walkthroughRoutes: [], walkthroughSteps: [], verificationEvents: [],
 };
@@ -60,6 +60,21 @@ assert.equal(reportReady(mixedSpace), false, 'another estimated space must block
 const mixedMedia = clone(ready);
 mixedMedia.mediaAssets.push({ id: 'unverified-image', mediaType: 'map_capture', sourceOrigin: 'public_source', visibilityScope: 'report', verificationStatus: 'estimated' });
 assert.equal(reportReady(mixedMedia), false, 'another unverified included image must block full report spatial readiness');
+const orphanSpace = clone(ready);
+orphanSpace.spaces[0].floorId = 'other-floor';
+assert.equal(reportReady(orphanSpace), false, 'verified space linked to another floor must not certify plan');
+const missingPlanFloor = clone(ready);
+delete missingPlanFloor.floorPlans[0].floorId;
+assert.equal(reportReady(missingPlanFloor), false, 'verified plan without floor ID must not certify 3D');
+const missingSpaceFloor = clone(ready);
+delete missingSpaceFloor.spaces[0].floorId;
+assert.equal(reportReady(missingSpaceFloor), false, 'verified space without floor ID must not certify 3D');
+const emptySecondFloor = clone(ready);
+emptySecondFloor.floorPlans.push({ ...ready.floorPlans[0], id: 'plan-2', floorId: 'floor-2' });
+assert.equal(reportReady(emptySecondFloor), false, 'another verified floor without a verified mapped space must block');
+const validSecondFloor = clone(emptySecondFloor);
+validSecondFloor.spaces.push({ ...ready.spaces[0], id: 'space-2', floorId: 'floor-2' });
+assert.equal(reportReady(validSecondFloor), true, 'two independently mapped verified floors remain report-ready');
 const deleted = clone(ready);
 deleted.floorPlans[0].deletedAt = '2026-10-24T00:00:00Z';
 assert.equal(reportReady(deleted), false, 'deleted plan must not count');
@@ -74,4 +89,4 @@ const strict = 'spatialReady && verifiedScaledPlan && verifiedSpace && verifiedR
 assert.ok(source.includes(strict), 'strict guard must remain in the real service');
 const weakened = load(source.replace(strict, 'spatialReady && reportSafeMediaCount(mediaAssets, photosAllowed) > 0 && conflictCount === 0'));
 assert.equal(weakened.summarize(baseline, false).reportSpatialReady, true, 'negative control must reproduce false-ready');
-console.log('PASS report spatial evidence readiness: 13 cases + permissive-formula negative control');
+console.log('PASS report spatial evidence readiness: 18 cases + permissive-formula negative control');
