@@ -176,8 +176,10 @@ assert.equal(readiness.assessRequiredDocumentReadiness(bundle(bangbaeFourFiles))
 await check('two registry copies cannot substitute for land register', bundle(bangbaeFourFiles), false);
 await check('no connected original documents', bundle([]), false);
 await check('explicit verified document attestation', bundle(docs('confirmed'), [], docs('confirmed').map(d => ({ propertyId: PROPERTY_ID, fieldKey: `document:${d.id}`, status: 'verified' }))), true);
-await check('pending verification candidate', bundle(docs(), [{ decisionStatus: 'pending' }]), false);
-await check('held verification candidate', bundle(docs(), [{ decisionStatus: 'held' }]), false);
+await check('pending verification candidate', bundle(docs(), [{ propertyId: PROPERTY_ID, decisionStatus: 'pending' }]), false);
+await check('held verification candidate', bundle(docs(), [{ propertyId: PROPERTY_ID, decisionStatus: 'held' }]), false);
+await check('foreign pending candidate cannot block this Property', bundle(docs(), [{ propertyId: 'foreign-property', decisionStatus: 'pending' }]), true);
+await check('foreign held candidate cannot block this Property', bundle(docs(), [{ propertyId: 'foreign-property', decisionStatus: 'held' }]), true);
 await check('snapshot already not report-ready', bundle(), false, false);
 // A verified Data Room must not finalize a mismatched or legacy report payload.
 await check('wrong Property identity', bundle(), false, true, (s) => { s.snapshotData.identity.id = 'another-property'; });
@@ -208,7 +210,7 @@ await check('unrelated property retains its own media policy', bundle(docs().map
 });
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 37 service scenarios + full Data Room Property isolation + binary integrity + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 39 service scenarios + full Data Room Property isolation + binary integrity + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
