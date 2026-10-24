@@ -64,6 +64,14 @@ const legacy = {
 };
 assert.deepEqual(Array.from(policy.prepareSpatialPanelBundle(empty(), legacy, 'a').mediaAssets, (row) => row.id), ['legacy-media-a']);
 assert.deepEqual(Array.from(policy.prepareSpatialPanelBundle(empty(), legacy, 'b').mediaAssets, (row) => row.id), ['legacy-media-b']);
+// Viewer GLB assets must be scoped too: typed spatial rows alone are not a sufficient boundary.
+const legacyTwin = { digitalTwinAssets: [
+  { id: 'own-glb', propertyId: 'a', assetType: 'glb' },
+  { id: 'foreign-glb', propertyId: 'b', assetType: 'glb' },
+] };
+assert.deepEqual(Array.from(policy.getSpatialPanelLegacyTwinAssets(legacyTwin, 'a'), (row) => row.id), ['own-glb']);
+assert.deepEqual(Array.from(policy.getSpatialPanelLegacyTwinAssets(legacyTwin, 'b'), (row) => row.id), ['foreign-glb']);
+assert.deepEqual(Array.from(policy.getSpatialPanelLegacyTwinAssets(undefined, 'a')), []);
 const normal = { ...empty(), mediaPolicy: { propertyId: 'a', allowInteriorPhotos: true } };
 assert.equal(policy.getSpatialPanelPolicy(normal, 'a').allowInteriorPhotos, true);
 assert.equal(policy.getSpatialPanelPolicy(normal, 'b'), undefined);
@@ -84,6 +92,11 @@ for (const marker of [
   'prepareSpatialPanelBundle(typed, legacyBundle, propertyId)',
   'prepareSpatialPanelBundle(emptySpatialBundle, legacyBundle, propertyId)',
   'spatialMediaViewService.summarize(bundle, allowInteriorPhotos)',
+  'getSpatialPanelLegacyTwinAssets(legacyBundle, propertyId)',
+  'legacyTwinAssets.some((asset)',
+  '{legacyTwinAssets',
 ]) assert.ok(ui.includes(marker), `missing spatial panel isolation contract: ${marker}`);
 assert.ok(!ui.includes('spatialMediaCompatibilityService.mergePreferTyped(typed, legacyBundle)'));
+assert.ok(!ui.includes('legacyBundle!.digitalTwinAssets'));
+assert.ok(!ui.includes('legacyBundle?.digitalTwinAssets'));
 console.log('PASS spatial panel Property isolation, hard-deny, route race guards, negative control');
