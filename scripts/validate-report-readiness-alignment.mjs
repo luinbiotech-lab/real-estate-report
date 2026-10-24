@@ -30,7 +30,11 @@ const docs = (status = 'verified') => REQUIRED_DOCUMENT_TYPES.map((documentType,
 const bundle = (documents = docs(), verificationCandidates = [], verifications = []) => ({
   documents, verificationCandidates, verifications, dataSources: [],
 });
-const mediaPolicy = loadTs('src/domain/professionalReport/reportAccessPolicy.ts');
+const mediaPolicy = loadTs('src/domain/professionalReport/reportAccessPolicy.ts', {
+  '../propertyDataRoom/bangbaeIdentity': loadTs('src/domain/propertyDataRoom/bangbaeIdentity.ts'),
+});
+assert.equal(mediaPolicy.isBangbae81511({ id: 'sample-bangbae-815-11', address: '', detailAddress: '' }), true,
+  'production Property ID must retain the interior-photo hard deny even without address fields');
 // Exercise the actual TypeScript scoping helper, including media, comparable sources,
 // verification candidates, documents, spaces, and Digital Twin assets.
 const mixed = bundle();

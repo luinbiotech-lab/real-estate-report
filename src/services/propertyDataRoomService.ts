@@ -5,7 +5,7 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { spatialMediaRepository } from '../repositories/spatialMediaRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { agentOrchestratorService } from './agentOrchestratorService';
-import { assessRequiredDocumentReadiness } from './propertyReadinessService';
+import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from './propertyReadinessService';
 import type { Property } from '../types';
 
 const MAX_DOCUMENT_BYTES = 20 * 1024 * 1024;
@@ -40,7 +40,10 @@ async function dataUrl(file: File): Promise<string> {
 
 export const propertyDataRoomService = {
   getBundle: (propertyId: string) => propertyDataRoomRepository.getBundle(propertyId),
-  summarize(property: Property, bundle: DataRoomBundle): DataRoomSummary {
+  summarize(property: Property, inputBundle: DataRoomBundle): DataRoomSummary {
+    // Defensive Property isolation: a mixed/stale repository response must not
+    // inflate another Property's media, verification, report or 3D readiness.
+    const bundle = scopeDataRoomBundle(inputBundle, property.id);
     const existingMedia = [property.mainImage, property.mapImage, property.locationAnalysisImage, ...property.additionalImages].filter(Boolean).length;
     const statuses = [...bundle.documents.map((item) => item.verificationStatus), ...bundle.verifications.map((item) => item.status), ...bundle.dataSources.map((item) => item.verificationStatus)];
     const requiredDocuments = assessRequiredDocumentReadiness(bundle, property.id);
