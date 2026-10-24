@@ -4,6 +4,7 @@ import type {
   SpatialVerificationStatus,
 } from '../domain/propertyDataRoom/spatialMediaModel';
 import { getSpatialVerificationLevel, isReportSafeMedia } from '../domain/propertyDataRoom/spatialMediaModel';
+import { reportSpatialMediaAllowed } from '../domain/professionalReport/reportAccessPolicy';
 
 export interface SpatialMediaSummary {
   floorPlans: number;
@@ -34,12 +35,17 @@ function active<T extends { deletedAt?: string }>(items: T[]) {
   return items.filter((item) => !item.deletedAt);
 }
 
-function reportSafeMediaCount(items: MediaAssetRecord[]) {
-  return items.filter((item) => isReportSafeMedia(item)).length;
+function reportSafeSpatialMedia(item: MediaAssetRecord, allowInternalPhotos: boolean) {
+  return isReportSafeMedia(item) && reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, allowInternalPhotos);
+}
+
+function reportSafeMediaCount(items: MediaAssetRecord[], allowInternalPhotos: boolean) {
+  return items.filter((item) => reportSafeSpatialMedia(item, allowInternalPhotos)).length;
 }
 
 export const spatialMediaViewService = {
-  summarize(bundle: SpatialMediaDataRoomBundle): SpatialMediaSummary {
+  summarize(bundle: SpatialMediaDataRoomBundle, allowInternalPhotos = true): SpatialMediaSummary {
+    const photosAllowed = allowInternalPhotos && bundle.mediaPolicy?.allowInteriorPhotos !== false;
     const floorPlans = active(bundle.floorPlans);
     const spaces = active(bundle.spaces);
     const mediaAssets = active(bundle.mediaAssets);
@@ -84,7 +90,7 @@ export const spatialMediaViewService = {
 
     const spatialReady = floorPlans.length > 0 && spaces.length > 0;
     const walkthroughReady = readyViewerScenes > 0 && validWalkthroughRoutes > 0;
-    const reportSpatialReady = spatialReady && reportSafeMediaCount(mediaAssets) > 0 && conflictCount === 0;
+    const reportSpatialReady = spatialReady && reportSafeMediaCount(mediaAssets, photosAllowed) > 0 && conflictCount === 0;
 
     return {
       floorPlans: floorPlans.length,
@@ -92,7 +98,7 @@ export const spatialMediaViewService = {
       spaces: spaces.length,
       verifiedSpaces: spaces.filter((item) => isVerifiedStatus(item.verificationStatus)).length,
       mediaAssets: mediaAssets.length,
-      reportSafeMedia: reportSafeMediaCount(mediaAssets),
+      reportSafeMedia: reportSafeMediaCount(mediaAssets, photosAllowed),
       unmatchedMedia: unmatchedMediaIds.size,
       mediaNeedsReview: needsReviewIds.size,
       viewerScenes: viewerScenes.length,
@@ -108,8 +114,9 @@ export const spatialMediaViewService = {
     };
   },
 
-  buildReportSpatialSnapshot(bundle: SpatialMediaDataRoomBundle) {
-    const summary = this.summarize(bundle);
+  buildReportSpatialSnapshot(bundle: SpatialMediaDataRoomBundle, allowInternalPhotos = true) {
+    const photosAllowed = allowInternalPhotos && bundle.mediaPolicy?.allowInteriorPhotos !== false;
+    const summary = this.summarize(bundle, photosAllowed);
     return {
       mediaPolicy: bundle.mediaPolicy,
       floorPlans: active(bundle.floorPlans).map((item) => ({
@@ -135,7 +142,7 @@ export const spatialMediaViewService = {
         verificationStatus: item.verificationStatus,
       })),
       media: active(bundle.mediaAssets)
-        .filter((item) => isReportSafeMedia(item))
+        .filter((item) => reportSafeSpatialMedia(item, photosAllowed))
         .map((item) => ({
           id: item.id,
           mediaType: item.mediaType,
