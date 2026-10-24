@@ -107,7 +107,16 @@ export const spatialMediaViewService = {
       typeof space.floorId === 'string' && verifiedPlanFloorIds.has(space.floorId));
     const reportMedia = mediaAssets.filter((asset) => reportSafeSpatialMedia(asset, photosAllowed));
     const verifiedReportMedia = reportMedia.length > 0 && reportMedia.every((asset) => isVerifiedStatus(asset.verificationStatus));
-    const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && conflictCount === 0;
+    // Verified media alone is not proof that the image belongs to the measured floor.
+    // Each plan floor must have an independently verified media-to-space match on that floor.
+    const verifiedMediaMappedFloorIds = new Set(mediaSpaceLinks
+      .filter((link) => link.matchStatus === 'verified' && isVerifiedStatus(link.verificationStatus) &&
+        reportMedia.some((asset) => asset.id === link.mediaAssetId) &&
+        spaces.some((space) => space.id === link.spaceId && space.floorId === link.floorId && isVerifiedStatus(space.verificationStatus)))
+      .map((link) => link.floorId));
+    const verifiedMediaMapping = verifiedPlanFloorIds.size > 0 &&
+      [...verifiedPlanFloorIds].every((floorId) => verifiedMediaMappedFloorIds.has(floorId));
+    const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && verifiedMediaMapping && conflictCount === 0;
 
     return {
       floorPlans: floorPlans.length,
