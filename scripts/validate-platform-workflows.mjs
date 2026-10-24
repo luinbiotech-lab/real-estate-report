@@ -53,8 +53,12 @@ for (const marker of ["source.resourceType === 'source_document_inventory'", "so
 if (readinessService.includes("state: bundle.documents.length > 0 ? 'ready' : 'missing'")) throw new Error('문서 1건만으로 Property Readiness를 READY 처리하면 안 됩니다.');
 if (!readinessService.includes('export function assessRequiredDocumentReadiness')) throw new Error('필수 공적자료 readiness는 공통 함수로 유지해야 합니다.');
 const dataRoomService = readFileSync('src/services/propertyDataRoomService.ts', 'utf8');
-for (const marker of ['assessRequiredDocumentReadiness(bundle)', 'requiredSourcePresent', 'requiredBinaryConnected', 'requiredOfficiallyVerified', 'requiredDocumentTotal']) {
+for (const marker of ['scopeDataRoomBundle(inputBundle, property.id)', 'assessRequiredDocumentReadiness(bundle, property.id)', 'requiredSourcePresent', 'requiredBinaryConnected', 'requiredOfficiallyVerified', 'requiredDocumentTotal']) {
   if (!dataRoomService.includes(marker)) throw new Error(`Data Room summary는 공통 필수자료 readiness를 사용해야 합니다: ${marker}`);
+}
+const migrationReadinessPage = readFileSync('src/pages/RemoteMigrationReadinessPage.tsx', 'utf8');
+for (const marker of ['scopeDataRoomBundle(await propertyDataRoomRepository.getBundle(propertyId), propertyId)', 'assessRequiredDocumentReadiness(bundle, propertyId)']) {
+  if (!migrationReadinessPage.includes(marker)) throw new Error(`Migration readiness must isolate every Data Room row by the selected Property: ${marker}`);
 }
 for (const marker of ['문서 준비도', 'requiredSourcePresent', 'requiredBinaryConnected', 'requiredDocumentTotal']) {
   if (!text.propertyHub.includes(marker)) throw new Error(`Property Hub 문서 준비도 UI 누락: ${marker}`);

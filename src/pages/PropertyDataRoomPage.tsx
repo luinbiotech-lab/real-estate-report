@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ChangeEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, EditOutlined, MapOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, MenuItem, Tab, Tabs, TextField } from '@mui/material';
@@ -55,17 +55,32 @@ export default function PropertyDataRoomPage() {
   const [tab, setTab] = useState<TabKey>(() => isTabKey(requestedTab) ? requestedTab : 'overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('other');
   const [creatingReport, setCreatingReport] = useState(false); const [reviewingCandidateId, setReviewingCandidateId] = useState('');
+  const loadRequestRef = useRef(0);
 
   const load = useCallback(async () => {
+    const requestId = ++loadRequestRef.current;
     setLoading(true); setError('');
+    // Never leave another Property's documents/actions visible during a route change or reload.
+    setProperty(undefined); setBundle(emptyBundle);
     try {
       const item = await propertyRepository.getById(id);
-      if (!item) { setError('요청한 물건을 찾을 수 없습니다.'); return; }
-      setProperty(item); setBundle(await propertyDataRoomService.getBundle(id));
-    } catch (reason) { setError(reason instanceof Error ? reason.message : 'Data Room 자료를 불러오지 못했습니다.'); }
-    finally { setLoading(false); }
+      if (requestId !== loadRequestRef.current) return;
+      if (!item || item.id !== id) { setError('요청한 물건을 찾을 수 없습니다.'); return; }
+      const nextBundle = await propertyDataRoomService.getBundle(id);
+      if (requestId !== loadRequestRef.current) return;
+      setProperty(item); setBundle(nextBundle);
+    } catch (reason) {
+      if (requestId === loadRequestRef.current) {
+        setError(reason instanceof Error ? reason.message : 'Data Room 자료를 불러오지 못했습니다.');
+      }
+    } finally {
+      if (requestId === loadRequestRef.current) setLoading(false);
+    }
   }, [id]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+    return () => { loadRequestRef.current += 1; };
+  }, [load]);
   useEffect(() => {
     const nextTab = searchParams.get('tab');
     if (isTabKey(nextTab)) setTab(nextTab);
@@ -222,7 +237,7 @@ export default function PropertyDataRoomPage() {
     finally { setCreatingReport(false); }
   };
 
-  if (loading) return <div className="center"><CircularProgress /><p>Property Data Room을 불러오는 중입니다.</p></div>;
+  if (loading || (property && property.id !== id)) return <div className="center"><CircularProgress /><p>Property Data Room을 불러오는 중입니다.</p></div>;
   if (!property) return <main className="data-room-error"><Alert severity="error">{error || '요청한 물건을 찾을 수 없습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button></main>;
 
   const photos = [

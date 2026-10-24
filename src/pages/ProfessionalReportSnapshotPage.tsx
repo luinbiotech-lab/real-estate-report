@@ -4,12 +4,13 @@ import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { DaonProfessionalReportMaster } from '../components/professionalReport/DaonProfessionalReportMaster';
-import { reportMediaCategoryAllowed } from '../domain/professionalReport/reportAccessPolicy';
+import { reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed, reportSpatialMediaAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { reportSnapshotFreshnessService, reportSnapshotService, type ReportSnapshotFreshness } from '../services/reportEngine';
+import { getFinalizedSnapshotDestination, getSnapshotFinalizationUiState } from '../services/reportEngine/reportFinalizationUiState';
 import '../professional-report.css';
 import '../daon-detail-master.css';
 import '../daon-report-frame.css';
@@ -21,17 +22,35 @@ function isViewModel(value: unknown): value is ProfessionalReportViewModel {
   return Boolean(candidate.identity?.name && candidate.pricing?.salePrice && candidate.generated?.generatedAt && candidate.dataQuality);
 }
 
-function applySnapshotMediaPolicy(model: ProfessionalReportViewModel): ProfessionalReportViewModel {
-  if (model.media.internalPhotoAllowed) return model;
+function applySnapshotMediaPolicy(model: ProfessionalReportViewModel, propertyId: string): ProfessionalReportViewModel {
+  const allowInternal = reportSnapshotInternalPhotoAllowed({
+    id: propertyId,
+    name: model.identity.name.value ?? '',
+    address: model.identity.address.value ?? '',
+    detailAddress: model.identity.detailAddress.value ?? '',
+  }, model.media.internalPhotoAllowed);
+  if (allowInternal) return model;
   return {
     ...model,
+    spatial: model.spatial ? {
+      ...model.spatial,
+      media: model.spatial.media.filter((item) => reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, false)),
+    } : undefined,
     media: {
       ...model.media,
+      internalPhotoAllowed: false,
       mainImage: { ...model.media.mainImage, value: null, display: '미연결', state: 'missing', sourceIds: [] },
       additionalImages: { ...model.media.additionalImages, value: [], display: '미연결', state: 'missing', sourceIds: [] },
       items: model.media.items.filter((item) => item.id !== 'property-main' && item.category !== 'additional' && reportMediaCategoryAllowed(item.category, false)),
     },
   };
+}
+
+// Never display or print a Snapshot whose embedded Property differs from its owner.
+// markReady() already rejects this mismatch, but historical drafts are printable.
+function snapshotMatchesProperty(snapshot: ReportSnapshot): boolean {
+  const identity = (snapshot.snapshotData as Partial<ProfessionalReportViewModel>).identity;
+  return typeof snapshot.propertyId === 'string' && snapshot.propertyId.length > 0 && identity?.id === snapshot.propertyId;
 }
 
 export default function ProfessionalReportSnapshotPage() {
@@ -44,45 +63,86 @@ export default function ProfessionalReportSnapshotPage() {
   const [confirming, setConfirming] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [freshness, setFreshness] = useState<ReportSnapshotFreshness>();
+  const [freshnessError, setFreshnessError] = useState('');
+  const currentRouteSnapshotId = useRef(snapshotId);
+  currentRouteSnapshotId.current = snapshotId;
   const print = useReactToPrint({ contentRef, documentTitle: snapshot ? `DAON_Professional_Report_MASTER_v${snapshot.reportVersion}` : 'DAON_Professional_Report_MASTER' });
 
   useEffect(() => {
+    // React Router reuses this component when only :snapshotId changes.
+    // A late response for A must never replace B's report, freshness, or PDF.
+    let active = true;
+    setLoading(true);
+    setSnapshot(undefined);
+    setError('');
     setFreshness(undefined);
-    propertyDataRoomRepository.getReportSnapshot(snapshotId).then(async (value) => {
-      if (!value) {
-        setError('요청한 보고서 Snapshot을 찾을 수 없습니다.');
-        return;
-      }
-      setSnapshot(value);
+    setFreshnessError('');
+    setConfirming(false);
+    setRegenerating(false);
+    void (async () => {
       try {
-        setFreshness(await reportSnapshotFreshnessService.evaluate(value));
-      } catch {
-        setFreshness(undefined);
+        const value = await propertyDataRoomRepository.getReportSnapshot(snapshotId);
+        if (!active) return;
+        if (!value || value.id !== snapshotId) {
+          setError('요청한 보고서 Snapshot을 찾을 수 없습니다.');
+          return;
+        }
+        setSnapshot(value);
+        try {
+          const nextFreshness = await reportSnapshotFreshnessService.evaluate(value);
+          if (active) { setFreshness(nextFreshness); setFreshnessError(''); }
+        } catch {
+          if (active) {
+            setFreshness(undefined);
+            setFreshnessError('Data Room 최신성 확인에 실패했습니다. 확정을 차단했습니다. 자료 연결을 확인한 후 보고서를 다시 열어 주세요.');
+          }
+        }
+      } catch (reason) {
+        if (active) setError(reason instanceof Error ? reason.message : 'Snapshot을 불러오지 못했습니다.');
+      } finally {
+        if (active) setLoading(false);
       }
-    }).catch((reason) => setError(reason instanceof Error ? reason.message : 'Snapshot을 불러오지 못했습니다.')).finally(() => setLoading(false));
+    })();
+    return () => { active = false; };
   }, [snapshotId]);
 
   const markReady = async () => {
+    const requestedId = snapshotId;
     setConfirming(true); setError('');
-    try { setSnapshot(await reportSnapshotService.markReady(snapshotId)); }
-    catch (reason) { setError(reason instanceof Error ? reason.message : '보고서를 확정하지 못했습니다.'); }
-    finally { setConfirming(false); }
-  };
-
-  const regenerateWithMaster = async () => {
-    if (!snapshot) return;
-    setRegenerating(true); setError('');
     try {
-      const next = await reportSnapshotService.createDraft(snapshot.propertyId);
-      navigate(`/professional-report/snapshot/${next.id}`, { replace: true });
+      const ready = await reportSnapshotService.markReady(requestedId);
+      if (currentRouteSnapshotId.current === requestedId) {
+        const destination = getFinalizedSnapshotDestination(requestedId, ready);
+        if (destination) navigate(destination, { replace: true });
+        else setSnapshot(ready);
+      }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '현재 DA:ON MASTER 보고서를 생성하지 못했습니다.');
-      setRegenerating(false);
+      if (currentRouteSnapshotId.current === requestedId) setError(reason instanceof Error ? reason.message : '보고서를 확정하지 못했습니다.');
+    } finally {
+      if (currentRouteSnapshotId.current === requestedId) setConfirming(false);
     }
   };
 
-  if (loading) return <div className="center"><CircularProgress /><p>저장된 보고서를 불러오는 중입니다.</p></div>;
+  const regenerateWithMaster = async () => {
+    if (!snapshot || snapshot.id !== snapshotId) return;
+    const requestedId = snapshotId;
+    setRegenerating(true); setError('');
+    try {
+      const next = await reportSnapshotService.createDraft(snapshot.propertyId);
+      if (currentRouteSnapshotId.current === requestedId) navigate(`/professional-report/snapshot/${next.id}`, { replace: true });
+    } catch (reason) {
+      if (currentRouteSnapshotId.current === requestedId) setError(reason instanceof Error ? reason.message : '현재 DA:ON MASTER 보고서를 생성하지 못했습니다.');
+    } finally {
+      if (currentRouteSnapshotId.current === requestedId) setRegenerating(false);
+    }
+  };
+
+  // Guard the render *before* useEffect resets state: navigation may render
+  // with the previous snapshot for one frame, exposing its Print/PDF action.
+  if (loading || (snapshot && snapshot.id !== snapshotId)) return <div className="center"><CircularProgress /><p>저장된 보고서를 불러오는 중입니다.</p></div>;
   if (!snapshot || !isViewModel(snapshot.snapshotData)) return <main className="snapshot-error"><Alert severity="error">{error || '저장된 Snapshot 형식이 올바르지 않습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
+
+  if (!snapshotMatchesProperty(snapshot)) return <main className="snapshot-error"><Alert severity="error">Snapshot의 물건 ID와 보고서 본문의 물건 ID가 일치하지 않습니다. 다른 물건의 보고서 표시·인쇄를 차단했습니다.</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
 
   const templateId = resolveProfessionalTemplate(snapshot);
   if (!templateId) return <main className="snapshot-error"><Alert severity="warning">지원되지 않는 보고서 템플릿입니다: {snapshot.templateId || snapshot.templateVersion}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>돌아가기</Button></main>;
@@ -109,20 +169,24 @@ export default function ProfessionalReportSnapshotPage() {
       ...snapshot.snapshotData.investment,
       comparables: snapshot.snapshotData.investment.comparables ?? [],
     },
-  });
+  }, snapshot.propertyId);
   const reportReady = model.dataQuality.reportReady;
+  // The embedded reportReady flag is historical. Never present a draft as
+  // confirmable until live freshness has been checked successfully.
+  const finalizationUi = getSnapshotFinalizationUiState(snapshot.status, reportReady, freshness);
   const report = <DaonProfessionalReportMaster snapshot={snapshot} model={model} />;
 
   return <main className="professional-report-shell">
     <nav className="professional-report-toolbar" aria-label="Professional Report 작업">
-      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON PROFESSIONAL MASTER · OPENING + DETAIL + CLOSING</span><Chip size="small" label={snapshot.status === 'ready' ? '확정됨' : reportReady ? '확정 가능' : '검증 필요'} color={snapshot.status === 'ready' ? 'success' : reportReady ? 'primary' : 'warning'} /></div>
+      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON PROFESSIONAL MASTER · OPENING + DETAIL + CLOSING</span><Chip size="small" label={finalizationUi.label} color={finalizationUi.color} /></div>
       <div>
         {(snapshot.status === 'draft' || freshness?.isStale) && <Button startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? '재생성 중…' : snapshot.status === 'ready' ? '최신 데이터로 새 버전 생성' : '최신 데이터로 다시 생성'}</Button>}
-        {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !reportReady || freshness?.isStale} onClick={markReady}>보고서 확정</Button>}
+        {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !finalizationUi.canRequestReady} onClick={markReady}>보고서 확정</Button>}
         <Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button>
       </div>
     </nav>
     {freshness?.isStale && <Alert severity="warning" className="professional-report-alert">이 Snapshot 생성 이후 원본·검증·공간 데이터가 변경되었습니다. 기존 Snapshot은 그대로 보존되지만 최신 보고서로 확정하면 안 됩니다.{freshness.latestDataAt ? ` 최근 변경: ${new Date(freshness.latestDataAt).toLocaleString('ko-KR')}` : ''}{freshness.latestDataLabel ? ` · ${freshness.latestDataLabel}` : ''} ‘최신 데이터로 새 버전 생성’을 사용하세요.</Alert>}
+    {freshnessError && snapshot.status === 'draft' && <Alert severity="error" className="professional-report-alert">{freshnessError}</Alert>}
     {!reportReady && snapshot.status === 'draft' && <Alert severity="warning" className="professional-report-alert">필수 공적자료 검증 또는 검증 대기 후보 처리가 남아 있습니다. 초안 미리보기·인쇄는 가능하지만, 모든 검증이 끝나기 전에는 보고서를 확정할 수 없습니다. Data Room 검증 후 ‘최신 데이터로 다시 생성’을 사용하세요.</Alert>}
     {error && <Alert severity="error" className="professional-report-alert">{error}</Alert>}
     <div ref={contentRef}>{report}</div>

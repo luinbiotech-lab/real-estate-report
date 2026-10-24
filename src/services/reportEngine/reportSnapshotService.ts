@@ -1,9 +1,9 @@
 import type { ProfessionalReportViewModel } from '../../domain/professionalReport/types';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
-import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
+import { isBangbae81511, reportMediaCategoryAllowed, reportSpatialMediaAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
-import { assessRequiredDocumentReadiness } from '../propertyReadinessService';
+import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from '../propertyReadinessService';
 import { reportSnapshotFreshnessService } from './reportSnapshotFreshnessService';
 import {
   PROFESSIONAL_REPORT_TEMPLATE_ID,
@@ -16,6 +16,10 @@ function applySnapshotMediaPolicy(viewModel: ProfessionalReportViewModel): Profe
   if (viewModel.media.internalPhotoAllowed) return viewModel;
   return {
     ...viewModel,
+    spatial: viewModel.spatial ? {
+      ...viewModel.spatial,
+      media: viewModel.spatial.media.filter((item) => reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, false)),
+    } : undefined,
     media: {
       ...viewModel.media,
       mainImage: { ...viewModel.media.mainImage, value: null, display: '미연결', state: 'missing', sourceIds: [] },
@@ -58,6 +62,39 @@ export const reportSnapshotService = {
     if (current.status !== 'draft') throw new Error('초안 상태의 보고서만 확정할 수 있습니다.');
     const viewModel = snapshotViewModel(current);
     if (!viewModel) throw new Error('현재 MASTER 형식으로 다시 생성한 뒤 보고서를 확정해 주세요.');
+    // A ready report must be bound to its authoritative Property and approved MASTER.
+    // Checking only the stored reportReady flag can finalize a legacy or cross-property payload.
+    if (current.reportType !== 'professional_report' ||
+        current.templateId !== PROFESSIONAL_REPORT_TEMPLATE_ID ||
+        current.templateVersion !== PROFESSIONAL_REPORT_TEMPLATE_VERSION ||
+        current.engineVersion !== REPORT_ENGINE_VERSION ||
+        viewModel.identity?.id !== current.propertyId ||
+        viewModel.generated.templateId !== current.templateId ||
+        viewModel.generated.templateVersion !== current.templateVersion ||
+        viewModel.generated.engineVersion !== current.engineVersion ||
+        viewModel.generated.generatedAt !== current.generatedAt) {
+      throw new Error('Snapshot 물건 ID·MASTER 버전·생성시각이 일치하지 않습니다. 현재 MASTER로 새 초안을 생성해 주세요.');
+    }
+    // A legacy Snapshot may contain interior/unknown media even when the current
+    // preview hides it. Never persist that raw payload as an immutable final report.
+    // Require regeneration instead of silently changing historical Snapshot data.
+    if (isBangbae81511({
+      id: current.propertyId,
+      name: viewModel.identity.name?.value ?? '',
+      address: viewModel.identity.address?.value ?? '',
+      detailAddress: viewModel.identity.detailAddress?.value ?? '',
+    })) {
+      const media = viewModel.media;
+      if (!media || media.internalPhotoAllowed !== false ||
+          Boolean(media.mainImage?.value) ||
+          Boolean(media.additionalImages?.value?.length) ||
+          !Array.isArray(media.items) ||
+          media.items.some((item) => item.id === 'property-main' || !reportMediaCategoryAllowed(item.category, false)) ||
+          (viewModel.spatial && (!Array.isArray(viewModel.spatial.media) ||
+            viewModel.spatial.media.some((item) => !reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, false))))) {
+        throw new Error('방배동 815-11의 Snapshot에 금지되거나 미분류된 사진이 포함되어 있습니다. 내부사진을 제외한 현재 MASTER로 새 초안을 생성해 주세요.');
+      }
+    }
     if (!viewModel.dataQuality.reportReady) {
       const missingDocuments = viewModel.dataQuality.requiredDocumentsMissing.length;
       const missingFields = viewModel.dataQuality.missingFields.length;
@@ -65,8 +102,8 @@ export const reportSnapshotService = {
     }
     // Recheck live Data Room evidence: an older Snapshot may have been generated
     // when user-confirmed documents were incorrectly accepted as officially verified.
-    const bundle = await propertyDataRoomRepository.getBundle(current.propertyId);
-    const required = assessRequiredDocumentReadiness(bundle);
+    const bundle = scopeDataRoomBundle(await propertyDataRoomRepository.getBundle(current.propertyId), current.propertyId);
+    const required = assessRequiredDocumentReadiness(bundle, current.propertyId);
     const unresolvedCandidates = bundle.verificationCandidates.some(
       (candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held',
     );

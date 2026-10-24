@@ -3,7 +3,7 @@ import type { ProfessionalReportComparable, ProfessionalReportMedia, Professiona
 import { numericReportValue, reportValue } from '../../domain/professionalReport/valuePolicy';
 import { calculateUnitPrice, roundArea, sqmToPyeong, pyeongToSqm } from '../../domain/professionalReport/calculations';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
-import { assessRequiredDocumentReadiness } from '../propertyReadinessService';
+import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from '../propertyReadinessService';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
@@ -13,6 +13,7 @@ import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } f
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 import { spatialMediaViewService } from '../spatialMediaViewService';
 import { spatialMediaCompatibilityService } from '../spatialMediaCompatibilityService';
+import { scopeReportSpatialBundle } from './reportSpatialPropertyScope';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
 export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
@@ -25,7 +26,8 @@ function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalRep
   const items: ProfessionalReportMedia[] = [];
   const allowInternal = internalPhotoAllowed(property);
 
-  if (property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
+  // Legacy primary photos have no exterior classification: fail closed when restricted.
+  if (allowInternal && property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
   if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
@@ -85,7 +87,8 @@ function comparableRows(bundle: DataRoomBundle): ProfessionalReportComparable[] 
   return result.sort((left, right) => right.tradeDate.localeCompare(left.tradeDate));
 }
 
-export function buildProfessionalReportViewModel(property: Property, bundle: DataRoomBundle, options: BuilderOptions = {}): ProfessionalReportViewModel {
+export function buildProfessionalReportViewModel(property: Property, inputBundle: DataRoomBundle, options: BuilderOptions = {}): ProfessionalReportViewModel {
+  const bundle = scopeDataRoomBundle(inputBundle, property.id);
   const verifications = bundle.verifications; const sources = bundle.dataSources;
   const context = (fieldKey: string, extra: Partial<Parameters<typeof reportValue>[1]> = {}) => ({ fieldKey, verifications, sources, ...extra });
   const text = (fieldKey: keyof Property, disconnected = false) => reportValue(String(property[fieldKey] ?? '').trim(), context(String(fieldKey), { disconnected }));
@@ -174,7 +177,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
     briefingItems: reportValue(property.briefingItems ?? [], context('briefingItems', { disconnected: !property.briefingItems })),
   };
   const mediaGroup = {
-    mainImage: reportValue(property.mainImage, context('mainImage', { disconnected: false })),
+    mainImage: reportValue(allowInternal ? property.mainImage : null, context('mainImage', { disconnected: false })),
     mapImage: reportValue(property.mapImage, context('mapImage', { disconnected: !property.latitude || !property.longitude })),
     locationAnalysisImage: reportValue(property.locationAnalysisImage, context('locationAnalysisImage')),
     additionalImages: reportValue(allowInternal ? property.additionalImages ?? [] : [], context('additionalImages')),
@@ -202,9 +205,8 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const values = collectValues(partial);
   const qualityCounts = emptyCounts(['actual', 'missing', 'disconnected', 'estimated', 'calculated', 'ai_analysis', 'unverified'] as const);
   values.forEach(({ value }) => { qualityCounts[value.state] += 1; });
-  // Use the same official-verification policy as the Data Room readiness indicator.
-  // A user-confirmed source alone is not an officially verified document.
-  const requiredDocumentReadiness = assessRequiredDocumentReadiness(bundle);
+  // Apply the Data Room's official verification policy; confirmed-only is insufficient.
+  const requiredDocumentReadiness = assessRequiredDocumentReadiness(bundle, property.id);
   const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !requiredDocumentReadiness.connected.includes(type));
   const requiredDocumentsVerified = requiredDocumentReadiness.verified.length === REQUIRED_DOCUMENT_TYPES.length;
   const unresolvedCandidates = bundle.verificationCandidates.some((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held');
@@ -238,18 +240,21 @@ export class ReportDataBuilder {
       propertyDataRoomRepository.getBundle(propertyId),
     ]);
     if (!property) throw new Error('보고서를 생성할 물건을 찾을 수 없습니다.');
+    // A repository response for a different Property must never become this report's Snapshot.
+    if (property.id !== propertyId) throw new Error('보고서 대상 물건 ID가 조회 결과와 일치하지 않습니다. 다시 조회해 주세요.');
+    const scopedBundle = scopeDataRoomBundle(bundle, property.id);
     const typedSpatialBundle = await spatialMediaRepository.getBundle(propertyId).catch(() => undefined);
     const spatialBundle = typedSpatialBundle
-      ? spatialMediaCompatibilityService.mergePreferTyped(typedSpatialBundle, bundle)
-      : spatialMediaCompatibilityService.fromLegacyBundle(bundle);
-    const viewModel = buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
-    const spatial = spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle);
+      ? spatialMediaCompatibilityService.mergePreferTyped(scopeReportSpatialBundle(typedSpatialBundle, property.id), scopedBundle)
+      : spatialMediaCompatibilityService.fromLegacyBundle(scopedBundle);
+    const viewModel = buildProfessionalReportViewModel(property, scopedBundle, { ...options, generatedAt: this.now() });
+    const spatial = spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle, internalPhotoAllowed(property));
     return {
       ...viewModel,
       spatial: {
         ...spatial,
-        generatedAssets: bundle.digitalTwinAssets
-          .filter((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
+        generatedAssets: scopedBundle.digitalTwinAssets
+          .filter((asset) => asset.propertyId === propertyId && (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
           .map((asset) => ({
             id: asset.id,
             assetType: asset.assetType,

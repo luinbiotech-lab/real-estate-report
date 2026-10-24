@@ -16,7 +16,13 @@ if (!text.repository.includes('getBundle(propertyId: string)')) throw new Error(
 
 for (const id of ["'core'", "'documents'", "'provenance'", "'verification'", "'media'", "'report'", "'digital_twin'"]) if (!text.service.includes(id)) throw new Error(`Readiness stage 누락: ${id}`);
 for (const label of ['기본정보', '문서', '구조화 / 출처', '검증', '미디어', '보고서', '3D / Digital Twin']) if (!text.service.includes(`label: '${label}'`)) throw new Error(`Readiness stage label 누락: ${label}`);
-if (!text.service.includes("bundle.verifications.length > 0 ? 'ready' : bundle.verificationCandidates.length > 0 ? 'partial' : 'missing'")) throw new Error('Verification 기록이 없는 imported/candidate 자료를 READY로 승격하면 안 됩니다.');
+for (const marker of [
+  'verifiedRecordCount > 0',
+  'verifiedRecordCount === bundle.verifications.length && unresolvedCandidateCount === 0',
+  "verificationReady ? 'ready' : bundle.verifications.length > 0 || bundle.verificationCandidates.length > 0 ? 'partial' : 'missing'",
+]) {
+  if (!text.service.includes(marker)) throw new Error(`Verification READY must require official verification of every record and zero unresolved candidates: ${marker}`);
+}
 if (!text.service.includes("snapshot.status === 'ready'")) throw new Error('보고서 READY는 ready Snapshot 존재 여부로 판단해야 합니다.');
 if (!text.service.includes('weighted = readyCount + partialCount * 0.5')) throw new Error('Readiness score는 ready/partial/missing 상태에서 계산되어야 합니다.');
 
