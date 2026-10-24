@@ -109,7 +109,13 @@ assert.equal(twinStage([twinAsset({ propertyId: 'foreign-property', metadata: {
 } })]).state, 'missing', 'foreign 3D model must not count');
 assert.equal(twinStage([twinAsset({ metadata: {
   horizontalScaleVerified: true, heightStatus: 'verified', sourceFloorPlanAssetId: 'plan-1',
-} })]).state, 'ready', 'all dimensional verification metadata must be present for READY indication');
+} })]).state, 'partial', 'unlinked source plan must never certify 3D readiness');
+assert.equal(twinStage([
+  twinAsset({ id: 'plan-1', assetType: 'floor_plan', processingStatus: 'ready' }),
+  twinAsset({ metadata: {
+    horizontalScaleVerified: true, heightStatus: 'verified', sourceFloorPlanAssetId: 'plan-1',
+  } }),
+]).state, 'ready', 'ready source plan and dimensional verification metadata are required');
 assert.match(twinStage([twinAsset()]).detail, /검증 필요/, 'unverified 3D must visibly disclose its limitations');
 console.log('PASS Digital Twin readiness: failed/uploaded/unverified/deleted/foreign vs dimension-checked models');
 
