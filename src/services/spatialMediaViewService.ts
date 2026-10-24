@@ -100,6 +100,11 @@ export const spatialMediaViewService = {
       .filter((floorId): floorId is string => typeof floorId === 'string' && floorId.trim().length > 0));
     const verifiedScaledPlan = floorPlans.length > 0 && floorPlans.every((plan) =>
       plan.scaleStatus === 'verified' && plan.extractionStatus === 'verified' && isVerifiedStatus(plan.verificationStatus) &&
+      // A verified flag without a traceable original and calibrated scale cannot certify a real 3D floor.
+      ((typeof plan.sourceFileId === 'string' && plan.sourceFileId.trim().length > 0) ||
+        (typeof plan.storagePath === 'string' && plan.storagePath.trim().length > 0)) &&
+      typeof plan.scaleValue === 'number' && Number.isFinite(plan.scaleValue) && plan.scaleValue > 0 &&
+      typeof plan.scaleUnit === 'string' && plan.scaleUnit.trim().length > 0 &&
       typeof plan.floorId === 'string' && plan.floorId.trim().length > 0 &&
       spaces.some((space) => space.floorId === plan.floorId && isVerifiedStatus(space.verificationStatus)));
     const verifiedSpace = spaces.length > 0 && spaces.every((space) =>
@@ -107,7 +112,16 @@ export const spatialMediaViewService = {
       typeof space.floorId === 'string' && verifiedPlanFloorIds.has(space.floorId));
     const reportMedia = mediaAssets.filter((asset) => reportSafeSpatialMedia(asset, photosAllowed));
     const verifiedReportMedia = reportMedia.length > 0 && reportMedia.every((asset) => isVerifiedStatus(asset.verificationStatus));
-    const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && conflictCount === 0;
+    // Verified media alone is not proof that the image belongs to the measured floor.
+    // Each plan floor must have an independently verified media-to-space match on that floor.
+    const verifiedMediaMappedFloorIds = new Set(mediaSpaceLinks
+      .filter((link) => link.matchStatus === 'verified' && isVerifiedStatus(link.verificationStatus) &&
+        reportMedia.some((asset) => asset.id === link.mediaAssetId) &&
+        spaces.some((space) => space.id === link.spaceId && space.floorId === link.floorId && isVerifiedStatus(space.verificationStatus)))
+      .map((link) => link.floorId));
+    const verifiedMediaMapping = verifiedPlanFloorIds.size > 0 &&
+      [...verifiedPlanFloorIds].every((floorId) => verifiedMediaMappedFloorIds.has(floorId));
+    const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && verifiedMediaMapping && conflictCount === 0;
 
     return {
       floorPlans: floorPlans.length,

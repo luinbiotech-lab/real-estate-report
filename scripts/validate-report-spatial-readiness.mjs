@@ -35,9 +35,10 @@ const baseline = {
   mediaSpaceLinks: [], viewerScenes: [], walkthroughRoutes: [], walkthroughSteps: [], verificationEvents: [],
 };
 const ready = clone(baseline);
-Object.assign(ready.floorPlans[0], { scaleStatus: 'verified', extractionStatus: 'verified', verificationStatus: 'document_verified' });
+Object.assign(ready.floorPlans[0], { scaleStatus: 'verified', extractionStatus: 'verified', verificationStatus: 'document_verified', storagePath: 'originals/floor-1.pdf', scaleValue: 100, scaleUnit: '1:n' });
 ready.spaces[0].verificationStatus = 'document_verified';
 ready.mediaAssets[0].verificationStatus = 'document_verified';
+ready.mediaSpaceLinks = [{ id: 'link', mediaAssetId: 'media', spaceId: 'space', floorId: 'floor-1', matchStatus: 'verified', verificationStatus: 'document_verified' }];
 const reportReady = (bundle) => service.summarize(bundle, false).reportSpatialReady;
 assert.equal(reportReady(baseline), false, 'estimated/uploaded evidence must not be report-ready');
 assert.equal(reportReady(ready), true, 'verified plan/space/media can be report-ready');
@@ -51,6 +52,22 @@ for (const type of ['spaces', 'mediaAssets']) {
   item[type][0].verificationStatus = 'estimated';
   assert.equal(reportReady(item), false, `estimated ${type} must block`);
 }
+// An asserted verification status without the original or calibration is not real measured evidence.
+for (const field of ['storagePath', 'scaleValue', 'scaleUnit']) {
+  const item = clone(ready);
+  delete item.floorPlans[0][field];
+  assert.equal(reportReady(item), false, `missing original/scale metadata ${field} must block`);
+}
+const invalidScale = clone(ready);
+invalidScale.floorPlans[0].scaleValue = 0;
+assert.equal(reportReady(invalidScale), false, 'zero physical scale must block');
+const invalidScaleUnit = clone(ready);
+invalidScaleUnit.floorPlans[0].scaleUnit = ' ';
+assert.equal(reportReady(invalidScaleUnit), false, 'blank scale unit must block');
+const sourceFileBacked = clone(ready);
+delete sourceFileBacked.floorPlans[0].storagePath;
+sourceFileBacked.floorPlans[0].sourceFileId = 'verified-original-file';
+assert.equal(reportReady(sourceFileBacked), true, 'linked original source file can replace storage path');
 const mixedPlan = clone(ready);
 mixedPlan.floorPlans.push({ id: 'other-floor', scaleStatus: 'unknown', extractionStatus: 'uploaded', verificationStatus: 'estimated' });
 assert.equal(reportReady(mixedPlan), false, 'another unscaled floor must block full report spatial readiness');
@@ -74,6 +91,7 @@ emptySecondFloor.floorPlans.push({ ...ready.floorPlans[0], id: 'plan-2', floorId
 assert.equal(reportReady(emptySecondFloor), false, 'another verified floor without a verified mapped space must block');
 const validSecondFloor = clone(emptySecondFloor);
 validSecondFloor.spaces.push({ ...ready.spaces[0], id: 'space-2', floorId: 'floor-2' });
+validSecondFloor.mediaSpaceLinks.push({ ...ready.mediaSpaceLinks[0], id: 'link-2', spaceId: 'space-2', floorId: 'floor-2' });
 assert.equal(reportReady(validSecondFloor), true, 'two independently mapped verified floors remain report-ready');
 const deleted = clone(ready);
 deleted.floorPlans[0].deletedAt = '2026-10-24T00:00:00Z';
@@ -84,9 +102,33 @@ assert.equal(reportReady(conflict), false, 'conflicting evidence must block');
 const sample = clone(ready);
 sample.mediaAssets[0].sourceOrigin = 'sample';
 assert.equal(reportReady(sample), false, 'sample media must not be report-grade evidence');
+const unlinked = clone(ready);
+unlinked.mediaSpaceLinks = [];
+assert.equal(reportReady(unlinked), false, 'verified media without a space link must not certify a floor');
+const suggestedLink = clone(ready);
+suggestedLink.mediaSpaceLinks[0].matchStatus = 'suggested';
+assert.equal(reportReady(suggestedLink), false, 'suggested media-space matches must not certify a floor');
+const unverifiedLink = clone(ready);
+unverifiedLink.mediaSpaceLinks[0].verificationStatus = 'estimated';
+assert.equal(reportReady(unverifiedLink), false, 'unverified media-space link must not certify a floor');
+const foreignAssetLink = clone(ready);
+foreignAssetLink.mediaSpaceLinks[0].mediaAssetId = 'other-media';
+assert.equal(reportReady(foreignAssetLink), false, 'link to a different media asset must not certify a floor');
+const foreignSpaceLink = clone(ready);
+foreignSpaceLink.mediaSpaceLinks[0].spaceId = 'other-space';
+assert.equal(reportReady(foreignSpaceLink), false, 'link to a different space must not certify a floor');
+const wrongFloorLink = clone(ready);
+wrongFloorLink.mediaSpaceLinks[0].floorId = 'floor-2';
+assert.equal(reportReady(wrongFloorLink), false, 'link floor must agree with the verified space floor');
+const deletedLink = clone(ready);
+deletedLink.mediaSpaceLinks[0].deletedAt = '2026-10-24T00:00:00Z';
+assert.equal(reportReady(deletedLink), false, 'deleted links must not certify a floor');
+const unmappedSecondFloor = clone(validSecondFloor);
+unmappedSecondFloor.mediaSpaceLinks.pop();
+assert.equal(reportReady(unmappedSecondFloor), false, 'every verified plan floor requires a verified media-space mapping');
 // Negative control: removing the verified-evidence gate reproduces the false-ready condition.
-const strict = 'spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && conflictCount === 0';
+const strict = 'spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && verifiedMediaMapping && conflictCount === 0';
 assert.ok(source.includes(strict), 'strict guard must remain in the real service');
 const weakened = load(source.replace(strict, 'spatialReady && reportSafeMediaCount(mediaAssets, photosAllowed) > 0 && conflictCount === 0'));
 assert.equal(weakened.summarize(baseline, false).reportSpatialReady, true, 'negative control must reproduce false-ready');
-console.log('PASS report spatial evidence readiness: 18 cases + permissive-formula negative control');
+console.log('PASS report spatial evidence readiness: 32 cases + permissive-formula negative control');
