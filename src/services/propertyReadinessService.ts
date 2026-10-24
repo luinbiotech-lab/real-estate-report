@@ -124,11 +124,15 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
   const activeTwinAssets = bundle.digitalTwinAssets.filter((asset) => !asset.deletedAt);
   const readyTwinModels = activeTwinAssets.filter((asset) =>
     (asset.assetType === 'glb' || asset.assetType === 'gltf') && asset.processingStatus === 'ready');
+  const readySourcePlanIds = new Set(activeTwinAssets
+    .filter((asset) => ['floor_plan', 'scanned_plan', 'dwg', 'dxf'].includes(asset.assetType) &&
+      asset.processingStatus === 'ready')
+    .map((asset) => asset.id));
   const dimensionCheckedModels = readyTwinModels.filter((asset) =>
     asset.metadata?.horizontalScaleVerified === true &&
     asset.metadata?.heightStatus === 'verified' &&
     typeof asset.metadata?.sourceFloorPlanAssetId === 'string' &&
-    asset.metadata.sourceFloorPlanAssetId.trim().length > 0);
+    readySourcePlanIds.has(asset.metadata.sourceFloorPlanAssetId));
 
   const required = assessRequiredDocumentReadiness(bundle, property.id);
   const requiredPresent = required.present;
