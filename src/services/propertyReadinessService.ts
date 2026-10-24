@@ -119,6 +119,17 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
   const spaces = bundle.spaces ?? [];
   const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
   const hasReport = bundle.reportSnapshots.length > 0;
+  // A floor-plan upload, failed conversion, or sample 3D file is not a verified Digital Twin.
+  // This is a dashboard readiness signal, not independent evidence of real dimensions.
+  const activeTwinAssets = bundle.digitalTwinAssets.filter((asset) => !asset.deletedAt);
+  const readyTwinModels = activeTwinAssets.filter((asset) =>
+    (asset.assetType === 'glb' || asset.assetType === 'gltf') && asset.processingStatus === 'ready');
+  const dimensionCheckedModels = readyTwinModels.filter((asset) =>
+    asset.metadata?.horizontalScaleVerified === true &&
+    asset.metadata?.heightStatus === 'verified' &&
+    typeof asset.metadata?.sourceFloorPlanAssetId === 'string' &&
+    asset.metadata.sourceFloorPlanAssetId.trim().length > 0);
+
   const required = assessRequiredDocumentReadiness(bundle, property.id);
   const requiredPresent = required.present;
   const requiredConnected = required.connected;
@@ -171,8 +182,12 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
     {
       id: 'digital_twin',
       label: '3D / Digital Twin',
-      state: bundle.digitalTwinAssets.length > 0 ? 'ready' : 'missing',
-      detail: `${bundle.digitalTwinAssets.length}개 자산`,
+      state: dimensionCheckedModels.length > 0 ? 'ready' : activeTwinAssets.length > 0 ? 'partial' : 'missing',
+      detail: dimensionCheckedModels.length > 0
+        ? `치수·축척 검증표시 3D ${dimensionCheckedModels.length}건 (실자료 독립검증 별도)`
+        : activeTwinAssets.length > 0
+          ? `자산 ${activeTwinAssets.length}건 · 모델 준비 ${readyTwinModels.length}건 · 도면/치수/층 검증 필요`
+          : '3D 자산 없음',
       pathSuffix: '?tab=digitalTwin',
     },
   ];
