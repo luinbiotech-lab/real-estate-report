@@ -100,6 +100,11 @@ export const spatialMediaViewService = {
       .filter((floorId): floorId is string => typeof floorId === 'string' && floorId.trim().length > 0));
     const verifiedScaledPlan = floorPlans.length > 0 && floorPlans.every((plan) =>
       plan.scaleStatus === 'verified' && plan.extractionStatus === 'verified' && isVerifiedStatus(plan.verificationStatus) &&
+      // A verified flag without a traceable original and calibrated scale cannot certify a real 3D floor.
+      ((typeof plan.sourceFileId === 'string' && plan.sourceFileId.trim().length > 0) ||
+        (typeof plan.storagePath === 'string' && plan.storagePath.trim().length > 0)) &&
+      typeof plan.scaleValue === 'number' && Number.isFinite(plan.scaleValue) && plan.scaleValue > 0 &&
+      typeof plan.scaleUnit === 'string' && plan.scaleUnit.trim().length > 0 &&
       typeof plan.floorId === 'string' && plan.floorId.trim().length > 0 &&
       spaces.some((space) => space.floorId === plan.floorId && isVerifiedStatus(space.verificationStatus)));
     const verifiedSpace = spaces.length > 0 && spaces.every((space) =>
