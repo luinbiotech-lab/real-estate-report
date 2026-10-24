@@ -10,7 +10,7 @@ export interface ReportSnapshotFreshness {
   latestDataLabel?: string;
 }
 
-const TIMESTAMP_KEYS = ['updatedAt', 'createdAt', 'uploadedAt', 'verifiedAt', 'decidedAt', 'collectedAt', 'deletedAt'] as const;
+const TIMESTAMP_KEYS = ['updatedAt', 'createdAt', 'uploadedAt', 'verifiedAt', 'decidedAt', 'reviewedAt', 'collectedAt', 'deletedAt'] as const;
 
 function candidate(value: unknown, label: string) {
   if (typeof value !== 'string' || !value) return undefined;
