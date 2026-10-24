@@ -1,4 +1,5 @@
 import type { Property } from '../../types';
+import { BANGBAE_815_11_PROPERTY_IDS } from '../propertyDataRoom/bangbaeIdentity';
 
 type PropertyIdentityLike = Pick<Property, 'address' | 'detailAddress'> & Partial<Pick<Property, 'name' | 'id'>>;
 type PropertyMediaPolicyLike = PropertyIdentityLike & Pick<Property, 'internalPhotoAllowed'>;
@@ -18,7 +19,7 @@ const INTERNAL_MEDIA_CATEGORIES = new Set([
 
 export function isBangbae81511(property: PropertyIdentityLike): boolean {
   const identity = `${property.name || ''} ${property.address} ${property.detailAddress}`;
-  return property.id === 'daon-bangbae-815-11' || BANGBAE_815_11.test(identity) || BANGBAE_ROAD_ADDRESS.test(identity);
+  return BANGBAE_815_11_PROPERTY_IDS.some((id) => id === property.id) || BANGBAE_815_11.test(identity) || BANGBAE_ROAD_ADDRESS.test(identity);
 }
 
 export function internalPhotoAllowed(property: PropertyMediaPolicyLike): boolean {
