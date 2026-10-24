@@ -240,6 +240,8 @@ export class ReportDataBuilder {
       propertyDataRoomRepository.getBundle(propertyId),
     ]);
     if (!property) throw new Error('보고서를 생성할 물건을 찾을 수 없습니다.');
+    // A repository response for a different Property must never become this report's Snapshot.
+    if (property.id !== propertyId) throw new Error('보고서 대상 물건 ID가 조회 결과와 일치하지 않습니다. 다시 조회해 주세요.');
     const scopedBundle = scopeDataRoomBundle(bundle, property.id);
     const typedSpatialBundle = await spatialMediaRepository.getBundle(propertyId).catch(() => undefined);
     const spatialBundle = typedSpatialBundle
