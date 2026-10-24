@@ -7,6 +7,8 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { propertyRepository } from '../repositories/propertyRepository';
 import { internalPhotoAllowed, reportMediaCategoryAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { reportSnapshotService } from '../services/reportEngine';
+import { createReportDraftOnce } from '../services/reportEngine/reportDraftSingleFlight';
+import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 import { DaonOnePageMaster } from '../components/professionalReport/DaonOnePageMaster';
 import '../daon-one-page-master.css';
@@ -22,6 +24,9 @@ export default function DocumentPreview() {
   const navigate = useNavigate();
   const [view, setView] = useState<PreviewState>({ routeKey: '', phase: 'loading' });
   const contentRef = useRef<HTMLDivElement>(null);
+  // Per-component scope prevents StrictMode effect replay from persisting two
+  // Draft Snapshots; never share pending creations across auth sessions.
+  const draftRequests = useRef(new Map<string, Promise<ReportSnapshot>>());
   const routeKey = `${kind}:${id}`;
   // React Router can reuse this page while its URL changes. Reject the previous
   // property's content synchronously, before useEffect has reset the state.
@@ -43,7 +48,7 @@ export default function DocumentPreview() {
     if (kind === 'report') {
       // Existing workflow: generate a new draft and navigate to its Snapshot.
       // A late completion may persist the draft, but must not navigate this route.
-      void reportSnapshotService.createDraft(id)
+      void createReportDraftOnce(draftRequests.current, id, (propertyId) => reportSnapshotService.createDraft(propertyId))
         .then((snapshot) => { if (!cancelled) navigate(`/professional-report/snapshot/${snapshot.id}`, { replace: true }); })
         .catch((reason) => {
           if (!cancelled) setView({ routeKey, phase: 'error', error: reason instanceof Error ? reason.message : '7P 상세보고서를 생성하지 못했습니다.' });
