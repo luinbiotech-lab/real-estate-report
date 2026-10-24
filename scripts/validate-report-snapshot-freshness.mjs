@@ -36,6 +36,24 @@ legacy = { documents: [], reportSnapshots: [{ updatedAt: '2026-10-10T00:00:00Z' 
 assert.equal((await evaluate(past)).isStale, false, 'other snapshots must not make snapshot stale');
 assert.equal((await evaluate('not-a-date')).isStale, true, 'invalid generatedAt must fail closed');
 assert.equal((await evaluate(new Date(Date.now() + 60 * 60 * 1000).toISOString())).isStale, true, 'future-dated generatedAt must fail closed');
+
+for (const decisionStatus of ['approved', 'rejected', 'held']) {
+  legacy = { documents: [], reportSnapshots: [], verificationCandidates: [{
+    createdAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z', decisionStatus,
+  }] };
+  const result = await evaluate(past);
+  assert.equal(result.isStale, true, 'a later candidate review must invalidate the Snapshot: ' + decisionStatus);
+  assert.equal(result.latestDataAt, '2026-10-03T00:00:00.000Z');
+}
+legacy = { documents: [], reportSnapshots: [], verificationCandidates: [{
+  createdAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-01T12:00:00Z', decisionStatus: 'approved',
+}] };
+assert.equal((await evaluate(past)).isStale, false, 'review before generation must remain fresh');
+legacy = { documents: [], reportSnapshots: [] };
+spatial = { verificationEvents: [{ createdAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z' }] };
+assert.equal((await evaluate(past)).isStale, true, 'later spatial review must invalidate Snapshot');
+spatial = { spaces: [] };
+
 property = undefined;
 assert.equal((await evaluate(past)).isStale, true, 'missing property must fail closed');
-console.log('PASS report Snapshot freshness: 6 scenarios; invalid/future time and missing property fail closed');
+console.log('PASS report Snapshot freshness: 11 scenarios; invalid/future time and missing property fail closed');
