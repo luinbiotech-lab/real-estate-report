@@ -39,8 +39,14 @@ function hasConnectedOriginal(document: DataRoomBundle['documents'][number]): bo
     Number.isFinite(document.fileSize) && document.fileSize === document.fileData.size;
 }
 
-export function assessRequiredDocumentReadiness(bundle: DataRoomBundle): RequiredDocumentReadiness {
-  const inventoryDocumentTypes = new Set(bundle.dataSources
+export function assessRequiredDocumentReadiness(bundle: DataRoomBundle, propertyId?: string): RequiredDocumentReadiness {
+  // A repository query normally scopes rows by Property, but a mixed/stale bundle
+  // must never certify another Property's official originals or attestations.
+  // Callers that issue a report must supply the authoritative Property ID.
+  const documents = propertyId ? bundle.documents.filter((document) => document.propertyId === propertyId) : bundle.documents;
+  const verifications = propertyId ? bundle.verifications.filter((verification) => verification.propertyId === propertyId) : bundle.verifications;
+  const dataSources = propertyId ? bundle.dataSources.filter((source) => source.propertyId === propertyId) : bundle.dataSources;
+  const inventoryDocumentTypes = new Set(dataSources
     .filter((source) => source.resourceType === 'source_document_inventory' && source.metadata?.originalSourcePresence === 'confirmed')
     .map((source) => {
       const type = source.metadata?.documentType;
@@ -48,12 +54,12 @@ export function assessRequiredDocumentReadiness(bundle: DataRoomBundle): Require
       return typeof type === 'string' ? type : '';
     })
     .filter(Boolean));
-  const connected = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) =>
+  const connected = REQUIRED_DOCUMENT_TYPES.filter((type) => documents.some((document) =>
     document.documentType === type && hasConnectedOriginal(document)));
   const present = REQUIRED_DOCUMENT_TYPES.filter((type) => connected.includes(type) || inventoryDocumentTypes.has(type));
-  const verified = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) =>
+  const verified = REQUIRED_DOCUMENT_TYPES.filter((type) => documents.some((document) =>
     document.documentType === type && hasConnectedOriginal(document) &&
-    (document.verificationStatus === 'verified' || bundle.verifications.some((verification) =>
+    (document.verificationStatus === 'verified' || verifications.some((verification) =>
       verification.status === 'verified' &&
       (verification.fieldKey === `document:${document.id}` || verification.fieldKey === document.id)
     ))
