@@ -13,6 +13,7 @@ import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } f
 import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../../utils/format';
 import { spatialMediaViewService } from '../spatialMediaViewService';
 import { spatialMediaCompatibilityService } from '../spatialMediaCompatibilityService';
+import { scopeReportSpatialBundle } from './reportSpatialPropertyScope';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
 export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
@@ -239,17 +240,18 @@ export class ReportDataBuilder {
       propertyDataRoomRepository.getBundle(propertyId),
     ]);
     if (!property) throw new Error('보고서를 생성할 물건을 찾을 수 없습니다.');
+    const scopedBundle = scopeDataRoomBundle(bundle, property.id);
     const typedSpatialBundle = await spatialMediaRepository.getBundle(propertyId).catch(() => undefined);
     const spatialBundle = typedSpatialBundle
-      ? spatialMediaCompatibilityService.mergePreferTyped(typedSpatialBundle, bundle)
-      : spatialMediaCompatibilityService.fromLegacyBundle(bundle);
-    const viewModel = buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
+      ? spatialMediaCompatibilityService.mergePreferTyped(scopeReportSpatialBundle(typedSpatialBundle, property.id), scopedBundle)
+      : spatialMediaCompatibilityService.fromLegacyBundle(scopedBundle);
+    const viewModel = buildProfessionalReportViewModel(property, scopedBundle, { ...options, generatedAt: this.now() });
     const spatial = spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle, internalPhotoAllowed(property));
     return {
       ...viewModel,
       spatial: {
         ...spatial,
-        generatedAssets: bundle.digitalTwinAssets
+        generatedAssets: scopedBundle.digitalTwinAssets
           .filter((asset) => asset.propertyId === propertyId && (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
           .map((asset) => ({
             id: asset.id,
