@@ -55,3 +55,53 @@ assert.notEqual(weakened, source, 'negative control must mutate real source');
 const weakenedCompiled = ts.transpileModule(weakened, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
 assert.deepEqual(Array.from(load(weakenedCompiled)(bundle, own).floorPlans, (entry) => entry.id), ['plan', 'foreign-plan'], 'negative control must reproduce foreign plan contamination');
 console.log('PASS report spatial Property boundary: 10 typed collections, policy, cross-references, legacy builder wiring, negative control');
+
+
+// Execute the real ReportDataBuilder.build method with isolated read-only repositories.
+// A mismatched Property lookup must fail before any spatial fetch or Snapshot assembly.
+function loadReportBuilder(code) {
+  const begin = code.indexOf('  async build(propertyId: string, options:');
+  const end = code.indexOf('\n  }\n}\n\nexport const reportDataBuilder', begin);
+  assert.ok(begin >= 0 && end > begin, 'actual report builder method must be present');
+  const method = code.slice(begin, end + '\n  }'.length);
+  const transpiled = ts.transpileModule(
+    `class Harness { constructor() { this.now = () => '2026-10-24T00:00:00Z'; } ${method} }; module.exports = Harness;`,
+    { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } },
+  ).outputText;
+  return (state) => {
+    const module = { exports: {} };
+    runInNewContext(`(function(module) { ${transpiled}\n})`, {
+      propertyRepository: { getById: async () => state.property },
+      propertyDataRoomRepository: { getBundle: async () => ({ digitalTwinAssets: [] }) },
+      spatialMediaRepository: { getBundle: async () => { state.spatialCalls += 1; return { floorPlans: [] }; } },
+      scopeDataRoomBundle: (bundle) => bundle,
+      scopeReportSpatialBundle: (bundle) => bundle,
+      spatialMediaCompatibilityService: {
+        mergePreferTyped: (typed) => typed,
+        fromLegacyBundle: () => ({ floorPlans: [] }),
+      },
+      buildProfessionalReportViewModel: (property) => ({ identity: { id: property.id }, generated: {}, media: {} }),
+      spatialMediaViewService: { buildReportSpatialSnapshot: () => ({ media: [] }) },
+      internalPhotoAllowed: () => false,
+      module, Date, Error, Promise,
+    })(module);
+    return new module.exports();
+  };
+}
+const realBuilder = loadReportBuilder(builder);
+const wrong = { property: { id: 'foreign' }, spatialCalls: 0 };
+await assert.rejects(realBuilder(wrong).build(own), /물건 ID가 조회 결과와 일치하지 않습니다/);
+assert.equal(wrong.spatialCalls, 0, 'foreign Property must be rejected before reading spatial assets');
+const absent = { property: null, spatialCalls: 0 };
+await assert.rejects(realBuilder(absent).build(own), /물건을 찾을 수 없습니다/);
+const matching = { property: { id: own }, spatialCalls: 0 };
+const built = await realBuilder(matching).build(own);
+assert.equal(built.identity.id, own);
+assert.equal(matching.spatialCalls, 1, 'matching Property should build normally');
+// Negative control: the previous implementation assembled the wrong Property as a report.
+const identityGuard = "if (property.id !== propertyId) throw new Error('보고서 대상 물건 ID가 조회 결과와 일치하지 않습니다. 다시 조회해 주세요.');";
+assert.ok(builder.includes(identityGuard), 'identity guard must exist in actual builder');
+const weakenedBuilder = loadReportBuilder(builder.replace(identityGuard, '/* removed Property identity guard */'));
+const leaked = { property: { id: 'foreign' }, spatialCalls: 0 };
+assert.equal((await weakenedBuilder(leaked).build(own)).identity.id, 'foreign', 'negative control must reproduce cross-Property report');
+console.log('PASS report Property lookup identity mismatch: fail-closed, missing Property, valid build, negative control');
