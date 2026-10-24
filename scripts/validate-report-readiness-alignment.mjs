@@ -31,6 +31,40 @@ const bundle = (documents = docs(), verificationCandidates = [], verifications =
   documents, verificationCandidates, verifications, dataSources: [],
 });
 const mediaPolicy = loadTs('src/domain/professionalReport/reportAccessPolicy.ts');
+// Exercise the actual TypeScript scoping helper, including media, comparable sources,
+// verification candidates, documents, spaces, and Digital Twin assets.
+const mixed = bundle();
+mixed.media = [
+  { id: 'own-exterior', propertyId: PROPERTY_ID, category: 'exterior' },
+  { id: 'foreign-interior', propertyId: 'foreign-property', category: 'interior' },
+];
+mixed.dataSources = [
+  { id: 'own-source', propertyId: PROPERTY_ID, resourceType: 'comparable_transaction_set' },
+  { id: 'foreign-comparable', propertyId: 'foreign-property', resourceType: 'comparable_transaction_set' },
+];
+mixed.verificationCandidates = [
+  { propertyId: PROPERTY_ID, decisionStatus: 'approved' },
+  { propertyId: 'foreign-property', decisionStatus: 'pending' },
+];
+mixed.spaces = [
+  { id: 'own-space', propertyId: PROPERTY_ID },
+  { id: 'foreign-space', propertyId: 'foreign-property' },
+];
+mixed.digitalTwinAssets = [
+  { id: 'own-3d', propertyId: PROPERTY_ID },
+  { id: 'foreign-3d', propertyId: 'foreign-property' },
+];
+mixed.documents.push({ ...docs()[0], id: 'foreign-document', propertyId: 'foreign-property' });
+const scoped = readiness.scopeDataRoomBundle(mixed, PROPERTY_ID);
+for (const key of ['documents', 'media', 'dataSources', 'verificationCandidates', 'spaces', 'digitalTwinAssets']) {
+  assert.ok(scoped[key].every((row) => row.propertyId === PROPERTY_ID), key + ': cross-Property row leaked');
+}
+assert.equal(scoped.media.length, 1, 'foreign media must not reach report rendering');
+assert.equal(scoped.dataSources.length, 1, 'foreign comparables must not reach report analysis');
+assert.equal(scoped.verificationCandidates.length, 1, 'foreign pending candidate must not block this Property');
+assert.equal(scoped.spaces.length, 1, 'foreign floor must not enter report');
+assert.equal(scoped.digitalTwinAssets.length, 1, 'foreign 3D asset must not enter report');
+assert.equal(mixed.media.length, 2, 'original Data Room bundle must remain untouched');
 const assessed = readiness.assessRequiredDocumentReadiness(bundle());
 assert.equal(assessed.connected.length, 4);
 assert.equal(assessed.verified.length, 4);
@@ -40,6 +74,8 @@ assert.equal(readiness.assessRequiredDocumentReadiness(bundle(docs('confirmed'),
 }])).verified.length, 1);
 
 const builder = readFileSync('src/services/reportEngine/reportDataBuilder.ts', 'utf8');
+assert.match(builder, /scopeDataRoomBundle\(inputBundle,\s*property\.id\)/, 'Builder must isolate the entire Data Room bundle before rendering');
+assert.match(builder, /asset\.propertyId\s*===\s*propertyId/, 'Generated 3D assets must be Property-scoped');
 assert.match(builder, /assessRequiredDocumentReadiness\(bundle,\s*property\.id\)/, 'Report builder must scope evidence to its Property');
 assert.match(builder, /requiredDocumentReadiness\.verified\.length\s*===\s*REQUIRED_DOCUMENT_TYPES\.length/, 'Builder must require all documents verified');
 assert.match(builder, /requiredDocumentReadiness\.connected\.includes\(type\)/, 'Builder must require actual connected originals');
@@ -54,10 +90,13 @@ const repository = {
   async getBundle() { return currentBundle; },
   async updateReportSnapshotStatus(id, status) { statusWrites += 1; return { id, status }; },
 };
+const snapshotSource = readFileSync('src/services/reportEngine/reportSnapshotService.ts', 'utf8');
+assert.match(snapshotSource, /scopeDataRoomBundle\(await propertyDataRoomRepository\.getBundle\(current\.propertyId\),\s*current\.propertyId\)/,
+  'Snapshot finalization must isolate mixed Data Room rows');
 const snapshotService = loadTs('src/services/reportEngine/reportSnapshotService.ts', {
   '../../domain/professionalReport/reportAccessPolicy': mediaPolicy,
   '../../repositories/propertyDataRoomRepository': { propertyDataRoomRepository: repository },
-  '../propertyReadinessService': { assessRequiredDocumentReadiness: readiness.assessRequiredDocumentReadiness },
+  '../propertyReadinessService': { assessRequiredDocumentReadiness: readiness.assessRequiredDocumentReadiness, scopeDataRoomBundle: readiness.scopeDataRoomBundle },
   '../../domain/propertyDataRoom/labels': { REQUIRED_DOCUMENT_TYPES },
   './reportSnapshotFreshnessService': { reportSnapshotFreshnessService: { async evaluate() { return { isStale: stale }; } } },
   './reportDataBuilder': { PROFESSIONAL_REPORT_TEMPLATE_ID: 'master', PROFESSIONAL_REPORT_TEMPLATE_VERSION: 'v3', REPORT_ENGINE_VERSION: '1', reportDataBuilder: {} },
@@ -169,7 +208,7 @@ await check('unrelated property retains its own media policy', bundle(docs().map
 });
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 37 service scenarios + cross-Property evidence isolation + binary integrity + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 37 service scenarios + full Data Room Property isolation + binary integrity + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
