@@ -58,6 +58,25 @@ function floorSortKey(floor?: string) {
   return Number.NEGATIVE_INFINITY;
 }
 
+// Historical/imported Data Room rows may bypass the current input validator.
+// Never turn null/blank prices or areas into fabricated zero-value report facts.
+function comparablePositiveNumber(value: unknown): number | null {
+  if (typeof value === 'number') return Number.isFinite(value) && value > 0 ? value : null;
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!/^[0-9]+(?:[.][0-9]+)?$/.test(trimmed)) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function comparableDate(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const trimmed = value.trim();
+  if (!/^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(trimmed)) return null;
+  const date = new Date(`${trimmed}T00:00:00.000Z`);
+  return Number.isFinite(date.getTime()) && date.toISOString().slice(0, 10) === trimmed ? trimmed : null;
+}
+
 function comparableRows(bundle: DataRoomBundle): ProfessionalReportComparable[] {
   const source = bundle.dataSources.find((item) => item.resourceType === 'comparable_transaction_set' && item.fieldKey === 'nearbyTransactions');
   const rows = source?.metadata?.rows;
@@ -67,21 +86,19 @@ function comparableRows(bundle: DataRoomBundle): ProfessionalReportComparable[] 
     if (!row || typeof row !== 'object') continue;
     const value = row as Record<string, unknown>;
     const label = typeof value.label === 'string' ? value.label.trim() : '';
-    const salePrice = Number(value.salePrice);
-    const landAreaPyeong = Number(value.landAreaPyeong);
-    const landUnitPrice = Number(value.landUnitPrice);
-    const tradeDate = typeof value.tradeDate === 'string' ? value.tradeDate : '';
-    if (!label || !Number.isFinite(salePrice) || !Number.isFinite(landAreaPyeong) || !Number.isFinite(landUnitPrice) || !tradeDate) continue;
+    const salePrice = comparablePositiveNumber(value.salePrice);
+    const landAreaPyeong = comparablePositiveNumber(value.landAreaPyeong);
+    const landUnitPrice = comparablePositiveNumber(value.landUnitPrice);
+    const tradeDate = comparableDate(value.tradeDate);
+    if (!label || salePrice === null || landAreaPyeong === null || landUnitPrice === null || !tradeDate) continue;
+    const rawYear = value.approvalYear;
+    const parsedYear = rawYear === null || rawYear === undefined || rawYear === '' ? null : Number(rawYear);
+    const approvalYear = typeof parsedYear === 'number' && Number.isInteger(parsedYear) &&
+      parsedYear >= 1800 && parsedYear <= 2100 ? parsedYear : null;
     result.push({
-      label,
-      address: typeof value.address === 'string' ? value.address : '',
-      salePrice,
-      landAreaPyeong,
-      landUnitPrice,
-      approvalYear: Number.isFinite(Number(value.approvalYear)) ? Number(value.approvalYear) : null,
-      tradeDate,
-      sourceId: source.id,
-      verificationStatus: source.verificationStatus,
+      label, address: typeof value.address === 'string' ? value.address : '',
+      salePrice, landAreaPyeong, landUnitPrice, approvalYear, tradeDate,
+      sourceId: source.id, verificationStatus: source.verificationStatus,
     });
   }
   return result.sort((left, right) => right.tradeDate.localeCompare(left.tradeDate));
