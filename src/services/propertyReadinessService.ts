@@ -113,6 +113,9 @@ function coreStage(property: Property): ReadinessStage {
 }
 
 export function assessPropertyReadiness(property: Property, bundle: DataRoomBundle): PropertyReadinessAssessment {
+  // Never let a mixed/stale Data Room response inflate another Property's dashboard readiness.
+  // Scope every stage, not only the official-document gate used for report finalization.
+  bundle = scopeDataRoomBundle(bundle, property.id);
   const spaces = bundle.spaces ?? [];
   const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
   const hasReport = bundle.reportSnapshots.length > 0;
