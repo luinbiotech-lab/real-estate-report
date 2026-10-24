@@ -4,6 +4,7 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 
 const REQUIRED_DOCUMENT_TYPES = ['building_register', 'land_register', 'land_use_plan', 'registry'];
+const PROPERTY_ID = 'daon-bangbae-815-11';
 
 function loadTs(path, imports = {}) {
   const compiled = ts.transpileModule(readFileSync(path, 'utf8'), {
@@ -23,7 +24,7 @@ const readiness = loadTs('src/services/propertyReadinessService.ts', {
   '../domain/propertyDataRoom/labels': { REQUIRED_DOCUMENT_TYPES, DOCUMENT_TYPE_LABELS: {} },
 });
 const docs = (status = 'verified') => REQUIRED_DOCUMENT_TYPES.map((documentType, i) => ({
-  id: `doc-${i}`, documentType, verificationStatus: status,
+  id: `doc-${i}`, propertyId: PROPERTY_ID, documentType, verificationStatus: status,
   storagePath: `property/document/doc-${i}.pdf`, fileData: new Blob(['%PDF-1.7 test original']), fileSize: new Blob(['%PDF-1.7 test original']).size,
 }));
 const bundle = (documents = docs(), verificationCandidates = [], verifications = []) => ({
@@ -35,11 +36,11 @@ assert.equal(assessed.connected.length, 4);
 assert.equal(assessed.verified.length, 4);
 assert.equal(readiness.assessRequiredDocumentReadiness(bundle(docs('confirmed'))).verified.length, 0);
 assert.equal(readiness.assessRequiredDocumentReadiness(bundle(docs('confirmed'), [], [{
-  fieldKey: 'document:doc-0', status: 'verified',
+  fieldKey: 'document:doc-0', propertyId: PROPERTY_ID, status: 'verified',
 }])).verified.length, 1);
 
 const builder = readFileSync('src/services/reportEngine/reportDataBuilder.ts', 'utf8');
-assert.match(builder, /assessRequiredDocumentReadiness\(bundle\)/, 'Report builder must use shared verified-document policy');
+assert.match(builder, /assessRequiredDocumentReadiness\(bundle,\s*property\.id\)/, 'Report builder must scope evidence to its Property');
 assert.match(builder, /requiredDocumentReadiness\.verified\.length\s*===\s*REQUIRED_DOCUMENT_TYPES\.length/, 'Builder must require all documents verified');
 assert.match(builder, /requiredDocumentReadiness\.connected\.includes\(type\)/, 'Builder must require actual connected originals');
 assert.doesNotMatch(builder, /document\.verificationStatus\s*===\s*'verified'\s*\|\|\s*document\.verificationStatus\s*===\s*'confirmed'/, 'Confirmed-only must not bypass report gate');
@@ -89,6 +90,26 @@ async function check(label, dataRoom, expectPass, reportReady = true, mutate = (
 
 await check('verified four required documents', bundle(), true);
 await check('confirmed-only must be rejected', bundle(docs('confirmed')), false);
+// A mixed Data Room bundle must never use another Property's originals,
+ // source inventory, or document attestations to finalize this Property's report.
+await check('foreign Property original cannot satisfy required documents', bundle(
+  docs().map((document, i) => i === 0 ? { ...document, propertyId: 'foreign-property' } : document),
+), false);
+await check('foreign Property verification cannot attest local document', bundle(
+  docs('confirmed'), [], docs('confirmed').map((document) => ({
+    propertyId: 'foreign-property', fieldKey: `document:${document.id}`, status: 'verified',
+  })),
+), false);
+const foreignInventory = bundle([]);
+foreignInventory.dataSources = [{
+  propertyId: 'foreign-property', resourceType: 'source_document_inventory',
+  metadata: { originalSourcePresence: 'confirmed', documentType: 'building_register' },
+}];
+assert.equal(readiness.assessRequiredDocumentReadiness(foreignInventory, PROPERTY_ID).present.length, 0,
+  'foreign Property inventory must not count as original presence');
+assert.equal(readiness.assessRequiredDocumentReadiness(bundle(docs()), PROPERTY_ID).verified.length, 4,
+  'same Property originals must remain eligible');
+
 await check('one required document missing', bundle(docs().slice(1)), false);
 await check('verified metadata without original bytes', bundle(docs().map((document, i) =>
   i === 0 ? { ...document, fileData: undefined } : document)), false);
@@ -110,12 +131,12 @@ const bangbaeFourFiles = [
   { id: 'land-registry', documentType: 'registry', verificationStatus: 'verified' },
   { id: 'building-registry', documentType: 'registry', verificationStatus: 'verified' },
   { id: 'land-use', documentType: 'land_use_plan', verificationStatus: 'verified' },
-].map((document) => ({ ...document, storagePath: `property/document/${document.id}.pdf`, fileData: new Blob(['%PDF-1.7 test original']), fileSize: new Blob(['%PDF-1.7 test original']).size }));
+].map((document) => ({ ...document, propertyId: PROPERTY_ID, storagePath: `property/document/${document.id}.pdf`, fileData: new Blob(['%PDF-1.7 test original']), fileSize: new Blob(['%PDF-1.7 test original']).size }));
 assert.equal(readiness.assessRequiredDocumentReadiness(bundle(bangbaeFourFiles)).connected.length, 3, 'duplicate registry is not land register');
 assert.equal(readiness.assessRequiredDocumentReadiness(bundle(bangbaeFourFiles)).verified.length, 3, 'four files do not equal four required document types');
 await check('two registry copies cannot substitute for land register', bundle(bangbaeFourFiles), false);
 await check('no connected original documents', bundle([]), false);
-await check('explicit verified document attestation', bundle(docs('confirmed'), [], docs('confirmed').map(d => ({ fieldKey: `document:${d.id}`, status: 'verified' }))), true);
+await check('explicit verified document attestation', bundle(docs('confirmed'), [], docs('confirmed').map(d => ({ propertyId: PROPERTY_ID, fieldKey: `document:${d.id}`, status: 'verified' }))), true);
 await check('pending verification candidate', bundle(docs(), [{ decisionStatus: 'pending' }]), false);
 await check('held verification candidate', bundle(docs(), [{ decisionStatus: 'held' }]), false);
 await check('snapshot already not report-ready', bundle(), false, false);
@@ -140,7 +161,7 @@ await check('unknown item category must be rejected', bundle(), false, true, (s)
 await check('legacy property main item must be rejected', bundle(), false, true, (s) => { s.snapshotData.media.items = [{ id: 'property-main', category: 'exterior' }]; });
 await check('missing media section must be rejected', bundle(), false, true, (s) => { delete s.snapshotData.media; });
 await check('explicit exterior media remains permitted', bundle(), true, true, (s) => { s.snapshotData.media.items = [{ id: 'exterior-1', category: 'exterior' }]; });
-await check('unrelated property retains its own media policy', bundle(), true, true, (s) => {
+await check('unrelated property retains its own media policy', bundle(docs().map((document) => ({ ...document, propertyId: 'unrelated-property' }))), true, true, (s) => {
   s.propertyId = 'unrelated-property';
   s.snapshotData.identity.id = 'unrelated-property';
   s.snapshotData.media.internalPhotoAllowed = true;
@@ -148,7 +169,7 @@ await check('unrelated property retains its own media policy', bundle(), true, t
 });
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 35 service scenarios + binary integrity + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 37 service scenarios + cross-Property evidence isolation + binary integrity + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
