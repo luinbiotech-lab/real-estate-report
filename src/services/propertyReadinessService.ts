@@ -88,7 +88,7 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
   const spaces = bundle.spaces ?? [];
   const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
   const hasReport = bundle.reportSnapshots.length > 0;
-  const required = assessRequiredDocumentReadiness(bundle);
+  const required = assessRequiredDocumentReadiness(bundle, property.id);
   const requiredPresent = required.present;
   const requiredConnected = required.connected;
   const requiredVerified = required.verified;
