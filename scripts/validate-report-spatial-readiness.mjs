@@ -35,7 +35,7 @@ const baseline = {
   mediaSpaceLinks: [], viewerScenes: [], walkthroughRoutes: [], walkthroughSteps: [], verificationEvents: [],
 };
 const ready = clone(baseline);
-Object.assign(ready.floorPlans[0], { scaleStatus: 'verified', extractionStatus: 'verified', verificationStatus: 'document_verified' });
+Object.assign(ready.floorPlans[0], { scaleStatus: 'verified', extractionStatus: 'verified', verificationStatus: 'document_verified', storagePath: 'originals/floor-1.pdf', scaleValue: 100, scaleUnit: '1:n' });
 ready.spaces[0].verificationStatus = 'document_verified';
 ready.mediaAssets[0].verificationStatus = 'document_verified';
 ready.mediaSpaceLinks = [{ id: 'link', mediaAssetId: 'media', spaceId: 'space', floorId: 'floor-1', matchStatus: 'verified', verificationStatus: 'document_verified' }];
@@ -52,6 +52,22 @@ for (const type of ['spaces', 'mediaAssets']) {
   item[type][0].verificationStatus = 'estimated';
   assert.equal(reportReady(item), false, `estimated ${type} must block`);
 }
+// An asserted verification status without the original or calibration is not real measured evidence.
+for (const field of ['storagePath', 'scaleValue', 'scaleUnit']) {
+  const item = clone(ready);
+  delete item.floorPlans[0][field];
+  assert.equal(reportReady(item), false, `missing original/scale metadata ${field} must block`);
+}
+const invalidScale = clone(ready);
+invalidScale.floorPlans[0].scaleValue = 0;
+assert.equal(reportReady(invalidScale), false, 'zero physical scale must block');
+const invalidScaleUnit = clone(ready);
+invalidScaleUnit.floorPlans[0].scaleUnit = ' ';
+assert.equal(reportReady(invalidScaleUnit), false, 'blank scale unit must block');
+const sourceFileBacked = clone(ready);
+delete sourceFileBacked.floorPlans[0].storagePath;
+sourceFileBacked.floorPlans[0].sourceFileId = 'verified-original-file';
+assert.equal(reportReady(sourceFileBacked), true, 'linked original source file can replace storage path');
 const mixedPlan = clone(ready);
 mixedPlan.floorPlans.push({ id: 'other-floor', scaleStatus: 'unknown', extractionStatus: 'uploaded', verificationStatus: 'estimated' });
 assert.equal(reportReady(mixedPlan), false, 'another unscaled floor must block full report spatial readiness');
@@ -115,4 +131,4 @@ const strict = 'spatialReady && verifiedScaledPlan && verifiedSpace && verifiedR
 assert.ok(source.includes(strict), 'strict guard must remain in the real service');
 const weakened = load(source.replace(strict, 'spatialReady && reportSafeMediaCount(mediaAssets, photosAllowed) > 0 && conflictCount === 0'));
 assert.equal(weakened.summarize(baseline, false).reportSpatialReady, true, 'negative control must reproduce false-ready');
-console.log('PASS report spatial evidence readiness: 26 cases + permissive-formula negative control');
+console.log('PASS report spatial evidence readiness: 32 cases + permissive-formula negative control');
