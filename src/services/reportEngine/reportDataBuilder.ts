@@ -3,7 +3,7 @@ import type { ProfessionalReportComparable, ProfessionalReportMedia, Professiona
 import { numericReportValue, reportValue } from '../../domain/professionalReport/valuePolicy';
 import { calculateUnitPrice, roundArea, sqmToPyeong, pyeongToSqm } from '../../domain/professionalReport/calculations';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
-import { assessRequiredDocumentReadiness } from '../propertyReadinessService';
+import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from '../propertyReadinessService';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { propertyRepository } from '../../repositories/propertyRepository';
@@ -86,7 +86,8 @@ function comparableRows(bundle: DataRoomBundle): ProfessionalReportComparable[] 
   return result.sort((left, right) => right.tradeDate.localeCompare(left.tradeDate));
 }
 
-export function buildProfessionalReportViewModel(property: Property, bundle: DataRoomBundle, options: BuilderOptions = {}): ProfessionalReportViewModel {
+export function buildProfessionalReportViewModel(property: Property, inputBundle: DataRoomBundle, options: BuilderOptions = {}): ProfessionalReportViewModel {
+  const bundle = scopeDataRoomBundle(inputBundle, property.id);
   const verifications = bundle.verifications; const sources = bundle.dataSources;
   const context = (fieldKey: string, extra: Partial<Parameters<typeof reportValue>[1]> = {}) => ({ fieldKey, verifications, sources, ...extra });
   const text = (fieldKey: keyof Property, disconnected = false) => reportValue(String(property[fieldKey] ?? '').trim(), context(String(fieldKey), { disconnected }));
@@ -249,7 +250,7 @@ export class ReportDataBuilder {
       spatial: {
         ...spatial,
         generatedAssets: bundle.digitalTwinAssets
-          .filter((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
+          .filter((asset) => asset.propertyId === propertyId && (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
           .map((asset) => ({
             id: asset.id,
             assetType: asset.assetType,
