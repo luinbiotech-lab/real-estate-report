@@ -90,7 +90,15 @@ export const spatialMediaViewService = {
 
     const spatialReady = floorPlans.length > 0 && spaces.length > 0;
     const walkthroughReady = readyViewerScenes > 0 && validWalkthroughRoutes > 0;
-    const reportSpatialReady = spatialReady && reportSafeMediaCount(mediaAssets, photosAllowed) > 0 && conflictCount === 0;
+    // Report-grade spatial evidence requires a scale-verified original plan,
+    // verified mapping, and verified space/media. An uploaded or estimated
+    // plan may count toward workflow progress, but not report readiness.
+    const verifiedScaledPlan = floorPlans.some((plan) =>
+      plan.scaleStatus === 'verified' && plan.extractionStatus === 'verified' && isVerifiedStatus(plan.verificationStatus));
+    const verifiedSpace = spaces.some((space) => isVerifiedStatus(space.verificationStatus));
+    const verifiedReportMedia = mediaAssets.some((asset) =>
+      isVerifiedStatus(asset.verificationStatus) && reportSafeSpatialMedia(asset, photosAllowed));
+    const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && conflictCount === 0;
 
     return {
       floorPlans: floorPlans.length,
