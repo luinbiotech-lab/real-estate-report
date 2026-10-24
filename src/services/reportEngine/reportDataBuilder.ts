@@ -244,7 +244,7 @@ export class ReportDataBuilder {
       ? spatialMediaCompatibilityService.mergePreferTyped(typedSpatialBundle, bundle)
       : spatialMediaCompatibilityService.fromLegacyBundle(bundle);
     const viewModel = buildProfessionalReportViewModel(property, bundle, { ...options, generatedAt: this.now() });
-    const spatial = spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle);
+    const spatial = spatialMediaViewService.buildReportSpatialSnapshot(spatialBundle, internalPhotoAllowed(property));
     return {
       ...viewModel,
       spatial: {
