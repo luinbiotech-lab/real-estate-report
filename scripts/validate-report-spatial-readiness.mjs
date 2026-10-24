@@ -51,6 +51,15 @@ for (const type of ['spaces', 'mediaAssets']) {
   item[type][0].verificationStatus = 'estimated';
   assert.equal(reportReady(item), false, `estimated ${type} must block`);
 }
+const mixedPlan = clone(ready);
+mixedPlan.floorPlans.push({ id: 'other-floor', scaleStatus: 'unknown', extractionStatus: 'uploaded', verificationStatus: 'estimated' });
+assert.equal(reportReady(mixedPlan), false, 'another unscaled floor must block full report spatial readiness');
+const mixedSpace = clone(ready);
+mixedSpace.spaces.push({ id: 'unverified-room', verificationStatus: 'estimated' });
+assert.equal(reportReady(mixedSpace), false, 'another estimated space must block full report spatial readiness');
+const mixedMedia = clone(ready);
+mixedMedia.mediaAssets.push({ id: 'unverified-image', mediaType: 'map_capture', sourceOrigin: 'public_source', visibilityScope: 'report', verificationStatus: 'estimated' });
+assert.equal(reportReady(mixedMedia), false, 'another unverified included image must block full report spatial readiness');
 const deleted = clone(ready);
 deleted.floorPlans[0].deletedAt = '2026-10-24T00:00:00Z';
 assert.equal(reportReady(deleted), false, 'deleted plan must not count');
@@ -65,4 +74,4 @@ const strict = 'spatialReady && verifiedScaledPlan && verifiedSpace && verifiedR
 assert.ok(source.includes(strict), 'strict guard must remain in the real service');
 const weakened = load(source.replace(strict, 'spatialReady && reportSafeMediaCount(mediaAssets, photosAllowed) > 0 && conflictCount === 0'));
 assert.equal(weakened.summarize(baseline, false).reportSpatialReady, true, 'negative control must reproduce false-ready');
-console.log('PASS report spatial evidence readiness: 10 cases + permissive-formula negative control');
+console.log('PASS report spatial evidence readiness: 13 cases + permissive-formula negative control');
