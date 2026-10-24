@@ -97,7 +97,7 @@ export const reportSnapshotService = {
     // Recheck live Data Room evidence: an older Snapshot may have been generated
     // when user-confirmed documents were incorrectly accepted as officially verified.
     const bundle = await propertyDataRoomRepository.getBundle(current.propertyId);
-    const required = assessRequiredDocumentReadiness(bundle);
+    const required = assessRequiredDocumentReadiness(bundle, current.propertyId);
     const unresolvedCandidates = bundle.verificationCandidates.some(
       (candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held',
     );
