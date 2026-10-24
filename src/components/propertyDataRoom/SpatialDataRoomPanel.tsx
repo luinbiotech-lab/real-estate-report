@@ -1,7 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import {
-  BANGBAE_815_11_MEDIA_POLICY,
   FLOOR_PLAN_EXTRACTION_LABELS,
   MEDIA_PROCESSING_LABELS,
   MEDIA_SPACE_MATCH_LABELS,
@@ -11,8 +10,8 @@ import {
 import type { DataRoomBundle } from '../../domain/propertyDataRoom/types';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
-import { isBangbae81511Property } from '../../domain/propertyDataRoom/bangbaeIdentity';
-import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
+import { isBangbae81511 as isBangbae81511Report } from '../../domain/professionalReport/reportAccessPolicy';
+import { getSpatialPanelPolicy, prepareSpatialPanelBundle } from '../../services/spatialDataRoomPanelPolicy';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
 const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
 const ThreeSchematicSpaceViewer = lazy(() => import('./ThreeSchematicSpaceViewer'));
@@ -62,34 +61,48 @@ export default function SpatialDataRoomPanel({
   const [bundle, setBundle] = useState<SpatialMediaDataRoomBundle>(emptySpatialBundle);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loadedPropertyId, setLoadedPropertyId] = useState<string | null>(null);
+  const requestVersion = useRef(0);
 
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError('');
     try {
       const typed = await spatialMediaRepository.getBundle(propertyId);
-      setBundle(legacyBundle ? spatialMediaCompatibilityService.mergePreferTyped(typed, legacyBundle) : typed);
+      const scoped = prepareSpatialPanelBundle(typed, legacyBundle, propertyId);
+      if (version !== requestVersion.current) return;
+      setBundle(scoped);
+      setLoadedPropertyId(propertyId);
     } catch (reason) {
+      if (version !== requestVersion.current) return;
       if (legacyBundle) {
-        setBundle(spatialMediaCompatibilityService.fromLegacyBundle(legacyBundle));
+        setBundle(prepareSpatialPanelBundle(emptySpatialBundle, legacyBundle, propertyId));
         setError('새 spatial schema 연결 전이라 기존 Data Room 데이터를 호환 모드로 표시하고 있습니다.');
       } else {
+        setBundle(emptySpatialBundle);
         setError(reason instanceof Error ? reason.message : '공간·미디어 데이터를 불러오지 못했습니다.');
       }
+      setLoadedPropertyId(propertyId);
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, [legacyBundle, propertyId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+    return () => { requestVersion.current += 1; };
+  }, [load]);
 
-  const summary = useMemo(() => spatialMediaViewService.summarize(bundle), [bundle]);
+  const effectivePolicy = getSpatialPanelPolicy(bundle, propertyId, propertyAddress);
+  const allowInteriorPhotos = effectivePolicy?.allowInteriorPhotos ?? true;
+  const summary = useMemo(() => spatialMediaViewService.summarize(bundle, allowInteriorPhotos), [bundle, allowInteriorPhotos]);
   const rasterMappedSpaces = bundle.spaces.filter((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image');
   const rasterScaleVerified = rasterMappedSpaces.length > 0 && rasterMappedSpaces.every((space) => space.estimatedGeometry3d?.scaleVerified === true);
-  const isBangbae81511 = isBangbae81511Property({ id: propertyId, address: propertyAddress });
-  const effectivePolicy = bundle.mediaPolicy ?? (isBangbae81511 ? { propertyId, ...BANGBAE_815_11_MEDIA_POLICY } : undefined);
+  const isBangbae81511 = isBangbae81511Report({ id: propertyId, address: propertyAddress ?? '', detailAddress: '' });
 
-  if (loading) return <div className="center"><CircularProgress size={28} /><p>공간·미디어 구조를 불러오는 중입니다.</p></div>;
+  // Never render the previous Property's spatial records during a route switch.
+  if (loading || loadedPropertyId !== propertyId) return <div className="center"><CircularProgress size={28} /><p>공간·미디어 구조를 불러오는 중입니다.</p></div>;
 
   return <div className="data-room-overview spatial-data-room-panel">
     {error && <Alert severity="error">{error}</Alert>}
