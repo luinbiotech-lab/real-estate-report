@@ -17,6 +17,13 @@ export function prepareSpatialPanelBundle(
   return scopeReportSpatialBundle(merged, propertyId);
 }
 
+/** Viewer must not read the raw legacy bundle: it may contain another Property's GLB assets. */
+export function getSpatialPanelLegacyTwinAssets(
+  legacy: DataRoomBundle | undefined, propertyId: string,
+): DataRoomBundle['digitalTwinAssets'] {
+  return legacy ? scopeDataRoomBundle(legacy, propertyId).digitalTwinAssets : [];
+}
+
 /** A stale/editable media preference cannot override Bangbae 815-11's locked no-interior rule. */
 export function getSpatialPanelPolicy(
   bundle: SpatialMediaDataRoomBundle, propertyId: string, propertyAddress?: string,
