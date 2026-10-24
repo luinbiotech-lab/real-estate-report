@@ -148,7 +148,9 @@ for (const marker of [
 
 
 for (const marker of [
-  'assessRequiredDocumentReadiness(bundle)',
+  // Property-scoped since dd441b5: migration preflight must not count another Property's originals.
+  'scopeDataRoomBundle(await propertyDataRoomRepository.getBundle(propertyId), propertyId)',
+  'assessRequiredDocumentReadiness(bundle, propertyId)',
   'requiredDocumentTotal',
   'requiredSourcePresent',
   'requiredBinaryConnected',

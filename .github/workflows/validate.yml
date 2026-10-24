@@ -54,6 +54,33 @@ jobs:
       - name: Validate property readiness center
         run: node scripts/validate-readiness-center.mjs
 
+      - name: Validate Bangbae interior media hard deny
+        run: node scripts/validate-bangbae-internal-media-guard.mjs
+
+      - name: Validate Data Room property switch isolation
+        run: node scripts/validate-data-room-property-switch.mjs
+
+      - name: Validate Report draft single flight
+        run: node scripts/validate-report-draft-single-flight.mjs
+
+      - name: Validate Report final Snapshot provenance
+        run: node scripts/validate-report-final-provenance.mjs
+
+      - name: Validate Report finalization UI gate
+        run: node scripts/validate-report-finalization-ui-gate.mjs
+
+      - name: Validate Report readiness alignment
+        run: node scripts/validate-report-readiness-alignment.mjs
+
+      - name: Validate Report Snapshot freshness
+        run: node scripts/validate-report-snapshot-freshness.mjs
+
+      - name: Validate Report spatial Property scope
+        run: node scripts/validate-report-spatial-property-scope.mjs
+
+      - name: Validate Report spatial readiness
+        run: node scripts/validate-report-spatial-readiness.mjs
+
       - name: Validate company settings policy
         run: node scripts/validate-company-settings.mjs
 
