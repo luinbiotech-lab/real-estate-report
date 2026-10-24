@@ -140,7 +140,8 @@ console.log('PASS: snapshot route isolation model (late fetch, mismatched ID, st
 // report builder. Test its actual media-selection expression: mixed Data Room
 // responses must not show/print a foreign Property's exterior photograph.
 const onePageSource = readFileSync('src/pages/DocumentPreview.tsx', 'utf8');
-const heroExpression = onePageSource.match(/const dataRoomHero = (bundle\\.media\\.find\\([^\\n]+\\)\\?\\.url \\|\\| '');/);
+const heroLine = onePageSource.split('\n').find((line) => line.includes('const dataRoomHero = bundle.media.find('));
+const heroExpression = heroLine ? [null, heroLine.trim().slice('const dataRoomHero = '.length).replace(/;$/, '')] : null;
 assert.ok(heroExpression, '1P hero media expression must be available for execution');
 const makeHeroSelector = (expression) => new Function(
   'bundle', 'id', 'allowInternal', 'reportMediaCategoryAllowed',
