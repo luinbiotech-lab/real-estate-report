@@ -85,6 +85,34 @@ for (const stageId of ['documents', 'provenance', 'verification', 'media', 'repo
     `foreign-only Data Room must not mark ${stageId} as ready`);
 }
 assert.equal(foreignOnlyReadiness.readyCount, 1, 'only the own Property core fields may be ready');
+
+// A model upload is not an as-built, dimension-verified Digital Twin.
+// This dashboard signal must not claim READY for failed, pending, sample,
+// deleted, or another Property's 3D files.
+const twinStage = (assets) => readiness.assessPropertyReadiness(dashboardProperty, {
+  ...foreignOnlyBundle, digitalTwinAssets: assets,
+}).stages.find((stage) => stage.id === 'digital_twin');
+const twinAsset = (overrides = {}) => ({
+  id: 'model-1', propertyId: PROPERTY_ID, assetType: 'glb', processingStatus: 'ready',
+  metadata: {}, ...overrides,
+});
+assert.equal(twinStage([twinAsset({ assetType: 'floor_plan', processingStatus: 'uploaded' })]).state, 'partial',
+  'an uploaded floor plan must not be READY 3D');
+assert.equal(twinStage([twinAsset({ processingStatus: 'failed' })]).state, 'partial',
+  'a failed 3D model must not be READY');
+assert.equal(twinStage([twinAsset()]).state, 'partial',
+  'a renderable but unverified 3D model must not claim dimensional verification');
+assert.equal(twinStage([twinAsset({ deletedAt: '2026-10-24' })]).state, 'missing',
+  'a deleted model is not an active Digital Twin');
+assert.equal(twinStage([twinAsset({ propertyId: 'foreign-property', metadata: {
+  horizontalScaleVerified: true, heightStatus: 'verified', sourceFloorPlanAssetId: 'plan-1',
+} })]).state, 'missing', 'foreign 3D model must not count');
+assert.equal(twinStage([twinAsset({ metadata: {
+  horizontalScaleVerified: true, heightStatus: 'verified', sourceFloorPlanAssetId: 'plan-1',
+} })]).state, 'ready', 'all dimensional verification metadata must be present for READY indication');
+assert.match(twinStage([twinAsset()]).detail, /검증 필요/, 'unverified 3D must visibly disclose its limitations');
+console.log('PASS Digital Twin readiness: failed/uploaded/unverified/deleted/foreign vs dimension-checked models');
+
 const mixedDashboardBundle = {
   ...foreignOnlyBundle,
   documents: [...foreignOnlyBundle.documents, ...docs()],
