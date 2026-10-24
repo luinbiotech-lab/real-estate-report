@@ -3,6 +3,14 @@ import type { ReportSnapshotFreshness } from './reportSnapshotFreshnessService';
 
 // UI preflight only. reportSnapshotService.markReady() remains the authoritative
 // live Data Room, provenance, privacy and freshness gate at mutation time.
+// Remote finalization creates a new immutable Snapshot ID. The route must
+// follow that ID; otherwise the cross-route render guard shows a permanent spinner.
+// Local IndexedDB finalization retains the original ID and should not navigate.
+export function getFinalizedSnapshotDestination(requestedId: string, ready: Pick<ReportSnapshot, 'id'>): string | null {
+  if (!ready.id) throw new Error('확정된 보고서 Snapshot ID가 없습니다.');
+  return ready.id === requestedId ? null : `/professional-report/snapshot/${encodeURIComponent(ready.id)}`;
+}
+
 export function getSnapshotFinalizationUiState(
   status: ReportSnapshot['status'],
   reportReady: boolean,
