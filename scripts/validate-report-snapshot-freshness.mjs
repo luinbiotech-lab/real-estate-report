@@ -28,18 +28,18 @@ const evaluate = (generatedAt) => module.exports.reportSnapshotFreshnessService.
 const past = '2026-10-02T00:00:00Z';
 assert.equal((await evaluate(past)).isStale, false, 'unchanged property remains fresh');
 legacy = {
-  documents: [{ updatedAt: '2026-10-03T00:00:00Z' }],
-  reportSnapshots: [{ updatedAt: '2026-10-10T00:00:00Z' }],
+  documents: [{ propertyId: 'P', updatedAt: '2026-10-03T00:00:00Z' }],
+  reportSnapshots: [{ propertyId: 'P', updatedAt: '2026-10-10T00:00:00Z' }],
 };
 assert.equal((await evaluate(past)).isStale, true, 'new document makes snapshot stale');
-legacy = { documents: [], reportSnapshots: [{ updatedAt: '2026-10-10T00:00:00Z' }] };
+legacy = { documents: [], reportSnapshots: [{ propertyId: 'P', updatedAt: '2026-10-10T00:00:00Z' }] };
 assert.equal((await evaluate(past)).isStale, false, 'other snapshots must not make snapshot stale');
 assert.equal((await evaluate('not-a-date')).isStale, true, 'invalid generatedAt must fail closed');
 assert.equal((await evaluate(new Date(Date.now() + 60 * 60 * 1000).toISOString())).isStale, true, 'future-dated generatedAt must fail closed');
 
 for (const decisionStatus of ['approved', 'rejected', 'held']) {
   legacy = { documents: [], reportSnapshots: [], verificationCandidates: [{
-    createdAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z', decisionStatus,
+    propertyId: 'P', createdAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z', decisionStatus,
   }] };
   const result = await evaluate(past);
   assert.equal(result.isStale, true, 'a later candidate review must invalidate the Snapshot: ' + decisionStatus);
@@ -50,10 +50,27 @@ legacy = { documents: [], reportSnapshots: [], verificationCandidates: [{
 }] };
 assert.equal((await evaluate(past)).isStale, false, 'review before generation must remain fresh');
 legacy = { documents: [], reportSnapshots: [] };
-spatial = { verificationEvents: [{ createdAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z' }] };
+spatial = { verificationEvents: [{ propertyId: 'P', createdAt: '2026-10-01T00:00:00Z', reviewedAt: '2026-10-03T00:00:00Z' }] };
 assert.equal((await evaluate(past)).isStale, true, 'later spatial review must invalidate Snapshot');
 spatial = { spaces: [] };
 
 property = undefined;
 assert.equal((await evaluate(past)).isStale, true, 'missing property must fail closed');
-console.log('PASS report Snapshot freshness: 11 scenarios; invalid/future time and missing property fail closed');
+
+// Regression: stale/mixed repository responses must never use another Property's
+// Data Room or spatial timestamps as the freshness evidence for this Snapshot.
+property = { id: 'P', updatedAt: '2026-10-01T00:00:00Z' };
+legacy = { documents: [{ propertyId: 'Q', updatedAt: '2026-10-12T00:00:00Z' }], reportSnapshots: [] };
+spatial = { spaces: [{ propertyId: 'Q', updatedAt: '2026-10-13T00:00:00Z' }] };
+assert.equal((await evaluate(past)).isStale, false, 'foreign Data Room and Spatial rows must not mark P stale');
+legacy.documents.push({ propertyId: 'P', updatedAt: '2026-10-04T00:00:00Z' });
+assert.equal((await evaluate(past)).isStale, true, 'P own later document still marks stale in mixed response');
+legacy = { documents: [], reportSnapshots: [] };
+spatial = { mediaPolicy: { propertyId: 'Q', updatedAt: '2026-10-14T00:00:00Z' } };
+assert.equal((await evaluate(past)).isStale, false, 'foreign single spatial policy must not mark P stale');
+spatial.mediaPolicy.propertyId = 'P';
+assert.equal((await evaluate(past)).isStale, true, 'own single spatial policy must mark P stale');
+spatial = { spaces: [] };
+property = { id: 'Q', updatedAt: '2026-10-01T00:00:00Z' };
+assert.equal((await evaluate(past)).isStale, true, 'wrong property returned by getById must fail closed');
+console.log('PASS report Snapshot freshness: 16 scenarios including foreign Property isolation and mismatch fail-closed');
