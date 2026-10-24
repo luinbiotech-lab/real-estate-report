@@ -3,7 +3,7 @@ import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import { isBangbae81511, reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
-import { assessRequiredDocumentReadiness } from '../propertyReadinessService';
+import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from '../propertyReadinessService';
 import { reportSnapshotFreshnessService } from './reportSnapshotFreshnessService';
 import {
   PROFESSIONAL_REPORT_TEMPLATE_ID,
@@ -96,7 +96,7 @@ export const reportSnapshotService = {
     }
     // Recheck live Data Room evidence: an older Snapshot may have been generated
     // when user-confirmed documents were incorrectly accepted as officially verified.
-    const bundle = await propertyDataRoomRepository.getBundle(current.propertyId);
+    const bundle = scopeDataRoomBundle(await propertyDataRoomRepository.getBundle(current.propertyId), current.propertyId);
     const required = assessRequiredDocumentReadiness(bundle, current.propertyId);
     const unresolvedCandidates = bundle.verificationCandidates.some(
       (candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held',
