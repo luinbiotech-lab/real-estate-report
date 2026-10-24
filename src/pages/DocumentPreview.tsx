@@ -62,7 +62,7 @@ export default function DocumentPreview() {
           return;
         }
         const allowInternal = internalPhotoAllowed(value);
-        const dataRoomHero = bundle.media.find((item) => item.url && reportMediaCategoryAllowed(item.category, allowInternal))?.url || '';
+        const dataRoomHero = bundle.media.find((item) => item.propertyId === id && !item.deletedAt && item.mediaType === 'image' && item.url && reportMediaCategoryAllowed(item.category, allowInternal))?.url || '';
         const mainImage = allowInternal ? (value.mainImage || dataRoomHero) : dataRoomHero;
         setView({ routeKey, phase: 'ready', property: { ...value, mainImage } });
       })
