@@ -1,6 +1,6 @@
 import type { ProfessionalReportViewModel } from '../../domain/professionalReport/types';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
-import { isBangbae81511, reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
+import { isBangbae81511, reportMediaCategoryAllowed, reportSpatialMediaAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
 import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from '../propertyReadinessService';
@@ -16,6 +16,10 @@ function applySnapshotMediaPolicy(viewModel: ProfessionalReportViewModel): Profe
   if (viewModel.media.internalPhotoAllowed) return viewModel;
   return {
     ...viewModel,
+    spatial: viewModel.spatial ? {
+      ...viewModel.spatial,
+      media: viewModel.spatial.media.filter((item) => reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, false)),
+    } : undefined,
     media: {
       ...viewModel.media,
       mainImage: { ...viewModel.media.mainImage, value: null, display: '미연결', state: 'missing', sourceIds: [] },
@@ -85,7 +89,9 @@ export const reportSnapshotService = {
           Boolean(media.mainImage?.value) ||
           Boolean(media.additionalImages?.value?.length) ||
           !Array.isArray(media.items) ||
-          media.items.some((item) => item.id === 'property-main' || !reportMediaCategoryAllowed(item.category, false))) {
+          media.items.some((item) => item.id === 'property-main' || !reportMediaCategoryAllowed(item.category, false)) ||
+          (viewModel.spatial && (!Array.isArray(viewModel.spatial.media) ||
+            viewModel.spatial.media.some((item) => !reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, false))))) {
         throw new Error('방배동 815-11의 Snapshot에 금지되거나 미분류된 사진이 포함되어 있습니다. 내부사진을 제외한 현재 MASTER로 새 초안을 생성해 주세요.');
       }
     }
