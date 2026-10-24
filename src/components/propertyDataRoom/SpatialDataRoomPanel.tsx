@@ -1,7 +1,6 @@
-import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import {
-  BANGBAE_815_11_MEDIA_POLICY,
   FLOOR_PLAN_EXTRACTION_LABELS,
   MEDIA_PROCESSING_LABELS,
   MEDIA_SPACE_MATCH_LABELS,
@@ -11,8 +10,8 @@ import {
 import type { DataRoomBundle } from '../../domain/propertyDataRoom/types';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
-import { isBangbae81511Property } from '../../domain/propertyDataRoom/bangbaeIdentity';
-import { spatialMediaCompatibilityService } from '../../services/spatialMediaCompatibilityService';
+import { isBangbae81511 as isBangbae81511Report } from '../../domain/professionalReport/reportAccessPolicy';
+import { assessSpatialPanelModelEvidence, getSpatialPanelLegacyTwinAssets, getSpatialPanelPolicy, prepareSpatialPanelBundle } from '../../services/spatialDataRoomPanelPolicy';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
 const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
 const ThreeSchematicSpaceViewer = lazy(() => import('./ThreeSchematicSpaceViewer'));
@@ -62,34 +61,51 @@ export default function SpatialDataRoomPanel({
   const [bundle, setBundle] = useState<SpatialMediaDataRoomBundle>(emptySpatialBundle);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [loadedPropertyId, setLoadedPropertyId] = useState<string | null>(null);
+  const requestVersion = useRef(0);
 
   const load = useCallback(async () => {
+    const version = ++requestVersion.current;
     setLoading(true);
     setError('');
     try {
       const typed = await spatialMediaRepository.getBundle(propertyId);
-      setBundle(legacyBundle ? spatialMediaCompatibilityService.mergePreferTyped(typed, legacyBundle) : typed);
+      const scoped = prepareSpatialPanelBundle(typed, legacyBundle, propertyId);
+      if (version !== requestVersion.current) return;
+      setBundle(scoped);
+      setLoadedPropertyId(propertyId);
     } catch (reason) {
+      if (version !== requestVersion.current) return;
       if (legacyBundle) {
-        setBundle(spatialMediaCompatibilityService.fromLegacyBundle(legacyBundle));
+        setBundle(prepareSpatialPanelBundle(emptySpatialBundle, legacyBundle, propertyId));
         setError('새 spatial schema 연결 전이라 기존 Data Room 데이터를 호환 모드로 표시하고 있습니다.');
       } else {
+        setBundle(emptySpatialBundle);
         setError(reason instanceof Error ? reason.message : '공간·미디어 데이터를 불러오지 못했습니다.');
       }
+      setLoadedPropertyId(propertyId);
     } finally {
-      setLoading(false);
+      if (version === requestVersion.current) setLoading(false);
     }
   }, [legacyBundle, propertyId]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    void load();
+    return () => { requestVersion.current += 1; };
+  }, [load]);
 
-  const summary = useMemo(() => spatialMediaViewService.summarize(bundle), [bundle]);
+  const legacyTwinAssets = useMemo(() => getSpatialPanelLegacyTwinAssets(legacyBundle, propertyId), [legacyBundle, propertyId]);
+  const effectivePolicy = getSpatialPanelPolicy(bundle, propertyId, propertyAddress);
+  const allowInteriorPhotos = effectivePolicy?.allowInteriorPhotos ?? true;
+  const summary = useMemo(() => spatialMediaViewService.summarize(bundle, allowInteriorPhotos), [bundle, allowInteriorPhotos]);
+  const modelEvidence = useMemo(() => assessSpatialPanelModelEvidence(bundle.viewerScenes, summary.reportSpatialReady), [bundle.viewerScenes, summary.reportSpatialReady]);
+  const modelEvidenceComplete = modelEvidence.modelCount > 0 && modelEvidence.verifiedModelCount === modelEvidence.modelCount;
   const rasterMappedSpaces = bundle.spaces.filter((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image');
   const rasterScaleVerified = rasterMappedSpaces.length > 0 && rasterMappedSpaces.every((space) => space.estimatedGeometry3d?.scaleVerified === true);
-  const isBangbae81511 = isBangbae81511Property({ id: propertyId, address: propertyAddress });
-  const effectivePolicy = bundle.mediaPolicy ?? (isBangbae81511 ? { propertyId, ...BANGBAE_815_11_MEDIA_POLICY } : undefined);
+  const isBangbae81511 = isBangbae81511Report({ id: propertyId, address: propertyAddress ?? '', detailAddress: '' });
 
-  if (loading) return <div className="center"><CircularProgress size={28} /><p>공간·미디어 구조를 불러오는 중입니다.</p></div>;
+  // Never render the previous Property's spatial records during a route switch.
+  if (loading || loadedPropertyId !== propertyId) return <div className="center"><CircularProgress size={28} /><p>공간·미디어 구조를 불러오는 중입니다.</p></div>;
 
   return <div className="data-room-overview spatial-data-room-panel">
     {error && <Alert severity="error">{error}</Alert>}
@@ -164,19 +180,23 @@ export default function SpatialDataRoomPanel({
           <ThreeSchematicSpaceViewer spaces={bundle.spaces} />
         </Suspense>
       </section>}
-      {Boolean(legacyBundle?.digitalTwinAssets?.some((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)) && <section>
+      {Boolean(legacyTwinAssets.some((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)) && <section>
         <div className="section-heading-row"><div><p className="eyebrow">GENERATED GLB ASSETS</p><h2>Digital Twin GLB</h2></div><Chip size="small" color="warning" label="provenance preserved" /></div>
-        {legacyBundle!.digitalTwinAssets
+        {legacyTwinAssets
           .filter((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
           .map((asset) => <Suspense key={asset.id} fallback={<div className="center"><CircularProgress size={28} /><p>GLB 자산을 불러오는 중입니다.</p></div>}>
             <DigitalTwinAssetGlbViewer asset={asset} />
           </Suspense>)}
       </section>}
-      {bundle.viewerScenes.some((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl) && <section>
-        <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color="success" label="3D model connected" /></div>
+      {modelEvidence.modelCount > 0 && <section>
+        <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color={modelEvidenceComplete ? 'success' : 'warning'} label={modelEvidenceComplete ? '검증기록 충족 · 독립확인 별도' : '모델 연결 · 실측 미검증'} /></div>
+        <Alert severity="info" sx={{ mb: 2 }}>3D 파일 연결은 실제 도면의 치수·축척·층 또는 현장 실측 검증을 의미하지 않습니다. 검증된 원본 자료와 독립 확인이 필요합니다.</Alert>
         {bundle.viewerScenes
-          .filter((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl)
-          .map((scene) => <Suspense key={scene.id} fallback={<div className="center"><CircularProgress size={28} /><p>3D Viewer 모듈을 불러오는 중입니다.</p></div>}><ThreeGlbViewer modelUrl={scene.modelUrl!} title={scene.title} /></Suspense>)}
+          .filter((scene) => !scene.deletedAt && (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && typeof scene.modelUrl === 'string' && scene.modelUrl.trim().length > 0)
+          .map((scene) => <div key={scene.id}>
+            <StatusChip status={scene.verificationStatus} />
+            <Suspense fallback={<div className="center"><CircularProgress size={28} /><p>3D Viewer 모듈을 불러오는 중입니다.</p></div>}><ThreeGlbViewer modelUrl={scene.modelUrl!} title={scene.title} /></Suspense>
+          </div>)}
       </section>}
       <section>
         <div className="section-heading-row"><div><p className="eyebrow">LIGHTWEIGHT VIEWER</p><h2>층 · 공간 구조 Viewer</h2></div><Chip size="small" label={String(summary.spaces) + ' spaces'} /></div>
