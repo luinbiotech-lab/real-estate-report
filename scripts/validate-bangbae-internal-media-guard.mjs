@@ -87,7 +87,7 @@ for (const [pattern, label] of [
   [/if \(active\) \{ setFreshness\(nextFreshness\); setFreshnessError\(''\); \}/, 'discard stale freshness and clear prior failure'],
   [/if \(active\) setLoading\(false\)/, 'old route must not complete new loading'],
   [/snapshot && snapshot\.id !== snapshotId/, 'guard render before effects reset stale state'],
-  [/currentRouteSnapshotId\.current === requestedId\) setSnapshot\(ready\)/, 'guard stale confirm completion'],
+  [/if \(currentRouteSnapshotId\.current === requestedId\) \{\s*const destination = getFinalizedSnapshotDestination\(requestedId, ready\);\s*if \(destination\) navigate\(destination, \{ replace: true \}\);\s*else setSnapshot\(ready\);\s*\}/, 'guard stale confirm completion and immutable final navigation'],
   [/currentRouteSnapshotId\.current === requestedId\) navigate\(/, 'guard stale regeneration navigation'],
 ]) assert.match(snapshotPage, pattern, label);
 
