@@ -93,11 +93,11 @@ export const spatialMediaViewService = {
     // Report-grade spatial evidence requires a scale-verified original plan,
     // verified mapping, and verified space/media. An uploaded or estimated
     // plan may count toward workflow progress, but not report readiness.
-    const verifiedScaledPlan = floorPlans.some((plan) =>
+    const verifiedScaledPlan = floorPlans.length > 0 && floorPlans.every((plan) =>
       plan.scaleStatus === 'verified' && plan.extractionStatus === 'verified' && isVerifiedStatus(plan.verificationStatus));
-    const verifiedSpace = spaces.some((space) => isVerifiedStatus(space.verificationStatus));
-    const verifiedReportMedia = mediaAssets.some((asset) =>
-      isVerifiedStatus(asset.verificationStatus) && reportSafeSpatialMedia(asset, photosAllowed));
+    const verifiedSpace = spaces.length > 0 && spaces.every((space) => isVerifiedStatus(space.verificationStatus));
+    const reportMedia = mediaAssets.filter((asset) => reportSafeSpatialMedia(asset, photosAllowed));
+    const verifiedReportMedia = reportMedia.length > 0 && reportMedia.every((asset) => isVerifiedStatus(asset.verificationStatus));
     const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && conflictCount === 0;
 
     return {
