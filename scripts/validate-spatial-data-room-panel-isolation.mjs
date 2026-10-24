@@ -83,6 +83,21 @@ assert.equal(policy.getSpatialPanelPolicy(empty(), 'arbitrary', '동광로18길 
 const weakened = load(path, imports, source.replace('allowInteriorPhotos: false', 'allowInteriorPhotos: true'));
 assert.equal(weakened.getSpatialPanelPolicy(locked, 'sample-bangbae-815-11').allowInteriorPhotos, true,
   'negative control must reproduce forbidden override');
+// A renderable model is not proof of a measured, verified floor or geometry.
+const modelScene = (overrides = {}) => ({
+  modelSourceType: 'glb', modelUrl: 'https://example.invalid/model.glb',
+  generationStatus: 'ready', verificationStatus: 'document_verified', ...overrides,
+});
+const evidence = policy.assessSpatialPanelModelEvidence;
+assert.equal(evidence([], true).modelCount, 0);
+assert.equal(evidence([modelScene()], false).verifiedModelCount, 0, 'no verified scaled plan => no verified model');
+assert.equal(evidence([modelScene()], true).verifiedModelCount, 1);
+assert.equal(evidence([modelScene({ verificationStatus: 'estimated' })], true).verifiedModelCount, 0);
+assert.equal(evidence([modelScene({ generationStatus: 'draft' })], true).verifiedModelCount, 0);
+assert.equal(evidence([modelScene({ modelUrl: '  ' })], true).modelCount, 0);
+assert.equal(evidence([modelScene({ deletedAt: '2026-10-25T00:00:00Z' })], true).modelCount, 0);
+assert.equal(evidence([modelScene(), modelScene({ verificationStatus: 'source_provided' })], true).verifiedModelCount, 1);
+assert.equal(evidence([modelScene({ modelSourceType: 'external' })], true).modelCount, 0);
 const ui = readFileSync('src/components/propertyDataRoom/SpatialDataRoomPanel.tsx', 'utf8');
 for (const marker of [
   'const version = ++requestVersion.current;',
@@ -95,8 +110,14 @@ for (const marker of [
   'getSpatialPanelLegacyTwinAssets(legacyBundle, propertyId)',
   'legacyTwinAssets.some((asset)',
   '{legacyTwinAssets',
+  'assessSpatialPanelModelEvidence(bundle.viewerScenes, summary.reportSpatialReady)',
+  'modelEvidence.modelCount > 0',
+  'modelEvidenceComplete ? \'success\' : \'warning\'',
+  '모델 연결 · 실측 미검증',
+  '검증된 원본 자료와 독립 확인이 필요합니다.',
 ]) assert.ok(ui.includes(marker), `missing spatial panel isolation contract: ${marker}`);
 assert.ok(!ui.includes('spatialMediaCompatibilityService.mergePreferTyped(typed, legacyBundle)'));
 assert.ok(!ui.includes('legacyBundle!.digitalTwinAssets'));
 assert.ok(!ui.includes('legacyBundle?.digitalTwinAssets'));
+assert.ok(!ui.includes('color="success" label="3D model connected"'), 'connected GLB must not imply verified 3D');
 console.log('PASS spatial panel Property isolation, hard-deny, route race guards, negative control');
