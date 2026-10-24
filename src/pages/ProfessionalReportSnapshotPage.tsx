@@ -10,7 +10,7 @@ import type { ProfessionalReportViewModel } from '../domain/professionalReport/t
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { reportSnapshotFreshnessService, reportSnapshotService, type ReportSnapshotFreshness } from '../services/reportEngine';
-import { getSnapshotFinalizationUiState } from '../services/reportEngine/reportFinalizationUiState';
+import { getFinalizedSnapshotDestination, getSnapshotFinalizationUiState } from '../services/reportEngine/reportFinalizationUiState';
 import '../professional-report.css';
 import '../daon-detail-master.css';
 import '../daon-report-frame.css';
@@ -111,7 +111,11 @@ export default function ProfessionalReportSnapshotPage() {
     setConfirming(true); setError('');
     try {
       const ready = await reportSnapshotService.markReady(requestedId);
-      if (currentRouteSnapshotId.current === requestedId) setSnapshot(ready);
+      if (currentRouteSnapshotId.current === requestedId) {
+        const destination = getFinalizedSnapshotDestination(requestedId, ready);
+        if (destination) navigate(destination, { replace: true });
+        else setSnapshot(ready);
+      }
     } catch (reason) {
       if (currentRouteSnapshotId.current === requestedId) setError(reason instanceof Error ? reason.message : '보고서를 확정하지 못했습니다.');
     } finally {
