@@ -135,3 +135,36 @@ await pendingD;
 assert.equal(route.state.snapshot?.id, 'E', 'stale freshness must not replace the current route');
 assert.equal(route.state.freshness?.isStale, false, 'old stale state must not contaminate new report');
 console.log('PASS: snapshot route isolation model (late fetch, mismatched ID, stale freshness, print guard); NOT browser E2E');
+
+// 1P proposal preview is a separate rendering path from the professional
+// report builder. Test its actual media-selection expression: mixed Data Room
+// responses must not show/print a foreign Property's exterior photograph.
+const onePageSource = readFileSync('src/pages/DocumentPreview.tsx', 'utf8');
+const heroExpression = onePageSource.match(/const dataRoomHero = (bundle\\.media\\.find\\([^\\n]+\\)\\?\\.url \\|\\| '');/);
+assert.ok(heroExpression, '1P hero media expression must be available for execution');
+const makeHeroSelector = (expression) => new Function(
+  'bundle', 'id', 'allowInternal', 'reportMediaCategoryAllowed',
+  `return ${expression};`,
+);
+const selectHero = makeHeroSelector(heroExpression[1]);
+const ownId = 'daon-bangbae-815-11';
+const mixedHeroBundle = { media: [
+  { id: 'foreign', propertyId: 'another-property', mediaType: 'image', category: 'exterior', url: 'foreign.jpg' },
+  { id: 'deleted', propertyId: ownId, mediaType: 'image', category: 'exterior', url: 'deleted.jpg', deletedAt: '2026-10-24' },
+  { id: 'video', propertyId: ownId, mediaType: 'video', category: 'exterior', url: 'video.mp4' },
+  { id: 'unknown', propertyId: ownId, mediaType: 'image', category: 'other', url: 'unknown.jpg' },
+  { id: 'interior', propertyId: ownId, mediaType: 'image', category: 'interior', url: 'interior.jpg' },
+  { id: 'exterior', propertyId: ownId, mediaType: 'image', category: 'exterior', url: 'own-exterior.jpg' },
+] };
+assert.equal(selectHero(mixedHeroBundle, ownId, false, reportMediaCategoryAllowed), 'own-exterior.jpg',
+  'restricted 1P report must select only its own active, explicitly exterior image');
+assert.equal(selectHero(mixedHeroBundle, ownId, true, reportMediaCategoryAllowed), 'unknown.jpg',
+  'unrestricted 1P report may use its own active image, but never another Property');
+assert.equal(selectHero({ media: mixedHeroBundle.media.slice(0, 5) }, ownId, false, reportMediaCategoryAllowed), '',
+  'no eligible own exterior means no hero image, not a foreign/deleted/interior fallback');
+const unscopedExpression = heroExpression[1].replace('item.propertyId === id && ', '');
+assert.notEqual(unscopedExpression, heroExpression[1], 'negative control must remove the Property boundary');
+assert.equal(makeHeroSelector(unscopedExpression)(mixedHeroBundle, ownId, false, reportMediaCategoryAllowed), 'foreign.jpg',
+  'negative control must reproduce the cross-Property image leak');
+console.log('PASS 1P hero cross-Property isolation: own active image, privacy policy, no fallback, negative control');
+
