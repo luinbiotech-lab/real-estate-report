@@ -65,6 +65,37 @@ assert.equal(scoped.verificationCandidates.length, 1, 'foreign pending candidate
 assert.equal(scoped.spaces.length, 1, 'foreign floor must not enter report');
 assert.equal(scoped.digitalTwinAssets.length, 1, 'foreign 3D asset must not enter report');
 assert.equal(mixed.media.length, 2, 'original Data Room bundle must remain untouched');
+// Dashboard readiness must not inherit another Property's ready Snapshot, assets or documents.
+// The report builder already scopes mixed bundles; the readiness dashboard must do the same.
+const foreignOnlyBundle = {
+  ...bundle(docs().map((document) => ({ ...document, propertyId: 'foreign-property' }))),
+  media: [{ id: 'foreign-photo', propertyId: 'foreign-property' }],
+  dataSources: [{ id: 'foreign-source', propertyId: 'foreign-property' }],
+  reportSnapshots: [{ id: 'foreign-final', propertyId: 'foreign-property', status: 'ready' }],
+  digitalTwinAssets: [{ id: 'foreign-3d', propertyId: 'foreign-property', processingStatus: 'ready' }],
+  spaces: [{ id: 'foreign-space', propertyId: 'foreign-property' }],
+};
+const dashboardProperty = {
+  id: PROPERTY_ID, address: '서울 서초구 방배동 815-11',
+  landAreaSqm: 100, totalFloorAreaSqm: 200, managerName: '검증 담당',
+};
+const foreignOnlyReadiness = readiness.assessPropertyReadiness(dashboardProperty, foreignOnlyBundle);
+for (const stageId of ['documents', 'provenance', 'verification', 'media', 'report', 'digital_twin']) {
+  assert.equal(foreignOnlyReadiness.stages.find((stage) => stage.id === stageId)?.state, 'missing',
+    `foreign-only Data Room must not mark ${stageId} as ready`);
+}
+assert.equal(foreignOnlyReadiness.readyCount, 1, 'only the own Property core fields may be ready');
+const mixedDashboardBundle = {
+  ...foreignOnlyBundle,
+  documents: [...foreignOnlyBundle.documents, ...docs()],
+  reportSnapshots: [...foreignOnlyBundle.reportSnapshots, { id: 'own-draft', propertyId: PROPERTY_ID, status: 'draft' }],
+};
+assert.deepEqual(
+  readiness.assessPropertyReadiness(dashboardProperty, mixedDashboardBundle),
+  readiness.assessPropertyReadiness(dashboardProperty, readiness.scopeDataRoomBundle(mixedDashboardBundle, PROPERTY_ID)),
+  'mixed Data Room dashboard assessment must equal the authoritative Property-only assessment',
+);
+
 const assessed = readiness.assessRequiredDocumentReadiness(bundle());
 assert.equal(assessed.connected.length, 4);
 assert.equal(assessed.verified.length, 4);
