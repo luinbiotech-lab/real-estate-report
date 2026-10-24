@@ -57,3 +57,16 @@ const NON_INTERIOR_MEDIA_CATEGORIES = new Set([
 export function reportMediaCategoryAllowed(category: string, allowInternal: boolean): boolean {
   return allowInternal || NON_INTERIOR_MEDIA_CATEGORIES.has(category);
 }
+
+// Typed spatial media has no exterior/interior category. For restricted reports,
+// only intrinsically non-interior context formats are eligible; generic photos
+// must not be treated as exterior merely because their source is approved.
+const NON_INTERIOR_SPATIAL_MEDIA_TYPES = new Set([
+  'roadview_capture', 'map_capture', 'floorplan_image', 'drone_image',
+]);
+
+export function reportSpatialMediaAllowed(mediaType: string, sourceOrigin: string, allowInternal: boolean): boolean {
+  // Samples, untraceable files and AI visualizations are not verified source media.
+  if (sourceOrigin === 'sample' || sourceOrigin === 'unknown' || sourceOrigin === 'ai_generated') return false;
+  return allowInternal || NON_INTERIOR_SPATIAL_MEDIA_TYPES.has(mediaType);
+}
