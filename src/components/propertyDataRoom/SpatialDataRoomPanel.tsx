@@ -11,7 +11,7 @@ import type { DataRoomBundle } from '../../domain/propertyDataRoom/types';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
 import { isBangbae81511 as isBangbae81511Report } from '../../domain/professionalReport/reportAccessPolicy';
-import { getSpatialPanelPolicy, prepareSpatialPanelBundle } from '../../services/spatialDataRoomPanelPolicy';
+import { getSpatialPanelLegacyTwinAssets, getSpatialPanelPolicy, prepareSpatialPanelBundle } from '../../services/spatialDataRoomPanelPolicy';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
 const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
 const ThreeSchematicSpaceViewer = lazy(() => import('./ThreeSchematicSpaceViewer'));
@@ -94,6 +94,7 @@ export default function SpatialDataRoomPanel({
     return () => { requestVersion.current += 1; };
   }, [load]);
 
+  const legacyTwinAssets = useMemo(() => getSpatialPanelLegacyTwinAssets(legacyBundle, propertyId), [legacyBundle, propertyId]);
   const effectivePolicy = getSpatialPanelPolicy(bundle, propertyId, propertyAddress);
   const allowInteriorPhotos = effectivePolicy?.allowInteriorPhotos ?? true;
   const summary = useMemo(() => spatialMediaViewService.summarize(bundle, allowInteriorPhotos), [bundle, allowInteriorPhotos]);
@@ -177,9 +178,9 @@ export default function SpatialDataRoomPanel({
           <ThreeSchematicSpaceViewer spaces={bundle.spaces} />
         </Suspense>
       </section>}
-      {Boolean(legacyBundle?.digitalTwinAssets?.some((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)) && <section>
+      {Boolean(legacyTwinAssets.some((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)) && <section>
         <div className="section-heading-row"><div><p className="eyebrow">GENERATED GLB ASSETS</p><h2>Digital Twin GLB</h2></div><Chip size="small" color="warning" label="provenance preserved" /></div>
-        {legacyBundle!.digitalTwinAssets
+        {legacyTwinAssets
           .filter((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
           .map((asset) => <Suspense key={asset.id} fallback={<div className="center"><CircularProgress size={28} /><p>GLB 자산을 불러오는 중입니다.</p></div>}>
             <DigitalTwinAssetGlbViewer asset={asset} />
