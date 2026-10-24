@@ -4,7 +4,7 @@ import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { DaonProfessionalReportMaster } from '../components/professionalReport/DaonProfessionalReportMaster';
-import { reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed } from '../domain/professionalReport/reportAccessPolicy';
+import { reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed, reportSpatialMediaAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
@@ -31,6 +31,10 @@ function applySnapshotMediaPolicy(model: ProfessionalReportViewModel, propertyId
   if (allowInternal) return model;
   return {
     ...model,
+    spatial: model.spatial ? {
+      ...model.spatial,
+      media: model.spatial.media.filter((item) => reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, false)),
+    } : undefined,
     media: {
       ...model.media,
       internalPhotoAllowed: false,
