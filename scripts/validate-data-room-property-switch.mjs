@@ -88,4 +88,36 @@ assert.notEqual(unsafe, method, 'negative-control mutation must apply');
 const badState = await race(unsafe, 'bundle');
 assert.equal(badState.property?.id, 'A', 'negative control must reproduce stale A overwrite');
 
+// Exercise the actual Snapshot identity gate, not a parallel implementation.
+// Previously markReady() checked embedded identity, but preview/PDF did not.
+const snapshotPageSource = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+const snapshotGuardStart = snapshotPageSource.indexOf('function snapshotMatchesProperty(');
+const snapshotGuardEnd = snapshotPageSource.indexOf('\n}\n', snapshotGuardStart);
+assert.ok(snapshotGuardStart >= 0 && snapshotGuardEnd > snapshotGuardStart, 'Snapshot identity guard must exist');
+const snapshotGuardSource = snapshotPageSource.slice(snapshotGuardStart, snapshotGuardEnd + 2);
+const snapshotRenderGuard = snapshotPageSource.indexOf('if (!snapshotMatchesProperty(snapshot)) return');
+assert.ok(snapshotRenderGuard > snapshotGuardEnd, 'Snapshot preview must fail closed on cross-Property data');
+assert.ok(snapshotRenderGuard < snapshotPageSource.indexOf('const report = <DaonProfessionalReportMaster'),
+  'Snapshot identity guard must execute before report rendering and PDF printing');
+
+function compileSnapshotGuard(code) {
+  const js = ts.transpileModule(`${code}\nmodule.exports = snapshotMatchesProperty;`, {
+    compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+  }).outputText;
+  const module = { exports: {} };
+  runInNewContext(`(function(module) { ${js} })`)(module);
+  return module.exports;
+}
+const snapshotGuard = compileSnapshotGuard(snapshotGuardSource);
+const storedSnapshot = (propertyId, embeddedId) => ({ propertyId, snapshotData: { identity: { id: embeddedId } } });
+assert.equal(snapshotGuard(storedSnapshot('A', 'A')), true, 'matching Property must remain readable');
+assert.equal(snapshotGuard(storedSnapshot('A', 'B')), false, 'foreign Property must never be printed');
+assert.equal(snapshotGuard(storedSnapshot('A', undefined)), false, 'missing identity must fail closed');
+assert.equal(snapshotGuard(storedSnapshot('', 'A')), false, 'missing owner must fail closed');
+const weakenedGuard = snapshotGuardSource.replace('identity?.id === snapshot.propertyId', 'true');
+assert.notEqual(weakenedGuard, snapshotGuardSource, 'negative-control mutation must apply');
+assert.equal(compileSnapshotGuard(weakenedGuard)(storedSnapshot('A', 'B')), true,
+  'negative control must reproduce foreign-Property exposure');
+console.log('PASS Snapshot embedded-Property identity gate: matching/foreign/missing and negative control');
+
 console.log('PASS Data Room route isolation: late Property/bundle responses, mismatched IDs, render/cleanup guards, negative control');
