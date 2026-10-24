@@ -11,7 +11,7 @@ import type { DataRoomBundle } from '../../domain/propertyDataRoom/types';
 import { spatialMediaRepository } from '../../repositories/spatialMediaRepository';
 import { spatialMediaViewService } from '../../services/spatialMediaViewService';
 import { isBangbae81511 as isBangbae81511Report } from '../../domain/professionalReport/reportAccessPolicy';
-import { getSpatialPanelLegacyTwinAssets, getSpatialPanelPolicy, prepareSpatialPanelBundle } from '../../services/spatialDataRoomPanelPolicy';
+import { assessSpatialPanelModelEvidence, getSpatialPanelLegacyTwinAssets, getSpatialPanelPolicy, prepareSpatialPanelBundle } from '../../services/spatialDataRoomPanelPolicy';
 import LightweightSpatialViewer from './LightweightSpatialViewer';
 const ThreeGlbViewer = lazy(() => import('./ThreeGlbViewer'));
 const ThreeSchematicSpaceViewer = lazy(() => import('./ThreeSchematicSpaceViewer'));
@@ -98,6 +98,8 @@ export default function SpatialDataRoomPanel({
   const effectivePolicy = getSpatialPanelPolicy(bundle, propertyId, propertyAddress);
   const allowInteriorPhotos = effectivePolicy?.allowInteriorPhotos ?? true;
   const summary = useMemo(() => spatialMediaViewService.summarize(bundle, allowInteriorPhotos), [bundle, allowInteriorPhotos]);
+  const modelEvidence = useMemo(() => assessSpatialPanelModelEvidence(bundle.viewerScenes, summary.reportSpatialReady), [bundle.viewerScenes, summary.reportSpatialReady]);
+  const modelEvidenceComplete = modelEvidence.modelCount > 0 && modelEvidence.verifiedModelCount === modelEvidence.modelCount;
   const rasterMappedSpaces = bundle.spaces.filter((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image');
   const rasterScaleVerified = rasterMappedSpaces.length > 0 && rasterMappedSpaces.every((space) => space.estimatedGeometry3d?.scaleVerified === true);
   const isBangbae81511 = isBangbae81511Report({ id: propertyId, address: propertyAddress ?? '', detailAddress: '' });
@@ -186,11 +188,15 @@ export default function SpatialDataRoomPanel({
             <DigitalTwinAssetGlbViewer asset={asset} />
           </Suspense>)}
       </section>}
-      {bundle.viewerScenes.some((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl) && <section>
-        <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color="success" label="3D model connected" /></div>
+      {modelEvidence.modelCount > 0 && <section>
+        <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color={modelEvidenceComplete ? 'success' : 'warning'} label={modelEvidenceComplete ? '검증기록 충족 · 독립확인 별도' : '모델 연결 · 실측 미검증'} /></div>
+        <Alert severity="info" sx={{ mb: 2 }}>3D 파일 연결은 실제 도면의 치수·축척·층 또는 현장 실측 검증을 의미하지 않습니다. 검증된 원본 자료와 독립 확인이 필요합니다.</Alert>
         {bundle.viewerScenes
-          .filter((scene) => (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && scene.modelUrl)
-          .map((scene) => <Suspense key={scene.id} fallback={<div className="center"><CircularProgress size={28} /><p>3D Viewer 모듈을 불러오는 중입니다.</p></div>}><ThreeGlbViewer modelUrl={scene.modelUrl!} title={scene.title} /></Suspense>)}
+          .filter((scene) => !scene.deletedAt && (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && typeof scene.modelUrl === 'string' && scene.modelUrl.trim().length > 0)
+          .map((scene) => <div key={scene.id}>
+            <StatusChip status={scene.verificationStatus} />
+            <Suspense fallback={<div className="center"><CircularProgress size={28} /><p>3D Viewer 모듈을 불러오는 중입니다.</p></div>}><ThreeGlbViewer modelUrl={scene.modelUrl!} title={scene.title} /></Suspense>
+          </div>)}
       </section>}
       <section>
         <div className="section-heading-row"><div><p className="eyebrow">LIGHTWEIGHT VIEWER</p><h2>층 · 공간 구조 Viewer</h2></div><Chip size="small" label={String(summary.spaces) + ' spaces'} /></div>
