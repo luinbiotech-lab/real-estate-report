@@ -43,7 +43,7 @@ export const propertyDataRoomService = {
   summarize(property: Property, bundle: DataRoomBundle): DataRoomSummary {
     const existingMedia = [property.mainImage, property.mapImage, property.locationAnalysisImage, ...property.additionalImages].filter(Boolean).length;
     const statuses = [...bundle.documents.map((item) => item.verificationStatus), ...bundle.verifications.map((item) => item.status), ...bundle.dataSources.map((item) => item.verificationStatus)];
-    const requiredDocuments = assessRequiredDocumentReadiness(bundle);
+    const requiredDocuments = assessRequiredDocumentReadiness(bundle, property.id);
     const missingDocumentTypes = requiredDocuments.missing;
     const verificationCandidates = bundle.verificationCandidates ?? [];
     const activeCandidates = verificationCandidates.filter((item) => item.decisionStatus === 'pending' || item.decisionStatus === 'held');
