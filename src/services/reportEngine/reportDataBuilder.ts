@@ -204,7 +204,7 @@ export function buildProfessionalReportViewModel(property: Property, bundle: Dat
   const qualityCounts = emptyCounts(['actual', 'missing', 'disconnected', 'estimated', 'calculated', 'ai_analysis', 'unverified'] as const);
   values.forEach(({ value }) => { qualityCounts[value.state] += 1; });
   // Apply the Data Room's official verification policy; confirmed-only is insufficient.
-  const requiredDocumentReadiness = assessRequiredDocumentReadiness(bundle);
+  const requiredDocumentReadiness = assessRequiredDocumentReadiness(bundle, property.id);
   const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !requiredDocumentReadiness.connected.includes(type));
   const requiredDocumentsVerified = requiredDocumentReadiness.verified.length === REQUIRED_DOCUMENT_TYPES.length;
   const unresolvedCandidates = bundle.verificationCandidates.some((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held');
