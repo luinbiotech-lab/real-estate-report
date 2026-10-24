@@ -93,9 +93,18 @@ export const spatialMediaViewService = {
     // Report-grade spatial evidence requires a scale-verified original plan,
     // verified mapping, and verified space/media. An uploaded or estimated
     // plan may count toward workflow progress, but not report readiness.
+    // A report-grade floor plan must be tied to a real floor with a verified space.
+    // Verified but orphaned spaces/plans must not certify a multi-floor Digital Twin.
+    const verifiedPlanFloorIds = new Set(floorPlans
+      .map((plan) => plan.floorId)
+      .filter((floorId): floorId is string => typeof floorId === 'string' && floorId.trim().length > 0));
     const verifiedScaledPlan = floorPlans.length > 0 && floorPlans.every((plan) =>
-      plan.scaleStatus === 'verified' && plan.extractionStatus === 'verified' && isVerifiedStatus(plan.verificationStatus));
-    const verifiedSpace = spaces.length > 0 && spaces.every((space) => isVerifiedStatus(space.verificationStatus));
+      plan.scaleStatus === 'verified' && plan.extractionStatus === 'verified' && isVerifiedStatus(plan.verificationStatus) &&
+      typeof plan.floorId === 'string' && plan.floorId.trim().length > 0 &&
+      spaces.some((space) => space.floorId === plan.floorId && isVerifiedStatus(space.verificationStatus)));
+    const verifiedSpace = spaces.length > 0 && spaces.every((space) =>
+      isVerifiedStatus(space.verificationStatus) &&
+      typeof space.floorId === 'string' && verifiedPlanFloorIds.has(space.floorId));
     const reportMedia = mediaAssets.filter((asset) => reportSafeSpatialMedia(asset, photosAllowed));
     const verifiedReportMedia = reportMedia.length > 0 && reportMedia.every((asset) => isVerifiedStatus(asset.verificationStatus));
     const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && conflictCount === 0;
