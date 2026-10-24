@@ -28,6 +28,34 @@ export interface RequiredDocumentReadiness {
   missing: typeof REQUIRED_DOCUMENT_TYPES;
 }
 
+// All Data Room rows used to generate a report must belong to the authoritative Property.
+// Repository filtering alone is not a security boundary: stale/mixed bundles can reach the builder.
+export function scopeDataRoomBundle(bundle: DataRoomBundle, propertyId: string): DataRoomBundle {
+  return {
+    ...bundle,
+    documents: bundle.documents.filter((row) => row.propertyId === propertyId),
+    media: bundle.media.filter((row) => row.propertyId === propertyId),
+    verifications: bundle.verifications.filter((row) => row.propertyId === propertyId),
+    verificationCandidates: bundle.verificationCandidates.filter((row) => row.propertyId === propertyId),
+    dataSources: bundle.dataSources.filter((row) => row.propertyId === propertyId),
+    reportSnapshots: bundle.reportSnapshots.filter((row) => row.propertyId === propertyId),
+    digitalTwinAssets: bundle.digitalTwinAssets.filter((row) => row.propertyId === propertyId),
+    agentJobs: bundle.agentJobs?.filter((row) => row.propertyId === propertyId),
+    agentResults: bundle.agentResults?.filter((row) => row.propertyId === propertyId),
+    agentReviews: bundle.agentReviews?.filter((row) => row.propertyId === propertyId),
+    spaces: bundle.spaces?.filter((row) => row.propertyId === propertyId),
+    spaceMediaLinks: bundle.spaceMediaLinks?.filter((row) => row.propertyId === propertyId),
+    spaceRoomLinks: bundle.spaceRoomLinks?.filter((row) => row.propertyId === propertyId),
+    facilities: bundle.facilities?.filter((row) => row.propertyId === propertyId),
+    roomEvidencePositions: bundle.roomEvidencePositions?.filter((row) => row.propertyId === propertyId),
+    roomConditionHistory: bundle.roomConditionHistory?.filter((row) => row.propertyId === propertyId),
+    renovationAssessments: bundle.renovationAssessments?.filter((row) => row.propertyId === propertyId),
+    roomRenovationAssessments: bundle.roomRenovationAssessments?.filter((row) => row.propertyId === propertyId),
+    roomRenovationHistory: bundle.roomRenovationHistory?.filter((row) => row.propertyId === propertyId),
+    riskAssessments: bundle.riskAssessments?.filter((row) => row.propertyId === propertyId),
+  };
+}
+
 // A Data Room metadata row or a stale/deleted document is not an attached original.
 // Remote mode downloads the private Storage object into fileData before returning
 // the bundle; local mode stores the original Blob in IndexedDB.
