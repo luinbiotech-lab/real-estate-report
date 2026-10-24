@@ -86,6 +86,34 @@ for (const stageId of ['documents', 'provenance', 'verification', 'media', 'repo
 }
 assert.equal(foreignOnlyReadiness.readyCount, 1, 'only the own Property core fields may be ready');
 
+
+const verificationStage = (statuses, decisions = [], foreignRecords = []) => readiness.assessPropertyReadiness(dashboardProperty, {
+  ...foreignOnlyBundle,
+  verifications: [
+    ...statuses.map((status) => ({ propertyId: PROPERTY_ID, status })),
+    ...foreignRecords,
+  ],
+  verificationCandidates: decisions.map((decisionStatus) => ({ propertyId: PROPERTY_ID, decisionStatus })),
+}).stages.find((stage) => stage.id === 'verification');
+for (const [statuses, decisions, expected] of [
+  [[], [], 'missing'],
+  [['verified'], [], 'ready'],
+  [['estimated'], [], 'partial'],
+  [['confirmed'], [], 'partial'],
+  [['verified', 'unverified'], [], 'partial'],
+  [['verified'], ['pending'], 'partial'],
+  [['verified'], ['held'], 'partial'],
+  [[], ['pending'], 'partial'],
+  [['verified'], ['approved', 'rejected'], 'ready'],
+]) {
+  assert.equal(verificationStage(statuses, decisions).state, expected,
+    'verification stage must distinguish completed verification from recorded or unresolved work');
+}
+assert.equal(verificationStage([], [], [{ propertyId: 'foreign-property', status: 'verified' }]).state, 'missing',
+  'foreign verification must not certify this Property');
+assert.match(verificationStage(['verified'], ['held']).detail, /대기\/보류 1건/);
+console.log('PASS dashboard verification readiness: nine status cases, Property isolation and unresolved count');
+
 // A model upload is not an as-built, dimension-verified Digital Twin.
 // This dashboard signal must not claim READY for failed, pending, sample,
 // deleted, or another Property's 3D files.
