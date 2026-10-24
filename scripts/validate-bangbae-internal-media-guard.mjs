@@ -68,7 +68,7 @@ for (const [pattern, label] of [
   [/return \(\) => \{ active = false; \};/, 'invalidate the old request on route change'],
   [/if \(!active\) return;/, 'discard stale snapshot fetches'],
   [/value\.id !== snapshotId/, 'reject a mismatched repository snapshot ID'],
-  [/if \(active\) setFreshness\(nextFreshness\)/, 'discard stale freshness'],
+  [/if \(active\) \{ setFreshness\(nextFreshness\); setFreshnessError\(''\); \}/, 'discard stale freshness and clear prior failure'],
   [/if \(active\) setLoading\(false\)/, 'old route must not complete new loading'],
   [/snapshot && snapshot\.id !== snapshotId/, 'guard render before effects reset stale state'],
   [/currentRouteSnapshotId\.current === requestedId\) setSnapshot\(ready\)/, 'guard stale confirm completion'],
