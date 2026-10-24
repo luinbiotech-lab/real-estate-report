@@ -20,7 +20,7 @@ function load(code) {
         (allowInternal || ['roadview_capture', 'map_capture', 'floorplan_image', 'drone_image'].includes(type)),
     },
   };
-  runInNewContext(`(function(require, module, exports) { ${compiled}\\n})`, { Set, Math })(
+  runInNewContext(`(function(require, module, exports) { ${compiled}\n})`, { Set, Math })(
     (name) => { assert.ok(Object.hasOwn(imports, name), `unexpected import: ${name}`); return imports[name]; },
     module, module.exports,
   );
