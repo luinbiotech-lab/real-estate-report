@@ -134,6 +134,13 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
     typeof asset.metadata?.sourceFloorPlanAssetId === 'string' &&
     readySourcePlanIds.has(asset.metadata.sourceFloorPlanAssetId));
 
+  // A recorded estimate or unresolved candidate is not completed verification.
+  const verifiedRecordCount = bundle.verifications.filter((record) => record.status === 'verified').length;
+  const unresolvedCandidateCount = bundle.verificationCandidates.filter((candidate) =>
+    candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held').length;
+  const verificationReady = verifiedRecordCount > 0 &&
+    verifiedRecordCount === bundle.verifications.length && unresolvedCandidateCount === 0;
+
   const required = assessRequiredDocumentReadiness(bundle, property.id);
   const requiredPresent = required.present;
   const requiredConnected = required.connected;
@@ -165,8 +172,10 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
     {
       id: 'verification',
       label: '검증',
-      state: bundle.verifications.length > 0 ? 'ready' : bundle.verificationCandidates.length > 0 ? 'partial' : 'missing',
-      detail: bundle.verifications.length > 0 ? `검증 ${bundle.verifications.length}건` : bundle.verificationCandidates.length > 0 ? `후보 ${bundle.verificationCandidates.length}건` : '검증 기록 없음',
+      state: verificationReady ? 'ready' : bundle.verifications.length > 0 || bundle.verificationCandidates.length > 0 ? 'partial' : 'missing',
+      detail: bundle.verifications.length > 0 || bundle.verificationCandidates.length > 0
+        ? `공식검증 ${verifiedRecordCount}/${bundle.verifications.length}건 · 대기/보류 ${unresolvedCandidateCount}건`
+        : '검증 기록 없음',
       pathSuffix: '?tab=verification',
     },
     {
