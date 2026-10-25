@@ -5,6 +5,7 @@ import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomR
 import { REQUIRED_DOCUMENT_TYPES } from '../../domain/propertyDataRoom/labels';
 import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from '../propertyReadinessService';
 import { reportSnapshotFreshnessService } from './reportSnapshotFreshnessService';
+import { assessReportComparableReadiness } from './reportComparableReadiness';
 import {
   PROFESSIONAL_REPORT_TEMPLATE_ID,
   PROFESSIONAL_REPORT_TEMPLATE_VERSION,
@@ -110,6 +111,12 @@ export const reportSnapshotService = {
     if (required.connected.length !== REQUIRED_DOCUMENT_TYPES.length ||
         required.verified.length !== REQUIRED_DOCUMENT_TYPES.length || unresolvedCandidates) {
       throw new Error('현재 Data Room의 필수 원본·공식 검증 또는 미처리 후보가 남아 있어 보고서를 확정할 수 없습니다.');
+    }
+    // Re-evaluate source arithmetic/provenance against the live Property-scoped Data Room.
+    // A historical Snapshot's stored reportReady flag must not override pending reviews.
+    const comparableReadiness = assessReportComparableReadiness(bundle);
+    if (!comparableReadiness.ready) {
+      throw new Error(`비교거래 원문·산술 검토가 미완료입니다 (${comparableReadiness.reasons.length}건). 원본과 대조한 뒤 보고서를 다시 생성해 주세요.`);
     }
     const freshness = await reportSnapshotFreshnessService.evaluate(current);
     if (freshness.isStale) {
