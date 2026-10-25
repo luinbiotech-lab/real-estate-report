@@ -70,6 +70,12 @@ export const comparableTransactionService = {
   async replace(propertyId: string, rows: ComparableTransactionInput[], source: ComparableTransactionSource) {
     if (!rows.length) throw new Error('비교거래를 1건 이상 입력해 주세요.');
     rows.forEach(validateRow);
+    // A user-editable market-data form cannot independently attest official verification.
+    // Preserve the submitted evidence, but require the separate verification workflow
+    // to promote a source to verified. Never self-approve on a data edit.
+    if (source.verificationStatus === 'verified') {
+      throw new Error('비교거래 입력·수정만으로 공식 검증 완료를 지정할 수 없습니다. 별도 검증 이력을 완료해 주세요.');
+    }
     const property = await propertyRepository.getById(propertyId);
     if (!property) throw new Error('비교거래를 연결할 물건을 찾을 수 없습니다.');
 

@@ -3,7 +3,7 @@ import { Alert, Button, Chip, MenuItem, TextField } from '@mui/material';
 import type { PropertyDataSource, VerificationStatus } from '../../domain/propertyDataRoom/types';
 import { comparableTransactionService, type ComparableTransactionInput } from '../../services/comparableTransactionService';
 
-const statusOptions: Array<Extract<VerificationStatus, 'verified' | 'confirmed' | 'imported' | 'unverified'>> = ['verified', 'confirmed', 'imported', 'unverified'];
+const statusOptions: Array<Extract<VerificationStatus, 'confirmed' | 'imported' | 'unverified'>> = ['confirmed', 'imported', 'unverified'];
 
 const example = [
   '방배동 811-20\t4500000000\t56.29\t79050000\t1986\t2025-11-25\t서울 서초구 방배동\t11\t방배동 811-20',
@@ -70,7 +70,7 @@ export default function ComparableTransactionPanel({ propertyId, sources, onSave
   const [sourceName, setSourceName] = useState(existing?.sourceName || '비교거래 원본자료');
   const [sourceReference, setSourceReference] = useState(existing?.sourceReference || '');
   const [sourceDate, setSourceDate] = useState(existing?.sourceDate || '');
-  const [verificationStatus, setVerificationStatus] = useState<Extract<VerificationStatus, 'verified' | 'confirmed' | 'imported' | 'unverified'>>(
+  const [verificationStatus, setVerificationStatus] = useState<Extract<VerificationStatus, 'confirmed' | 'imported' | 'unverified'>>(
     existing && statusOptions.includes(existing.verificationStatus as typeof statusOptions[number])
       ? existing.verificationStatus as typeof statusOptions[number]
       : 'unverified',
@@ -110,6 +110,9 @@ export default function ComparableTransactionPanel({ propertyId, sources, onSave
     </div>
     {message && <Alert severity="success">{message}</Alert>}
     {error && <Alert severity="error">{error}</Alert>}
+    {existing?.verificationStatus === 'verified' && <Alert severity="warning" sx={{ mb: 2 }}>
+      기존 비교거래 검증은 수정·재저장 시 재검토가 필요합니다. 이 화면에서는 공식 검증 완료를 지정할 수 없으며, 저장 후 별도 검증 이력을 확인해야 합니다.
+    </Alert>}
     {missingProvenance > 0 && <Alert severity="warning" sx={{ mb: 2 }}>
       원문 행번호·기록명 미입력 {missingProvenance}건. 저장은 가능하지만 원문 대조 전에는 전문 보고서를 확정할 수 없습니다.
     </Alert>}
