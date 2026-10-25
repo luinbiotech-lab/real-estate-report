@@ -44,4 +44,7 @@ const weakened = methods.replace("item.sourceRow ?? '', item.sourceRecordLabel ?
 assert.notEqual(weakened, methods, 'negative-control mutation must match serializer');
 assert.equal(load(weakened).parseRows(load(weakened).rowsFromSource(saved))[0].sourceRow, undefined, 'negative control reproduces the original provenance-loss defect');
 assert.match(source, /원문 행번호·기록명 미입력/, 'editor must warn about missing source locators');
+const page = readFileSync('src/pages/PropertyDataRoomPage.tsx', 'utf8');
+assert.match(page, /<ComparableTransactionPanel key=\{property\.id\} propertyId=\{property\.id\}/,
+  'switching Property must remount the editor instead of reusing previous Property form state');
 console.log('PASS comparable editor provenance: source row/record round-trip, legacy compatibility, invalid locator guards, negative control');
