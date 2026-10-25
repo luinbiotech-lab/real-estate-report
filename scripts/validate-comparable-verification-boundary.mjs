@@ -55,7 +55,7 @@ await actual.replace('p1', [valid], input('imported'));
 assert.equal(actual.saves.sources[1].verificationStatus, 'imported');
 assert.equal(actual.saves.verifications[1].status, 'imported');
 assert.equal(actual.saves.verifications[1].verifiedAt, undefined);
-assert.match(ui, /const statusOptions: Array<Extract<VerificationStatus, 'confirmed' \\| 'imported' \\| 'unverified'>> = \\['confirmed', 'imported', 'unverified'\\]/,
+assert.ok(ui.includes("const statusOptions: Array<Extract<VerificationStatus, 'confirmed' | 'imported' | 'unverified'>> = ['confirmed', 'imported', 'unverified'];"),
   'editor cannot offer self-attested verified');
 assert.match(ui, /기존 비교거래 검증은 수정·재저장 시 재검토가 필요/,
   'editing previously verified data must show an explicit warning');
