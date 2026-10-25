@@ -265,7 +265,7 @@ export default function PropertyDataRoomPage() {
       {tab === 'spatial' && <SpatialDataRoomPanel propertyId={property.id} propertyAddress={property.address} mode="spatial" legacyBundle={bundle} />}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} onQueued={async () => { await load(); setTab('verification'); }} />}
       {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} onUploadSources={uploadSourceDocuments} />}
-      {tab === 'market' && <ComparableTransactionPanel propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
+      {tab === 'market' && <ComparableTransactionPanel key={property.id} propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
       {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
       {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
       {tab === 'digitalTwin' && <div>
