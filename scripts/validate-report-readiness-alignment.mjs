@@ -190,7 +190,11 @@ const repository = {
 const snapshotSource = readFileSync('src/services/reportEngine/reportSnapshotService.ts', 'utf8');
 assert.match(snapshotSource, /scopeDataRoomBundle\(await propertyDataRoomRepository\.getBundle\(current\.propertyId\),\s*current\.propertyId\)/,
   'Snapshot finalization must isolate mixed Data Room rows');
+// Load the real comparable readiness policy: a missing mock must not silently
+// bypass the new DataSource verification/provenance finalization gate.
+const comparableReadiness = loadTs('src/services/reportEngine/reportComparableReadiness.ts').assessReportComparableReadiness;
 const snapshotService = loadTs('src/services/reportEngine/reportSnapshotService.ts', {
+  './reportComparableReadiness': { assessReportComparableReadiness: comparableReadiness },
   '../../domain/professionalReport/reportAccessPolicy': mediaPolicy,
   '../../repositories/propertyDataRoomRepository': { propertyDataRoomRepository: repository },
   '../propertyReadinessService': { assessRequiredDocumentReadiness: readiness.assessRequiredDocumentReadiness, scopeDataRoomBundle: readiness.scopeDataRoomBundle },
@@ -225,6 +229,23 @@ async function check(label, dataRoom, expectPass, reportReady = true, mutate = (
 }
 
 await check('verified four required documents', bundle(), true);
+// A fully verified document set must not finalize a report that contains
+// unverified, untraceable, or arithmetically inconsistent market DataSources.
+const comparable = (overrides = {}, rowOverrides = {}) => ({
+  id: 'market-comparables', propertyId: PROPERTY_ID,
+  fieldKey: 'nearbyTransactions', resourceType: 'comparable_transaction_set',
+  verificationStatus: 'verified', sourceReference: 'market-original.pdf',
+  metadata: { rows: [{
+    label: '비교거래', sourceRow: 11, sourceRecordLabel: '원문 11',
+    salePrice: 4_500_000_000, landAreaPyeong: 60, landUnitPrice: 75_000_000,
+    tradeDate: '2026-02-13', ...rowOverrides,
+  }] }, ...overrides,
+});
+const bundleWithComparable = (source) => ({ ...bundle(), dataSources: [source] });
+await check('verified comparable with source locator', bundleWithComparable(comparable()), true);
+await check('confirmed-only comparable source', bundleWithComparable(comparable({ verificationStatus: 'confirmed' })), false);
+await check('comparable without original reference', bundleWithComparable(comparable({ sourceReference: '' })), false);
+await check('comparable arithmetic discrepancy', bundleWithComparable(comparable({}, { landUnitPrice: 79_050_000 })), false);
 await check('confirmed-only must be rejected', bundle(docs('confirmed')), false);
 // A mixed Data Room bundle must never use another Property's originals,
  // source inventory, or document attestations to finalize this Property's report.
@@ -316,7 +337,7 @@ await check('unrelated property retains its own media policy', bundle(docs().map
 });
 stale = true;
 await check('stale snapshot', bundle(), false);
-console.log('PASS report readiness alignment: 42 service scenarios + full Data Room Property isolation + binary integrity + distinct document types + shared policy + builder guards');
+console.log('PASS report readiness alignment: 46 service scenarios + full Data Room Property isolation + binary integrity + distinct document types + shared policy + builder guards');
 
 // Prevent stale/invalid/future-dated Snapshots from passing the final readiness gate.
 await import('./validate-report-snapshot-freshness.mjs');
