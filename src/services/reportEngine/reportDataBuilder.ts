@@ -14,6 +14,7 @@ import { formatNullableArea, formatNullableNumber, formatNullableWon } from '../
 import { spatialMediaViewService } from '../spatialMediaViewService';
 import { spatialMediaCompatibilityService } from '../spatialMediaCompatibilityService';
 import { scopeReportSpatialBundle } from './reportSpatialPropertyScope';
+import { assessReportComparableReadiness } from './reportComparableReadiness';
 
 export const REPORT_ENGINE_VERSION = 'report-engine-1';
 export const PROFESSIONAL_REPORT_TEMPLATE_ID = DAON_DETAIL_MASTER_TEMPLATE_ID;
@@ -227,12 +228,13 @@ export function buildProfessionalReportViewModel(property: Property, inputBundle
   const requiredDocumentsMissing = REQUIRED_DOCUMENT_TYPES.filter((type: DocumentType) => !requiredDocumentReadiness.connected.includes(type));
   const requiredDocumentsVerified = requiredDocumentReadiness.verified.length === REQUIRED_DOCUMENT_TYPES.length;
   const unresolvedCandidates = bundle.verificationCandidates.some((candidate) => candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held');
+  const comparableReadiness = assessReportComparableReadiness(bundle);
   const dataQuality = {
     counts: qualityCounts,
     missingFields: values.filter(({ value }) => value.state === 'missing').map(({ path }) => path),
     disconnectedFields: values.filter(({ value }) => value.state === 'disconnected').map(({ path }) => path),
     requiredDocumentsMissing,
-    reportReady: requiredDocumentsMissing.length === 0 && requiredDocumentsVerified && !unresolvedCandidates,
+    reportReady: requiredDocumentsMissing.length === 0 && requiredDocumentsVerified && !unresolvedCandidates && comparableReadiness.ready,
   };
 
   return {
