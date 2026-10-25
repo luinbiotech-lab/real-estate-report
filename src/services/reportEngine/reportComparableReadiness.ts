@@ -8,6 +8,15 @@ export function assessReportComparableReadiness(bundle: Pick<DataRoomBundle, 'da
   const sources = bundle.dataSources.filter((source) =>
     source.resourceType === 'comparable_transaction_set' && source.fieldKey === 'nearbyTransactions');
   for (const source of sources) {
+    // Row arithmetic alone cannot certify an unverified or untraceable DataSource.
+    // Preserve source data but block finalization until its verification and
+    // original reference are recorded. This does not change report layout.
+    if (source.verificationStatus !== 'verified') {
+      reasons.push(`${source.id}: 비교거래 DataSource 검증 미완료`);
+    }
+    if (typeof source.sourceReference !== 'string' || !source.sourceReference.trim()) {
+      reasons.push(`${source.id}: 비교거래 원본 출처 참조 누락`);
+    }
     const rows = source.metadata?.rows;
     if (!Array.isArray(rows) || rows.length === 0) {
       reasons.push(`${source.id}: 비교거래 원문 행 누락`);
