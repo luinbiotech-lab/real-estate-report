@@ -13,9 +13,16 @@ function load(js) {
 const assess = load(compiled);
 assert.equal(typeof assess, 'function');
 const valid = { label: '비교거래', sourceRow: 11, sourceRecordLabel: '원문 행 11', salePrice: 4_500_000_000, landAreaPyeong: 60, landUnitPrice: 75_000_000, tradeDate: '2026-02-13', arithmeticReviewStatus: 'consistent' };
-const bundle = (rows) => ({ dataSources: [{ id: 'market-1', fieldKey: 'nearbyTransactions', resourceType: 'comparable_transaction_set', metadata: { rows } }] });
+const bundle = (rows, overrides = {}) => ({ dataSources: [{ id: 'market-1', fieldKey: 'nearbyTransactions', resourceType: 'comparable_transaction_set', sourceReference: 'verified-market-original.pdf', verificationStatus: 'verified', metadata: { rows }, ...overrides }] });
 assert.equal(assess({ dataSources: [] }).ready, true, 'no optional comparables must not block unrelated report');
 assert.equal(assess(bundle([valid])).ready, true);
+assert.equal(assess(bundle([valid], { verificationStatus: 'confirmed' })).ready, false, 'confirmed-only source cannot finalize');
+assert.equal(assess(bundle([valid], { verificationStatus: 'imported' })).ready, false, 'imported source cannot finalize');
+assert.equal(assess(bundle([valid], { verificationStatus: 'unverified' })).ready, false, 'unverified source cannot finalize');
+assert.equal(assess(bundle([valid], { sourceReference: '' })).ready, false, 'missing source reference cannot finalize');
+assert.equal(assess(bundle([valid], { sourceReference: '  ' })).ready, false, 'blank source reference cannot finalize');
+assert.equal(assess(bundle([valid], { sourceReference: undefined })).ready, false, 'undefined source reference cannot finalize');
+assert.equal(assess({ dataSources: [...bundle([valid]).dataSources, ...bundle([valid], { id: 'market-2', verificationStatus: 'confirmed' }).dataSources] }).ready, false, 'all matching sources must be verified');
 assert.equal(assess(bundle([{ ...valid, landUnitPrice: 79_050_000 }])).ready, false, 'arithmetic discrepancy must block final');
 assert.equal(assess(bundle([{ ...valid, sourceRow: null }])).ready, false, 'missing row locator must block final');
 assert.equal(assess(bundle([{ ...valid, sourceRecordLabel: '' }])).ready, false, 'missing record locator must block final');
@@ -29,6 +36,12 @@ assert.equal(assess({ dataSources: [unrelated] }).ready, true, 'unrelated DataSo
 const weakened = compiled.replace('variancePct > 0.5', 'variancePct > 100');
 assert.notEqual(weakened, compiled, 'negative-control mutation must apply');
 assert.equal(load(weakened)(bundle([{...valid, landUnitPrice: 79_050_000}])).ready, true, 'negative control proves arithmetic gate detects the discrepancy');
+const provenanceWeakened = compiled
+  .replace("source.verificationStatus !== 'verified'", 'false')
+  .replace("typeof source.sourceReference !== 'string' || !source.sourceReference.trim()", 'false');
+assert.notEqual(provenanceWeakened, compiled, 'provenance negative-control mutation must apply');
+assert.equal(load(provenanceWeakened)(bundle([valid], { verificationStatus: 'confirmed', sourceReference: '' })).ready, true,
+  'negative control reproduces unverified/untraceable source finalization');
 
 const builder = readFileSync('src/services/reportEngine/reportDataBuilder.ts', 'utf8');
 const snapshot = readFileSync('src/services/reportEngine/reportSnapshotService.ts', 'utf8');
@@ -49,4 +62,4 @@ const bangbae = [
 ];
 const pending = bangbae.filter(row => Math.abs((row.unit - row.price / row.area) / (row.price / row.area)) * 100 > 0.5);
 assert.equal(pending.length, 3, 'three Bangbae source-reported prices require arithmetic review');
-console.log('PASS report comparable finalization: 10 scenarios, negative control, two live/draft gates, Bangbae 3/6 discrepancies');
+console.log('PASS report comparable finalization: 17 scenarios, two negative controls, two live/draft gates, Bangbae 3/6 discrepancies');
