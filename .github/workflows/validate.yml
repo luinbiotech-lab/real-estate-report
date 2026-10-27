@@ -51,6 +51,12 @@ jobs:
       - name: Validate portfolio operations hub
         run: node scripts/validate-portfolio-hub.mjs
 
+      - name: Validate navigation IA and route coverage
+        run: node scripts/validate-navigation-ia.mjs
+
+      - name: Validate property record guard
+        run: node scripts/validate-property-record-guard.mjs
+
       - name: Validate property readiness center
         run: node scripts/validate-readiness-center.mjs
 

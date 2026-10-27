@@ -134,7 +134,7 @@ export const comparableTransactionService = {
       fieldKey: 'nearbyTransactions',
       status: source.verificationStatus,
       note: `${source.sourceName} 비교거래 ${storedRows.length}건 제공 원문 전사 확인 · row provenance ${provenanceComplete.length}/${storedRows.length} · 독립 공식 원천 검증 미완료 · 원문 평당가 보존 · 산술 차이 검토 ${arithmeticReviewRequired.length}건`,
-      verifiedAt: source.verificationStatus === 'verified' || source.verificationStatus === 'confirmed' ? now : undefined,
+      verifiedAt: source.verificationStatus === 'confirmed' ? now : undefined,
       createdAt: existingVerifications.find((item) => item.id === verificationId)?.createdAt ?? now,
       updatedAt: now,
     });

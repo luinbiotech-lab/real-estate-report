@@ -50,11 +50,16 @@ assert.equal(actual.saves.properties.length, 0, 'verified attempt must not chang
 await actual.replace('p1', [valid], input('confirmed'));
 assert.equal(actual.saves.sources[0].verificationStatus, 'confirmed');
 assert.equal(actual.saves.verifications[0].status, 'confirmed');
+assert.ok(actual.saves.verifications[0].verifiedAt, 'confirmed entry retains its confirmation timestamp');
 assert.equal(actual.saves.sources[0].metadata.provenance.independentOfficialVerification, false);
 await actual.replace('p1', [valid], input('imported'));
 assert.equal(actual.saves.sources[1].verificationStatus, 'imported');
 assert.equal(actual.saves.verifications[1].status, 'imported');
 assert.equal(actual.saves.verifications[1].verifiedAt, undefined);
+await actual.replace('p1', [valid], input('unverified'));
+assert.equal(actual.saves.sources[2].verificationStatus, 'unverified');
+assert.equal(actual.saves.verifications[2].status, 'unverified');
+assert.equal(actual.saves.verifications[2].verifiedAt, undefined);
 assert.ok(ui.includes("const statusOptions: Array<Extract<VerificationStatus, 'confirmed' | 'imported' | 'unverified'>> = ['confirmed', 'imported', 'unverified'];"),
   'editor cannot offer self-attested verified');
 assert.match(ui, /기존 비교거래 검증은 수정·재저장 시 재검토가 필요/,

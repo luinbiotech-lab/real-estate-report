@@ -20,6 +20,7 @@ export const localBootstrapService = {
     const sample: Property = {
       ...emptyProperty,
       id: 'sample-seongsu',
+      recordClass: 'sample', recordClassSource: 'local-bootstrap',
       propertyNumber: 'SS-2026-001',
       name: '성수동2가 331-7 신축부지',
       tradeType: '매매',
@@ -60,6 +61,7 @@ export const localBootstrapService = {
     const bangbae: Property = {
       ...emptyProperty,
       id: BANGBAE_815_11_LEGACY_LOCAL_PROPERTY_ID,
+      recordClass: 'sample', recordClassSource: 'local-bootstrap',
       propertyNumber: '방배동 815-11',
       name: '방배동 815-11 코너빌딩',
       tradeType: '매매',

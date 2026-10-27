@@ -1,6 +1,7 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { annotateFailure, waitForVisibleText } from './lib/qa-annotate.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const ARTIFACT_DIR = 'artifacts/agent-qa';
@@ -10,9 +11,7 @@ const QA_INLINE_PROPERTY_ID = 'qa-inline-property';
 const QA_INLINE_BINARY_ID = 'qa-inline-binary-risk';
 const QA_BINARY_PAYLOAD_SENTINEL = 'DAON_QA_SENSITIVE_BINARY_PAYLOAD_SENTINEL_20260916';
 
-async function waitForText(page, text, timeout = 30_000) {
-  await page.waitForFunction((expected) => document.body?.innerText.toLowerCase().includes(String(expected).toLowerCase()), text, { timeout });
-}
+const waitForText = waitForVisibleText;
 
 async function writeQaRows(page) {
   await page.evaluate(async ({ propertyId, riskId, binaryPayload }) => new Promise((resolve, reject) => {
@@ -97,7 +96,8 @@ async function uploadBangbaeExteriorMedia(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=media`, { waitUntil: 'domcontentloaded' });
   await waitForText(page, '보고서 미디어 연결');
   await page.getByLabel('캡션').fill('QA 방배동 코너 외관');
-  const input = page.locator('input[type="file"][accept="image/jpeg,image/png,image/webp"]');
+  // Scope to the report-media panel; since 9497665 its uploader also accepts video, so match by included image type.
+  const input = page.locator('section').filter({ has: page.getByRole('heading', { name: '보고서 미디어 연결' }) }).last().locator('input[type="file"][accept*="image/png"]');
   const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64');
   await input.setInputFiles({ name: 'bangbae-815-11-exterior.png', mimeType: 'image/png', buffer: png });
   await waitForText(page, 'QA 방배동 코너 외관');
@@ -239,6 +239,7 @@ try {
   await page.screenshot({ path: `${ARTIFACT_DIR}/remote-migration-readiness-failure.png`, fullPage: true });
   console.error('Rendered remote migration readiness QA: FAIL');
   console.error(error);
+  annotateFailure('Rendered migration readiness dry run QA', error);
   throw error;
 } finally {
   try { await cleanupQaRows(page); } catch { /* best-effort QA cleanup */ }
