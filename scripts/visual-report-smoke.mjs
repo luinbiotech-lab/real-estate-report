@@ -1,4 +1,4 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
 import { annotateFailure } from './lib/qa-annotate.mjs';
 
@@ -206,6 +206,18 @@ try {
 
   console.log('Rendered DA:ON professional report smoke QA: PASS');
 } catch (error) {
+  // Preserve the rendered failure before closing Chromium, including missing-data
+  // context. Do not hide a failing MASTER assertion by altering the fixture.
+  await page.screenshot({ path: `${OUT_DIR}/report-failure.png`, fullPage: true }).catch(() => {});
+  const evidence = await page.evaluate(() => ({
+    url: location.href,
+    missingValueContexts: [...document.querySelectorAll('.daon-frame-page, .daon-detail-page')]
+      .map((el, index) => ({ page: index + 1, text: el.textContent || '' }))
+      .filter((item) => item.text.includes('확인 필요'))
+      .map((item) => ({ page: item.page, contexts: [...item.text.matchAll(/.{0,70}확인 필요.{0,70}/g)].map((match) => match[0]) })),
+  })).catch(() => ({ evidenceUnavailable: true }));
+  await writeFile(`${OUT_DIR}/report-failure.json`, JSON.stringify(evidence, null, 2));
+  console.error('Rendered report failure evidence:', JSON.stringify(evidence));
   console.error('Rendered DA:ON report smoke QA: FAIL');
   console.error(error);
   annotateFailure('Rendered report smoke QA (design advisory)', error);
