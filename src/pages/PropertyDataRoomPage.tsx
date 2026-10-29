@@ -13,6 +13,8 @@ import type { DataRoomBundle, DocumentType, PropertyDocument, PropertyVerificati
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { propertyDataRoomService } from '../services/propertyDataRoomService';
+import { scopeDataRoomBundle } from '../services/propertyReadinessService';
+import { applyDocumentVerification, DOCUMENT_VERIFICATION_OPTIONS, documentVerificationOptions, requiresOfficialConfirmation } from '../domain/propertyDetail/dataRoomDocumentRules';
 import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
@@ -55,6 +57,7 @@ export default function PropertyDataRoomPage() {
   const [tab, setTab] = useState<TabKey>(() => isTabKey(requestedTab) ? requestedTab : 'overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('other');
   const [creatingReport, setCreatingReport] = useState(false); const [reviewingCandidateId, setReviewingCandidateId] = useState('');
+  const [documentActionId, setDocumentActionId] = useState('');
   const loadRequestRef = useRef(0);
 
   const load = useCallback(async () => {
@@ -68,7 +71,8 @@ export default function PropertyDataRoomPage() {
       if (!item || item.id !== id) { setError('요청한 물건을 찾을 수 없습니다.'); return; }
       const nextBundle = await propertyDataRoomService.getBundle(id);
       if (requestId !== loadRequestRef.current) return;
-      setProperty(item); setBundle(nextBundle);
+      // Repository filtering is not a boundary; never render another Property's rows here.
+      setProperty(item); setBundle(scopeDataRoomBundle(nextBundle, id));
     } catch (reason) {
       if (requestId === loadRequestRef.current) {
         setError(reason instanceof Error ? reason.message : 'Data Room 자료를 불러오지 못했습니다.');
@@ -217,12 +221,21 @@ export default function PropertyDataRoomPage() {
     }
   };
   const removeDocument = async (document: PropertyDocument) => {
+    if (documentActionId) return;
     if (!confirm(`“${document.title}” 문서를 삭제할까요? 파일 본문은 복구되지 않습니다.`)) return;
-    await propertyDataRoomRepository.deleteDocument(document.id); await load();
+    setDocumentActionId(document.id); setError('');
+    try { await propertyDataRoomRepository.deleteDocument(document.id); await load(); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : '문서를 삭제하지 못했습니다.'); }
+    finally { setDocumentActionId(''); }
   };
   const changeVerification = async (document: PropertyDocument, status: VerificationStatus) => {
-    const now = new Date().toISOString();
-    await propertyDataRoomRepository.updateDocument({ ...document, verificationStatus: status, verifiedAt: status === 'verified' ? now : undefined, updatedAt: now }); await load();
+    if (documentActionId || status === document.verificationStatus) return;
+    if (requiresOfficialConfirmation(document.verificationStatus, status)
+      && !confirm(`“${document.title}”을(를) 공식 확인으로 표시합니다. 발급 원본과 내용을 직접 대조했습니까? 이 상태는 보고서 확정 조건에 사용됩니다.`)) return;
+    setDocumentActionId(document.id); setError('');
+    try { await propertyDataRoomRepository.updateDocument(applyDocumentVerification(document, status, new Date().toISOString())); await load(); }
+    catch (reason) { setError(reason instanceof Error ? reason.message : '문서 검증 상태를 바꾸지 못했습니다.'); }
+    finally { setDocumentActionId(''); }
   };
   const decideCandidate = async (candidate: PropertyVerificationCandidate, decisionStatus: VerificationDecisionStatus) => {
     setReviewingCandidateId(candidate.id); setError('');
@@ -263,7 +276,7 @@ export default function PropertyDataRoomPage() {
       {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} onTab={setTab} />}
       {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진/영상이 없습니다." detail="실제 촬영 자료와 출처가 확인된 미디어를 등록하세요. AI 시각화는 실제 현장사진과 분리해서 관리합니다." />}</div><MediaClassificationPanel propertyId={property.id} media={bundle.media} spaces={bundle.spaces ?? []} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
       {tab === 'spatial' && <SpatialDataRoomPanel propertyId={property.id} propertyAddress={property.address} mode="spatial" legacyBundle={bundle} />}
-      {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} onQueued={async () => { await load(); setTab('verification'); }} />}
+      {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} busyDocumentId={documentActionId} onQueued={async () => { await load(); setTab('verification'); }} />}
       {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} onUploadSources={uploadSourceDocuments} />}
       {tab === 'market' && <ComparableTransactionPanel key={property.id} propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
       {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
@@ -292,8 +305,8 @@ function Overview({ property, bundle, missing, onTab }: { property: Property; bu
   return <div className="data-room-overview"><section><div className="section-heading-row"><div><p className="eyebrow">PROPERTY PROFILE</p><h2>물건 개요</h2></div><VerificationBadge status="confirmed" /></div><dl>{overview.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section><section><p className="eyebrow">READINESS CHECK</p><h2>자료 준비 현황</h2>{missing.length ? <><p className="readiness-copy">보고서의 근거자료 완성도를 높이려면 아래 자료를 확인해 주세요.</p><div className="missing-list">{missing.map((type) => <span key={type}>{DOCUMENT_TYPE_LABELS[type]} <VerificationBadge status="missing" /></span>)}</div><Button onClick={() => onTab('documents')}>문서 등록하기</Button></> : <Alert severity="success">필수 공적자료가 모두 등록되어 있습니다.</Alert>}</section><section><p className="eyebrow">DATA QUALITY</p><h2>출처와 검증</h2>{bundle.dataSources.length || bundle.verifications.length ? <p>{bundle.dataSources.length}개 출처 · {bundle.verifications.length}개 필드 검증 기록</p> : <EmptyState title="검증 이력이 없습니다." detail="공식자료와 데이터 출처가 연결되면 이곳에서 신뢰도를 확인할 수 있습니다." />}</section><PropertySpaceOverviewPanel spaces={bundle.spaces ?? []} sources={bundle.dataSources} /><ComparableTransactionOverviewPanel sources={bundle.dataSources} onOpenMarket={() => onTab('market')} /></div>;
 }
 
-function DocumentPanel({ documents, documentType, setDocumentType, upload, uploading, remove, changeVerification, onQueued }: { documents: PropertyDocument[]; documentType: DocumentType; setDocumentType: (value: DocumentType) => void; upload: (event: ChangeEvent<HTMLInputElement>) => void; uploading: boolean; remove: (item: PropertyDocument) => void; changeVerification: (item: PropertyDocument, status: VerificationStatus) => void; onQueued: () => Promise<void> | void }) {
-  return <><div className="document-toolbar"><div><h2>문서 자료</h2><p>파일명으로 문서 유형을 1차 자동 분류하고, 출처·검증 메타데이터를 별도 보존합니다.</p></div><TextField select size="small" label="문서 분류" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>{Object.entries(DOCUMENT_TYPE_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button component="label" variant="contained" startIcon={<CloudUploadOutlined />} disabled={uploading}>{uploading ? '등록 중…' : '문서 등록'}<input hidden type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={upload} /></Button></div>{documents.length ? <div className="document-list">{documents.map((document) => <article key={document.id}><div className="file-icon"><DescriptionOutlined /></div><div><b>{document.title}</b><span>{DOCUMENT_TYPE_LABELS[document.documentType]} · {(document.fileSize / 1024 / 1024).toFixed(2)}MB · v{document.version}</span><small>{document.sourceName} · {new Date(document.uploadedAt).toLocaleDateString('ko-KR')}</small><DocumentExtractionPanel document={document} onQueued={onQueued} /></div><TextField select size="small" value={document.verificationStatus} onChange={(event) => changeVerification(document, event.target.value as VerificationStatus)} aria-label={`${document.title} 검증 상태`}>{Object.entries(VERIFICATION_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button startIcon={<DownloadRounded />} onClick={() => propertyDataRoomService.downloadDocument(document)}>다운로드</Button><Button color="error" startIcon={<DeleteOutlineRounded />} onClick={() => remove(document)}>삭제</Button></article>)}</div> : <EmptyState title="등록된 문서가 없습니다." detail="건축물대장, 토지대장, 등기부등본 등 확인된 원본 자료를 등록하세요." />}</>;
+function DocumentPanel({ documents, documentType, setDocumentType, upload, uploading, remove, changeVerification, busyDocumentId, onQueued }: { busyDocumentId: string; documents: PropertyDocument[]; documentType: DocumentType; setDocumentType: (value: DocumentType) => void; upload: (event: ChangeEvent<HTMLInputElement>) => void; uploading: boolean; remove: (item: PropertyDocument) => void | Promise<void>; changeVerification: (item: PropertyDocument, status: VerificationStatus) => void | Promise<void>; onQueued: () => Promise<void> | void }) {
+  return <><div className="document-toolbar"><div><h2>문서 자료</h2><p>파일명으로 문서 유형을 1차 자동 분류하고, 출처·검증 메타데이터를 별도 보존합니다.</p></div><TextField select size="small" label="문서 분류" value={documentType} onChange={(event) => setDocumentType(event.target.value as DocumentType)}>{Object.entries(DOCUMENT_TYPE_LABELS).map(([key, label]) => <MenuItem key={key} value={key}>{label}</MenuItem>)}</TextField><Button component="label" variant="contained" startIcon={<CloudUploadOutlined />} disabled={uploading}>{uploading ? '등록 중…' : '문서 등록'}<input hidden type="file" accept=".pdf,.jpg,.jpeg,.png,.webp" onChange={upload} /></Button></div>{documents.length ? <div className="document-list">{documents.map((document) => <article key={document.id}><div className="file-icon"><DescriptionOutlined /></div><div><b>{document.title}</b><span>{DOCUMENT_TYPE_LABELS[document.documentType]} · {(document.fileSize / 1024 / 1024).toFixed(2)}MB · v{document.version}</span><small>{document.sourceName} · {new Date(document.uploadedAt).toLocaleDateString('ko-KR')}</small><DocumentExtractionPanel document={document} onQueued={onQueued} /></div><TextField select size="small" value={document.verificationStatus} disabled={Boolean(busyDocumentId)} onChange={(event) => { void changeVerification(document, event.target.value as VerificationStatus); }} aria-label={`${document.title} 검증 상태`}>{documentVerificationOptions(document.verificationStatus).map((key) => <MenuItem key={key} value={key} disabled={!DOCUMENT_VERIFICATION_OPTIONS.includes(key)}>{VERIFICATION_LABELS[key]}</MenuItem>)}</TextField><Button startIcon={<DownloadRounded />} onClick={() => propertyDataRoomService.downloadDocument(document)}>다운로드</Button><Button color="error" startIcon={<DeleteOutlineRounded />} disabled={Boolean(busyDocumentId)} onClick={() => { void remove(document); }}>{busyDocumentId === document.id ? "처리 중" : "삭제"}</Button></article>)}</div> : <EmptyState title="등록된 문서가 없습니다." detail="건축물대장, 토지대장, 등기부등본 등 확인된 원본 자료를 등록하세요." />}</>;
 }
 
 function normalizedSourceFileName(value: string) {
