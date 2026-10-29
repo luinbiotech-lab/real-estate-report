@@ -11,6 +11,7 @@ import {
   type AccessRole,
 } from '../services/accessControlService';
 import { AUTH_PROVIDER_SUMMARIES, remoteAuthGateway, type AuthSession } from '../services/authProviderService';
+import { ownerChangeBlockReason } from '../domain/propertyDetail/ownerSafety';
 import type { RemoteAuthProfile } from '../services/supabaseRemoteAuthGateway';
 
 const ROLES: AccessRole[] = ['owner', 'admin', 'editor', 'viewer'];
@@ -123,6 +124,9 @@ export default function AccessManagementPage() {
 
   const updateRemoteRole = async (profile: RemoteAuthProfile, role: AccessRole) => {
     if (remoteSession?.role !== 'owner') return;
+    const blocked = ownerChangeBlockReason(remoteProfiles, remoteSession?.userId, profile, { role });
+    if (blocked) { setNotice(''); setError(blocked); return; }
+    if (!window.confirm(`${profile.email || profile.userId}의 권한을 ${role.toUpperCase()}(으)로 변경합니다. 계속할까요?`)) return;
     setRemoteBusy(true); setError(''); setNotice('');
     try {
       await remoteAuthGateway.updateRole(profile.userId, role);
@@ -137,6 +141,9 @@ export default function AccessManagementPage() {
 
   const toggleRemoteActive = async (profile: RemoteAuthProfile) => {
     if (remoteSession?.role !== 'owner') return;
+    const blocked = ownerChangeBlockReason(remoteProfiles, remoteSession?.userId, profile, { active: !profile.active });
+    if (blocked) { setNotice(''); setError(blocked); return; }
+    if (!window.confirm(`${profile.email || profile.userId}을(를) ${profile.active ? '비활성화' : '다시 활성화'}합니다. 계속할까요?`)) return;
     setRemoteBusy(true); setError(''); setNotice('');
     try {
       await remoteAuthGateway.setActive(profile.userId, !profile.active);

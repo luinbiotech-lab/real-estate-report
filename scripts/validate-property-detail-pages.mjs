@@ -155,3 +155,27 @@ if (/function csvCell[\s\S]{0,120}return `"\$\{text\.replace/.test(sharePage)) f
 for (const marker of ['const csvCell = safeCsvCell;', "if (!canReissueShare(share, new Date().toISOString())) { setNotice(''); setError('회수되었거나 만료된 공유는 Manifest", "if (!canReissueShare(share, new Date().toISOString())) { setNotice(''); setError('회수되었거나 만료된 공유는 공유 HTML", "if (!confirm('이 공유를 회수 처리할까요?", "share.status !== 'active'} onClick={() => void revoke(share)}"]) if (!sharePage.includes(marker)) fail(`외부 공유 화면 계약 누락: ${marker.slice(0, 60)}`);
 if (/<main[\s>]/.test(sharePage)) fail('외부 공유 화면이 <main>을 중첩합니다.');
 console.log('External share center validation passed.');
+
+// 12. Backup center: MERGE overwrites same-id records, so every restore path asks first.
+const backupPage = readFileSync('src/pages/DataBackupCenterPage.tsx', 'utf8');
+for (const marker of ["mode === 'merge' && !window.confirm(", "백업 파일의 방배동 Phase 1 레코드를 현재 로컬 데이터에 병합합니다", "mode === 'replace' && !window.confirm("]) if (!backupPage.includes(marker)) fail(`백업 복원 확인 누락: ${marker.slice(0, 40)}`);
+const backupSmoke = readFileSync('scripts/visual-backup-smoke.mjs', 'utf8');
+if ((backupSmoke.match(/page\.once\('dialog', \(dialog\) => \{ void dialog\.accept\(\); \}\);/g) ?? []).length < 2) fail('백업 렌더 smoke가 병합/Phase 1 확인 창을 수락해야 합니다.');
+console.log('Backup restore confirmation validation passed.');
+
+// 13. Access management: owner lockout guard (client-side; server/RLS unchanged).
+const owner = await importTs('src/domain/propertyDetail/ownerSafety.ts');
+const team = [{ userId: 'o1', role: 'owner', active: true }, { userId: 'o2', role: 'owner', active: true }, { userId: 'e1', role: 'editor', active: true }];
+const solo = [{ userId: 'o1', role: 'owner', active: true }, { userId: 'e1', role: 'editor', active: true }];
+const reason = (profiles, actor, target, change) => owner.ownerChangeBlockReason(profiles, actor, target, change);
+if (!reason(team, 'o1', team[0], { role: 'admin' })) fail('OWNER 본인 강등을 막아야 합니다.');
+if (!reason(team, 'o1', team[0], { active: false })) fail('OWNER 본인 비활성화를 막아야 합니다.');
+if (reason(team, 'o1', team[1], { role: 'admin' })) fail('다른 OWNER가 남아 있으면 다른 OWNER 강등은 허용됩니다.');
+if (!reason(solo, 'x', solo[0], { role: 'viewer' })) fail('마지막 활성 OWNER 강등을 막아야 합니다.');
+if (!reason(solo, 'x', solo[0], { active: false })) fail('마지막 활성 OWNER 비활성화를 막아야 합니다.');
+if (reason(solo, 'o1', solo[1], { role: 'viewer' }) || reason(solo, 'o1', solo[1], { active: false })) fail('일반 사용자 변경은 막지 않습니다.');
+if (reason(solo, 'o1', solo[0], { role: 'owner' }) || reason(solo, 'o1', solo[0], { active: true })) fail('권한을 낮추지 않는 변경은 막지 않습니다.');
+const accessPage = readFileSync('src/pages/AccessManagementPage.tsx', 'utf8');
+for (const marker of ['ownerChangeBlockReason(remoteProfiles, remoteSession?.userId, profile, { role })', 'ownerChangeBlockReason(remoteProfiles, remoteSession?.userId, profile, { active: !profile.active })']) if (!accessPage.includes(marker)) fail(`권한 관리 잠금 방지 연결 누락: ${marker.slice(0, 50)}`);
+if ((accessPage.match(/window\.confirm\(`\$\{profile\.email \|\| profile\.userId\}/g) ?? []).length < 2) fail('권한 변경·활성 변경은 확인 후 실행해야 합니다.');
+console.log('Access owner-lockout validation passed.');
