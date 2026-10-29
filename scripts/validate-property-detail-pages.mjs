@@ -122,3 +122,21 @@ if (briefing.indexOf('useReactToPrint(') > briefing.indexOf('if (loadError) retu
 const reportHistory = readFileSync('src/pages/ReportHistoryPage.tsx', 'utf8');
 for (const marker of ['Promise.allSettled(', "result.status === 'rejected'", 'classifyPropertyRecord(property)', "'생성 시각 미기록'"]) if (!reportHistory.includes(marker)) fail(`보고서 이력 계약 누락: ${marker}`);
 console.log('Report-adjacent page validation passed.');
+
+// 10. Workspaces (stage d-1): readiness center, rental/income.
+const rental = await importTs('src/domain/propertyDetail/rentalInput.ts');
+for (const [key, raw, expected] of [['monthlyRent', '', 0], ['monthlyRent', '1200000', 1_200_000], ['monthlyRent', '-1', undefined], ['vacancyRatePct', '101', undefined], ['vacancyRatePct', '100', 100], ['operatingExpenseRatePct', '-5', undefined], ['purchasePrice', 'NaN', undefined], ['purchasePrice', '150', 150]]) {
+  if (rental.sanitizeRentalInput(key, raw) !== expected) fail(`임대 입력 처리 오류: ${key}="${raw}"`);
+}
+const props = [{ id: 'p1' }, { id: 'daon-bangbae-815-11' }];
+const picked = rental.pickRentalTarget(props, 'missing');
+if (picked.target !== undefined || !picked.missingRequested) fail('없는 propertyId로 다른 물건의 수익 분석을 열면 안 됩니다.');
+if (rental.pickRentalTarget(props, 'daon-bangbae-815-11').target?.id !== 'daon-bangbae-815-11') fail('지정한 물건은 정확히 선택되어야 합니다.');
+if (rental.pickRentalTarget(props, null).target?.id !== 'p1') fail('지정이 없으면 첫 물건을 선택합니다.');
+const rentalPage = readFileSync('src/pages/RentalIncomeWorkspacePage.tsx', 'utf8');
+if (rentalPage.includes("rows.find((item) => item.id === 'daon-bangbae-815-11')")) fail('수익 분석이 하드코딩된 방배동 ID로 대체 선택하면 안 됩니다.');
+for (const marker of ['pickRentalTarget(rows, searchParams.get(\'propertyId\'))', 'sanitizeRentalInput(String(key), event.target.value)', "if (!propertyId) { setError('대상 물건을 먼저 선택해 주세요.'); return; }", 'className="rental-workspace-grid"', '} catch (reason) {']) if (!rentalPage.includes(marker)) fail(`임대·수익 화면 계약 누락: ${marker}`);
+const readinessPage = readFileSync('src/pages/PropertyReadinessCenterPage.tsx', 'utf8');
+for (const marker of ['Promise.allSettled(', 'setLoadError(', 'compareByUpdatedAtDesc(a.property, b.property)', '{loadError && <Alert']) if (!readinessPage.includes(marker)) fail(`준비도 센터 계약 누락: ${marker}`);
+for (const [name, text] of [['준비도 센터', readinessPage], ['임대·수익', rentalPage]]) if (/<main[\s>]/.test(text)) fail(`${name} 화면이 Layout <main> 안에 <main>을 중첩합니다.`);
+console.log('Workspace (readiness, rental) validation passed.');
