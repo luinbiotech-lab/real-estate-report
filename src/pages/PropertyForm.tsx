@@ -83,7 +83,8 @@ export default function PropertyForm({ settings }: { settings: Settings }) {
       if (discoveryResult) await publicPropertyDiscoveryService.persist(data.id, discoveryResult);
       await marketPresenceService.persist(data);
       await streetViewProvenanceService.ensure(data);
-      navigate(id ? `/property/${encodeURIComponent(data.id)}` : '/');
+      // Address → registration → Data Room: land on the saved property hub, new or edited.
+      navigate(`/property/${encodeURIComponent(data.id)}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '물건 저장에 실패했습니다.');
     } finally { setSaving(false); }

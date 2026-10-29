@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Box, Button, Chip, CircularProgress } from '@mui/material';
 import SearchRounded from '@mui/icons-material/SearchRounded';
 import VerifiedRounded from '@mui/icons-material/VerifiedRounded';
@@ -21,6 +21,7 @@ export default function PropertyPublicDiscoveryPanel({
   const [result, setResult] = useState<PropertyDiscoveryResult>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const searchRequestRef = useRef(0);
 
   useEffect(() => {
     if (!query && property.address) setQuery(property.address);
@@ -28,16 +29,19 @@ export default function PropertyPublicDiscoveryPanel({
 
   const search = async () => {
     const value = query.trim();
-    if (!value) return;
+    // Enter bypasses the disabled button; never run overlapping searches or let a late result win.
+    if (!value || loading) return;
+    const requestId = ++searchRequestRef.current;
     setLoading(true); setError('');
     try {
       const next = await publicPropertyDiscoveryService.discover(value);
+      if (requestId !== searchRequestRef.current) return;
       setResult(next);
       onResolved(next);
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '부동산 공공데이터 조회에 실패했습니다.');
+      if (requestId === searchRequestRef.current) setError(reason instanceof Error ? reason.message : '부동산 공공데이터 조회에 실패했습니다.');
     } finally {
-      setLoading(false);
+      if (requestId === searchRequestRef.current) setLoading(false);
     }
   };
 

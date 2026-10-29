@@ -92,3 +92,24 @@ const bulkStart = dataRoom.indexOf('const uploadSourceDocuments = async');
 const bulk = dataRoom.slice(bulkStart, dataRoom.indexOf('const removeDocument = async', bulkStart));
 if (!bulk.includes('linkedCount += 1;') || bulk.indexOf('if (linkedCount) await load()') > bulk.indexOf('setError(linkedCount ?')) fail('공적자료 일괄 등록이 중간에 실패하면 이미 연결된 건수를 (재로드 후) 알려야 합니다.');
 console.log('Bulk source upload partial-failure validation passed.');
+
+// 8. Discovery → registered property matching (stage b, 2026-10-30).
+const match = await importTs('src/domain/propertyDetail/discoveryMatch.ts');
+const rows = [
+  { id: 'a', address: '서울 서초구 방배동 815-11' },
+  { id: 'b', address: '서울특별시 성동구 성수동2가 331-7' },
+  { id: 'c', address: '서울특별시 서초구 방배동 815-11' },
+  { id: 'd', address: '' },
+];
+const hit = (address) => match.findRegisteredMatches(address, rows).map((row) => row.id).join(',');
+if (hit({ lotAddress: '서울특별시 서초구 방배동 815-11' }) !== 'a,c') fail('서울특별시/서울 표기 차이를 같은 주소로 대조하고, 중복 등록을 모두 찾아야 합니다.');
+if (hit({ roadAddress: '서울 성동구 성수동2가 331-7' }) !== 'b') fail('도로명/지번 중 하나만 일치해도 찾아야 합니다.');
+if (hit({ lotAddress: '서울 서초구 방배동 815-1' }) !== '') fail('번지가 다른 주소를 같은 물건으로 보면 안 됩니다.');
+if (hit({}) !== '' || hit(undefined) !== '' || hit({ officialAddress: '   ' }) !== '') fail('빈 주소는 어떤 물건과도 일치하면 안 됩니다(빈 주소 등록 물건 포함).');
+const discovery = readFileSync('src/pages/PropertyDiscoveryPage.tsx', 'utf8');
+for (const marker of ['requestId !== matchRequestRef.current', 'found.length === 1 ? found[0] : undefined', 'matches.length > 1', 'severity={refreshFailed ?', 'setMatchError(']) if (!discovery.includes(marker)) fail(`주소 조회 화면 계약 누락: ${marker}`);
+if (discovery.includes("refreshMessage.includes('실패')")) fail('저장 실패 여부를 메시지 문구로 추정하면 안 됩니다.');
+const discoveryPanel = readFileSync('src/components/PropertyPublicDiscoveryPanel.tsx', 'utf8');
+for (const marker of ['if (!value || loading) return;', 'requestId !== searchRequestRef.current']) if (!discoveryPanel.includes(marker)) fail(`공공자료 조회 패널 계약 누락: ${marker}`);
+console.log('Discovery matching validation passed.');
+if (!form.includes('navigate(`/property/${encodeURIComponent(data.id)}`);')) fail('신규 등록 후에도 저장된 물건 상세(→ Data Room)로 이어져야 합니다.');
