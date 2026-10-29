@@ -81,3 +81,14 @@ const dataRoom = readFileSync('src/pages/PropertyDataRoomPage.tsx', 'utf8');
 for (const marker of ['setBundle(scopeDataRoomBundle(nextBundle, id))', 'applyDocumentVerification(document, status,', 'requiresOfficialConfirmation(document.verificationStatus, status)', "catch (reason) { setError(reason instanceof Error ? reason.message : '문서를 삭제하지 못했습니다.'); }", 'documentVerificationOptions(document.verificationStatus)', 'disabled={Boolean(busyDocumentId)}']) if (!dataRoom.includes(marker)) fail(`Data Room 문서 처리 계약 누락: ${marker}`);
 if (dataRoom.includes('Object.entries(VERIFICATION_LABELS).map(([key, label]) => <MenuItem')) fail('문서 검증 선택지에 시스템 전용 상태 전체를 노출하면 안 됩니다.');
 console.log('Data Room document action validation passed.');
+
+// 7. Comparable transaction panel: parse errors visible, Korean status labels, responsive fields.
+const comparablePanel = readFileSync('src/components/propertyDataRoom/ComparableTransactionPanel.tsx', 'utf8');
+if (comparablePanel.includes('catch { return []; }')) fail('비교거래 입력 오류를 숨기고 0건으로 표시하면 안 됩니다.');
+for (const marker of ['parseError && !error', 'VERIFICATION_LABELS[status]', 'Boolean(parseError)', 'className="comparable-source-fields"']) if (!comparablePanel.includes(marker)) fail(`비교거래 패널 계약 누락: ${marker}`);
+if (!readFileSync('src/mobile-shell.css', 'utf8').includes('@media(max-width:480px){.comparable-source-fields')) fail('비교거래 출처 입력 반응형 CSS 누락');
+console.log('Comparable panel validation passed.');
+const bulkStart = dataRoom.indexOf('const uploadSourceDocuments = async');
+const bulk = dataRoom.slice(bulkStart, dataRoom.indexOf('const removeDocument = async', bulkStart));
+if (!bulk.includes('linkedCount += 1;') || bulk.indexOf('if (linkedCount) await load()') > bulk.indexOf('setError(linkedCount ?')) fail('공적자료 일괄 등록이 중간에 실패하면 이미 연결된 건수를 (재로드 후) 알려야 합니다.');
+console.log('Bulk source upload partial-failure validation passed.');

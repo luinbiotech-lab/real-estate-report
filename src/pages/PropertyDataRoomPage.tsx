@@ -146,6 +146,7 @@ export default function PropertyDataRoomPage() {
     const inventories = bundle.dataSources.filter((source) => source.resourceType === 'source_document_inventory');
     const plans: Array<{ source: DataRoomBundle['dataSources'][number]; file: File; documentType: DocumentType }> = [];
     const matchedSourceIds = new Set<string>();
+    let linkedCount = 0;
 
     setUploading(true); setError('');
     try {
@@ -209,12 +210,17 @@ export default function PropertyDataRoomPage() {
               : '원본 파일 일괄 등록으로 존재를 확인했습니다. 문서 내용은 별도 검증이 필요하며 private Storage 연결은 Production migration에서 수행합니다.',
           },
         });
+        linkedCount += 1;
       }
 
       await load();
       setTab('official');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : '공적자료 원본을 일괄 등록하지 못했습니다.');
+      const detail = reason instanceof Error ? reason.message : '공적자료 원본을 일괄 등록하지 못했습니다.';
+      // Uploads are not transactional: say how many files were already linked before the failure.
+      // Reload first (load() clears the error banner), then report the partial result.
+      if (linkedCount) await load().catch(() => undefined);
+      setError(linkedCount ? `${linkedCount}건은 연결된 뒤 중단되었습니다. ${detail}` : detail);
     } finally {
       setUploading(false);
       event.target.value = '';
