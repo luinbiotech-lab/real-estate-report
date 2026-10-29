@@ -2,6 +2,10 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
+import { importTs } from './lib/ts-module-loader.mjs';
+
+// The loader scopes the bundle with the real helper (2026-10-30); inject it, never a re-implementation.
+const { scopeDataRoomBundle } = await importTs('src/services/propertyReadinessService.ts');
 
 // Run the actual Data Room loader, not a separately reimplemented state machine.
 // A late response for Property A must never overwrite B's Property/Data Room.
@@ -40,7 +44,7 @@ function makeHarness(loaderSource) {
       setError: (value) => { state.error = value; },
       setProperty: (value) => { state.property = value; },
       setBundle: (value) => { state.bundle = value; },
-      propertyRepository: repository, propertyDataRoomService: service,
+      propertyRepository: repository, propertyDataRoomService: service, scopeDataRoomBundle,
       emptyBundle: { documents: [], media: [] },
     });
     wrapper(module);
@@ -58,10 +62,11 @@ async function race(loaderSource, phase) {
   }
   const pendingB = h.loadFor('B')();
   h.propertyRequests.get('B').resolve({ id: 'B' });
-  h.bundleRequests.get('B').resolve({ documents: [{ id: 'B-doc' }] });
+  // B's bundle also carries a foreign A row; the loader must drop it.
+  h.bundleRequests.get('B').resolve({ documents: [{ id: 'B-doc', propertyId: 'B' }, { id: 'A-leak', propertyId: 'A' }] });
   await pendingB;
   if (phase === 'property') h.propertyRequests.get('A').resolve({ id: 'A' });
-  else h.bundleRequests.get('A').resolve({ documents: [{ id: 'A-doc' }] });
+  else h.bundleRequests.get('A').resolve({ documents: [{ id: 'A-doc', propertyId: 'A' }] });
   await pendingA;
   return h.state;
 }
@@ -70,6 +75,7 @@ for (const phase of ['property', 'bundle']) {
   const state = await race(method, phase);
   assert.equal(state.property?.id, 'B', `stale A ${phase} response must not overwrite B`);
   assert.equal(state.bundle.documents[0].id, 'B-doc', `stale A ${phase} response must not overwrite B documents`);
+  assert.deepEqual(state.bundle.documents.map((row) => row.id), ['B-doc'], 'foreign Property rows must be scoped out of the Data Room UI');
   assert.equal(state.loading, false);
   assert.equal(state.error, '');
 }
