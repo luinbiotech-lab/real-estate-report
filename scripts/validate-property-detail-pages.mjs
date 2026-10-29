@@ -140,3 +140,18 @@ const readinessPage = readFileSync('src/pages/PropertyReadinessCenterPage.tsx', 
 for (const marker of ['Promise.allSettled(', 'setLoadError(', 'compareByUpdatedAtDesc(a.property, b.property)', '{loadError && <Alert']) if (!readinessPage.includes(marker)) fail(`준비도 센터 계약 누락: ${marker}`);
 for (const [name, text] of [['준비도 센터', readinessPage], ['임대·수익', rentalPage]]) if (/<main[\s>]/.test(text)) fail(`${name} 화면이 Layout <main> 안에 <main>을 중첩합니다.`);
 console.log('Workspace (readiness, rental) validation passed.');
+
+// 11. External share center (stage d-2).
+const share = await importTs('src/domain/propertyDetail/shareRules.ts');
+for (const [input, expected] of [['=HYPERLINK("x")', `"'=HYPERLINK(""x"")"`], ['+1', `"'+1"`], ['-2', `"'-2"`], ['@SUM(A1)', `"'@SUM(A1)"`], ['\tx', `"'\tx"`], ['정상 메모', '"정상 메모"'], [null, '""'], [12, '"12"']]) {
+  if (share.safeCsvCell(input) !== expected) fail(`CSV 셀 처리 오류(수식 주입 방지): ${JSON.stringify(input)} → ${share.safeCsvCell(input)}`);
+}
+const now = '2026-10-30T00:00:00.000Z';
+if (!share.canReissueShare({ status: 'active', expiresAt: '2026-11-01T00:00:00.000Z' }, now)) fail('유효한 공유는 다시 만들 수 있어야 합니다.');
+if (!share.canReissueShare({ status: 'active' }, now)) fail('만료일 없는 유효 공유는 다시 만들 수 있어야 합니다.');
+for (const blocked of [{ status: 'revoked' }, { status: 'expired' }, { status: 'active', expiresAt: '2026-10-29T00:00:00.000Z' }]) if (share.canReissueShare(blocked, now)) fail(`회수/만료 공유를 다시 발급할 수 있습니다: ${JSON.stringify(blocked)}`);
+const sharePage = readFileSync('src/pages/ExternalShareCenterPage.tsx', 'utf8');
+if (/function csvCell[\s\S]{0,120}return `"\$\{text\.replace/.test(sharePage)) fail('감사대장 CSV가 수식 주입 방지 없이 내보내집니다.');
+for (const marker of ['const csvCell = safeCsvCell;', "if (!canReissueShare(share, new Date().toISOString())) { setNotice(''); setError('회수되었거나 만료된 공유는 Manifest", "if (!canReissueShare(share, new Date().toISOString())) { setNotice(''); setError('회수되었거나 만료된 공유는 공유 HTML", "if (!confirm('이 공유를 회수 처리할까요?", "share.status !== 'active'} onClick={() => void revoke(share)}"]) if (!sharePage.includes(marker)) fail(`외부 공유 화면 계약 누락: ${marker.slice(0, 60)}`);
+if (/<main[\s>]/.test(sharePage)) fail('외부 공유 화면이 <main>을 중첩합니다.');
+console.log('External share center validation passed.');
