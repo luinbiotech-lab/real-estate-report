@@ -220,10 +220,10 @@ export default function PropertyPublicDiscoveryPanel({
 
       {marketSummary && <Box sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1 }}>
         {[
-          ['최근 6개월 후보', marketSummary.totalCandidates + '건'],
+          ['최근 6개월 후보', `${marketSummary.totalCandidates}건${marketSummary.comparableCount !== undefined ? ` · 비교가능 ${marketSummary.comparableCount}건` : ''}`],
           ['동일 지번', marketSummary.exactLotCount + '건'],
           ['거래가 중앙값', won(marketSummary.medianDealAmount)],
-          ['평당가 중앙값', won(marketSummary.medianPricePerPyeong)],
+          ['토지 평당가 중앙값', won(marketSummary.medianLandPricePerPyeong ?? marketSummary.medianPricePerPyeong)],
         ].map(([label, value]) => <div key={label} style={{ background: '#f8fafc', border: '1px solid #e4e7ec', borderRadius: 8, padding: 10 }}>
           <small style={{ color: '#667085' }}>{label}</small><div style={{ fontWeight: 700, marginTop: 4 }}>{value}</div>
         </div>)}
@@ -235,10 +235,10 @@ export default function PropertyPublicDiscoveryPanel({
           {trades.map((trade, index) => <div key={index} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 130px', gap: 8, padding: '8px 10px', border: '1px solid #e4e7ec', borderRadius: 8, fontSize: 13 }}>
             <span>{trade.dealDate || '-'}</span>
             <span>{trade.matchLevel === 'exact_lot' ? '● 동일 지번 · ' : ''}{trade.legalDong} {trade.jibun} {trade.buildingName}</span>
-            <strong style={{ textAlign: 'right' }}>{won(trade.dealAmount)}{trade.pricePerPyeong ? <small style={{ display: 'block', fontWeight: 400 }}>{won(trade.pricePerPyeong)}/평</small> : null}</strong>
+            <strong style={{ textAlign: 'right' }}>{won(trade.dealAmount)}{trade.landPricePerPyeong ? <small style={{ display: 'block', fontWeight: 400 }}>토지 {won(trade.landPricePerPyeong)}/평</small> : trade.pricePerPyeong ? <small style={{ display: 'block', fontWeight: 400 }}>{won(trade.pricePerPyeong)}/평</small> : null}{trade.comparableExclusion ? <small style={{ display: 'block', fontWeight: 400, color: '#b54708' }}>{trade.comparableExclusion === 'cancelled' ? '해제 거래' : trade.comparableExclusion === 'share_deal' ? '지분 거래' : '집합건물 호실'} · 비교 제외</small> : null}</strong>
           </div>)}
         </div>
-        <small style={{ display: 'block', marginTop: 7, color: '#667085' }}>동일 건물 확정 거래가 아니라 법정동·최근기간 기준 후보입니다. 지번/면적/용도 일치도를 추가 검증해 비교거래로 승격합니다.</small>
+        <small style={{ display: 'block', marginTop: 7, color: '#667085' }}>{marketSummary?.excluded && (marketSummary.excluded.cancelled + marketSummary.excluded.share_deal + marketSummary.excluded.collective_unit) > 0 ? `중앙값에서 제외: 해제 ${marketSummary.excluded.cancelled}건 · 지분거래 ${marketSummary.excluded.share_deal}건 · 집합건물 호실 ${marketSummary.excluded.collective_unit}건. ` : ''}동일 건물 확정 거래가 아니라 법정동·최근기간 기준 후보입니다. 지번/면적/용도 일치도를 추가 검증해 비교거래로 승격합니다.</small>
       </Box>}
     </Box>}
   </section>;

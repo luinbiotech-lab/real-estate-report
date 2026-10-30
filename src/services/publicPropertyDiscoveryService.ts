@@ -21,6 +21,7 @@ export interface DiscoveredTrade {
   buildingName: string; buildingAreaSqm?: number; landAreaSqm?: number; floor: string; buildingUse: string;
   matchLevel?: 'exact_lot' | 'masked_address_candidate' | 'same_dong_candidate' | 'regional_candidate';
   pricePerSqm?: number; pricePerPyeong?: number;
+  buildingType?: string; comparableExclusion?: 'cancelled' | 'share_deal' | 'collective_unit'; landPricePerPyeong?: number;
 }
 export interface LandUseZone { type: string; code: string; name: string; representativeYn: string }
 export interface LandProfile {
@@ -31,6 +32,7 @@ export interface LandProfile {
 }
 export interface MarketSummary {
   totalCandidates: number; exactLotCount: number; latestDealDate?: string; medianDealAmount?: number; medianPricePerPyeong?: number;
+  comparableCount?: number; excluded?: { cancelled: number; share_deal: number; collective_unit: number }; medianLandPricePerPyeong?: number;
 }
 export interface BuildingUsageEvidence {
   state: 'energy_usage_observed' | 'no_public_record' | 'not_configured';
