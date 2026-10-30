@@ -81,6 +81,9 @@ jobs:
       - name: Validate Report readiness alignment
         run: node scripts/validate-report-readiness-alignment.mjs
 
+      - name: Validate Report blank-field policy (hide blanks after pre-publish confirmation)
+        run: node scripts/validate-report-blank-fields.mjs
+
       - name: Validate Report Snapshot freshness
         run: node scripts/validate-report-snapshot-freshness.mjs
 

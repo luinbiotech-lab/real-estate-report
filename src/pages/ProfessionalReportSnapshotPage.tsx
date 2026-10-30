@@ -4,6 +4,8 @@ import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { DaonProfessionalReportMaster } from '../components/professionalReport/DaonProfessionalReportMaster';
+import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/professionalReport/ReportBlankFieldsGate';
+import { blankFieldsSignature, detailBlankFields, needsBlankFieldConfirmation, type ReportPublishAction } from '../domain/professionalReport/reportBlankFields';
 import { reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed, reportSpatialMediaAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
 import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
@@ -64,6 +66,10 @@ export default function ProfessionalReportSnapshotPage() {
   const [regenerating, setRegenerating] = useState(false);
   const [freshness, setFreshness] = useState<ReportSnapshotFreshness>();
   const [freshnessError, setFreshnessError] = useState('');
+  // Blank-field pre-publish check (owner decision 2026-10-30): which action waits for the user's answer, and the blank
+  // set the user agreed to publish hidden.
+  const [blankPrompt, setBlankPrompt] = useState<ReportPublishAction | null>(null);
+  const [blankAcknowledged, setBlankAcknowledged] = useState<string | null>(null);
   const currentRouteSnapshotId = useRef(snapshotId);
   currentRouteSnapshotId.current = snapshotId;
   const print = useReactToPrint({ contentRef, documentTitle: snapshot ? `DAON_Professional_Report_MASTER_v${snapshot.reportVersion}` : 'DAON_Professional_Report_MASTER' });
@@ -175,16 +181,38 @@ export default function ProfessionalReportSnapshotPage() {
   // confirmable until live freshness has been checked successfully.
   const finalizationUi = getSnapshotFinalizationUiState(snapshot.status, reportReady, freshness);
   const report = <DaonProfessionalReportMaster snapshot={snapshot} model={model} />;
+  const blankFields = detailBlankFields(model);
+  // A final (ready) Snapshot is already published; its blanks were acknowledged when it was confirmed.
+  const blankAcknowledgedNow = snapshot.status !== 'draft' || !needsBlankFieldConfirmation(blankFields, blankAcknowledged);
+  const runPublishAction = (action: ReportPublishAction) => { if (action === 'finalize') void markReady(); else print(); };
+  const requestPublishAction = (action: ReportPublishAction) => {
+    if (!blankAcknowledgedNow) { setBlankPrompt(action); return; }
+    runPublishAction(action);
+  };
 
   return <main className="professional-report-shell">
     <nav className="professional-report-toolbar" aria-label="Professional Report 작업">
       <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON PROFESSIONAL MASTER · OPENING + DETAIL + CLOSING</span><Chip size="small" label={finalizationUi.label} color={finalizationUi.color} /></div>
       <div>
         {(snapshot.status === 'draft' || freshness?.isStale) && <Button startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? '재생성 중…' : snapshot.status === 'ready' ? '최신 데이터로 새 버전 생성' : '최신 데이터로 다시 생성'}</Button>}
-        {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !finalizationUi.canRequestReady} onClick={markReady}>보고서 확정</Button>}
-        <Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button>
+        {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !finalizationUi.canRequestReady} onClick={() => requestPublishAction('finalize')}>보고서 확정</Button>}
+        <Button variant="contained" startIcon={<PrintRounded />} onClick={() => requestPublishAction('print')}>인쇄 / PDF 저장</Button>
       </div>
     </nav>
+    <ReportBlankFieldsNotice fields={blankFields} acknowledged={blankAcknowledgedNow} className="professional-report-alert" />
+    <ReportBlankFieldsDialog
+      open={blankPrompt !== null}
+      fields={blankFields}
+      actionLabel={blankPrompt === 'finalize' ? '보고서 확정' : '인쇄 / PDF 저장'}
+      onClose={() => setBlankPrompt(null)}
+      onEnterValues={() => { setBlankPrompt(null); navigate(`/property/${encodeURIComponent(snapshot.propertyId)}/edit`); }}
+      onContinue={() => {
+        const action = blankPrompt;
+        setBlankAcknowledged(blankFieldsSignature(blankFields));
+        setBlankPrompt(null);
+        if (action) runPublishAction(action);
+      }}
+    />
     {freshness?.isStale && <Alert severity="warning" className="professional-report-alert">이 Snapshot 생성 이후 원본·검증·공간 데이터가 변경되었습니다. 기존 Snapshot은 그대로 보존되지만 최신 보고서로 확정하면 안 됩니다.{freshness.latestDataAt ? ` 최근 변경: ${new Date(freshness.latestDataAt).toLocaleString('ko-KR')}` : ''}{freshness.latestDataLabel ? ` · ${freshness.latestDataLabel}` : ''} ‘최신 데이터로 새 버전 생성’을 사용하세요.</Alert>}
     {freshnessError && snapshot.status === 'draft' && <Alert severity="error" className="professional-report-alert">{freshnessError}</Alert>}
     {!reportReady && snapshot.status === 'draft' && <Alert severity="warning" className="professional-report-alert">필수 공적자료 검증 또는 검증 대기 후보 처리가 남아 있습니다. 초안 미리보기·인쇄는 가능하지만, 모든 검증이 끝나기 전에는 보고서를 확정할 수 없습니다. Data Room 검증 후 ‘최신 데이터로 다시 생성’을 사용하세요.</Alert>}

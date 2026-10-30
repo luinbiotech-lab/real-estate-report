@@ -119,10 +119,29 @@ try {
       assert(one.templateId === 'DAON_1P_MASTER', `템플릿 ${one.templateId}`);
       assert(one.text.includes(listing.name.replace('[테스트] ', '')) || one.text.includes(listing.name), '1P에 물건명이 없습니다.');
       assert(one.facts.length > 0 && one.facts.length <= 12, `표시 항목 수 ${one.facts.length}`);
-      assert(!one.facts.some((value) => value.includes('확인 필요')), '1P에 "확인 필요" 공란 표시가 있습니다.');
+      const onePlaceholder = one.text.match(/.{0,30}(확인 필요|검토 필요|분석 필요|미등록).{0,20}/);
+      assert(!onePlaceholder, `1P에 공란 placeholder 표시: ${onePlaceholder?.[0]}`);
       assert(one.sh <= one.ch + 2 && one.sw <= one.cw + 2, `1P 넘침 ${one.sw}x${one.sh}/${one.cw}x${one.ch}`);
       const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
       return `항목 ${one.facts.length}개`;
+    });
+
+    // 4b. Owner decision 2026-10-30: blank fields are confirmed with the user before publishing, then hidden.
+    await check(tag, '1P 발행 전 공란 확인 안내', async () => {
+      const notice = page.getByTestId('report-blank-fields-notice');
+      if (!(await notice.count())) return '공란 없음 — 확인 없이 발행';
+      assert((await notice.innerText()).includes('숨김 처리되어 발행'), '숨김 발행 안내가 없습니다.');
+      await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+      const dialogText = await dialog.innerText();
+      assert(dialogText.includes('값 입력하러 가기') && dialogText.includes('숨김 처리하고'), `대화상자 선택지 누락: ${dialogText.slice(0, 120)}`);
+      const chips = await dialog.getByTestId('report-blank-fields-list').locator('.MuiChip-root').count();
+      assert(chips > 0, '공란 항목 목록이 비어 있습니다.');
+      await shot(`${tag}-1p-blank-dialog`);
+      await dialog.getByRole('button', { name: '취소' }).click();
+      await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
+      return `공란 ${chips}개 확인 요청`;
     });
 
     // 5. 7P professional MASTER (owner standard: Opening → detail-1..7 → Closing, no overflow).
@@ -143,10 +162,25 @@ try {
       assert(names.length === 9 && names[0] === 'opening' && names.at(-1) === 'closing' && [1, 2, 3, 4, 5, 6, 7].every((n) => names[n] === `detail-${n}`), `페이지 구성 ${names.join(',')}`);
       const overflow = report.pages.filter((item) => item.sh > item.ch + 2 || item.sw > item.cw + 2).map((item) => item.name);
       assert(!overflow.length, `넘침 페이지: ${overflow.join(',')}`);
-      const placeholders = report.pages.filter((item) => item.text.includes('확인 필요')).map((item) => item.name);
+      // Owner decision 2026-10-30 ("빈칸 숨김"): placeholders are a hard failure, no longer a policy WARN.
+      const placeholders = report.pages
+        .map((item) => ({ name: item.name, hit: item.text.match(/.{0,30}(확인 필요|검토 필요|분석 필요|미등록).{0,20}/)?.[0] }))
+        .filter((item) => item.hit);
       const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
-      if (placeholders.length) record(tag, '7P "확인 필요" 공란 표시(정책 결정 대기 #10/#11)', 'WARN', `표시 페이지: ${placeholders.join(',')}`);
-      return `9페이지, 넘침 0, visual=${report.visual}`;
+      assert(!placeholders.length, `공란 placeholder 표시: ${placeholders.map((item) => `${item.name}「${item.hit}」`).join(' / ')}`);
+      const notice = page.getByTestId('report-blank-fields-notice');
+      let blankInfo = '공란 없음';
+      if (await notice.count()) {
+        assert((await notice.innerText()).includes('숨김 처리되어 발행'), '7P 숨김 발행 안내가 없습니다.');
+        await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+        const dialog = page.getByRole('dialog');
+        await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+        assert((await dialog.innerText()).includes('값 입력하러 가기'), '7P 발행 전 공란 확인 대화상자가 없습니다.');
+        await dialog.getByRole('button', { name: '취소' }).click();
+        await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
+        blankInfo = '발행 전 공란 확인 동작';
+      }
+      return `9페이지, 넘침 0, placeholder 0, ${blankInfo}, visual=${report.visual}`;
     });
 
     // 6. Location briefing renders this property.
