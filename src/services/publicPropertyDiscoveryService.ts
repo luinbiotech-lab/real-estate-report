@@ -266,7 +266,11 @@ export const publicPropertyDiscoveryService = {
         id: `public-market:${propertyId}`, propertyId, fieldKey: 'nearbyTransactions', resourceType: 'public_transaction_snapshot',
         sourceType: 'market_data', sourceName: '국토교통부 실거래가 공개자료',
         sourceReference: `${result.address.region2} 최근 6개월`, collectedAt: now,
-        verificationStatus: 'confirmed', metadata: { market: result.market, explicitFields: ['nearbyTransactions'] }, createdAt: now,
+        // Public transaction rows are candidates (masked lots, other buildings), never confirmed comparables. A
+        // 'confirmed' status here used to make the report's nearbyTransactions field look confirmed by automation alone.
+        verificationStatus: 'imported',
+        metadata: { market: result.market, explicitFields: ['nearbyTransactions'], evidenceSemantics: 'transaction_candidates_not_confirmed_comparables' },
+        createdAt: now,
       });
     }
     if (result.usageEvidence && result.usageEvidence.state !== 'not_configured') {

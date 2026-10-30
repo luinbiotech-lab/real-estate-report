@@ -201,5 +201,11 @@ assert.strictEqual(summary.medianLandPricePerPyeong, whole.landPricePerPyeong);
 const naive = [whole, unit, share, cancelled].map((row) => row.dealAmount).sort((a, b) => a - b)[1];
 assert.notStrictEqual(naive, summary.medianDealAmount);
 
+// Public transaction snapshot must never mark nearbyTransactions as confirmed (CLAUDE.md: a public transaction row is a
+// candidate; automation alone never promotes imported evidence).
+const marketBlock = service.slice(service.indexOf("id: `public-market:"), service.indexOf("id: `public-market:") + 900);
+if (!marketBlock.includes("verificationStatus: 'imported'") || marketBlock.includes("verificationStatus: 'confirmed'")) throw new Error('공개 실거래 스냅샷은 imported(후보)로 저장해야 합니다.');
+if (!marketBlock.includes('transaction_candidates_not_confirmed_comparables')) throw new Error('공개 실거래 스냅샷의 후보 의미(evidenceSemantics) 누락');
+
 console.log('PASS public property discovery contract');
 console.log('PASS MOLIT dealAmount 만원→KRW normalization regression');
