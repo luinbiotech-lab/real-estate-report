@@ -175,3 +175,19 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
   .property-list-table td:nth-child(10){grid-area:actions;justify-self:end}
   .app-shell .property-list-table tbody tr:hover td{background:transparent}
 }
+
+/* Property hub on phones: core facts first; an empty photo slot must not take the first screen. */
+@media(max-width:700px){
+  .property-hub-header{margin-bottom:12px}
+  .property-hub-header>div:last-child{width:100%}
+  .property-hub-header>div:last-child .MuiButton-root{flex:1 1 auto}
+  .property-hub-overview{display:flex;flex-direction:column;gap:12px}
+  .property-hub-overview>.property-hub-hero{order:2}
+  .property-hub-hero:not(:has(img)){min-height:84px;padding:10px}
+  .property-hub-hero:not(:has(img)) svg{display:none}
+  .property-hub-hero:not(:has(img)) *{font-size:12px!important;line-height:1.4}
+  .property-hub-hero:has(img){min-height:200px}
+  .property-hub-facts>div{padding:8px 0!important}
+  .property-hub-readiness{margin-top:10px}
+  .property-hub-cards button{min-height:96px!important;padding:12px!important}
+}
