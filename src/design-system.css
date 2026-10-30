@@ -232,3 +232,24 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
   .app-shell [style*="grid-template-columns"][style*="grid-template-columns: 1fr 180px"]{grid-template-columns:minmax(0,1fr)!important}
   /* (specific single-column rules carry two attribute selectors so they outrank the generic fallback above) */
 }
+
+/* Small fixed-minimum KPI rows (e.g. Digital Twin "repeat(11, minmax(78px, 1fr))" clipped on phones, 2026-10-31). */
+@media(max-width:900px){
+  .app-shell [style*="grid-template-columns"][style*="repeat(1"][style*="minmax(4"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(1"][style*="minmax(5"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(1"][style*="minmax(6"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(1"][style*="minmax(7"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(1"][style*="minmax(8"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(1"][style*="minmax(9"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(6"][style*="minmax(9"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(7"][style*="minmax(9"],
+  .app-shell [style*="grid-template-columns"][style*="repeat(8"][style*="minmax(9"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,92px),1fr))!important}
+}
+@media(max-width:600px){
+  .app-shell [style*="grid-template-columns"][style*="repeat("][style*="minmax(4"],
+  .app-shell [style*="grid-template-columns"][style*="repeat("][style*="minmax(5"],
+  .app-shell [style*="grid-template-columns"][style*="repeat("][style*="minmax(6"],
+  .app-shell [style*="grid-template-columns"][style*="repeat("][style*="minmax(7"],
+  .app-shell [style*="grid-template-columns"][style*="repeat("][style*="minmax(8"],
+  .app-shell [style*="grid-template-columns"][style*="repeat("][style*="minmax(9"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,92px),1fr))!important}
+}
