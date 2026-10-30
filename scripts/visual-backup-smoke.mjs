@@ -142,6 +142,8 @@ try {
   await fileInput.setInputFiles(BACKUP_PATH);
   await waitForText(page, 'daon-local-backup-v1');
   await waitForText(page, 'propertyMedia');
+  // MERGE now asks for confirmation (it overwrites same-id records); accept it like an operator would.
+  page.once('dialog', (dialog) => { void dialog.accept(); });
   await page.getByRole('button', { name: '병합 복원' }).click();
   await waitForText(page, '병합 복원을 완료했습니다.');
 
@@ -165,6 +167,7 @@ try {
 
   await fileInput.setInputFiles(BANGBAE_PHASE1_BACKUP_PATH);
   await waitForText(page, '방배동 815-11 Phase 1 패키지 감지');
+  page.once('dialog', (dialog) => { void dialog.accept(); });
   await page.getByRole('button', { name: '방배동 Phase 1 복원 + Dry Run', exact: true }).click();
   await waitForText(page, '방배동 Phase 1 복원 + Dry Run 완료');
   await waitForText(page, 'NETWORK WRITES');

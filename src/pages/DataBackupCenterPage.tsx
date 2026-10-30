@@ -84,6 +84,7 @@ export default function DataBackupCenterPage() {
 
   const restoreBangbaePhase1AndDryRun = async () => {
     if (!backup || !bangbaePhase1Package) return;
+    if (!window.confirm('백업 파일의 방배동 Phase 1 레코드를 현재 로컬 데이터에 병합합니다. 같은 ID의 기존 레코드는 백업 내용으로 덮어씁니다. 계속할까요?')) return;
     setBusy(true); setError(''); setNotice('');
     try {
       const restored = await localBackupService.restore(backup, 'merge');
@@ -101,6 +102,8 @@ export default function DataBackupCenterPage() {
 
   const restore = async (mode: 'merge' | 'replace') => {
     if (!backup) return;
+    // MERGE also overwrites records with the same id, so both modes need an explicit confirmation.
+    if (mode === 'merge' && !window.confirm('백업 파일을 현재 로컬 데이터에 병합합니다. 같은 ID의 기존 레코드는 백업 내용으로 덮어씁니다. 계속할까요?')) return;
     if (mode === 'replace' && !window.confirm('현재 로컬 데이터를 백업 파일 기준으로 교체합니다. 이 작업 전 현재 상태를 별도 백업하는 것을 권장합니다. 계속할까요?')) return;
     setBusy(true); setError(''); setNotice('');
     try {
