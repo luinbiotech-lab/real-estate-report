@@ -6,6 +6,7 @@ import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { reportSnapshotHistoryService, type ReportSnapshotHistoryItem } from '../services/reportSnapshotHistoryService';
 import type { Property } from '../types';
+import { classifyPropertyRecord, RECORD_CLASS_LABEL } from '../domain/sampleProperty';
 
 type PropertyHistory = {
   property: Property;
@@ -38,11 +39,15 @@ export default function ReportHistoryPage() {
     setError('');
     try {
       const properties = await propertyRepository.getAll();
-      const rows = await Promise.all(properties.map(async (property) => ({
+      // One property's history failing must not blank the whole page; report which ones could not be read.
+      const settled = await Promise.allSettled(properties.map(async (property) => ({
         property,
         history: await reportSnapshotHistoryService.list(property.id),
       })));
-      setItems(rows.filter((row) => row.history.length > 0));
+      const rows = settled.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+      const failed = settled.flatMap((result, index) => result.status === 'rejected' ? [properties[index].name || properties[index].id] : []);
+      setItems(rows.filter((row) => row.history.length > 0).sort((a, b) => String(b.history[0]?.snapshot.generatedAt ?? '').localeCompare(String(a.history[0]?.snapshot.generatedAt ?? ''))));
+      if (failed.length) setError(`일부 물건의 보고서 이력을 불러오지 못했습니다: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ` 외 ${failed.length - 3}건` : ''}`);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : '보고서 이력을 불러오지 못했습니다.');
     } finally {
@@ -84,10 +89,10 @@ export default function ReportHistoryPage() {
         <CardContent>
           <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
             <Box>
-              <Typography variant="h6">{property.name}</Typography>
+              <Typography variant="h6">{property.name}{classifyPropertyRecord(property).recordClass !== 'operational' && <Chip size="small" variant="outlined" color="warning" label={RECORD_CLASS_LABEL[classifyPropertyRecord(property).recordClass]} sx={{ ml: 1 }} />}</Typography>
               <Typography variant="body2" color="text.secondary">{property.address} · {property.propertyNumber || '물건번호 미입력'}</Typography>
             </Box>
-            <Button size="small" onClick={() => navigate(`/property/${property.id}`)}>Data Room</Button>
+            <Button size="small" onClick={() => navigate(`/property/${encodeURIComponent(property.id)}`)}>물건 상세</Button>
           </Stack>
 
           <Stack spacing={1.25}>
@@ -99,7 +104,7 @@ export default function ReportHistoryPage() {
                   {isLatest && <Chip size="small" label="최신" variant="outlined" />}
                   {isLatestReady && <Chip size="small" label="최신 확정본" color="success" variant="outlined" />}
                 </Stack>
-                <Typography variant="body2">{new Date(snapshot.generatedAt).toLocaleString('ko-KR')}</Typography>
+                <Typography variant="body2">{Number.isNaN(Date.parse(snapshot.generatedAt)) ? '생성 시각 미기록' : new Date(snapshot.generatedAt).toLocaleString('ko-KR')}</Typography>
                 <Typography variant="caption" color="text.secondary">{snapshot.templateVersion} · {snapshot.engineVersion || 'engine 미기록'}{snapshot.generatedBy ? ` · ${snapshot.generatedBy}` : ''}</Typography>
               </Box>
               <Stack direction="row" spacing={1} justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>

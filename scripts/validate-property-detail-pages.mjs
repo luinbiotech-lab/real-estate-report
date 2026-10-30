@@ -113,3 +113,12 @@ const discoveryPanel = readFileSync('src/components/PropertyPublicDiscoveryPanel
 for (const marker of ['if (!value || loading) return;', 'requestId !== searchRequestRef.current']) if (!discoveryPanel.includes(marker)) fail(`공공자료 조회 패널 계약 누락: ${marker}`);
 console.log('Discovery matching validation passed.');
 if (!form.includes('navigate(`/property/${encodeURIComponent(data.id)}`);')) fail('신규 등록 후에도 저장된 물건 상세(→ Data Room)로 이어져야 합니다.');
+
+// 9. Report-adjacent pages outside the MASTER renderer (stage c, 2026-10-30).
+const briefing = readFileSync('src/pages/PropertyBriefingPage.tsx', 'utf8');
+for (const marker of ['let cancelled = false', "setLoadError('요청한 물건을 찾을 수 없습니다.')", '.catch((reason: unknown)', 'property.id !== id']) if (!briefing.includes(marker)) fail(`입지 브리핑 로딩 계약 누락: ${marker}`);
+if (briefing.includes('propertyRepository.getById(id).then(setProperty)')) fail('입지 브리핑이 없는 물건에서 무한 로딩되고 오류가 처리되지 않습니다.');
+if (briefing.indexOf('useReactToPrint(') > briefing.indexOf('if (loadError) return')) fail('입지 브리핑의 hook은 조건부 return보다 앞에 있어야 합니다.');
+const reportHistory = readFileSync('src/pages/ReportHistoryPage.tsx', 'utf8');
+for (const marker of ['Promise.allSettled(', "result.status === 'rejected'", 'classifyPropertyRecord(property)', "'생성 시각 미기록'"]) if (!reportHistory.includes(marker)) fail(`보고서 이력 계약 누락: ${marker}`);
+console.log('Report-adjacent page validation passed.');
