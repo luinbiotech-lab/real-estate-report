@@ -29,6 +29,7 @@ function makeHarness(loaderSource) {
   const propertyRequests = new Map([['A', deferred()], ['B', deferred()]]);
   const bundleRequests = new Map([['A', deferred()], ['B', deferred()]]);
   const requestRef = { current: 0 };
+  const loadedRef = { current: '' };
   const state = { property: undefined, bundle: undefined, loading: false, error: '' };
   const repository = { getById: (id) => propertyRequests.get(id).promise };
   const service = { getBundle: (id) => bundleRequests.get(id).promise };
@@ -39,7 +40,7 @@ function makeHarness(loaderSource) {
   function loadFor(id) {
     const module = { exports: {} };
     const wrapper = runInNewContext(`(function(module) { ${compiled} })`, {
-      id, useCallback: (callback) => callback, loadRequestRef: requestRef,
+      id, useCallback: (callback) => callback, loadRequestRef: requestRef, loadedIdRef: loadedRef,
       setLoading: (value) => { state.loading = value; },
       setError: (value) => { state.error = value; },
       setProperty: (value) => { state.property = value; },
@@ -50,7 +51,7 @@ function makeHarness(loaderSource) {
     wrapper(module);
     return module.exports;
   }
-  return { state, loadFor, propertyRequests, bundleRequests };
+  return { state, loadFor, propertyRequests, bundleRequests, loadedRef };
 }
 
 async function race(loaderSource, phase) {
@@ -87,6 +88,30 @@ await pendingMissing;
 assert.equal(missing.state.property, undefined, 'wrong Property ID must not render');
 assert.match(missing.state.error, /찾을 수 없습니다/);
 assert.equal(missing.state.loading, false);
+
+// Refresh of the same Property (after a save) keeps the current screen mounted instead of blanking it; a different
+// Property still starts from an empty screen (cross-Property isolation above is unchanged).
+{
+  const h = makeHarness(method);
+  const first = h.loadFor('B')();
+  h.propertyRequests.get('B').resolve({ id: 'B' });
+  h.bundleRequests.get('B').resolve({ documents: [{ id: 'B-doc', propertyId: 'B' }] });
+  await first;
+  assert.equal(h.loadedRef.current, 'B');
+  h.propertyRequests.set('B', deferred()); h.bundleRequests.set('B', deferred());
+  const again = h.loadFor('B')();
+  assert.equal(h.state.property?.id, 'B', 'same-Property refresh must keep the screen (panels and messages stay mounted)');
+  assert.equal(h.state.loading, false, 'same-Property refresh must not show the full-page spinner');
+  h.propertyRequests.get('B').resolve({ id: 'B' });
+  h.bundleRequests.get('B').resolve({ documents: [{ id: 'B-doc-2', propertyId: 'B' }] });
+  await again;
+  assert.deepEqual(h.state.bundle.documents.map((row) => row.id), ['B-doc-2'], 'refresh must apply the new bundle');
+  const other = h.loadFor('A')();
+  assert.equal(h.state.property, undefined, 'switching Property must clear the old Property immediately');
+  h.propertyRequests.get('A').resolve({ id: 'A' });
+  h.bundleRequests.get('A').resolve({ documents: [] });
+  await other;
+}
 
 // Negative control: removing the request guards must reintroduce the cross-Property race.
 const unsafe = method.replaceAll('if (requestId !== loadRequestRef.current) return;', '');
