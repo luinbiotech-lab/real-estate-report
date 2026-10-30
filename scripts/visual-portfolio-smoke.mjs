@@ -57,7 +57,9 @@ try {
   // Phone width: the closed drawer is off-canvas and inert; the toggle opens it and Escape closes it.
   await page.setViewportSize({ width: 390, height: 844 });
   const drawer = page.locator('#daon-main-drawer');
-  if (await drawer.getAttribute('inert') === null) throw new Error('닫힌 모바일 메뉴가 키보드 포커스 대상에 남아 있습니다.');
+  // The shell switches to the drawer on a matchMedia change event; give React a moment to re-render after the resize.
+  const becameInert = await page.waitForFunction(() => document.querySelector('#daon-main-drawer')?.hasAttribute('inert'), null, { timeout: 5_000 }).then(() => true).catch(() => false);
+  if (!becameInert) throw new Error(`닫힌 모바일 메뉴가 키보드 포커스 대상에 남아 있습니다. (inert=${await drawer.getAttribute('inert')}, aria-hidden=${await drawer.getAttribute('aria-hidden')}, width=${await page.evaluate(() => innerWidth)}, mq=${await page.evaluate(() => matchMedia('(max-width: 900px)').matches)})`);
   await page.getByRole('button', { name: '메뉴 열기' }).click();
   await page.getByRole('navigation', { name: 'DA:ON 주 메뉴' }).getByRole('link', { name: '주소로 물건 조회' }).waitFor({ state: 'visible' });
   await page.keyboard.press('Escape');
