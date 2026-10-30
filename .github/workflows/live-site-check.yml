@@ -31,3 +31,11 @@ jobs:
             summary=$(echo "$body" | jq -c '{status, publicDataConfigured, providers: (.providerStatus // {} | with_entries(.value = (if .value.ok then "ok" else (.value.error // "fail") end))), land: (.landProfile // {} | {pnu, officialLandPricePerSqm, landAreaSqm}), building: (.building // {} | {mainPurpsCdNm, totArea, grndFlrCnt, ugrndFlrCnt, useAprDay}), market: (.marketSummary // .market.summary // null)}' 2>/dev/null || echo "$body" | head -c 300)
             echo "::notice title=Live $q ($region)::$summary"
           done
+      - name: Transaction candidate composition (diagnosis, 논현로 339)
+        run: |
+          q=$(jq -rn --arg v "서울특별시 강남구 논현로 339" '$v|@uri')
+          curl -sS -m 40 "$SITE/api/property-discovery?query=$q" > /tmp/d.json
+          for kind in commercial land; do
+            echo "::notice title=Market $kind composition::$(jq -c --arg k "$kind" '.market[$k] as $r | {rows: ($r|length), byMatch: ($r|group_by(.matchLevel)|map({(.[0].matchLevel): length})|add), buildingType: ($r|map(.raw.buildingType // "-")|group_by(.)|map({(.[0]): length})|add), share: ($r|map(.raw.shareDealingType // "-")|group_by(.)|map({(.[0]): length})|add), cancelled: ($r|map(select((.raw.cdealType // "") != ""))|length), rawKeys: ($r[0].raw // {} | keys), sample: ($r[:4]|map({amt: .sourceDealAmountTenThousandWon, b: .buildingAreaSqm, l: .landAreaSqm, dong: .legalDong, jibun, use: .buildingUse, bt: .raw.buildingType, sh: .raw.shareDealingType, cd: .raw.cdealType}))}' /tmp/d.json | head -c 3000)"
+          done
+
