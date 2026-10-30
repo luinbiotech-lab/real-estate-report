@@ -1,3 +1,4 @@
+import { timingSafeEqual } from 'node:crypto';
 import { beginRequest, requestSearchParams, sendJson } from '../_lib/providerProxy.mjs';
 
 const VWORLD_DATA_URL = 'https://api.vworld.kr/req/data';
@@ -5,10 +6,25 @@ const PARCEL_LAYER = 'LP_PA_CBND_BUBUN';
 const PNU_PATTERN = /^[0-9]{19}$/;
 const DEFAULT_DOMAIN = 'https://real-estate-report.vercel.app';
 
+function validPilotToken(request) {
+  const expected = process.env.VWORLD_PROXY_ACCESS_TOKEN || '';
+  const received = request.headers?.['x-daon-vworld-pilot-token'];
+  if (expected.length < 32 || typeof received !== 'string' || received.length !== expected.length) return false;
+  return timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+}
+
+
 // Prototype endpoint: private VWorld key remains in the serverless runtime.
 // A Production rollout must additionally review authentication, quota/rate limits,
 // provider terms, registered domain constraints and official provenance.
 export default async function handler(request, response) {
+  // Restrict pilot to Vercel Preview; never expose a paid-provider proxy in Production.
+  if (process.env.VERCEL_ENV !== 'preview' || process.env.VWORLD_PROXY_ENABLED !== 'true') {
+    return sendJson(response, 404, { code: 'NOT_FOUND', message: '지원하지 않는 API 경로입니다.' });
+  }
+  if (!validPilotToken(request)) {
+    return sendJson(response, 401, { code: 'UNAUTHORIZED', message: 'Pilot 접근 권한이 없습니다.' });
+  }
   const state = beginRequest(request, response);
   if (state.handled) return;
 
