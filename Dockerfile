@@ -34,6 +34,8 @@ ENV NODE_ENV=production \
 WORKDIR /app
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/server ./server
+# server/proxy.mjs serves /api/property-discovery from ../api (since 4153872); the runtime must ship it.
+COPY --from=build /app/api ./api
 COPY --from=build /app/scripts/production.mjs ./scripts/production.mjs
 COPY --from=build /app/package.json ./package.json
 

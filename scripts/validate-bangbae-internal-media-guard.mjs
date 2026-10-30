@@ -1,0 +1,187 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { runInNewContext } from 'node:vm';
+import ts from 'typescript';
+
+// Execute the real policy module, not a reimplemented policy model.
+const source = readFileSync('src/domain/professionalReport/reportAccessPolicy.ts', 'utf8');
+const compiled = ts.transpileModule(source, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+// Compile the canonical Bangbae identity module as well: the policy must use
+// the same production/local ID contract as the Data Room.
+const identitySource = readFileSync('src/domain/propertyDataRoom/bangbaeIdentity.ts', 'utf8');
+const identityCompiled = ts.transpileModule(identitySource, {
+  compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 },
+}).outputText;
+const identityModule = { exports: {} };
+runInNewContext(`(function(require, module, exports) { ${identityCompiled}\n})`, {})(
+  () => { throw new Error('Unexpected runtime import in Bangbae identity'); },
+  identityModule, identityModule.exports,
+);
+const module = { exports: {} };
+const execute = runInNewContext(`(function(require, module, exports) { ${compiled}\n})`, {});
+execute((name) => {
+  if (name === '../propertyDataRoom/bangbaeIdentity') return identityModule.exports;
+  throw new Error(`Unexpected runtime import in media policy: ${name}`);
+}, module, module.exports);
+const { internalPhotoAllowed, isBangbae81511, reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed } = module.exports;
+
+const cases = [
+  ['parcel address / explicit true', { id: 'other', name: '', address: '서울 서초구 방배동 815-11', detailAddress: '', internalPhotoAllowed: true }, false],
+  ['road address / explicit true', { id: 'other', name: '', address: '서울 서초구 동광로18길 7', detailAddress: '', internalPhotoAllowed: true }, false],
+  ['property ID / explicit true', { id: 'daon-bangbae-815-11', name: '', address: '', detailAddress: '', internalPhotoAllowed: true }, false],
+  ['production property ID / explicit true', { id: 'sample-bangbae-815-11', name: '', address: '', detailAddress: '', internalPhotoAllowed: true }, false],
+  ['parcel address / explicit false', { id: 'other', name: '', address: '방배동 815-11', detailAddress: '', internalPhotoAllowed: false }, false],
+  ['unrelated / explicit true', { id: 'other', name: '', address: '서초구 서초동 1', detailAddress: '', internalPhotoAllowed: true }, true],
+  ['unrelated / explicit false', { id: 'other', name: '', address: '서초구 서초동 1', detailAddress: '', internalPhotoAllowed: false }, false],
+  ['unrelated / unset', { id: 'other', name: '', address: '서초구 서초동 1', detailAddress: '', internalPhotoAllowed: undefined }, true],
+];
+for (const [label, property, expected] of cases) {
+  assert.equal(internalPhotoAllowed(property), expected, label);
+  if (expected === false) {
+    assert.equal(reportMediaCategoryAllowed('interior', internalPhotoAllowed(property)), false, `${label}: interior`);
+  }
+}
+assert.equal(isBangbae81511(cases[2][1]), true, 'property ID must be sufficient even when address is unavailable');
+assert.equal(reportMediaCategoryAllowed('exterior', false), true, 'exterior photos remain allowed');
+// Unclassified and mixed media must never bypass a no-interior policy.
+for (const category of ['main', 'additional', 'other', '360', 'parking', 'entrance', 'interior', 'office']) {
+  assert.equal(reportMediaCategoryAllowed(category, false), false, `restricted ${category} must fail closed`);
+}
+for (const category of ['exterior', 'road', 'surroundings', 'facade_detail', 'aerial', 'floor_plan', 'map', 'location_analysis']) {
+  assert.equal(reportMediaCategoryAllowed(category, false), true, `classified ${category} remains available`);
+}
+// Regression guard for new reports AND stored Snapshot renderers.
+const builderSource = readFileSync('src/services/reportEngine/reportDataBuilder.ts', 'utf8');
+assert.match(builderSource, /if \(allowInternal && property\.mainImage\) items\.push/, 'new report cannot add unclassified main media');
+assert.match(builderSource, /mainImage: reportValue\(allowInternal \? property\.mainImage : null,/, 'new report hero must be gated');
+const openingSource = readFileSync('src/components/professionalReport/DaonReportOpeningPage.tsx', 'utf8');
+const detailSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+assert.match(openingSource, /model\.media\.internalPhotoAllowed \? model\.media\.mainImage\.value : null/, 'Opening must not trust restricted hero');
+assert.match(detailSource, /model\.media\.internalPhotoAllowed \? model\.media\.mainImage\.value : null/, '7P must not trust restricted hero');
+
+// Historical snapshots can contain a stale 'true' flag. Never trust it for Bangbae.
+assert.equal(reportSnapshotInternalPhotoAllowed({ id: 'daon-bangbae-815-11' }, true), false, 'legacy ID-only snapshot must be denied');
+assert.equal(reportSnapshotInternalPhotoAllowed({ id: 'sample-bangbae-815-11' }, true), false, 'production ID-only snapshot must be denied');
+assert.equal(reportSnapshotInternalPhotoAllowed({ address: '방배동 815-11' }, true), false, 'legacy parcel snapshot must be denied');
+assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 1' }, true), true, 'unrelated snapshot must retain explicit permission');
+assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 1' }, false), false, 'explicit deny remains denied');
+const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+assert.match(snapshotPage, /reportSnapshotInternalPhotoAllowed\(\{/, 'snapshot preview must re-evaluate current property privacy');
+assert.match(snapshotPage, /id: propertyId/, 'authoritative snapshot property ID must override untrusted stored identity');
+assert.match(snapshotPage, /\}, snapshot\.propertyId\);/, 'snapshot preview must pass authoritative property ID');
+assert.match(snapshotPage, /internalPhotoAllowed: false/, 'snapshot preview must pass the effective restriction to the 7P renderer');
+assert.match(snapshotPage, /item\.id !== 'property-main'/, 'unclassified primary image must fail closed');
+assert.match(snapshotPage, /reportMediaCategoryAllowed\(item\.category, false\)/, 'only explicitly non-interior media remains');
+console.log('PASS: Bangbae hard-deny internal media, eight property cases (including production ID) and exterior allowance');
+
+// Snapshot routes are reused by React Router. Prevent a late A response from
+// rendering/printing A while the URL already points to B.
+// These source assertions accompany a deterministic async model; not browser E2E.
+for (const [pattern, label] of [
+  [/setLoading\(true\);\s*setSnapshot\(undefined\);/, 'reset snapshot before loading a new route'],
+  [/return \(\) => \{ active = false; \};/, 'invalidate the old request on route change'],
+  [/if \(!active\) return;/, 'discard stale snapshot fetches'],
+  [/value\.id !== snapshotId/, 'reject a mismatched repository snapshot ID'],
+  [/if \(active\) \{ setFreshness\(nextFreshness\); setFreshnessError\(''\); \}/, 'discard stale freshness and clear prior failure'],
+  [/if \(active\) setLoading\(false\)/, 'old route must not complete new loading'],
+  [/snapshot && snapshot\.id !== snapshotId/, 'guard render before effects reset stale state'],
+  [/if \(currentRouteSnapshotId\.current === requestedId\) \{\s*const destination = getFinalizedSnapshotDestination\(requestedId, ready\);\s*if \(destination\) navigate\(destination, \{ replace: true \}\);\s*else setSnapshot\(ready\);\s*\}/, 'guard stale confirm completion and immutable final navigation'],
+  [/currentRouteSnapshotId\.current === requestedId\) navigate\(/, 'guard stale regeneration navigation'],
+]) assert.match(snapshotPage, pattern, label);
+
+function deferred() {
+  let resolve;
+  const promise = new Promise((done) => { resolve = done; });
+  return { promise, resolve };
+}
+function snapshotRouteModel() {
+  const state = { route: '', loading: false, snapshot: undefined, freshness: undefined, error: '' };
+  let previous;
+  const canPrint = () => !state.loading && state.snapshot?.id === state.route;
+  function load(id, fetchSnapshot, evaluateFreshness = async () => ({ isStale: false })) {
+    if (previous) previous.active = false;
+    const request = { active: true };
+    previous = request;
+    state.route = id; state.loading = true; state.snapshot = undefined;
+    state.freshness = undefined; state.error = '';
+    return (async () => {
+      try {
+        const value = await fetchSnapshot();
+        if (!request.active) return;
+        if (!value || value.id !== id) {
+          state.error = 'Snapshot mismatch';
+          return;
+        }
+        state.snapshot = value;
+        const fresh = await evaluateFreshness(value);
+        if (request.active) state.freshness = fresh;
+      } catch (reason) {
+        if (request.active) state.error = String(reason);
+      } finally {
+        if (request.active) state.loading = false;
+      }
+    })();
+  }
+  return { state, load, canPrint };
+}
+const route = snapshotRouteModel();
+const lateA = deferred();
+const pendingA = route.load('A', () => lateA.promise);
+assert.equal(route.canPrint(), false, 'A is not printable while loading');
+const pendingB = route.load('B', async () => ({ id: 'B' }));
+await pendingB;
+assert.equal(route.state.snapshot?.id, 'B');
+assert.equal(route.canPrint(), true);
+lateA.resolve({ id: 'A' });
+await pendingA;
+assert.equal(route.state.snapshot?.id, 'B', 'late A must not replace B');
+assert.equal(route.canPrint(), true, 'B must remain printable');
+const wrong = await route.load('C', async () => ({ id: 'A' }));
+assert.equal(route.state.snapshot, undefined, 'mismatched response must not be shown');
+assert.equal(route.canPrint(), false, 'mismatched response must not be printable');
+const delayedFreshness = deferred();
+const pendingD = route.load('D', async () => ({ id: 'D' }), () => delayedFreshness.promise);
+await Promise.resolve();
+const pendingE = route.load('E', async () => ({ id: 'E' }));
+await pendingE;
+delayedFreshness.resolve({ isStale: true });
+await pendingD;
+assert.equal(route.state.snapshot?.id, 'E', 'stale freshness must not replace the current route');
+assert.equal(route.state.freshness?.isStale, false, 'old stale state must not contaminate new report');
+console.log('PASS: snapshot route isolation model (late fetch, mismatched ID, stale freshness, print guard); NOT browser E2E');
+
+// 1P proposal preview is a separate rendering path from the professional
+// report builder. Test its actual media-selection expression: mixed Data Room
+// responses must not show/print a foreign Property's exterior photograph.
+const onePageSource = readFileSync('src/pages/DocumentPreview.tsx', 'utf8');
+const heroLine = onePageSource.split('\n').find((line) => line.includes('const dataRoomHero = bundle.media.find('));
+const heroExpression = heroLine ? [null, heroLine.trim().slice('const dataRoomHero = '.length).replace(/;$/, '')] : null;
+assert.ok(heroExpression, '1P hero media expression must be available for execution');
+const makeHeroSelector = (expression) => new Function(
+  'bundle', 'id', 'allowInternal', 'reportMediaCategoryAllowed',
+  `return ${expression};`,
+);
+const selectHero = makeHeroSelector(heroExpression[1]);
+const ownId = 'daon-bangbae-815-11';
+const mixedHeroBundle = { media: [
+  { id: 'foreign', propertyId: 'another-property', mediaType: 'image', category: 'exterior', url: 'foreign.jpg' },
+  { id: 'deleted', propertyId: ownId, mediaType: 'image', category: 'exterior', url: 'deleted.jpg', deletedAt: '2026-10-24' },
+  { id: 'video', propertyId: ownId, mediaType: 'video', category: 'exterior', url: 'video.mp4' },
+  { id: 'unknown', propertyId: ownId, mediaType: 'image', category: 'other', url: 'unknown.jpg' },
+  { id: 'interior', propertyId: ownId, mediaType: 'image', category: 'interior', url: 'interior.jpg' },
+  { id: 'exterior', propertyId: ownId, mediaType: 'image', category: 'exterior', url: 'own-exterior.jpg' },
+] };
+assert.equal(selectHero(mixedHeroBundle, ownId, false, reportMediaCategoryAllowed), 'own-exterior.jpg',
+  'restricted 1P report must select only its own active, explicitly exterior image');
+assert.equal(selectHero(mixedHeroBundle, ownId, true, reportMediaCategoryAllowed), 'unknown.jpg',
+  'unrestricted 1P report may use its own active image, but never another Property');
+assert.equal(selectHero({ media: mixedHeroBundle.media.slice(0, 5) }, ownId, false, reportMediaCategoryAllowed), '',
+  'no eligible own exterior means no hero image, not a foreign/deleted/interior fallback');
+const unscopedExpression = heroExpression[1].replace('item.propertyId === id && ', '');
+assert.notEqual(unscopedExpression, heroExpression[1], 'negative control must remove the Property boundary');
+assert.equal(makeHeroSelector(unscopedExpression)(mixedHeroBundle, ownId, false, reportMediaCategoryAllowed), 'foreign.jpg',
+  'negative control must reproduce the cross-Property image leak');
+console.log('PASS 1P hero cross-Property isolation: own active image, privacy policy, no fallback, negative control');
+

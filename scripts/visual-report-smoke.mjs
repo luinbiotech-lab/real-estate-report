@@ -1,5 +1,6 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, writeFile } from 'node:fs/promises';
 import { chromium } from 'playwright';
+import { annotateFailure } from './lib/qa-annotate.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const OUT_DIR = process.env.REPORT_QA_OUT_DIR || 'artifacts/report-qa';
@@ -42,7 +43,7 @@ try {
   await page.waitForSelector('body', { timeout: 30_000 });
   await page.waitForFunction(async () => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('real-estate-report', 13);
+      const request = indexedDB.open('real-estate-report');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -60,7 +61,7 @@ try {
 
   await page.evaluate(async ({ mainImage, mapImage }) => {
     const db = await new Promise((resolve, reject) => {
-      const request = indexedDB.open('real-estate-report', 13);
+      const request = indexedDB.open('real-estate-report');
       request.onsuccess = () => resolve(request.result);
       request.onerror = () => reject(request.error);
     });
@@ -159,10 +160,10 @@ try {
   const professional = await page.evaluate(() => {
     const master = document.querySelector('.daon-professional-report-master');
     const images = [...master.querySelectorAll('img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
-    const pages = [...master.querySelectorAll('.daon-frame-page, .daon-core-page')].map((node) => {
+    const pages = [...master.querySelectorAll('.daon-frame-page, .daon-detail-page')].map((node) => {
       const el = node;
       return {
-        masterPage: el.getAttribute('data-master-page') || '',
+        masterPage: el.getAttribute('data-master-page') || [...el.classList].find((name) => /^daon-detail-page-[1-7]$/.test(name))?.replace('daon-detail-page-', 'detail-') || '',
         className: el.className,
         scrollWidth: el.scrollWidth,
         scrollHeight: el.scrollHeight,
@@ -185,9 +186,13 @@ try {
   assert(professional.templateVersion === 'daon-professional-master-v3', `Professional template version mismatch: ${professional.templateVersion}`);
   assert(professional.visualMaster === 'DAON_VISUAL_MASTER_2026_09_22', `Visual master mismatch: ${professional.visualMaster}`);
   const pageNames = professional.pages.map((item) => item.masterPage);
+  // The locked MASTER is Opening + seven numbered detail pages + Closing.
+  // Legacy core-page markers no longer exist; testing them hid a real report QA failure.
+  assert(pageNames.length === 9, `MASTER must render exactly 9 pages: ${pageNames.join(',')}`);
   assert(pageNames[0] === 'opening', `Opening page missing: ${pageNames.join(',')}`);
-  assert(pageNames.includes('property-summary'), `Property summary page missing: ${pageNames.join(',')}`);
-  assert(pageNames.includes('investment-analysis'), `Investment analysis page missing: ${pageNames.join(',')}`);
+  for (let pageNumber = 1; pageNumber <= 7; pageNumber += 1) {
+    assert(pageNames[pageNumber] === `detail-${pageNumber}`, `MASTER detail page ${pageNumber} missing or out of order: ${pageNames.join(',')}`);
+  }
   assert(pageNames.at(-1) === 'closing', `Closing page missing: ${pageNames.join(',')}`);
   for (const [index, item] of professional.pages.entries()) {
     assert(item.scrollHeight <= item.clientHeight + 2, `Professional page ${index + 1} vertical overflow: ${item.scrollHeight}/${item.clientHeight}`);
@@ -200,6 +205,23 @@ try {
   await page.screenshot({ path: `${OUT_DIR}/daon-professional-master.png`, fullPage: true });
 
   console.log('Rendered DA:ON professional report smoke QA: PASS');
+} catch (error) {
+  // Preserve the rendered failure before closing Chromium, including missing-data
+  // context. Do not hide a failing MASTER assertion by altering the fixture.
+  await page.screenshot({ path: `${OUT_DIR}/report-failure.png`, fullPage: true }).catch(() => {});
+  const evidence = await page.evaluate(() => ({
+    url: location.href,
+    missingValueContexts: [...document.querySelectorAll('.daon-frame-page, .daon-detail-page')]
+      .map((el, index) => ({ page: index + 1, text: el.textContent || '' }))
+      .filter((item) => item.text.includes('확인 필요'))
+      .map((item) => ({ page: item.page, contexts: [...item.text.matchAll(/.{0,70}확인 필요.{0,70}/g)].map((match) => match[0]) })),
+  })).catch(() => ({ evidenceUnavailable: true }));
+  await writeFile(`${OUT_DIR}/report-failure.json`, JSON.stringify(evidence, null, 2));
+  console.error('Rendered report failure evidence:', JSON.stringify(evidence));
+  console.error('Rendered DA:ON report smoke QA: FAIL');
+  console.error(error);
+  annotateFailure('Rendered report smoke QA (design advisory)', error);
+  throw error;
 } finally {
   await browser.close();
 }

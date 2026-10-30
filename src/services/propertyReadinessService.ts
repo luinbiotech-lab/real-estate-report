@@ -28,8 +28,53 @@ export interface RequiredDocumentReadiness {
   missing: typeof REQUIRED_DOCUMENT_TYPES;
 }
 
-export function assessRequiredDocumentReadiness(bundle: DataRoomBundle): RequiredDocumentReadiness {
-  const inventoryDocumentTypes = new Set(bundle.dataSources
+// All Data Room rows used to generate a report must belong to the authoritative Property.
+// Repository filtering alone is not a security boundary: stale/mixed bundles can reach the builder.
+export function scopeDataRoomBundle(bundle: DataRoomBundle, propertyId: string): DataRoomBundle {
+  return {
+    ...bundle,
+    documents: bundle.documents?.filter((row) => row.propertyId === propertyId) ?? [],
+    media: bundle.media?.filter((row) => row.propertyId === propertyId) ?? [],
+    verifications: bundle.verifications?.filter((row) => row.propertyId === propertyId) ?? [],
+    verificationCandidates: bundle.verificationCandidates?.filter((row) => row.propertyId === propertyId) ?? [],
+    dataSources: bundle.dataSources?.filter((row) => row.propertyId === propertyId) ?? [],
+    reportSnapshots: bundle.reportSnapshots?.filter((row) => row.propertyId === propertyId) ?? [],
+    digitalTwinAssets: bundle.digitalTwinAssets?.filter((row) => row.propertyId === propertyId) ?? [],
+    agentJobs: bundle.agentJobs?.filter((row) => row.propertyId === propertyId),
+    agentResults: bundle.agentResults?.filter((row) => row.propertyId === propertyId),
+    agentReviews: bundle.agentReviews?.filter((row) => row.propertyId === propertyId),
+    spaces: bundle.spaces?.filter((row) => row.propertyId === propertyId),
+    spaceMediaLinks: bundle.spaceMediaLinks?.filter((row) => row.propertyId === propertyId),
+    spaceRoomLinks: bundle.spaceRoomLinks?.filter((row) => row.propertyId === propertyId),
+    facilities: bundle.facilities?.filter((row) => row.propertyId === propertyId),
+    roomEvidencePositions: bundle.roomEvidencePositions?.filter((row) => row.propertyId === propertyId),
+    roomConditionHistory: bundle.roomConditionHistory?.filter((row) => row.propertyId === propertyId),
+    renovationAssessments: bundle.renovationAssessments?.filter((row) => row.propertyId === propertyId),
+    roomRenovationAssessments: bundle.roomRenovationAssessments?.filter((row) => row.propertyId === propertyId),
+    roomRenovationHistory: bundle.roomRenovationHistory?.filter((row) => row.propertyId === propertyId),
+    riskAssessments: bundle.riskAssessments?.filter((row) => row.propertyId === propertyId),
+  };
+}
+
+// A Data Room metadata row or a stale/deleted document is not an attached original.
+// Remote mode downloads the private Storage object into fileData before returning
+// the bundle; local mode stores the original Blob in IndexedDB.
+function hasConnectedOriginal(document: DataRoomBundle['documents'][number]): boolean {
+  return !document.deletedAt &&
+    typeof document.storagePath === 'string' && document.storagePath.trim().length > 0 &&
+    document.fileData instanceof Blob &&
+    document.fileData.size > 0 &&
+    Number.isFinite(document.fileSize) && document.fileSize === document.fileData.size;
+}
+
+export function assessRequiredDocumentReadiness(bundle: DataRoomBundle, propertyId?: string): RequiredDocumentReadiness {
+  // A repository query normally scopes rows by Property, but a mixed/stale bundle
+  // must never certify another Property's official originals or attestations.
+  // Callers that issue a report must supply the authoritative Property ID.
+  const documents = propertyId ? bundle.documents.filter((document) => document.propertyId === propertyId) : bundle.documents;
+  const verifications = propertyId ? bundle.verifications.filter((verification) => verification.propertyId === propertyId) : bundle.verifications;
+  const dataSources = propertyId ? bundle.dataSources.filter((source) => source.propertyId === propertyId) : bundle.dataSources;
+  const inventoryDocumentTypes = new Set(dataSources
     .filter((source) => source.resourceType === 'source_document_inventory' && source.metadata?.originalSourcePresence === 'confirmed')
     .map((source) => {
       const type = source.metadata?.documentType;
@@ -37,11 +82,12 @@ export function assessRequiredDocumentReadiness(bundle: DataRoomBundle): Require
       return typeof type === 'string' ? type : '';
     })
     .filter(Boolean));
-  const connected = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) => document.documentType === type));
+  const connected = REQUIRED_DOCUMENT_TYPES.filter((type) => documents.some((document) =>
+    document.documentType === type && hasConnectedOriginal(document)));
   const present = REQUIRED_DOCUMENT_TYPES.filter((type) => connected.includes(type) || inventoryDocumentTypes.has(type));
-  const verified = REQUIRED_DOCUMENT_TYPES.filter((type) => bundle.documents.some((document) =>
-    document.documentType === type &&
-    (document.verificationStatus === 'verified' || bundle.verifications.some((verification) =>
+  const verified = REQUIRED_DOCUMENT_TYPES.filter((type) => documents.some((document) =>
+    document.documentType === type && hasConnectedOriginal(document) &&
+    (document.verificationStatus === 'verified' || verifications.some((verification) =>
       verification.status === 'verified' &&
       (verification.fieldKey === `document:${document.id}` || verification.fieldKey === document.id)
     ))
@@ -67,10 +113,35 @@ function coreStage(property: Property): ReadinessStage {
 }
 
 export function assessPropertyReadiness(property: Property, bundle: DataRoomBundle): PropertyReadinessAssessment {
+  // Never let a mixed/stale Data Room response inflate another Property's dashboard readiness.
+  // Scope every stage, not only the official-document gate used for report finalization.
+  bundle = scopeDataRoomBundle(bundle, property.id);
   const spaces = bundle.spaces ?? [];
   const hasReadyReport = bundle.reportSnapshots.some((snapshot) => snapshot.status === 'ready');
   const hasReport = bundle.reportSnapshots.length > 0;
-  const required = assessRequiredDocumentReadiness(bundle);
+  // A floor-plan upload, failed conversion, or sample 3D file is not a verified Digital Twin.
+  // This is a dashboard readiness signal, not independent evidence of real dimensions.
+  const activeTwinAssets = bundle.digitalTwinAssets.filter((asset) => !asset.deletedAt);
+  const readyTwinModels = activeTwinAssets.filter((asset) =>
+    (asset.assetType === 'glb' || asset.assetType === 'gltf') && asset.processingStatus === 'ready');
+  const readySourcePlanIds = new Set(activeTwinAssets
+    .filter((asset) => ['floor_plan', 'scanned_plan', 'dwg', 'dxf'].includes(asset.assetType) &&
+      asset.processingStatus === 'ready')
+    .map((asset) => asset.id));
+  const dimensionCheckedModels = readyTwinModels.filter((asset) =>
+    asset.metadata?.horizontalScaleVerified === true &&
+    asset.metadata?.heightStatus === 'verified' &&
+    typeof asset.metadata?.sourceFloorPlanAssetId === 'string' &&
+    readySourcePlanIds.has(asset.metadata.sourceFloorPlanAssetId));
+
+  // A recorded estimate or unresolved candidate is not completed verification.
+  const verifiedRecordCount = bundle.verifications.filter((record) => record.status === 'verified').length;
+  const unresolvedCandidateCount = bundle.verificationCandidates.filter((candidate) =>
+    candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held').length;
+  const verificationReady = verifiedRecordCount > 0 &&
+    verifiedRecordCount === bundle.verifications.length && unresolvedCandidateCount === 0;
+
+  const required = assessRequiredDocumentReadiness(bundle, property.id);
   const requiredPresent = required.present;
   const requiredConnected = required.connected;
   const requiredVerified = required.verified;
@@ -101,8 +172,10 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
     {
       id: 'verification',
       label: '검증',
-      state: bundle.verifications.length > 0 ? 'ready' : bundle.verificationCandidates.length > 0 ? 'partial' : 'missing',
-      detail: bundle.verifications.length > 0 ? `검증 ${bundle.verifications.length}건` : bundle.verificationCandidates.length > 0 ? `후보 ${bundle.verificationCandidates.length}건` : '검증 기록 없음',
+      state: verificationReady ? 'ready' : bundle.verifications.length > 0 || bundle.verificationCandidates.length > 0 ? 'partial' : 'missing',
+      detail: bundle.verifications.length > 0 || bundle.verificationCandidates.length > 0
+        ? `공식검증 ${verifiedRecordCount}/${bundle.verifications.length}건 · 대기/보류 ${unresolvedCandidateCount}건`
+        : '검증 기록 없음',
       pathSuffix: '?tab=verification',
     },
     {
@@ -122,8 +195,12 @@ export function assessPropertyReadiness(property: Property, bundle: DataRoomBund
     {
       id: 'digital_twin',
       label: '3D / Digital Twin',
-      state: bundle.digitalTwinAssets.length > 0 ? 'ready' : 'missing',
-      detail: `${bundle.digitalTwinAssets.length}개 자산`,
+      state: dimensionCheckedModels.length > 0 ? 'ready' : activeTwinAssets.length > 0 ? 'partial' : 'missing',
+      detail: dimensionCheckedModels.length > 0
+        ? `치수·축척 검증표시 3D ${dimensionCheckedModels.length}건 (실자료 독립검증 별도)`
+        : activeTwinAssets.length > 0
+          ? `자산 ${activeTwinAssets.length}건 · 모델 준비 ${readyTwinModels.length}건 · 도면/치수/층 검증 필요`
+          : '3D 자산 없음',
       pathSuffix: '?tab=digitalTwin',
     },
   ];

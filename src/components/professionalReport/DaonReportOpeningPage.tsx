@@ -1,10 +1,13 @@
 import type { ProfessionalReportViewModel } from '../../domain/professionalReport/types';
+import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 
 const display = (value: { value: unknown; display: string }, fallback = '') =>
   value.value === null || value.value === '' ? fallback : value.display;
 
 export function DaonReportOpeningPage({ model }: { model: ProfessionalReportViewModel }) {
-  const hero = model.media.mainImage.value || model.media.items.find((item) => item.url && (item.category === 'main' || item.category === 'exterior'))?.url || null;
+  const hero = (model.media.internalPhotoAllowed ? model.media.mainImage.value : null)
+    || model.media.items.find((item) => item.url && reportMediaCategoryAllowed(item.category, model.media.internalPhotoAllowed)
+      && (item.category === 'main' || item.category === 'exterior'))?.url || null;
   const name = display(model.identity.name, 'DA:ON PROFESSIONAL REPORT');
   const location = display(model.identity.address, '');
   return <article className="daon-frame-page daon-opening-page" data-master-page="opening">

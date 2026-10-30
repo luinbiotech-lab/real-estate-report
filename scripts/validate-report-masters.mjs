@@ -15,6 +15,7 @@ const requiredFiles = [
   'src/domain/professionalReport/templateIds.ts',
   'src/services/reportEngine/reportSnapshotService.ts',
   'src/domain/professionalReport/reportAccessPolicy.ts',
+  'scripts/visual-report-smoke.mjs',
 ];
 
 const forbiddenFiles = [
@@ -51,6 +52,7 @@ const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx'
 const templateIds = readFileSync('src/domain/professionalReport/templateIds.ts', 'utf8');
 const snapshotService = readFileSync('src/services/reportEngine/reportSnapshotService.ts', 'utf8');
 const accessPolicy = readFileSync('src/domain/professionalReport/reportAccessPolicy.ts', 'utf8');
+const reportSmoke = readFileSync('scripts/visual-report-smoke.mjs', 'utf8');
 
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
@@ -138,6 +140,15 @@ if (!snapshotPage.includes('DaonProfessionalReportMaster') || snapshotPage.inclu
 if (!professionalMaster.includes('DaonReportOpeningPage') || !professionalMaster.includes('DaonDetail7PageMaster') || !professionalMaster.includes('DaonReportClosingPage')) {
   throw new Error('DAON PROFESSIONAL MASTER는 OPENING + DAON_DETAIL_7P_MASTER + CLOSING 구조를 유지해야 합니다.');
 }
+// Keep rendered QA aligned with the approved nine-page MASTER. The previous
+// smoke looked for removed core-page selectors and failed after the Opening.
+if (!detail.includes('daon-detail-page-${page}') ||
+    !reportSmoke.includes("master.querySelectorAll('.daon-frame-page, .daon-detail-page')") ||
+    !reportSmoke.includes('pageNames.length === 9') ||
+    !reportSmoke.includes('pageNames[pageNumber] === `detail-${pageNumber}`') ||
+    reportSmoke.includes("master.querySelectorAll('.daon-frame-page, .daon-core-page')")) {
+  throw new Error('렌더링 QA는 OPENING + 상세 7P + CLOSING의 실제 DOM 구조와 순서를 검증해야 합니다.');
+}
 if (professionalMaster.includes('DaonApprovedCorePages') || professionalMaster.includes('DaonPropertySummaryMasterPage') || professionalMaster.includes('DaonInvestmentAnalysisMasterPage') || professionalMaster.includes('DaonDevelopmentDeepDiveMasterPage')) {
   throw new Error('잠금된 DAON_DETAIL_7P_MASTER를 우회하는 별도 core page 조합을 사용하면 안 됩니다.');
 }
@@ -150,7 +161,7 @@ if (!frameCss.includes('.daon-opening-page') || !frameCss.includes('.daon-closin
 if (!snapshotPage.includes('현재 DA:ON MASTER로 다시 생성')) {
   throw new Error('구형 Snapshot은 현재 MASTER 재생성 경로를 제공해야 합니다.');
 }
-if (!snapshotPage.includes('reportReady') || !snapshotPage.includes('검증 필요')) {
+if (!snapshotPage.includes('reportReady') || !snapshotPage.includes('getSnapshotFinalizationUiState') || !readFileSync('src/services/reportEngine/reportFinalizationUiState.ts', 'utf8').includes("label: '검증 필요'")) {
   throw new Error('7P 미리보기에서 검증 준비도를 표시해야 합니다.');
 }
 if (!snapshotService.includes('viewModel.dataQuality.reportReady')) {
@@ -164,3 +175,36 @@ if (!refinementCss.includes('.d1-map>img') || !refinementCss.includes('.dd-image
 }
 
 console.log('DA:ON report master integrity: PASS');
+
+// Validate privacy restrictions using the executable report policy module.
+await import('./validate-bangbae-internal-media-guard.mjs');
+
+
+// Execute the actual 1P preview route predicate to prevent cross-property
+// preview/print regressions when React Router reuses DocumentPreview.
+// This tests synchronous render gating; it is not a browser/PDF E2E test.
+const routePredicate = documentPreview.match(/const current = ([\s\S]*?) as PreviewState;/);
+if (!routePredicate) throw new Error('1P 미리보기 경로 격리 조건이 누락되었습니다.');
+const currentForRoute = new Function('view', 'routeKey', 'kind', 'id', `return (${routePredicate[1]});`);
+const previous = { routeKey: 'proposal:A', phase: 'ready', property: { id: 'A' } };
+const routeCases = [
+  ['matching property', previous, 'proposal:A', 'proposal', 'A', 'ready'],
+  ['A to B before effect', previous, 'proposal:B', 'proposal', 'B', 'loading'],
+  ['proposal to report', previous, 'report:A', 'report', 'A', 'loading'],
+  ['mismatched property', { routeKey: 'proposal:B', phase: 'ready', property: { id: 'A' } }, 'proposal:B', 'proposal', 'B', 'loading'],
+  ['report cannot print 1P', { routeKey: 'report:A', phase: 'ready', property: { id: 'A' } }, 'report:A', 'report', 'A', 'loading'],
+  ['stale error suppressed', { routeKey: 'proposal:A', phase: 'error', error: 'old' }, 'proposal:B', 'proposal', 'B', 'loading'],
+  ['current error retained', { routeKey: 'proposal:B', phase: 'error', error: 'current' }, 'proposal:B', 'proposal', 'B', 'error'],
+  ['loading retained', { routeKey: 'proposal:B', phase: 'loading' }, 'proposal:B', 'proposal', 'B', 'loading'],
+];
+for (const [name, view, key, kind, id, expected] of routeCases) {
+  const actual = currentForRoute(view, key, kind, id);
+  if (actual.phase !== expected) throw new Error(`1P route isolation ${name}: ${actual.phase} != ${expected}`);
+}
+if (!documentPreview.includes('if (cancelled) return;') ||
+    !documentPreview.includes('value.id !== id') ||
+    !documentPreview.includes("current.phase === 'ready'") ||
+    !documentPreview.includes("setView({ routeKey, phase: 'loading' })")) {
+  throw new Error('1P 비동기 요청 취소·Property ID·인쇄·로딩 가드가 누락되었습니다.');
+}
+console.log('DA:ON 1P route isolation: PASS (8 executable predicate scenarios; browser E2E still required)');

@@ -8,7 +8,7 @@ import { remoteMigrationDryRunService } from '../services/remoteMigrationDryRunS
 import { remoteMigrationHandoffService } from '../services/remoteMigrationHandoffService';
 import type { LocalMigrationSnapshot, RemoteMigrationPlan } from '../services/remoteMigrationPlanService';
 import { REMOTE_MIGRATION_CONFIRMATION, remoteMigrationExecutionService, type RemoteMigrationExecutionResult } from '../services/remoteMigrationExecutionService';
-import { assessRequiredDocumentReadiness } from '../services/propertyReadinessService';
+import { assessRequiredDocumentReadiness, scopeDataRoomBundle } from '../services/propertyReadinessService';
 import { DOCUMENT_TYPE_LABELS } from '../domain/propertyDataRoom/labels';
 import { localBackupService } from '../services/localBackupService';
 
@@ -106,11 +106,11 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
 
   const loadContentReadiness = async (propertyId: string) => {
     if (!propertyId) { setContentReadiness(undefined); return; }
-    const bundle = await propertyDataRoomRepository.getBundle(propertyId);
+    const bundle = scopeDataRoomBundle(await propertyDataRoomRepository.getBundle(propertyId), propertyId);
     const inventories = bundle.dataSources.filter((source) => source.resourceType === 'source_document_inventory');
     const confirmed = inventories.filter((source) => source.metadata?.originalSourcePresence === 'confirmed');
     const unconfirmed = inventories.filter((source) => source.metadata?.originalSourcePresence !== 'confirmed');
-    const requiredDocuments = assessRequiredDocumentReadiness(bundle);
+    const requiredDocuments = assessRequiredDocumentReadiness(bundle, propertyId);
     setContentReadiness({
       sourceInventoryTotal: inventories.length,
       sourceInventoryConfirmed: confirmed.length,

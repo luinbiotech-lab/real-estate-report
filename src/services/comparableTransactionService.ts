@@ -70,6 +70,12 @@ export const comparableTransactionService = {
   async replace(propertyId: string, rows: ComparableTransactionInput[], source: ComparableTransactionSource) {
     if (!rows.length) throw new Error('비교거래를 1건 이상 입력해 주세요.');
     rows.forEach(validateRow);
+    // A user-editable market-data form cannot independently attest official verification.
+    // Preserve the submitted evidence, but require the separate verification workflow
+    // to promote a source to verified. Never self-approve on a data edit.
+    if (source.verificationStatus === 'verified') {
+      throw new Error('비교거래 입력·수정만으로 공식 검증 완료를 지정할 수 없습니다. 별도 검증 이력을 완료해 주세요.');
+    }
     const property = await propertyRepository.getById(propertyId);
     if (!property) throw new Error('비교거래를 연결할 물건을 찾을 수 없습니다.');
 
@@ -128,7 +134,7 @@ export const comparableTransactionService = {
       fieldKey: 'nearbyTransactions',
       status: source.verificationStatus,
       note: `${source.sourceName} 비교거래 ${storedRows.length}건 제공 원문 전사 확인 · row provenance ${provenanceComplete.length}/${storedRows.length} · 독립 공식 원천 검증 미완료 · 원문 평당가 보존 · 산술 차이 검토 ${arithmeticReviewRequired.length}건`,
-      verifiedAt: source.verificationStatus === 'verified' || source.verificationStatus === 'confirmed' ? now : undefined,
+      verifiedAt: source.verificationStatus === 'confirmed' ? now : undefined,
       createdAt: existingVerifications.find((item) => item.id === verificationId)?.createdAt ?? now,
       updatedAt: now,
     });

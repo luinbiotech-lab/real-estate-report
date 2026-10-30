@@ -4,6 +4,7 @@ import type {
   SpatialVerificationStatus,
 } from '../domain/propertyDataRoom/spatialMediaModel';
 import { getSpatialVerificationLevel, isReportSafeMedia } from '../domain/propertyDataRoom/spatialMediaModel';
+import { reportSpatialMediaAllowed } from '../domain/professionalReport/reportAccessPolicy';
 
 export interface SpatialMediaSummary {
   floorPlans: number;
@@ -34,12 +35,17 @@ function active<T extends { deletedAt?: string }>(items: T[]) {
   return items.filter((item) => !item.deletedAt);
 }
 
-function reportSafeMediaCount(items: MediaAssetRecord[]) {
-  return items.filter((item) => isReportSafeMedia(item)).length;
+function reportSafeSpatialMedia(item: MediaAssetRecord, allowInternalPhotos: boolean) {
+  return isReportSafeMedia(item) && reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, allowInternalPhotos);
+}
+
+function reportSafeMediaCount(items: MediaAssetRecord[], allowInternalPhotos: boolean) {
+  return items.filter((item) => reportSafeSpatialMedia(item, allowInternalPhotos)).length;
 }
 
 export const spatialMediaViewService = {
-  summarize(bundle: SpatialMediaDataRoomBundle): SpatialMediaSummary {
+  summarize(bundle: SpatialMediaDataRoomBundle, allowInternalPhotos = true): SpatialMediaSummary {
+    const photosAllowed = allowInternalPhotos && bundle.mediaPolicy?.allowInteriorPhotos !== false;
     const floorPlans = active(bundle.floorPlans);
     const spaces = active(bundle.spaces);
     const mediaAssets = active(bundle.mediaAssets);
@@ -84,7 +90,38 @@ export const spatialMediaViewService = {
 
     const spatialReady = floorPlans.length > 0 && spaces.length > 0;
     const walkthroughReady = readyViewerScenes > 0 && validWalkthroughRoutes > 0;
-    const reportSpatialReady = spatialReady && reportSafeMediaCount(mediaAssets) > 0 && conflictCount === 0;
+    // Report-grade spatial evidence requires a scale-verified original plan,
+    // verified mapping, and verified space/media. An uploaded or estimated
+    // plan may count toward workflow progress, but not report readiness.
+    // A report-grade floor plan must be tied to a real floor with a verified space.
+    // Verified but orphaned spaces/plans must not certify a multi-floor Digital Twin.
+    const verifiedPlanFloorIds = new Set(floorPlans
+      .map((plan) => plan.floorId)
+      .filter((floorId): floorId is string => typeof floorId === 'string' && floorId.trim().length > 0));
+    const verifiedScaledPlan = floorPlans.length > 0 && floorPlans.every((plan) =>
+      plan.scaleStatus === 'verified' && plan.extractionStatus === 'verified' && isVerifiedStatus(plan.verificationStatus) &&
+      // A verified flag without a traceable original and calibrated scale cannot certify a real 3D floor.
+      ((typeof plan.sourceFileId === 'string' && plan.sourceFileId.trim().length > 0) ||
+        (typeof plan.storagePath === 'string' && plan.storagePath.trim().length > 0)) &&
+      typeof plan.scaleValue === 'number' && Number.isFinite(plan.scaleValue) && plan.scaleValue > 0 &&
+      typeof plan.scaleUnit === 'string' && plan.scaleUnit.trim().length > 0 &&
+      typeof plan.floorId === 'string' && plan.floorId.trim().length > 0 &&
+      spaces.some((space) => space.floorId === plan.floorId && isVerifiedStatus(space.verificationStatus)));
+    const verifiedSpace = spaces.length > 0 && spaces.every((space) =>
+      isVerifiedStatus(space.verificationStatus) &&
+      typeof space.floorId === 'string' && verifiedPlanFloorIds.has(space.floorId));
+    const reportMedia = mediaAssets.filter((asset) => reportSafeSpatialMedia(asset, photosAllowed));
+    const verifiedReportMedia = reportMedia.length > 0 && reportMedia.every((asset) => isVerifiedStatus(asset.verificationStatus));
+    // Verified media alone is not proof that the image belongs to the measured floor.
+    // Each plan floor must have an independently verified media-to-space match on that floor.
+    const verifiedMediaMappedFloorIds = new Set(mediaSpaceLinks
+      .filter((link) => link.matchStatus === 'verified' && isVerifiedStatus(link.verificationStatus) &&
+        reportMedia.some((asset) => asset.id === link.mediaAssetId) &&
+        spaces.some((space) => space.id === link.spaceId && space.floorId === link.floorId && isVerifiedStatus(space.verificationStatus)))
+      .map((link) => link.floorId));
+    const verifiedMediaMapping = verifiedPlanFloorIds.size > 0 &&
+      [...verifiedPlanFloorIds].every((floorId) => verifiedMediaMappedFloorIds.has(floorId));
+    const reportSpatialReady = spatialReady && verifiedScaledPlan && verifiedSpace && verifiedReportMedia && verifiedMediaMapping && conflictCount === 0;
 
     return {
       floorPlans: floorPlans.length,
@@ -92,7 +129,7 @@ export const spatialMediaViewService = {
       spaces: spaces.length,
       verifiedSpaces: spaces.filter((item) => isVerifiedStatus(item.verificationStatus)).length,
       mediaAssets: mediaAssets.length,
-      reportSafeMedia: reportSafeMediaCount(mediaAssets),
+      reportSafeMedia: reportSafeMediaCount(mediaAssets, photosAllowed),
       unmatchedMedia: unmatchedMediaIds.size,
       mediaNeedsReview: needsReviewIds.size,
       viewerScenes: viewerScenes.length,
@@ -108,8 +145,9 @@ export const spatialMediaViewService = {
     };
   },
 
-  buildReportSpatialSnapshot(bundle: SpatialMediaDataRoomBundle) {
-    const summary = this.summarize(bundle);
+  buildReportSpatialSnapshot(bundle: SpatialMediaDataRoomBundle, allowInternalPhotos = true) {
+    const photosAllowed = allowInternalPhotos && bundle.mediaPolicy?.allowInteriorPhotos !== false;
+    const summary = this.summarize(bundle, photosAllowed);
     return {
       mediaPolicy: bundle.mediaPolicy,
       floorPlans: active(bundle.floorPlans).map((item) => ({
@@ -135,7 +173,7 @@ export const spatialMediaViewService = {
         verificationStatus: item.verificationStatus,
       })),
       media: active(bundle.mediaAssets)
-        .filter((item) => isReportSafeMedia(item))
+        .filter((item) => reportSafeSpatialMedia(item, photosAllowed))
         .map((item) => ({
           id: item.id,
           mediaType: item.mediaType,
