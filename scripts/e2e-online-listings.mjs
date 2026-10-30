@@ -47,7 +47,18 @@ function record(listing, step, status, detail = '') {
 }
 async function check(listing, step, fn) {
   try { const detail = await fn(); record(listing, step, 'PASS', detail || ''); return true; }
-  catch (error) { record(listing, step, 'FAIL', error instanceof Error ? error.message.split('\n')[0].slice(0, 300) : String(error)); return false; }
+  catch (error) {
+    // Artifacts cannot be downloaded from every review environment, so the failure line itself carries the context:
+    // where the page was, its headings and any alert text.
+    const where = await page.evaluate(() => ({
+      path: location.pathname + location.search,
+      headings: [...document.querySelectorAll('h1, h2')].map((el) => (el.textContent || '').trim()).filter(Boolean).slice(0, 6).join(' | '),
+      alerts: [...document.querySelectorAll('.MuiAlert-message')].map((el) => (el.textContent || '').trim().slice(0, 100)).slice(0, 3).join(' | '),
+    })).catch(() => null);
+    const message = error instanceof Error ? error.message.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 3).join(' ').slice(0, 300) : String(error);
+    record(listing, step, 'FAIL', `${message}${where ? ` @ ${where.path} [h: ${where.headings}]${where.alerts ? ` [alert: ${where.alerts}]` : ''}` : ''}`);
+    return false;
+  }
 }
 function assert(condition, message) { if (!condition) throw new Error(message); }
 
@@ -259,7 +270,7 @@ try {
     await check(target.key, '실내 사진 → Interior Vision 분석', async () => {
       await page.goto(`${BASE_URL}/spatial?propertyId=${pid}`, { waitUntil: 'domcontentloaded' });
       await visibleText('Spatial Workspace', 25_000);
-      await pickCategory('실내');
+      await pickCategory('인테리어');
       await page.locator('input[type="file"]').first().setInputFiles({ name: 'e2e-interior-room.png', mimeType: 'image/png', buffer: IMAGES.interior });
       await visibleText('e2e-interior-room', 30_000);
       await page.getByText(/공간 자료 \d+건을 등록했습니다/).first().waitFor({ state: 'visible', timeout: 30_000 });
@@ -277,7 +288,7 @@ try {
     await check(target.key, '도면 이미지 → Floor Plan 자산', async () => {
       await page.goto(`${BASE_URL}/spatial?propertyId=${pid}`, { waitUntil: 'domcontentloaded' });
       await visibleText('Spatial Workspace', 25_000);
-      await pickCategory('평면도');
+      await pickCategory('도면/CAD');
       await page.getByLabel('층(선택)').fill('1F');
       await page.locator('input[type="file"]').first().setInputFiles({ name: 'e2e-floor-plan-1f.png', mimeType: 'image/png', buffer: IMAGES.plan });
       await page.getByText(/공간 자료 \d+건을 등록했습니다/).first().waitFor({ state: 'visible', timeout: 30_000 });
