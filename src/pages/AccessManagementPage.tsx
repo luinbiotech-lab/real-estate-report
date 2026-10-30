@@ -211,7 +211,7 @@ export default function AccessManagementPage() {
     <Alert severity="warning" sx={{ mb: 1.5 }}><strong>PRODUCTION SECURITY · MANUAL CHECK REQUIRED</strong> · Supabase Auth의 Leaked Password Protection 활성화 여부는 운영 승인 전에 Dashboard에서 직접 확인해야 합니다. 브라우저 UI는 이 설정을 자동으로 READY 처리하지 않습니다.</Alert>
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(320px,1fr))', gap: 12, marginBottom: 16 }}>
-      {AUTH_PROVIDER_SUMMARIES.map((provider) => <div key={provider.kind} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}>
+      {AUTH_PROVIDER_SUMMARIES.map((provider) => <div key={provider.kind} className="ds-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'flex-start' }}>
           <div><small style={{ color: '#667085', letterSpacing: '.08em' }}>AUTH PROVIDER</small><strong style={{ display: 'block', marginTop: 4 }}>{provider.label}</strong></div>
           <Chip size="small" color={provider.status === 'ready' ? 'success' : 'warning'} label={provider.status === 'ready' ? 'READY' : 'NOT CONFIGURED'} />
@@ -223,7 +223,7 @@ export default function AccessManagementPage() {
       </div>)}
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+    <section className="ds-card" style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <div>
           <strong>REMOTE AUTH SESSION</strong>
@@ -242,7 +242,7 @@ export default function AccessManagementPage() {
       </div>}
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+    <section className="ds-card" style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <div>
           <strong>PRODUCTION OPERATOR ACCEPTANCE GATE</strong>
@@ -294,10 +294,10 @@ export default function AccessManagementPage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(160px,1fr))', gap: 10, marginBottom: 16 }}>
       {[
         ['등록 프로필', profiles.length], ['ACTIVE', activeCount], ['ACTIVE OWNER', ownerCount],
-      ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
+      ].map(([label, value]) => <div key={String(label)} className="ds-card" style={{ padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+    <section className="ds-card" style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
         <div><strong style={{ fontSize: 16 }}>ROLE MATRIX</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>역할별 허용 capability를 명시적으로 고정합니다.</p></div>
         <AdminPanelSettingsRounded color="primary" />
@@ -311,7 +311,7 @@ export default function AccessManagementPage() {
     </section>
 
     <section style={{ display: 'grid', gridTemplateColumns: 'minmax(300px,.8fr) minmax(520px,1.4fr)', gap: 14 }}>
-      <div style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}>
+      <div className="ds-card">
         <strong>로컬 권한 프로필 추가</strong>
         <p style={{ color: '#667085', fontSize: 12 }}>실제 계정 초대가 아니라 Auth 연결 전 역할정책 테스트용 프로필입니다.</p>
         <div style={{ display: 'grid', gap: 10 }}>
@@ -321,7 +321,7 @@ export default function AccessManagementPage() {
         </div>
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}>
+      <div className="ds-card">
         <strong>ACCESS PROFILES</strong>
         <p style={{ color: '#667085', fontSize: 12 }}>OWNER 정책은 최소 1개 ACTIVE 상태를 유지합니다.</p>
         <div style={{ display: 'grid', gap: 8 }}>

@@ -26,7 +26,7 @@ export default function InteriorRoomLinkPanel({ propertyId, spaces, assets, link
     finally { setBusy(''); }
   };
 
-  return <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+  return <section className="ds-card" style={{ marginBottom: 20 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div><h2 style={{ margin: 0 }}>Interior ↔ 3D Room Linking</h2><p style={{ color: '#667085', margin: '6px 0 0' }}>승인된 Interior 공간 모델을 Human Review된 Digital Twin room boundary에 연결합니다. 자동 후보는 확정 연결이 아닙니다.</p></div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" variant="outlined" label={`Interior spaces ${spaces.length}`} /><Chip size="small" variant="outlined" label={`3D rooms ${approvedRooms.length}`} /><Chip size="small" color={approvedLinks.length ? 'success' : 'default'} variant="outlined" label={`Linked ${approvedLinks.length}`} /></div>

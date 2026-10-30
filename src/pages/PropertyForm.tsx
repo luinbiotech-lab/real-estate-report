@@ -91,7 +91,7 @@ export default function PropertyForm({ settings }: { settings: Settings }) {
   };
   if (id && loadState === 'loading') return <div className="center"><CircularProgress /><p>물건 정보를 불러오는 중입니다.</p></div>;
   if (id && (loadState === 'not_found' || loadState === 'error')) return <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => navigate('/')}>물건 목록</Button>}>{loadState === 'not_found' ? '수정할 물건을 찾을 수 없습니다. 저장하면 새 물건이 만들어지므로 편집 화면을 열지 않았습니다.' : `물건 정보를 불러오지 못했습니다. ${error}`}</Alert>;
-  return <><header className="page-header compact"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>목록으로</Button><h1>{id ? '물건 수정' : '개별 물건 등록'}</h1><p>입력한 하나의 물건 데이터가 보고서·제안서·입지 브리핑에 함께 반영됩니다.</p></div><Button variant="contained" startIcon={<SaveRounded />} onClick={save} disabled={saving}>저장하기</Button></header>{error && <div className="error-banner">{error}</div>}<div className="form-layout"><div>
+  return <><header className="page-header compact"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>목록으로</Button><h1>{id ? '물건 수정' : '개별 물건 등록'}</h1><p>입력한 하나의 물건 데이터가 보고서·제안서·입지 브리핑에 함께 반영됩니다.</p></div><Button className="form-save-button" variant="contained" startIcon={<SaveRounded />} onClick={save} disabled={saving}>저장하기</Button></header>{error && <div className="error-banner">{error}</div>}<div className="form-layout"><div>
     <PropertyPublicDiscoveryPanel
       property={property}
       onResolved={setDiscoveryResult}

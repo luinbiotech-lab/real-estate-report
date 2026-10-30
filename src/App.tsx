@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Navigate, Route, Routes } from 'react-router-dom';
-import { Alert, CircularProgress, createTheme, ThemeProvider } from '@mui/material';
+import { Alert, CircularProgress, ThemeProvider } from '@mui/material';
+import { applyBrandToDocument, createBrandTheme } from './brand/activeBrand';
 import { settingsRepository } from './repositories/propertyRepository';
 import type { Settings } from './types';
 import Layout from './components/Layout';
@@ -52,15 +53,9 @@ const defaults: Settings = {
   reportContactMode: 'mobile_email_only',
 };
 
-const theme = createTheme({
-  palette: {
-    primary: { main: '#073a69' },
-    secondary: { main: '#b47a25' },
-    background: { default: '#f3f5f8' },
-  },
-  typography: { fontFamily: 'Pretendard, "Noto Sans KR", Arial, sans-serif' },
-  shape: { borderRadius: 10 },
-});
+// Brand tokens drive the app theme (DA:ON now; LUIN by VITE_APP_BRAND later). Report MASTER styles are separate and locked.
+applyBrandToDocument();
+const theme = createBrandTheme();
 
 function AppContent() {
   const [ready, setReady] = useState(false);

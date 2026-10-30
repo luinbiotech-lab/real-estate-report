@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { activeBrand } from '../brand/activeBrand';
 import { AddRounded, ArrowBackRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, MenuRounded, CloseRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
@@ -75,7 +76,7 @@ export default function Layout() {
   const drawerHidden = isMobile && !mobileNavOpen;
 
   return <div className="app-shell"><button ref={toggleRef} type="button" className="mobile-menu-toggle" aria-label={mobileNavOpen ? '메뉴 닫기' : '메뉴 열기'} aria-expanded={mobileNavOpen} aria-controls="daon-main-drawer" onClick={() => setMobileNavOpen(v => !v)}>{mobileNavOpen ? <CloseRounded /> : <MenuRounded />}</button>{mobileNavOpen && <button type="button" className="mobile-nav-backdrop" aria-label="메뉴 닫기" tabIndex={-1} onClick={() => setMobileNavOpen(false)} />}<aside id="daon-main-drawer" className={mobileNavOpen ? 'mobile-nav-open' : ''} inert={drawerHidden} aria-hidden={drawerHidden || undefined}>
-    <div className="brand"><span>DA</span><div>DA:ON ASSET<small>PROPERTY DATA & AGENT PLATFORM</small></div></div>
+    <div className="brand"><span aria-hidden="true">{activeBrand.mark}</span><div>{activeBrand.name}<small>{activeBrand.tagline}</small></div></div>
     <nav aria-label="DA:ON 주 메뉴" onClick={(event) => { if ((event.target as HTMLElement).closest('a')) setMobileNavOpen(false); }}>
       <div className="side-primary">
         {primaryNav.map((item) => <NavLink key={item.to} to={item.to} end={item.to === '/'} className="side-primary-link">{navIcons[item.icon]}<span><strong>{item.title}</strong>{item.module && <small>{item.module}</small>}</span></NavLink>)}
@@ -93,7 +94,7 @@ export default function Layout() {
         </section>;
       })}</div>
     </nav>
-    <div className="side-note" aria-label="AGENT MODULAR ARCHITECTURE">DA:ON OPERATIONS<small>필요한 영역만 열어 집중해서 작업합니다.</small></div>
+    <div className="side-note" aria-label="AGENT MODULAR ARCHITECTURE">{activeBrand.operationsLabel}<small>필요한 영역만 열어 집중해서 작업합니다.</small></div>
   </aside><main>
     {route.crumbs.length > 0 && <div className="shell-context-bar">
       {route.parent && <Button size="small" className="shell-back" startIcon={<ArrowBackRounded />} onClick={() => navigate(route.parent!.to)}>{route.parent.label}</Button>}
