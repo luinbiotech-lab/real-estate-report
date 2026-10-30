@@ -30,6 +30,7 @@ for (const [width, height, tag] of [[390, 844, 'm'], [1440, 1000, 'd']]) {
     await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined);
     await page.waitForTimeout(1200);
     await page.screenshot({ path: `${OUT}/${tag}-${name}.png`, fullPage: false });
+    if (tag === 'm' && name === 'home') await page.screenshot({ path: `${OUT}/m-home-full.png`, fullPage: true });
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
     console.log(`::notice title=shot ${tag}-${name}::overflow=${overflow}px`);
   }

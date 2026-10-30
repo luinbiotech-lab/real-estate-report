@@ -130,3 +130,48 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
   /* The menu toggle sits top-left over the open drawer; keep the brand mark clear of it. */
   .app-shell>aside{padding-top:calc(72px + env(safe-area-inset-top))}
 }
+
+/*
+ * Screen composition on phones (owner 2026-10-30 "디자인 바로잡기"): first screen = what to do next.
+ * Home: compact hero, primary actions before KPIs, no duplicated explanations. Text/labels are unchanged (CSS only).
+ */
+@media(max-width:900px){
+  .app-shell .portfolio-focus{display:flex;flex-direction:column}
+  .app-shell .portfolio-focus>*{order:5}
+  .app-shell .portfolio-focus-hero{order:1;padding:16px 16px 14px;gap:10px}
+  .app-shell .portfolio-focus-hero h2{font-size:18px;margin:6px 0 0}
+  .app-shell .portfolio-focus-hero p{display:none}
+  .app-shell .portfolio-focus-system{gap:4px}
+  .app-shell .portfolio-focus-system .MuiChip-root{height:22px;font-size:11px}
+  .app-shell .portfolio-load-state{order:2}
+  .app-shell .portfolio-empty-state{order:2;padding:14px 16px}
+  .app-shell .portfolio-section-label{order:3;margin-top:4px}
+  .app-shell .portfolio-focus-actions{order:4;margin-bottom:14px}
+  .app-shell .portfolio-focus-metrics{order:5;margin-bottom:10px}
+  .app-shell .portfolio-sample-note{order:6}
+  .app-shell .portfolio-focus-more{order:7;margin-top:6px}
+  /* The empty state already explains sample records; don't repeat it under the KPIs. */
+  .app-shell .portfolio-focus:has(.portfolio-empty-state) .portfolio-sample-note{display:none}
+  /* Page subtitle repeats the hero message on phones. */
+  .app-shell .page-header>div>p:not(.eyebrow){display:none}
+  .app-shell .portfolio-focus-action{min-height:60px;padding:12px 14px}
+}
+
+/* Property list: card rows on phones instead of a 10-column table squeezed into a scroll box. */
+@media(max-width:700px){
+  .property-list-table thead{display:none}
+  .property-list-table,.property-list-table tbody{display:block;width:100%}
+  .property-list-table tr{display:grid;grid-template-columns:24px minmax(0,1fr) auto;grid-template-areas:"pick name price" "pick addr area" "pick meta actions";gap:4px 10px;padding:14px 12px;border-bottom:1px solid var(--brand-line);align-items:center}
+  .property-list-table td{display:block;padding:0;border:0!important;min-width:0}
+  .property-list-table td:nth-child(1){grid-area:pick;align-self:start;padding-top:2px}
+  .property-list-table td:nth-child(2){display:none}
+  .property-list-table td:nth-child(3){grid-area:name;font-weight:700}
+  .property-list-table td:nth-child(4){grid-area:addr;color:var(--brand-muted);font-size:12.5px;overflow-wrap:anywhere}
+  .property-list-table td:nth-child(5){grid-area:meta;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .property-list-table td:nth-child(5) small{margin:0}
+  .property-list-table td:nth-child(6){grid-area:price;text-align:right;font-size:14px}
+  .property-list-table td:nth-child(7){grid-area:area;text-align:right;color:var(--brand-muted);font-size:12.5px}
+  .property-list-table td:nth-child(8),.property-list-table td:nth-child(9){display:none}
+  .property-list-table td:nth-child(10){grid-area:actions;justify-self:end}
+  .app-shell .property-list-table tbody tr:hover td{background:transparent}
+}
