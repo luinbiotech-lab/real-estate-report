@@ -63,3 +63,32 @@ for (const marker of ['buildPropertyToSave(property, id, loadState', 'disabled={
 if (form.includes('id: property.id || crypto.randomUUID()')) fail('편집 저장에서 빈 ID를 새 UUID로 바꾸는 경로가 남아 있습니다.');
 
 console.log('Property detail pages validation passed (hero privacy 5, comparables 3, edit-save integrity 6, number input 6, wiring).');
+
+// 6. Data Room document actions (2026-10-30).
+const docRules = await importTs('src/domain/propertyDetail/dataRoomDocumentRules.ts');
+const doc = { id: 'd1', propertyId: 'p-1', title: '건축물대장', verificationStatus: 'imported', verifiedAt: undefined, updatedAt: 'old' };
+if (JSON.stringify(docRules.documentVerificationOptions('imported')) !== JSON.stringify(['unverified', 'imported', 'confirmed', 'verified'])) fail('문서 검증 선택지는 미확인/외부자료/사용자 확인/공식 확인만이어야 합니다.');
+if (docRules.documentVerificationOptions('ai_analysis')[0] !== 'ai_analysis') fail('기존(레거시) 상태는 선택지에 보존 표시되어야 합니다.');
+for (const bad of ['calculated', 'estimated', 'ai_analysis', 'missing']) {
+  try { docRules.applyDocumentVerification(doc, bad, 'T'); fail(`문서에 시스템 전용 상태 ${bad}를 지정할 수 있습니다.`); } catch (error) { if (String(error.message).includes('지정할 수 있습니다')) throw error; }
+}
+const verifiedDoc = docRules.applyDocumentVerification(doc, 'verified', 'T');
+if (verifiedDoc.verificationStatus !== 'verified' || verifiedDoc.verifiedAt !== 'T' || verifiedDoc.updatedAt !== 'T') fail('공식 확인 시 시각이 기록되어야 합니다.');
+if (docRules.applyDocumentVerification(verifiedDoc, 'confirmed', 'U').verifiedAt !== undefined) fail('공식 확인 해제 시 verifiedAt을 지워야 합니다.');
+if (docRules.applyDocumentVerification(doc, 'imported', 'T') !== doc) fail('같은 상태 선택은 저장하지 않아야 합니다.');
+if (!docRules.requiresOfficialConfirmation('imported', 'verified') || docRules.requiresOfficialConfirmation('verified', 'verified') || docRules.requiresOfficialConfirmation('imported', 'confirmed')) fail('공식 확인으로 올릴 때만 사람 확인 절차가 필요합니다.');
+const dataRoom = readFileSync('src/pages/PropertyDataRoomPage.tsx', 'utf8');
+for (const marker of ['setBundle(scopeDataRoomBundle(nextBundle, id))', 'applyDocumentVerification(document, status,', 'requiresOfficialConfirmation(document.verificationStatus, status)', "catch (reason) { setError(reason instanceof Error ? reason.message : '문서를 삭제하지 못했습니다.'); }", 'documentVerificationOptions(document.verificationStatus)', 'disabled={Boolean(busyDocumentId)}']) if (!dataRoom.includes(marker)) fail(`Data Room 문서 처리 계약 누락: ${marker}`);
+if (dataRoom.includes('Object.entries(VERIFICATION_LABELS).map(([key, label]) => <MenuItem')) fail('문서 검증 선택지에 시스템 전용 상태 전체를 노출하면 안 됩니다.');
+console.log('Data Room document action validation passed.');
+
+// 7. Comparable transaction panel: parse errors visible, Korean status labels, responsive fields.
+const comparablePanel = readFileSync('src/components/propertyDataRoom/ComparableTransactionPanel.tsx', 'utf8');
+if (comparablePanel.includes('catch { return []; }')) fail('비교거래 입력 오류를 숨기고 0건으로 표시하면 안 됩니다.');
+for (const marker of ['parseError && !error', 'VERIFICATION_LABELS[status]', 'Boolean(parseError)', 'className="comparable-source-fields"']) if (!comparablePanel.includes(marker)) fail(`비교거래 패널 계약 누락: ${marker}`);
+if (!readFileSync('src/mobile-shell.css', 'utf8').includes('@media(max-width:480px){.comparable-source-fields')) fail('비교거래 출처 입력 반응형 CSS 누락');
+console.log('Comparable panel validation passed.');
+const bulkStart = dataRoom.indexOf('const uploadSourceDocuments = async');
+const bulk = dataRoom.slice(bulkStart, dataRoom.indexOf('const removeDocument = async', bulkStart));
+if (!bulk.includes('linkedCount += 1;') || bulk.indexOf('if (linkedCount) await load()') > bulk.indexOf('setError(linkedCount ?')) fail('공적자료 일괄 등록이 중간에 실패하면 이미 연결된 건수를 (재로드 후) 알려야 합니다.');
+console.log('Bulk source upload partial-failure validation passed.');

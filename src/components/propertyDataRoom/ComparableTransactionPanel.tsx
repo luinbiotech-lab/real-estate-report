@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { Alert, Button, Chip, MenuItem, TextField } from '@mui/material';
 import type { PropertyDataSource, VerificationStatus } from '../../domain/propertyDataRoom/types';
 import { comparableTransactionService, type ComparableTransactionInput } from '../../services/comparableTransactionService';
+import { VERIFICATION_LABELS } from '../../domain/propertyDataRoom/labels';
 
 const statusOptions: Array<Extract<VerificationStatus, 'confirmed' | 'imported' | 'unverified'>> = ['confirmed', 'imported', 'unverified'];
 
@@ -79,8 +80,10 @@ export default function ComparableTransactionPanel({ propertyId, sources, onSave
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
 
-  const parsedRows = useMemo(() => {
-    try { return text.trim() ? parseRows(text) : []; } catch { return []; }
+  // Show the parse problem while typing; previously it was swallowed and the count silently read "0건".
+  const { parsedRows, parseError } = useMemo(() => {
+    try { return { parsedRows: text.trim() ? parseRows(text) : [], parseError: '' }; }
+    catch (reason) { return { parsedRows: [] as ComparableTransactionInput[], parseError: reason instanceof Error ? reason.message : '입력 형식을 확인해 주세요.' }; }
   }, [text]);
   const parsedCount = parsedRows.length;
   const missingProvenance = parsedRows.filter((row) => !row.sourceRow || !row.sourceRecordLabel).length;
@@ -110,17 +113,18 @@ export default function ComparableTransactionPanel({ propertyId, sources, onSave
     </div>
     {message && <Alert severity="success">{message}</Alert>}
     {error && <Alert severity="error">{error}</Alert>}
+    {parseError && !error && <Alert severity="warning" role="status">입력 형식 오류: {parseError}</Alert>}
     {existing?.verificationStatus === 'verified' && <Alert severity="warning" sx={{ mb: 2 }}>
       기존 비교거래 검증은 수정·재저장 시 재검토가 필요합니다. 이 화면에서는 공식 검증 완료를 지정할 수 없으며, 저장 후 별도 검증 이력을 확인해야 합니다.
     </Alert>}
     {missingProvenance > 0 && <Alert severity="warning" sx={{ mb: 2 }}>
       원문 행번호·기록명 미입력 {missingProvenance}건. 저장은 가능하지만 원문 대조 전에는 전문 보고서를 확정할 수 없습니다.
     </Alert>}
-    <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr 180px 180px', gap: 12, marginBottom: 12 }}>
+    <div className="comparable-source-fields">
       <TextField size="small" label="출처명" value={sourceName} onChange={(event) => setSourceName(event.target.value)} />
       <TextField size="small" label="출처 참조" value={sourceReference} onChange={(event) => setSourceReference(event.target.value)} placeholder="파일명 / URL / 문서 ID" />
       <TextField size="small" type="date" label="자료 기준일" value={sourceDate} onChange={(event) => setSourceDate(event.target.value)} slotProps={{ inputLabel: { shrink: true } }} />
-      <TextField select size="small" label="검증 상태" value={verificationStatus} onChange={(event) => setVerificationStatus(event.target.value as typeof verificationStatus)}>{statusOptions.map((status) => <MenuItem key={status} value={status}>{status}</MenuItem>)}</TextField>
+      <TextField select size="small" label="검증 상태" value={verificationStatus} onChange={(event) => setVerificationStatus(event.target.value as typeof verificationStatus)}>{statusOptions.map((status) => <MenuItem key={status} value={status}>{VERIFICATION_LABELS[status]}</MenuItem>)}</TextField>
     </div>
     <TextField
       fullWidth
@@ -133,6 +137,6 @@ export default function ComparableTransactionPanel({ propertyId, sources, onSave
       placeholder={example}
       helperText="한 행: 명칭 | 거래가(원) | 대지면적(평) | 토지평당가(원) | 승인연도 | 거래일(YYYY-MM-DD) | 주소 | 원문 행번호 | 원문 기록명. 원문 위치는 탭/파이프 구분 9열로 입력하세요. 기존 6~7열·쉼표 입력도 가능하지만 최종 확정 전 출처 보완이 필요합니다."
     />
-    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><Button variant="contained" disabled={busy || !text.trim()} onClick={save}>{busy ? '저장 중…' : '비교거래 저장 및 보고서 연결'}</Button></div>
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}><Button variant="contained" disabled={busy || !text.trim() || Boolean(parseError)} onClick={save}>{busy ? '저장 중…' : '비교거래 저장 및 보고서 연결'}</Button></div>
   </div>;
 }
