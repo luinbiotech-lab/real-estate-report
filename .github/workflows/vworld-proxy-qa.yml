@@ -1,0 +1,25 @@
+name: VWorld parcel proxy mock QA
+
+on:
+  pull_request:
+    branches: [master]
+    paths:
+      - 'api/vworld/parcel.mjs'
+      - 'scripts/validate-vworld-parcel.mjs'
+      - '.github/workflows/vworld-proxy-qa.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  vworld-proxy-contract:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Verify no external VWorld calls and no secret dependency
+        run: node scripts/validate-vworld-parcel.mjs
