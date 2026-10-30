@@ -55,8 +55,13 @@ export default function PropertyPublicDiscoveryPanel({
   const candidates = result?.buildingCandidates ?? [];
   const building = candidates.length > 1 ? candidates[Math.min(buildingIndex, candidates.length - 1)] : result?.building;
   const summary = result?.address ? buildDiscoverySummary(result) : undefined;
-  const trades = [...(result?.market?.exactLot || []), ...(result?.market?.commercial || []), ...(result?.market?.land || [])]
-    .filter((trade, index, rows) => rows.findIndex((candidate) => candidate.type === trade.type && candidate.dealDate === trade.dealDate && candidate.jibun === trade.jibun && candidate.dealAmount === trade.dealAmount) === index)
+  // exactLot repeats rows that are also in commercial/land; add only exact-lot rows not already listed. Genuine repeats in the
+  // public data (e.g. one lot sold in equal shares) stay and are grouped as '동일 거래 N건' below — they used to be dropped,
+  // which hid how many deals a single price level represented.
+  const listed = [...(result?.market?.commercial || []), ...(result?.market?.land || [])];
+  const tradeKey = (trade: { type: string; dealDate: string; jibun: string; dealAmount?: number }) => `${trade.type}|${trade.dealDate}|${trade.jibun}|${trade.dealAmount ?? ''}`;
+  const listedKeys = new Set(listed.map(tradeKey));
+  const trades = [...(result?.market?.exactLot || []).filter((trade) => !listedKeys.has(tradeKey(trade))), ...listed]
     .sort((a, b) => b.dealDate.localeCompare(a.dealDate));
   const groupedTrades = groupIdenticalTrades(trades).slice(0, 8);
   const marketSummary = result?.market?.summary;
