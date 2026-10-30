@@ -207,5 +207,31 @@ const marketBlock = service.slice(service.indexOf("id: `public-market:"), servic
 if (!marketBlock.includes("verificationStatus: 'imported'") || marketBlock.includes("verificationStatus: 'confirmed'")) throw new Error('공개 실거래 스냅샷은 imported(후보)로 저장해야 합니다.');
 if (!marketBlock.includes('transaction_candidates_not_confirmed_comparables')) throw new Error('공개 실거래 스냅샷의 후보 의미(evidenceSemantics) 누락');
 
+// Issue #37: property type classification from public records (executable), never guessing units.
+const { classifyPropertyType } = await import(new URL('../api/property-discovery.mjs', import.meta.url).href);
+const typeOf = (titles, landProfile = null) => classifyPropertyType({ titles, landProfile });
+const cases37 = [
+  [[{ mainUse: '제2종근린생활시설', registerKind: '일반' }], null, 'commercial_office'],
+  [[{ mainUse: '공동주택', detailUse: '아파트', registerKind: '집합', householdCount: 300 }], null, 'apartment'],
+  [[{ mainUse: '공동주택', detailUse: '다세대주택', registerKind: '집합' }], null, 'row_house'],
+  [[{ mainUse: '업무시설', detailUse: '오피스텔' }], null, 'officetel'],
+  [[{ mainUse: '단독주택', detailUse: '다가구주택' }], null, 'detached'],
+  [[{ mainUse: '창고시설' }], null, 'factory_warehouse'],
+  [[{ mainUse: '공동주택', detailUse: '아파트' }, { mainUse: '제1종근린생활시설' }], null, 'mixed'],
+  [[], { landCategory: '대', landUseSituation: '주거기타' }, 'unconfirmed'],
+  [[], { landCategory: '대', landUseSituation: '주거나지' }, 'land'],
+  [[], { landCategory: '전', landUseSituation: '전' }, 'land'],
+  [[], null, 'unconfirmed'],
+];
+for (const [titles, landProfile, expected] of cases37) {
+  const result = typeOf(titles, landProfile);
+  assert.strictEqual(result.type, expected, `유형 분류 오류: ${JSON.stringify(titles)} → ${result.type} (기대 ${expected})`);
+  assert.ok(Array.isArray(result.basis) && result.basis.length > 0, '분류 근거(basis)가 필요합니다');
+}
+assert.strictEqual(typeOf([{ mainUse: '공동주택', detailUse: '아파트' }, { mainUse: '공동주택', detailUse: '아파트' }]).multipleBuildings, true, '여러 표제부는 선택 단계가 필요합니다');
+assert.ok(typeOf([], null).basis.some((line) => line.includes('미확인')), '표제부 없음은 건물 부재가 아니라 미확인');
+const discoverySource = readFileSync('api/property-discovery.mjs', 'utf8');
+if (!discoverySource.includes('unrecordedFields')) throw new Error('건축물대장 0/공란을 미기재로 구분하는 unrecordedFields 누락');
+
 console.log('PASS public property discovery contract');
 console.log('PASS MOLIT dealAmount 만원→KRW normalization regression');

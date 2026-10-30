@@ -6,6 +6,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { deflateSync } from 'node:zlib';
 import { chromium } from 'playwright';
+import { classifyPropertyType, marketSummary as summarizeMarket, normalizeTrade } from '../api/property-discovery.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const OUT = 'artifacts/agent-qa';
@@ -432,6 +433,65 @@ try {
         });
       }
     }
+    await page.setViewportSize({ width: 1440, height: 1100 });
+  }
+
+  // 11. Issue #37: address lookup result on phones (320/375/390/430). The QA server has no API proxy, so the discovery
+  //     response is a fixture shaped like a real Production answer (방배동 765-32 lot, two register titles, share deals);
+  //     the type and market summary come from the real server functions, not hand-written values.
+  {
+    const titles = [
+      { buildingName: ' ', lotAddress: '서울특별시 서초구 방배동 765-32번지', roadAddress: '서울특별시 서초구 동광로1길 49 (방배동)', landAreaSqm: 0, landAreaPyeong: 0, buildingAreaSqm: 85.03, totalFloorAreaSqm: 160.87, buildingCoverageRate: 0, floorAreaRatio: 0, structure: '벽돌구조', mainUse: '제1종근린생활시설', detailUse: '소매점', registerKind: '일반', dongName: '', groundFloors: 2, basementFloors: 1, completionDate: '1976-12-10', rawPk: 'A', unrecordedFields: ['landAreaSqm', 'buildingCoverageRate', 'floorAreaRatio'] },
+      { buildingName: ' ', lotAddress: '서울특별시 서초구 방배동 765-32번지', roadAddress: '', landAreaSqm: 0, totalFloorAreaSqm: 21.5, buildingAreaSqm: 21.5, structure: '블록구조', mainUse: '창고시설', detailUse: '창고', registerKind: '일반', dongName: '부속동', groundFloors: 1, basementFloors: 0, completionDate: '', rawPk: 'B', unrecordedFields: ['landAreaSqm'] },
+    ];
+    const landProfile = { pnu: '1165010100107650032', standardYear: '2026', officialLandPricePerSqm: 9193000, estimatedOfficialLandValue: 1344016600, landAreaSqm: 146.2, landCategory: '대', landUseSituation: '상업용', terrainHeight: '평지', terrainShape: '세로장방', roadSide: '세로한면(가)', primaryUseZone: '제3종일반주거지역', useZones: ['제3종일반주거지역'] };
+    const resolved = { bun: '0765', ji: '0032', region3: '방배동' };
+    const share = (n) => ({ dealAmount: '2,600', dealArea: '3.3', shareDealingType: '지분', dealYear: '2026', dealMonth: '10', dealDay: '15', umdNm: '방배동', jibun: '7**', _n: n });
+    const landRows = Array.from({ length: 6 }, (_, i) => normalizeTrade(share(i), 'land', resolved));
+    const commercialRows = [
+      normalizeTrade({ dealAmount: '529,400', buildingAr: '320.5', plottageAr: '230.1', buildingType: '일반', dealYear: '2026', dealMonth: '9', dealDay: '3', umdNm: '방배동', jibun: '8**', buildingUse: '제2종근린생활' }, 'commercial', resolved),
+      normalizeTrade({ dealAmount: '12,365', buildingAr: '10.58', buildingType: '집합', dealYear: '2026', dealMonth: '10', dealDay: '21', umdNm: '방배동', jibun: '9**', buildingUse: '제2종근린생활' }, 'commercial', resolved),
+    ];
+    const fixture = {
+      status: 'ok', publicDataConfigured: true, vworldConfigured: true,
+      address: { query: '서울 서초구 동광로1길 49', officialAddress: '서울특별시 서초구 방배동 765-32', roadAddress: '서울특별시 서초구 동광로1길 49', lotAddress: '서울 서초구 방배동 765-32', latitude: 37.4874, longitude: 126.9937, region1: '서울', region2: '서초구', region3: '방배동', bCode: '1165010100', sigunguCd: '11650', bjdongCd: '10100', mountainYn: 'N', bun: '0765', ji: '0032' },
+      building: titles[0], buildingCandidates: titles, floors: [], landUseZones: [{ type: '용도지역', code: 'UQA123', name: '제3종일반주거지역', representativeYn: 'Y' }],
+      propertyType: classifyPropertyType({ titles, landProfile }), landProfile,
+      market: { commercial: commercialRows, land: landRows, summary: summarizeMarket([...commercialRows, ...landRows]), exactLot: [] },
+      usageEvidence: { state: 'no_public_record', interpretation: '공개 사용량 자료 없음', positiveMonths: 0, monthly: [] },
+      operatingBusinessEvidence: { state: 'no_public_record', interpretation: '공개 상가업소 기록 없음', sameAddress: [], nearby: [] },
+      kakaoPoiEvidence: { state: 'not_configured', interpretation: '', sameAddress: [], nearby: [] },
+      providerStatus: { buildingTitle: { ok: true }, landTrades: { ok: true }, commercialTrades: { ok: true }, vworldLandProfile: { ok: true } },
+    };
+    await page.route('**/api/property-discovery**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(fixture) }));
+    for (const width of [320, 375, 390, 430]) {
+      await check(`조회${width}`, '지번 조회 결과 — 유형·요약·탭·건물 선택(Issue #37)', async () => {
+        await page.setViewportSize({ width, height: 860 });
+        await page.goto(`${BASE_URL}/property/new`, { waitUntil: 'domcontentloaded' });
+        await page.getByLabel('건물 조회 주소').fill('서울 서초구 동광로1길 49');
+        await page.getByRole('button', { name: '건물 조회' }).click();
+        const summary = page.getByTestId('discovery-summary');
+        await summary.waitFor({ state: 'visible', timeout: 15_000 });
+        const text = await summary.innerText();
+        assert(text.includes(`유형: ${fixture.propertyType.label}`), `유형 표시 누락: ${text.slice(0, 80)}`);
+        assert(text.includes('시세') && text.includes('아닙니다'), '공시지가 기준 토지가액이 시세가 아니라는 안내가 없습니다.');
+        assert(text.includes('미기재'), '건축물대장 0값이 미기재로 안내되지 않습니다.');
+        const choices = await page.getByTestId('discovery-building-choice').getByRole('button').count();
+        assert(choices === 2, `대상 건물 선택지 ${choices}개 (기대 2)`);
+        await page.getByRole('tab', { name: /실거래/ }).click();
+        const marketText = await page.locator('section').filter({ hasText: '최근 실거래 후보' }).first().innerText();
+        assert(/동일 거래 6건/.test(marketText), '동일 지분 거래 6행이 1건(동일 거래 6건)으로 묶이지 않았습니다.');
+        assert(/비교 제외/.test(marketText), '지분·집합 거래의 비교 제외 표시가 없습니다.');
+        await page.getByRole('tab', { name: '공적자료' }).click();
+        await page.getByText('미기재').first().waitFor({ state: 'visible', timeout: 5_000 });
+        const layout = await page.evaluate(() => ({ vw: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+        await shot(`discovery-${width}`);
+        const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+        assert(layout.scroll <= layout.vw + 1, `가로 넘침 ${layout.scroll}px > ${layout.vw}px`);
+        return `${width}px · 유형 ${fixture.propertyType.label}`;
+      });
+    }
+    await page.unroute('**/api/property-discovery**');
     await page.setViewportSize({ width: 1440, height: 1100 });
   }
 } catch (error) {

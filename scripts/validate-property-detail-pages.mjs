@@ -210,3 +210,27 @@ if (!spatialPageNow.includes('공간 자료 ${saved}건을 등록했습니다.')
 if (/gridTemplateColumns: '(1fr 220px|1\.2fr \.8fr|1fr 1fr)'/.test(spatialPageNow)) fail('Spatial Workspace 고정 다열 grid는 모바일에서 넘칩니다.');
 for (const [name, text] of [['InteriorWorkspacePage', interiorPage], ['SpatialWorkspacePage', spatialPageNow]]) if (text.includes('<main')) fail(`${name}: Layout 안에 <main>을 중첩하지 않습니다.`);
 console.log('Interior/Spatial workspace validation passed.');
+
+// 17. Issue #37: discovery summary (executable) — type, honest labels, unrecorded register values, grouped repeats.
+{
+  const ds = await importTs('src/domain/propertyDetail/discoverySummary.ts');
+  const base = { status: 'ok', publicDataConfigured: true, address: { officialAddress: 'x' } };
+  const building = { buildingName: '', lotAddress: '', roadAddress: '', landAreaSqm: 0, totalFloorAreaSqm: 160.87, structure: '', mainUse: '근생', groundFloors: 2, basementFloors: 1, completionDate: '', rawPk: 'A', unrecordedFields: ['landAreaSqm'] };
+  if (ds.registerValue(building, 'landAreaSqm') !== '미기재') fail('건축물대장 0값은 미기재로 표시해야 합니다.');
+  if (ds.registerValue(building, 'totalFloorAreaSqm') !== '160.87㎡') fail('연면적 표시 오류');
+  if (ds.registerValue(null, 'landAreaSqm') !== '미확인') fail('표제부 없음은 미확인');
+  const withLand = ds.buildDiscoverySummary({ ...base, building, landProfile: { pnu: '1', standardYear: '2026', officialLandPricePerSqm: 9193000, estimatedOfficialLandValue: 1, landAreaSqm: 146.2, landCategory: '대', landUseSituation: '', terrainHeight: '', terrainShape: '', roadSide: '', primaryUseZone: '', useZones: [] }, propertyType: { type: 'commercial_office', label: '상가·업무', confidence: 'register', basis: ['b'], multipleBuildings: false } });
+  if (withLand.typeLabel !== '상가·업무') fail('유형 라벨 누락');
+  if (!withLand.cautions.some((c) => c.includes('시세') && c.includes('아닙니다'))) fail('공시지가 기준 토지가액 ≠ 시세 안내 누락');
+  if (!withLand.facts.some((f) => f.label === '개별공시지가' && f.value.includes('/평') && (f.note || '').includes('시세 아님'))) fail('공시지가 원/평 환산과 시세 아님 표시 누락');
+  if (ds.perPyeongFromPerSqm(9193000) !== Math.round(9193000 * 3.3058)) fail('원/㎡ → 원/평 환산 오류');
+  const noBuilding = ds.buildDiscoverySummary({ ...base, building: null, propertyType: { type: 'unconfirmed', label: '미확인', confidence: 'none', basis: ['x'], multipleBuildings: false } });
+  if (!noBuilding.cautions.some((c) => c.includes('미확인'))) fail('표제부 없음 = 미확인 안내 누락');
+  if (withLand.facts.length > 4) fail('모바일 첫 화면 핵심 정보는 4개 이하');
+  const row = { type: 'land', dealDate: '2026-10-15', legalDong: '방배동', jibun: '7**', dealAmount: 26000000, landAreaSqm: 3.3, floor: '', buildingName: '', buildingUse: '' };
+  const grouped = ds.groupIdenticalTrades([row, { ...row }, { ...row }, { ...row, dealAmount: 1 }]);
+  if (grouped.length !== 2 || grouped[0].count !== 3) fail('동일 공개 거래 행 묶기 오류');
+  const panel = readFileSync('src/components/PropertyPublicDiscoveryPanel.tsx', 'utf8');
+  for (const marker of ['data-testid="discovery-summary"', 'data-testid="discovery-building-choice"', "tab === 'market'", 'groupIdenticalTrades(trades)', '건물이 없다는 뜻이 아니며']) if (!panel.includes(marker)) fail(`조회 패널 #37 구조 누락: ${marker}`);
+  console.log('Discovery summary (Issue #37) validation passed.');
+}
