@@ -47,7 +47,7 @@ export default function RoomIntelligencePanel(props: {
   const view = views.find((item) => item.link.id === selectedId) || views[0];
   const roomPositions = view ? props.roomEvidencePositions.filter((item) => item.spaceId === view.space.id && item.roomCandidateId === view.room.roomCandidate.id) : [];
 
-  return <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+  return <section className="ds-card" style={{ marginBottom: 20 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div><h2 style={{ margin: 0 }}>Room Intelligence View</h2><p style={{ color: '#667085', margin: '6px 0 0' }}>승인된 Interior ↔ 3D Room 연결을 기준으로 사진·설비 위치, 상태 이력, 리노베이션 이력과 외부 검토 패키지까지 공간 단위로 묶습니다.</p></div>
       <Chip icon={<HomeWorkRounded />} color={views.length ? 'success' : 'default'} variant="outlined" label={`Intelligent rooms ${views.length}`} />

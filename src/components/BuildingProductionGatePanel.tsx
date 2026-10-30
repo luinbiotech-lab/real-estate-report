@@ -20,7 +20,7 @@ function downloadText(content: string, fileName: string) {
 export default function BuildingProductionGatePanel({ assets }: { assets: DigitalTwinAsset[] }) {
   const candidate = useMemo(() => buildingProductionGateService.build(assets), [assets]);
   return <>
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div>
           <h2 style={{ margin: 0 }}>Building Production Gate / 다층 Candidate Release</h2>

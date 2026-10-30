@@ -83,7 +83,6 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
 
 /* Generic work-screen card (used by workspaces instead of inline styles) */
 .ds-card{background:var(--brand-surface);border:1px solid var(--brand-line);border-radius:var(--brand-radius-card);padding:20px;box-shadow:var(--brand-shadow-card);min-width:0}
-.ds-card+.ds-card{margin-top:16px}
 .ds-card>h2:first-child,.ds-card>h3:first-child{margin-top:0}
 .ds-kpi-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,120px),1fr));gap:12px;margin-bottom:20px}
 .ds-kpi{background:var(--brand-surface);border:1px solid var(--brand-line);border-radius:var(--brand-radius-card);padding:14px 16px;box-shadow:var(--brand-shadow-card);min-width:0}

@@ -134,7 +134,7 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
           </div>
         </section>
 
-        <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 14, padding: 16 }}>
+        <section className="ds-card">
           <p className="eyebrow">APPLY SCOPE</p><h3 style={{ margin: '4px 0 10px' }}>적용 범위</h3>
           <div style={{ display: 'grid', gap: 9, fontSize: 13, color: '#475467' }}>
             <span>✓ 새 물건 등록 기본 담당자</span>

@@ -76,7 +76,7 @@ export default function BuildingReleasePanel({ assets }: { assets: DigitalTwinAs
     if (kind === 'writer') downloadText(JSON.stringify(bimWriterAdapterService.buildHandoff(selected), null, 2), `${selected.id}-ifc-writer-handoff.json`);
   };
 
-  return <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 18, marginBottom: 20 }}>
+  return <section className="ds-card" style={{ marginBottom: 20 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div>
         <h2 style={{ margin: 0 }}>Building Release & Collaboration Layer</h2>

@@ -32,7 +32,7 @@ export default function VerticalCorePanel({ assets, onSaved }: { assets: Digital
     } finally { setSaving(false); }
   };
 
-  return <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+  return <section className="ds-card" style={{ marginBottom: 20 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
       <div><h2 style={{ margin: 0 }}>Vertical Core / 계단·엘리베이터 층간 연결</h2><p style={{ margin: '6px 0 0', color: '#667085' }}>승인된 stair/elevator layer를 같은 Core ID로 연결해 층간 XY 정렬 편차를 검토합니다. 자동 연결은 하지 않습니다.</p></div>
       <Chip variant="outlined" label={`Connections ${connections.length}`} />

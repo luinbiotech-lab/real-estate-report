@@ -67,12 +67,12 @@ export default function RiskWorkspacePage() {
 
     {reviewRequired > 0 && <Alert severity="warning" sx={{ mb: 2 }}>Risk / Compliance Agent 결과 {reviewRequired}건이 Human Review 대기 중입니다. Agent Operations에서 승인해야 확정된 사전검토 기록으로 저장됩니다.</Alert>}
 
-    {!latest ? <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 36, textAlign: 'center', color: '#667085' }}><GavelRounded sx={{ fontSize: 42, color: '#98a2b3' }} /><h2>승인된 사전 리스크 검토가 없습니다.</h2><p>사전 점검 실행 → Agent Operations Human Review → 승인 순서로 기록이 생성됩니다.</p></section> : <>
-      <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    {!latest ? <section className="ds-card" style={{ padding: 36, textAlign: 'center', color: '#667085' }}><GavelRounded sx={{ fontSize: 42, color: '#98a2b3' }} /><h2>승인된 사전 리스크 검토가 없습니다.</h2><p>사전 점검 실행 → Agent Operations Human Review → 승인 순서로 기록이 생성됩니다.</p></section> : <>
+      <section className="ds-card" style={{ marginBottom: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start' }}><div><h2 style={{ marginTop: 0 }}>{latest.title}</h2><p style={{ color: '#475467' }}>{latest.summary}</p></div><Chip label={latest.verificationStatus} color="success" /></div>
         <Alert severity="info">{latest.disclaimer}</Alert>
       </section>
-      <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+      <section className="ds-card">
         <h2 style={{ marginTop: 0 }}>사전 체크리스트</h2>
         <div style={{ display: 'grid', gap: 10 }}>{latest.checks.map((check) => <article key={check.key} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 14, display: 'grid', gridTemplateColumns: '180px 120px 1fr', gap: 12, alignItems: 'center' }}><strong>{check.label}</strong><Chip size="small" color={STATUS_COLOR[check.status]} label={STATUS_LABEL[check.status]} /><span style={{ color: '#667085' }}>{check.detail}</span></article>)}</div>
       </section>

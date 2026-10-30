@@ -108,7 +108,7 @@ export default function SpatialWorkspacePage() {
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>공간 자료 Intake</h2>
       <p style={{ color: '#667085' }}>사진은 Interior Vision Agent, PDF/DWG/DXF 및 도면 이미지는 Floor Plan Agent로 자동 라우팅·실행됩니다. 결과는 Human Review 승인 전까지 확정 데이터가 아닙니다.</p>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -128,7 +128,7 @@ export default function SpatialWorkspacePage() {
     </section>
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 20, marginBottom: 20 }}>
-      <div style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+      <div className="ds-card">
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><h2 style={{ margin: 0 }}>미디어</h2><Chip label={`${bundle.media.length}개`} /></div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%, 190px),1fr))', gap: 12, marginTop: 16 }}>
           {bundle.media.map((media) => <article key={media.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 10 }}>
@@ -140,7 +140,7 @@ export default function SpatialWorkspacePage() {
         </div>
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+      <div className="ds-card">
         <h2 style={{ marginTop: 0 }}>Automation 상태</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           <div><small>Agent Jobs</small><strong style={{ display: 'block', fontSize: 24 }}>{agentJobs.length}</strong></div>
@@ -153,7 +153,7 @@ export default function SpatialWorkspacePage() {
       </div>
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>공간 모델</h2>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%, 240px),1fr))', gap: 12 }}>
         {spaces.map((space) => <article key={space.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 14 }}><strong>{space.name}</strong><p style={{ margin: '6px 0', color: '#667085' }}>{space.spaceType} · {space.floor || '층 미지정'}</p><small>연결 미디어 {links.filter((link) => link.spaceId === space.id).length}개 · {space.verificationStatus}</small></article>)}
@@ -161,7 +161,7 @@ export default function SpatialWorkspacePage() {
       </div>
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>리노베이션 검토</h2>
       <p style={{ color: '#667085' }}>공사비·인허가 가능성을 확정하지 않고, 승인된 공간 데이터를 기준으로 점검 범위와 리스크만 구조화합니다.</p>
       <div style={{ display: 'grid', gap: 12 }}>
@@ -178,7 +178,7 @@ export default function SpatialWorkspacePage() {
       </div>
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+    <section className="ds-card">
       <h2 style={{ marginTop: 0 }}>Digital Twin 준비 자산</h2>
       <div style={{ display: 'grid', gap: 10 }}>
         {bundle.digitalTwinAssets.map((asset) => <article key={asset.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 12, display: 'flex', justifyContent: 'space-between', gap: 12 }}><div><strong>{asset.fileName || asset.assetType}</strong><p style={{ margin: '4px 0 0', color: '#667085' }}>{asset.assetType} · {asset.floor || '층 미지정'} · {asset.fileFormat}</p></div><Chip label={asset.processingStatus} /></article>)}
