@@ -234,3 +234,29 @@ console.log('Interior/Spatial workspace validation passed.');
   for (const marker of ['data-testid="discovery-summary"', 'data-testid="discovery-building-choice"', "tab === 'market'", 'groupIdenticalTrades(trades)', '건물이 없다는 뜻이 아니며']) if (!panel.includes(marker)) fail(`조회 패널 #37 구조 누락: ${marker}`);
   console.log('Discovery summary (Issue #37) validation passed.');
 }
+
+// 18. Issue #37 phase 2: complex comparison view helpers (executable) — unapproved APIs, area bands, price text.
+{
+  const rc = await importTs('src/domain/propertyDetail/residentialCompare.ts');
+  const market = { propertyType: 'apartment', apiStatus: { aptTrade: { status: 'ok', label: 'A 매매', detail: '', okMonths: 6, totalMonths: 6 }, aptRent: { status: 'not_authorized', label: 'A 전월세', detail: 'HTTP 403', okMonths: 0, totalMonths: 6 } } };
+  if (JSON.stringify(rc.unapprovedApis(market)) !== JSON.stringify(['A 전월세'])) fail('미승인 API 목록 오류');
+  if (!rc.apiStatusLabel(market.apiStatus.aptRent).includes('미승인')) fail('미승인 라벨 누락');
+  if (rc.apiStatusLabel({ status: 'partial', okMonths: 4, totalMonths: 6 }) !== '일부 조회(4/6개월)') fail('부분 조회 라벨 오류');
+  const empty = { count: 0, comparableCount: 0, cancelledCount: 0 };
+  const bands = [
+    { key: '84', minAreaSqm: 84.97, maxAreaSqm: 84.97, sale: { ...empty, comparableCount: 1 }, jeonse: empty, monthly: empty },
+    { key: '50', minAreaSqm: 50.12, maxAreaSqm: 50.49, sale: { ...empty, comparableCount: 2 }, jeonse: { ...empty, comparableCount: 1 }, monthly: empty },
+  ];
+  if (rc.defaultAreaBand(bands).key !== '50') fail('기본 면적대는 비교 거래가 가장 많은 면적대');
+  if (!rc.areaBandLabel(bands[1]).includes('50.12~50.49㎡')) fail('면적대 라벨 범위 누락');
+  const deals = [{ dealKind: 'sale', exclusiveAreaSqm: 50.49, dealAmount: 870000000 }, { dealKind: 'monthly', exclusiveAreaSqm: 50.49, deposit: 50000000, monthlyRent: 1200000 }, { dealKind: 'sale', exclusiveAreaSqm: 84.97, dealAmount: 1 }];
+  if (rc.dealsInBand(deals, bands[1], 'all').length !== 2) fail('면적대 거래 필터 오류');
+  if (rc.dealsInBand(deals, bands[1], 'monthly').length !== 1) fail('월세 필터 오류');
+  if (rc.dealPriceText(deals[1]) !== '5,000만원 / 월 120만원') fail(`월세 금액 표시 오류: ${rc.dealPriceText(deals[1])}`);
+  if (rc.dealPriceText({ dealKind: 'sale' }) !== '금액 미기재') fail('결측 매매가는 0원이 아니라 미기재');
+  if (rc.residentialTabLabel({ propertyType: 'detached' }) !== '주택 거래' || rc.residentialTabLabel({ propertyType: 'apartment' }) !== '단지 비교') fail('탭 라벨 오류');
+  if (rc.complexMatchLabel({ complexMatch: 'lot_and_name' }).includes('확정')) fail('단지 일치도 확정으로 표시하면 안 됨');
+  const panel = readFileSync('src/components/ResidentialComplexPanel.tsx', 'utf8');
+  for (const marker of ['data-testid="residential-unapproved"', '미연결', '계산값', '호실']) if (!panel.includes(marker)) fail(`단지 비교 패널 구조 누락: ${marker}`);
+  console.log('Residential complex comparison (Issue #37 phase 2) validation passed.');
+}

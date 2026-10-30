@@ -233,5 +233,91 @@ assert.ok(typeOf([], null).basis.some((line) => line.includes('미확인')), '�
 const discoverySource = readFileSync('api/property-discovery.mjs', 'utf8');
 if (!discoverySource.includes('unrecordedFields')) throw new Error('건축물대장 0/공란을 미기재로 구분하는 unrecordedFields 누락');
 
+// Issue #37 phase 2: residential sale / jeonse / monthly candidates and complex comparison (executable).
+const residentialLib = await import(new URL('../api/_lib/residentialTrades.mjs', import.meta.url).href);
+const { residentialTypeFor } = await import(new URL('../api/property-discovery.mjs', import.meta.url).href);
+const { normalizeResidentialDeal, residentialSummary, classifyRtmsResponse, residentialMarket, areaBandKey, RESIDENTIAL_APIS } = residentialLib;
+const resolvedApt = { bun: '0237', ji: '0000', region3: '명륜2가', sigunguCd: '11110' };
+const targetApt = { complexName: '명륜동주상복합아남아파트' };
+const aptMeta = (dealKind) => ({ propertyType: 'apartment', dealKind, apiId: dealKind === 'sale' ? 'aptTrade' : 'aptRent' });
+// Real sample row (AptRent, 2025-01, LAWD_CD 11110): deposit 43,500만원, monthlyRent 0 → jeonse.
+const jeonse = normalizeResidentialDeal({ aptNm: '명륜동주상복합아남아파트', buildYear: '1999', contractTerm: '', contractType: ' ', dealDay: '20', dealMonth: '1', dealYear: '2025', deposit: '43,500', excluUseAr: '50.49', floor: '2', jibun: '237', monthlyRent: '0', sggCd: '11110', umdNm: '명륜2가' }, aptMeta('rent'), resolvedApt, targetApt);
+assert.strictEqual(jeonse.dealKind, 'jeonse');
+assert.strictEqual(jeonse.deposit, 435_000_000, '보증금 만원→KRW');
+assert.strictEqual(jeonse.sourceDepositTenThousandWon, 43_500);
+assert.strictEqual(jeonse.amountSourceUnit, '만원');
+assert.strictEqual(jeonse.dealDate, '2025-01-20');
+assert.strictEqual(jeonse.matchLevel, 'exact_lot');
+assert.strictEqual(jeonse.complexMatch, 'lot_and_name');
+assert.strictEqual(jeonse.comparableExclusion, undefined, 'contractType 공백은 해제가 아님');
+const monthly = normalizeResidentialDeal({ aptNm: '명륜동주상복합아남아파트', dealYear: '2025', dealMonth: '2', dealDay: '3', deposit: '5,000', excluUseAr: '50.12', jibun: '237', monthlyRent: '120', umdNm: '명륜2가' }, aptMeta('rent'), resolvedApt, targetApt);
+assert.strictEqual(monthly.dealKind, 'monthly');
+assert.strictEqual(monthly.monthlyRent, 1_200_000, '월세 만원→KRW');
+assert.strictEqual(monthly.deposit, 50_000_000);
+const sale = normalizeResidentialDeal({ aptNm: '명륜동주상복합 아남아파트', dealAmount: '87,000', dealYear: '2025', dealMonth: '1', dealDay: '5', excluUseAr: '50.49', jibun: '237', umdNm: '명륜2가', cdealType: '' }, aptMeta('sale'), resolvedApt, targetApt);
+assert.strictEqual(sale.dealAmount, 870_000_000);
+assert.strictEqual(sale.sourceDealAmountTenThousandWon, 87_000);
+assert.strictEqual(sale.complexMatch, 'lot_and_name', '공백·"아파트" 접미 차이는 같은 단지명');
+assert.strictEqual(sale.pricePerPyeong, Math.round(870_000_000 / (50.49 / 3.3058)));
+const cancelledSale = normalizeResidentialDeal({ aptNm: '명륜동주상복합아남아파트', dealAmount: '10,000', dealYear: '2025', dealMonth: '1', dealDay: '7', excluUseAr: '50.3', jibun: '237', umdNm: '명륜2가', cdealType: 'O' }, aptMeta('sale'), resolvedApt, targetApt);
+assert.strictEqual(cancelledSale.comparableExclusion, 'cancelled');
+const blankAmount = normalizeResidentialDeal({ aptNm: 'x', dealAmount: ' ', dealYear: '2025', dealMonth: '1', dealDay: '1', excluUseAr: '84', jibun: '1', umdNm: '명륜2가' }, aptMeta('sale'), resolvedApt, targetApt);
+assert.strictEqual(blankAmount.dealAmount, undefined, '공백 금액은 0원이 아니라 결측');
+const otherComplex = normalizeResidentialDeal({ aptNm: '다른아파트', dealAmount: '120,000', dealYear: '2025', dealMonth: '1', dealDay: '9', excluUseAr: '84.9', jibun: '12', umdNm: '명륜2가' }, aptMeta('sale'), resolvedApt, targetApt);
+assert.strictEqual(otherComplex.complexMatch, 'none');
+assert.strictEqual(otherComplex.matchLevel, 'same_dong_candidate');
+const masked = normalizeResidentialDeal({ mhouseNm: '21스타캐슬', houseType: '다세대', dealAmount: '47,000', dealYear: '2025', dealMonth: '1', dealDay: '24', excluUseAr: '59.75', landAr: '40.93', jibun: '5**', umdNm: '숭인동' }, { propertyType: 'row_house', dealKind: 'sale', apiId: 'rhTrade' }, { bun: '0581', ji: '0000', region3: '숭인동' }, { complexName: '' });
+assert.strictEqual(masked.matchLevel, 'masked_address_candidate', '마스킹 지번은 후보');
+assert.strictEqual(masked.complexName, '21스타캐슬');
+assert.strictEqual(masked.landAreaSqm, 40.93, 'RHTrade landAr 대지권면적');
+assert.strictEqual(areaBandKey(59.97), areaBandKey(59.12), '같은 59㎡대');
+assert.notStrictEqual(areaBandKey(59.97), areaBandKey(84.97));
+
+const summary37 = residentialSummary([jeonse, monthly, sale, cancelledSale, otherComplex]);
+assert.strictEqual(summary37.complexCandidateCount, 4, '다른 단지는 단지 비교에서 제외');
+const band50 = summary37.areaBands.find((band) => band.key === '50');
+assert.ok(band50, '50㎡대 면적 그룹');
+assert.strictEqual(band50.sale.count, 2);
+assert.strictEqual(band50.sale.comparableCount, 1, '해제 거래는 중앙값 제외');
+assert.strictEqual(band50.sale.medianDealAmount, 870_000_000, '해제 거래(1억)가 중앙값에 섞이면 안 됨');
+assert.strictEqual(band50.jeonse.medianDeposit, 435_000_000);
+assert.strictEqual(band50.monthly.medianMonthlyRent, 1_200_000);
+assert.strictEqual(band50.jeonseRatioPercent, 50, '전세가율 = 전세 중앙값 ÷ 매매 중앙값 (계산값)');
+assert.strictEqual(band50.jeonseRatioBasis, 'calculated_median_jeonse_over_median_sale');
+assert.strictEqual(summary37.neighbourhood.sale.count, 3, '동 전체 후보에는 다른 단지 포함');
+
+assert.strictEqual(classifyRtmsResponse(403, 'Forbidden').state, 'not_authorized');
+assert.strictEqual(classifyRtmsResponse(200, '<OpenAPI_ServiceResponse><cmmMsgHeader><returnAuthMsg>SERVICE_KEY_IS_NOT_REGISTERED_ERROR</returnAuthMsg></cmmMsgHeader></OpenAPI_ServiceResponse>').state, 'not_authorized');
+assert.strictEqual(classifyRtmsResponse(200, '<response><header><resultCode>000</resultCode><resultMsg>OK</resultMsg></header><body><items></items></body></response>').state, 'ok');
+assert.strictEqual(classifyRtmsResponse(200, '<response><header><resultCode>99</resultCode><resultMsg>SYSTEM ERROR</resultMsg></header></response>').state, 'error');
+assert.strictEqual(classifyRtmsResponse(500, '').state, 'error');
+
+assert.strictEqual(residentialTypeFor({ type: 'apartment' }), 'apartment');
+assert.strictEqual(residentialTypeFor({ type: 'commercial_office' }), null, '상가·업무에는 주거 API 호출 안 함');
+assert.strictEqual(residentialTypeFor({ type: 'land' }), null);
+assert.strictEqual(residentialTypeFor({ type: 'mixed', candidates: ['commercial_office', 'row_house'] }), 'row_house');
+for (const type of ['apartment', 'row_house', 'officetel', 'detached']) {
+  assert.deepStrictEqual(RESIDENTIAL_APIS[type].map((api) => api.dealKind), ['sale', 'rent'], `${type}: 매매·전월세 API 쌍`);
+}
+
+// Unapproved rent API must surface as not_authorized, never as "0 transactions"; approved sale API still yields rows.
+const fakeXml = (rows) => `<response><header><resultCode>000</resultCode><resultMsg>OK</resultMsg></header><body><items>${rows.map((row) => `<item>${Object.entries(row).map(([k, v]) => `<${k}>${v}</${k}>`).join('')}</item>`).join('')}</items></body></response>`;
+const tinyXmlItems = (xml) => [...String(xml).matchAll(/<item>([\s\S]*?)<\/item>/g)].map((m) => Object.fromEntries([...m[1].matchAll(/<([A-Za-z0-9_]+)>([\s\S]*?)<\/\1>/g)].map((x) => [x[1], x[2]])));
+const calls = [];
+const fakeFetch = async (url) => {
+  calls.push(url);
+  if (url.includes('RTMSDataSvcAptRent')) return { status: 403, text: async () => 'Forbidden' };
+  return { status: 200, text: async () => fakeXml([{ aptNm: '명륜동주상복합아남아파트', dealAmount: '87,000', dealYear: '2025', dealMonth: '1', dealDay: '5', excluUseAr: '50.49', jibun: '237', umdNm: '명륜2가' }]) };
+};
+const market37 = await residentialMarket({ propertyType: 'apartment', resolved: resolvedApt, key: 'TEST', months: ['202501', '202412'], target: targetApt, xmlItems: tinyXmlItems, fetcher: fakeFetch });
+assert.strictEqual(market37.apiStatus.aptRent.status, 'not_authorized', '미승인 API는 not_authorized');
+assert.strictEqual(market37.apiStatus.aptTrade.status, 'ok');
+assert.strictEqual(market37.complexDeals.length, 2, '승인된 매매 API 2개월 × 1건');
+assert.ok(calls.every((url) => url.startsWith('https://apis.data.go.kr/1613000/RTMSDataSvcApt')), '아파트 유형은 아파트 API만 호출');
+assert.ok(market37.interpretation.includes('후보'), '후보 의미 명시');
+assert.strictEqual(await residentialMarket({ propertyType: 'commercial_office', resolved: resolvedApt, key: 'T', months: [], target: {}, xmlItems: tinyXmlItems, fetcher: fakeFetch }), null);
+if (!discoverySource.includes('residentialTypeFor(propertyType)')) throw new Error('주거 API는 유형 판정 후에만 호출해야 합니다');
+
 console.log('PASS public property discovery contract');
 console.log('PASS MOLIT dealAmount 만원→KRW normalization regression');
+console.log('PASS residential sale/jeonse/monthly complex comparison (Issue #37 phase 2)');

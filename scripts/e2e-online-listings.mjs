@@ -7,6 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { deflateSync } from 'node:zlib';
 import { chromium } from 'playwright';
 import { classifyPropertyType, marketSummary as summarizeMarket, normalizeTrade } from '../api/property-discovery.mjs';
+import { normalizeResidentialDeal, residentialSummary } from '../api/_lib/residentialTrades.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const OUT = 'artifacts/agent-qa';
@@ -489,6 +490,75 @@ try {
         const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
         assert(layout.scroll <= layout.vw + 1, `가로 넘침 ${layout.scroll}px > ${layout.vw}px`);
         return `${width}px · 유형 ${fixture.propertyType.label}`;
+      });
+    }
+    await page.unroute('**/api/property-discovery**');
+    await page.setViewportSize({ width: 1440, height: 1100 });
+  }
+
+  // 12. Issue #37 phase 2: apartment complex comparison on phones. Rows are normalised by the real server functions from
+  //     response-shaped samples (AptRent sample fields verified 2025-01); the rent API answered only 4 of 6 months, which
+  //     the UI must show instead of presenting the counts as complete.
+  {
+    const resolved = { bun: '0237', ji: '0000', region3: '명륜2가', sigunguCd: '11110' };
+    const target = { complexName: '명륜동주상복합아남아파트' };
+    const meta = (dealKind) => ({ propertyType: 'apartment', dealKind, apiId: dealKind === 'sale' ? 'aptTrade' : 'aptRent' });
+    const raw = (extra) => ({ aptNm: '명륜동주상복합아남아파트', jibun: '237', umdNm: '명륜2가', dealYear: '2026', buildYear: '1999', ...extra });
+    const rows = [
+      normalizeResidentialDeal(raw({ dealAmount: '87,000', dealMonth: '9', dealDay: '5', excluUseAr: '50.49', floor: '7' }), meta('sale'), resolved, target),
+      normalizeResidentialDeal(raw({ dealAmount: '91,000', dealMonth: '10', dealDay: '2', excluUseAr: '50.12', floor: '11' }), meta('sale'), resolved, target),
+      normalizeResidentialDeal(raw({ dealAmount: '12,000', dealMonth: '10', dealDay: '3', excluUseAr: '50.49', floor: '3', cdealType: 'O' }), meta('sale'), resolved, target),
+      normalizeResidentialDeal(raw({ deposit: '43,500', monthlyRent: '0', dealMonth: '8', dealDay: '20', excluUseAr: '50.49', floor: '2' }), meta('rent'), resolved, target),
+      normalizeResidentialDeal(raw({ deposit: '5,000', monthlyRent: '120', dealMonth: '9', dealDay: '11', excluUseAr: '50.49', floor: '5' }), meta('rent'), resolved, target),
+      normalizeResidentialDeal(raw({ dealAmount: '135,000', dealMonth: '9', dealDay: '28', excluUseAr: '84.97', floor: '15' }), meta('sale'), resolved, target),
+    ];
+    const titles = [{ buildingName: '명륜동주상복합아남아파트', lotAddress: '서울특별시 종로구 명륜2가 237', roadAddress: '', totalFloorAreaSqm: 30210, structure: '철근콘크리트구조', mainUse: '공동주택', detailUse: '아파트', registerKind: '집합', householdCount: 180, groundFloors: 15, basementFloors: 2, completionDate: '1999-06-30', rawPk: 'APT' }];
+    const residential = {
+      propertyType: 'apartment', target: { complexName: target.complexName, lot: '237' },
+      apiStatus: { aptTrade: { status: 'ok', label: '국토교통부 아파트 매매 실거래가', detail: '', okMonths: 6, totalMonths: 6 }, aptRent: { status: 'partial', label: '국토교통부 아파트 전월세 실거래가', detail: 'HTTP 500', okMonths: 4, totalMonths: 6 } },
+      summary: residentialSummary(rows), complexDeals: rows, neighbourhoodDeals: [], months: ['202610', '202609', '202608', '202607', '202606', '202605'],
+      interpretation: '모든 거래는 후보입니다. 동일 지번·단지명 일치도 호실 거래로 확정하지 않습니다. 전세가율은 같은 면적대 중앙값으로 계산한 값입니다.',
+    };
+    const aptFixture = {
+      status: 'ok', publicDataConfigured: true, vworldConfigured: true,
+      address: { query: '서울 종로구 명륜2가 237', officialAddress: '서울특별시 종로구 명륜2가 237', roadAddress: '', lotAddress: '서울 종로구 명륜2가 237', latitude: 37.5873, longitude: 126.9973, region1: '서울', region2: '종로구', region3: '명륜2가', bCode: '1111017400', sigunguCd: '11110', bjdongCd: '17400', mountainYn: 'N', bun: '0237', ji: '0000' },
+      building: titles[0], buildingCandidates: titles, floors: [], landUseZones: [], landProfile: null,
+      propertyType: classifyPropertyType({ titles }), residential,
+      market: { commercial: [], land: [], summary: summarizeMarket([]), exactLot: [] },
+      usageEvidence: { state: 'no_public_record', interpretation: '', positiveMonths: 0, monthly: [] },
+      operatingBusinessEvidence: { state: 'no_public_record', interpretation: '', sameAddress: [], nearby: [] },
+      kakaoPoiEvidence: { state: 'not_configured', interpretation: '', sameAddress: [], nearby: [] },
+      providerStatus: { buildingTitle: { ok: true } }, collectedAt: '2026-10-31T00:00:00Z',
+    };
+    assert(aptFixture.propertyType.type === 'apartment', `아파트 유형 판정 실패: ${aptFixture.propertyType.type}`);
+    await page.route('**/api/property-discovery**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(aptFixture) }));
+    for (const width of [320, 375, 390, 430]) {
+      await check(`단지${width}`, '아파트 단지 비교 — 면적대·매매/전세/월세·미승인 표시(Issue #37 2단계)', async () => {
+        await page.setViewportSize({ width, height: 860 });
+        await page.goto(`${BASE_URL}/property/new`, { waitUntil: 'domcontentloaded' });
+        await page.getByLabel('건물 조회 주소').fill('서울 종로구 명륜2가 237');
+        await page.getByRole('button', { name: '건물 조회' }).click();
+        await page.getByTestId('discovery-summary').waitFor({ state: 'visible', timeout: 15_000 });
+        await page.getByRole('tab', { name: '단지 비교' }).click();
+        const panel = page.getByTestId('residential-complex');
+        await panel.waitFor({ state: 'visible', timeout: 5_000 });
+        const panelText = await panel.innerText();
+        assert(panelText.includes('일부 조회(4/6개월)'), '일부 월만 조회된 API 상태가 표시되지 않습니다.');
+        assert(await page.getByTestId('residential-unapproved').count() === 0, '미승인 API가 없는데 미승인 안내가 표시됩니다.');
+        const bands = await page.getByTestId('residential-area-bands').getByRole('button').count();
+        assert(bands === 2, `면적대 ${bands}개 (기대 2: 50㎡대·84㎡대)`);
+        const stats = await page.getByTestId('residential-band-stats').innerText();
+        assert(stats.includes('8.9억원'), `50㎡대 매매 중앙값(8.7억·9.1억 → 8.9억, 해제 제외) 오류: ${stats.slice(0, 120)}`);
+        assert(stats.includes('해제 1건 제외'), '해제 거래 제외 표시 누락');
+        assert(stats.includes('전세가율') && stats.includes('계산값'), '전세가율 계산값 표시 누락');
+        await page.getByRole('button', { name: '월세' }).click();
+        const deals = await page.getByTestId('residential-deals').innerText();
+        assert(deals.includes('월 120만원') && !deals.includes('매매 ·'), `월세 필터 오류: ${deals.slice(0, 120)}`);
+        const layout = await page.evaluate(() => ({ vw: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+        await shot(`complex-${width}`);
+        const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+        assert(layout.scroll <= layout.vw + 1, `가로 넘침 ${layout.scroll}px > ${layout.vw}px`);
+        return `${width}px · 면적대 ${bands}개`;
       });
     }
     await page.unroute('**/api/property-discovery**');

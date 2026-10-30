@@ -5,8 +5,10 @@ import VerifiedRounded from '@mui/icons-material/VerifiedRounded';
 import type { Property } from '../types';
 import { publicPropertyDiscoveryService, type PropertyDiscoveryResult } from '../services/publicPropertyDiscoveryService';
 import { buildDiscoverySummary, groupIdenticalTrades, registerValue } from '../domain/propertyDetail/discoverySummary';
+import { residentialTabLabel } from '../domain/propertyDetail/residentialCompare';
+import ResidentialComplexPanel from './ResidentialComplexPanel';
 
-type DiscoveryTab = 'summary' | 'official' | 'market' | 'activity';
+type DiscoveryTab = 'summary' | 'complex' | 'official' | 'market' | 'activity';
 
 const won = (value?: number) => value ? new Intl.NumberFormat('ko-KR').format(value) + '원' : '-';
 const sqm = (value?: number) => value != null ? new Intl.NumberFormat('ko-KR', { maximumFractionDigits: 2 }).format(value) + '㎡' : '-';
@@ -139,6 +141,7 @@ export default function PropertyPublicDiscoveryPanel({
 
       <Tabs value={tab} onChange={(_, value: DiscoveryTab) => setTab(value)} variant="scrollable" allowScrollButtonsMobile sx={{ mt: 1.25, borderBottom: '1px solid #e4e7ec', minHeight: 40 }} aria-label="조회 결과 구분">
         <Tab value="summary" label="요약" sx={{ minHeight: 40 }} />
+        {result.residential && <Tab value="complex" label={residentialTabLabel(result.residential)} sx={{ minHeight: 40 }} />}
         <Tab value="official" label="공적자료" sx={{ minHeight: 40 }} />
         <Tab value="market" label={`실거래${result.market?.summary ? ` ${result.market.summary.comparableCount ?? result.market.summary.totalCandidates}` : ''}`} sx={{ minHeight: 40 }} />
         <Tab value="activity" label="사용·매물" sx={{ minHeight: 40 }} />
@@ -195,6 +198,8 @@ export default function PropertyPublicDiscoveryPanel({
         longitude: result.address!.longitude,
       })}>주소·좌표 적용</Button>
       </>}
+
+      {tab === 'complex' && result.residential && <ResidentialComplexPanel key={`${result.address.bCode}-${result.address.bun}-${result.address.ji}-${result.collectedAt ?? ''}`} market={result.residential} />}
 
       {tab === 'official' && <>
 
