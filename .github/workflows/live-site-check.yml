@@ -34,7 +34,9 @@ jobs:
             echo "::notice title=Live $q ($region)::$summary"
             failed=$(echo "$body" | jq -r '[.providerStatus // {} | to_entries[] | select(.value.ok != true) | "\(.key): \(.value.error // "fail")"] | join(", ")' 2>/dev/null || echo "응답 파싱 실패")
             if [ -n "$failed" ]; then echo "::error title=Live provider failure $q::$failed"; fails=$((fails+1)); fi
-            case "$region" in *icn1::icn1*) ;; *) echo "::error title=Live region $q::함수 리전이 서울(icn1)이 아님: $region"; fails=$((fails+1));; esac
+            # x-vercel-id = <edge region>::<function region>::id; the runner's edge is in the US, only the function region matters.
+            fn_region=$(echo "$region" | awk -F'::' '{print $2}')
+            if [ "$fn_region" != "icn1" ]; then echo "::error title=Live region $q::함수 리전이 서울(icn1)이 아님: $region"; fails=$((fails+1)); fi
           done
           echo "fails=$fails" >> "$GITHUB_ENV"
       - name: Transaction candidate composition (diagnosis, 논현로 339)
