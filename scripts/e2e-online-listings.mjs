@@ -99,6 +99,11 @@ try {
     const ok = await check(tag, '물건 등록(폼 저장 → 상세 이동)', async () => {
       await page.goto(`${BASE_URL}/property/new`, { waitUntil: 'domcontentloaded' });
       await page.getByLabel('물건명 *', { exact: true }).waitFor({ state: 'visible', timeout: 20_000 });
+      // A fresh registration form must not greet the user with an error banner (2026-10-30: the map panel showed a red
+      // 'npm run dev' error before its status check). Wait for the provider status check to settle first.
+      await page.getByText('지도·주소 자동화 연결 상태를 확인하는 중입니다.').waitFor({ state: 'detached', timeout: 15_000 }).catch(() => undefined);
+      const formErrors = await page.locator('.MuiAlert-standardError, .MuiAlert-filledError').allInnerTexts();
+      assert(!formErrors.length, `등록 화면 오류 배너: ${formErrors.map((text) => text.slice(0, 80)).join(' / ')}`);
       await fill('물건번호', `TEST-${tag.toUpperCase()}`);
       await fill('물건명 *', listing.name);
       await fill('주소 *', listing.address);
