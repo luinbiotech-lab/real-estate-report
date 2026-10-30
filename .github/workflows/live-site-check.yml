@@ -1,0 +1,33 @@
+name: Live site check
+
+# Read-only check of the Production site from GitHub's runner, so the result does not depend on the owner's PC.
+# Triggered by pushing to the dedicated branch claude/live-monitor (no Production deploy: Vercel tracks master).
+# Calls only public GET endpoints; no secret is used, printed or stored. Provider values are reported as observed
+# (unverified evidence), never as confirmed facts.
+on:
+  push:
+    branches: [claude/live-monitor]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  live-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE: https://real-estate-report-lime.vercel.app
+    steps:
+      - name: Status and public-data discovery for the three test listings
+        run: |
+          set -u
+          status=$(curl -sS -m 20 "$SITE/api/status" || echo '{}')
+          echo "::notice title=Live status::$(echo "$status" | jq -c '{publicDataConfigured,vworldConfigured,naverConfigured,kakaoConfigured}' 2>/dev/null || echo "$status" | head -c 300)"
+          for q in "서울특별시 마포구 동교로 212-22" "서울특별시 서초구 동광로1길 49" "서울특별시 강남구 논현로 339"; do
+            enc=$(jq -rn --arg v "$q" '$v|@uri')
+            body=$(curl -sS -m 40 -D /tmp/h "$SITE/api/property-discovery?query=$enc" || echo '{}')
+            region=$(grep -i '^x-vercel-id' /tmp/h | tr -d '\r' | cut -d' ' -f2 | cut -d: -f1-3)
+            summary=$(echo "$body" | jq -c '{status, publicDataConfigured, providers: (.providerStatus // {} | with_entries(.value = (if .value.ok then "ok" else (.value.error // "fail") end))), land: (.landProfile // {} | {pnu, officialLandPricePerSqm, landAreaSqm}), building: (.building // {} | {mainPurpsCdNm, totArea, grndFlrCnt, ugrndFlrCnt, useAprDay}), market: (.marketSummary // .market.summary // null)}' 2>/dev/null || echo "$body" | head -c 300)
+            echo "::notice title=Live $q ($region)::$summary"
+          done
