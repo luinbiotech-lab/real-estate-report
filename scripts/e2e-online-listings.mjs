@@ -36,6 +36,15 @@ const IMAGES = {
   plan: png(600, 420, (x, y) => ((x > 40 && x < 560 && (Math.abs(y - 40) < 4 || Math.abs(y - 380) < 4)) || (y > 40 && y < 380 && (Math.abs(x - 40) < 4 || Math.abs(x - 560) < 4 || (Math.abs(x - 300) < 3 && (y < 180 || y > 240)))) ? [20, 20, 20] : [252, 252, 250])),
 };
 
+
+// PDF page count from the raw bytes: Chromium writes one '/Type /Page' object per page and the page tree '/Count'.
+function pdfPageCount(buffer) {
+  const text = buffer.toString('latin1');
+  const pages = (text.match(/\/Type\s*\/Page(?![s\w])/g) || []).length;
+  const counts = [...text.matchAll(/\/Type\s*\/Pages[\s\S]{0,200}?\/Count\s+(\d+)/g)].map((m) => Number(m[1]));
+  return { pages, treeCount: counts.length ? Math.max(...counts) : null };
+}
+
 const results = [];
 const esc = (text) => String(text).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
 function record(listing, step, status, detail = '') {
@@ -213,6 +222,50 @@ try {
       }
       return `9페이지, 넘침 0, placeholder 0, ${blankInfo}, visual=${report.visual}`;
     });
+
+
+    // 5b. Owner/루인 gate (Issue #12): the published artifacts themselves — print to PDF the way a user saves them, check
+    //     the page count (1P = 1 page, professional report = Opening + 7 + Closing = 9 pages), and reopen the same
+    //     Snapshot URL to confirm it renders the same stored version. First listing only (runtime).
+    if (listing === LISTINGS[0]) {
+      await check(tag, 'PDF 출력(1P=1쪽, 리포트=9쪽) · Snapshot 재열람', async () => {
+        await page.goto(`${BASE_URL}/document/proposal/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+        await page.emulateMedia({ media: 'print' });
+        const onePdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
+        await page.emulateMedia({ media: 'screen' });
+        await writeFile(`${OUT}/e2e-${tag}-1p.pdf`, onePdf);
+        const one = pdfPageCount(onePdf);
+        assert(one.pages === 1, `1P PDF 페이지 수 ${one.pages} (트리 ${one.treeCount}) — 기대 1`);
+
+        await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.daon-professional-report-master', { timeout: 45_000 });
+        await page.waitForURL(/\/professional-report\/snapshot\//, { timeout: 30_000 });
+        const snapshotUrl = page.url();
+        const fingerprint = () => page.evaluate(() => {
+          const master = document.querySelector('.daon-professional-report-master');
+          const text = master?.textContent || '';
+          let hash = 0; for (let i = 0; i < text.length; i++) hash = (hash * 31 + text.charCodeAt(i)) | 0;
+          return { pages: master ? master.querySelectorAll('.daon-frame-page, .daon-detail-page').length : 0, hash, length: text.length };
+        });
+        const before = await fingerprint();
+        await page.emulateMedia({ media: 'print' });
+        const reportPdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
+        await page.emulateMedia({ media: 'screen' });
+        await writeFile(`${OUT}/e2e-${tag}-report.pdf`, reportPdf);
+        const report = pdfPageCount(reportPdf);
+        assert(report.pages === 9, `리포트 PDF 페이지 수 ${report.pages} (트리 ${report.treeCount}, 화면 ${before.pages}쪽) — 기대 9`);
+
+        // Reopen: leave, come back to the same Snapshot URL; stored content must render identically.
+        await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
+        await page.goto(snapshotUrl, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.daon-professional-report-master', { timeout: 45_000 });
+        const after = await fingerprint();
+        assert(after.pages === before.pages && after.hash === before.hash, `Snapshot 재열람 내용 불일치 (${before.pages}/${before.hash} → ${after.pages}/${after.hash})`);
+        const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+        return `1P ${one.pages}쪽 ${Math.round(onePdf.length / 1024)}KB · 리포트 ${report.pages}쪽 ${Math.round(reportPdf.length / 1024)}KB · 재열람 동일`;
+      });
+    }
 
     // 6. Location briefing renders this property.
     await check(tag, '입지 브리핑', async () => {
