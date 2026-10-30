@@ -77,7 +77,7 @@ export default async function handler(request, response) {
 
     if (!upstream.ok) {
       const authError = upstream.status === 401 || upstream.status === 403;
-      return sendJson(response, authError ? 502 : 502, {
+      return sendJson(response, 502, {
         code: authError ? 'VWORLD_AUTH_FAILED' : 'VWORLD_UPSTREAM_FAILED',
         message: 'VWorld 조회에 실패했습니다.',
         upstreamStatus: upstream.status,
@@ -99,8 +99,18 @@ export default async function handler(request, response) {
       return sendJson(response, 502, { code: 'VWORLD_SCHEMA_MISMATCH', message: 'VWorld 응답 구조를 확인해야 합니다.' }, state.origin);
     }
 
+    // The upstream response may be malformed or refer to another parcel.
+    // Never display a foreign or unidentified parcel as the requested Property.
+    const selected = features.slice(0, 1);
+    if (selected.some((feature) => String(feature?.properties?.pnu ?? '') !== pnu)) {
+      return sendJson(response, 502, {
+        code: 'VWORLD_PARCEL_MISMATCH',
+        message: '조회 결과의 필지 식별자가 요청한 PNU와 일치하지 않습니다.',
+      }, state.origin);
+    }
+
     // Do not persist or mark attributes as verified official registry facts.
-    const rows = features.slice(0, 1).map((feature) => ({
+    const rows = selected.map((feature) => ({
       id: typeof feature?.id === 'string' ? feature.id : null,
       geometry: feature?.geometry ?? null,
       properties: feature?.properties && typeof feature.properties === 'object' ? feature.properties : {},
