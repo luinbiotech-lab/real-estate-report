@@ -21,6 +21,12 @@ const pages = [
   ['backup', '/backup'],
   ['shares', '/external-shares'],
   ['income', `/income?propertyId=${id}`],
+  ['review', '/review-history'],
+  ['risk', '/risk'],
+  ['agents', '/agents'],
+  ['twin', `/digital-twin?propertyId=${id}`],
+  ['roomops', '/room-ops'],
+  ['reports', '/report-history'],
 ];
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
