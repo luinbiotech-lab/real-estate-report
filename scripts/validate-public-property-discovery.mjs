@@ -179,5 +179,27 @@ for (const blank of ['', '   ', 'abc', '거래취소', undefined, null]) {
   assert.strictEqual(row.currency, 'KRW');
 }
 
+// Comparable filtering (2026-10-30 live diagnosis): cancelled, share (지분) and collective-unit (집합) rows never feed medians.
+const { marketSummary } = await import(new URL('../api/property-discovery.mjs', import.meta.url).href);
+const whole = normalizeTrade(tradeRow({ dealAmount: '300,000', buildingType: '일반', plottageAr: '140.8' }), 'commercial', tradeResolved);
+assert.strictEqual(whole.comparableExclusion, undefined);
+assert.strictEqual(whole.landAreaSqm, 140.8, 'commercial plottageAr must map to landAreaSqm');
+assert.strictEqual(whole.landPricePerPyeong, Math.round(3_000_000_000 / (140.8 / 3.3058)));
+const unit = normalizeTrade(tradeRow({ dealAmount: '29,500', buildingType: '집합', buildingArea: '34.25' }), 'commercial', tradeResolved);
+assert.strictEqual(unit.comparableExclusion, 'collective_unit');
+const share = normalizeTrade({ dealAmount: '2,000', dealArea: '1', shareDealingType: '지분', dealYear: '2026', dealMonth: '9', dealDay: '1', umdNm: '방배동', jibun: '7**' }, 'land', tradeResolved);
+assert.strictEqual(share.comparableExclusion, 'share_deal');
+const cancelled = normalizeTrade(tradeRow({ dealAmount: '500,000', buildingType: '일반', cdealType: 'O', cdealDay: '26.10.01' }), 'commercial', tradeResolved);
+assert.strictEqual(cancelled.comparableExclusion, 'cancelled');
+const summary = marketSummary([whole, unit, share, cancelled]);
+assert.strictEqual(summary.totalCandidates, 4);
+assert.strictEqual(summary.comparableCount, 1);
+assert.deepStrictEqual(summary.excluded, { cancelled: 1, share_deal: 1, collective_unit: 1 });
+assert.strictEqual(summary.medianDealAmount, 3_000_000_000, 'median must ignore excluded rows');
+assert.strictEqual(summary.medianLandPricePerPyeong, whole.landPricePerPyeong);
+// Negative control: without the filter the median would be the 집합/지분 level.
+const naive = [whole, unit, share, cancelled].map((row) => row.dealAmount).sort((a, b) => a - b)[1];
+assert.notStrictEqual(naive, summary.medianDealAmount);
+
 console.log('PASS public property discovery contract');
 console.log('PASS MOLIT dealAmount 만원→KRW normalization regression');

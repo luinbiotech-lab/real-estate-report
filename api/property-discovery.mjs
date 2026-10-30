@@ -367,7 +367,14 @@ export function normalizeTrade(row,type,resolved){
   const jibun=String(row.jibun||row.지번||'').trim();
   const buildingName=String(row.buildingName||row.건물명||'').trim();
   const buildingAreaSqm=num(row.buildingArea||row.buildingAr||row.excluUseAr||row.totalFloorAr||row.건물면적);
-  const landAreaSqm=num(row.landArea||row.landAr||row.dealArea||row.대지면적||row.거래면적);
+  // Commercial (상업업무용) rows carry the lot area as plottageAr; without it no land unit price can be compared.
+  const landAreaSqm=num(row.landArea||row.landAr||row.dealArea||row.plottageAr||row.대지면적||row.거래면적);
+  // Rows that must not feed price comparisons (2026-10-30 live diagnosis: 강남구 land candidates were all 1–8㎡ share
+  // deals, giving a 20,000,000 KRW median; cancelled deals were included).
+  const cancelled=String(row.cdealType||row.해제여부||'').trim()!=='';
+  const shareDeal=/지분/.test(String(row.shareDealingType||row.지분거래구분||''));
+  const buildingType=String(row.buildingType||row.건물유형||'').trim();
+  const comparableExclusion=cancelled ? 'cancelled' : shareDeal ? 'share_deal' : type==='commercial' && buildingType==='집합' ? 'collective_unit' : undefined;
   const targetJibun=`${Number(resolved.bun)}${Number(resolved.ji)>0?'-'+Number(resolved.ji):''}`;
   const masked=/\*|X|x/.test(jibun);
   const matchLevel=!masked && jibun===targetJibun
@@ -396,22 +403,32 @@ export function normalizeTrade(row,type,resolved){
     floor:row.floor||row.층||'',
     buildingUse:row.buildingUse||row.건물용도||'',
     matchLevel,
+    buildingType,
+    comparableExclusion,
+    landPricePerPyeong: amount && landAreaSqm ? Math.round(amount / (landAreaSqm / 3.3058)) : undefined,
     pricePerSqm: amount && basisArea ? Math.round(amount / basisArea) : undefined,
     pricePerPyeong: amount && basisArea ? Math.round(amount / (basisArea / 3.3058)) : undefined,
     raw:row
   };
 }
-function marketSummary(rows){
+export function marketSummary(rows){
   const exact=rows.filter(row=>row.matchLevel==='exact_lot');
-  const prices=rows.map(row=>row.dealAmount).filter(value=>Number.isFinite(value)).sort((a,b)=>a-b);
-  const unitPrices=rows.map(row=>row.pricePerPyeong).filter(value=>Number.isFinite(value)).sort((a,b)=>a-b);
+  // Medians use comparable rows only: cancelled deals, share (지분) deals and collective-building units (집합) describe a
+  // different asset than a whole lot/building and distort the price level.
+  const comparable=rows.filter(row=>!row.comparableExclusion);
+  const sorted=(key)=>comparable.map(row=>row[key]).filter(value=>Number.isFinite(value)).sort((a,b)=>a-b);
   const median=(values)=>values.length ? values[Math.floor((values.length-1)/2)] : undefined;
+  const excluded={cancelled:0,share_deal:0,collective_unit:0};
+  for(const row of rows) if(row.comparableExclusion) excluded[row.comparableExclusion]=(excluded[row.comparableExclusion]||0)+1;
   return {
     totalCandidates: rows.length,
+    comparableCount: comparable.length,
+    excluded,
     exactLotCount: exact.length,
     latestDealDate: rows.map(row=>row.dealDate).filter(Boolean).sort().at(-1),
-    medianDealAmount: median(prices),
-    medianPricePerPyeong: median(unitPrices)
+    medianDealAmount: median(sorted('dealAmount')),
+    medianPricePerPyeong: median(sorted('pricePerPyeong')),
+    medianLandPricePerPyeong: median(sorted('landPricePerPyeong'))
   };
 }
 
