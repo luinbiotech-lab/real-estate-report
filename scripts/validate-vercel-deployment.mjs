@@ -15,6 +15,12 @@ const config = JSON.parse(readFileSync('vercel.json', 'utf8'));
 if (config.framework !== 'vite' || config.outputDirectory !== 'dist' || config.buildCommand !== 'npm run build') {
   throw new Error('Vercel Vite build/output contract mismatch.');
 }
+// Korean public-data providers (VWorld NED, data.go.kr) reject requests from overseas function regions: on 2026-10-30 the
+// Production discovery call ran in iad1 and VWorld answered HTTP 502, while the same URL from a Korean IP returned JSON.
+// Pin serverless functions to Seoul so provider calls originate in Korea.
+if (!Array.isArray(config.regions) || config.regions.length !== 1 || config.regions[0] !== 'icn1') {
+  throw new Error('Vercel functions must run in icn1 (Seoul): VWorld/data.go.kr reject overseas regions.');
+}
 const rewrites = Array.isArray(config.rewrites) ? config.rewrites : [];
 const rewriteMap = new Map(rewrites.map((row) => [row.source, row.destination]));
 for (const [source, destination] of [
