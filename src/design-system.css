@@ -216,3 +216,18 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
 @media(min-width:701px){
   .property-hub-overview:has(.property-hub-hero:not(:has(img))){grid-template-columns:minmax(220px,.42fr) minmax(0,1.58fr)}
 }
+
+/*
+ * Phone fallback for work-screen grids with fixed pixel minimums (screenshot review 2026-10-31: 사용자·권한 provider cards
+ * were clipped at the right edge, 외부 공유 provider chips truncated). Browsers serialise inline styles with spaces, e.g.
+ * "repeat(2, minmax(320px, 1fr))", so match the stable "minmax(<digit>" fragment.
+ */
+@media(max-width:600px){
+  .app-shell [style*="grid-template-columns"][style*="minmax(1"],
+  .app-shell [style*="grid-template-columns"][style*="minmax(2"],
+  .app-shell [style*="grid-template-columns"][style*="minmax(3"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,150px),1fr))!important}
+  .app-shell [style*="grid-template-columns: repeat(2, minmax(3"],
+  .app-shell [style*="grid-template-columns: repeat(2, minmax(0px, 1fr))"],
+  .app-shell [style*="grid-template-columns: 1fr 1fr 160px auto"],
+  .app-shell [style*="grid-template-columns: 1fr 180px"]{grid-template-columns:minmax(0,1fr)!important}
+}
