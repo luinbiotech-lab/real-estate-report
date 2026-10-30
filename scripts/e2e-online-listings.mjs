@@ -4,6 +4,7 @@
 // Closing) → location briefing → 3D/interior workspaces. DXF upload → Digital Twin handoff for the first listing.
 // Every check is reported as a GitHub annotation (::notice PASS / ::error FAIL) and in artifacts/agent-qa/e2e-online-listings.json.
 import { mkdir, writeFile } from 'node:fs/promises';
+import { deflateSync } from 'node:zlib';
 import { chromium } from 'playwright';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
@@ -16,6 +17,25 @@ const LISTINGS = [
   { key: 'yeoksam', source: 'https://realty.daangn.com/articles/4523816', name: '[테스트] 역삼동 논현로 339 근생', address: '서울특별시 강남구 논현로 339', salePrice: 20_000_000_000, landAreaSqm: 365.1, totalFloorAreaSqm: 976.2, basementFloors: 1, groundFloors: 4, mainUse: '제2종 근린생활시설', zoning: '제3종일반주거지역', nearbyStation: '역삼역', completionDate: '1984-10-12', parkingSpaces: 0 },
 ];
 
+
+// Real raster test files (generated pixels, not placeholders): an "interior" photo, an "exterior" photo and a scanned floor plan.
+function crc32(buf) { let c, crc = 0xffffffff; for (const b of buf) { c = (crc ^ b) & 0xff; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; crc = (crc >>> 8) ^ c; } return (crc ^ 0xffffffff) >>> 0; }
+function png(width, height, pixel) {
+  const raw = Buffer.alloc((width * 3 + 1) * height);
+  for (let y = 0; y < height; y++) { raw[y * (width * 3 + 1)] = 0; for (let x = 0; x < width; x++) { const [r, g, b] = pixel(x, y); const o = y * (width * 3 + 1) + 1 + x * 3; raw[o] = r; raw[o + 1] = g; raw[o + 2] = b; } }
+  const chunk = (type, data) => { const len = Buffer.alloc(4); len.writeUInt32BE(data.length); const td = Buffer.concat([Buffer.from(type), data]); const crc = Buffer.alloc(4); crc.writeUInt32BE(crc32(td)); return Buffer.concat([len, td, crc]); };
+  const ihdr = Buffer.alloc(13); ihdr.writeUInt32BE(width, 0); ihdr.writeUInt32BE(height, 4); ihdr[8] = 8; ihdr[9] = 2;
+  return Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]);
+}
+const IMAGES = {
+  // Room (400x300, so it is distinguishable from the 480x320 exterior in the report hero): warm floor, light walls, a window and a door.
+  interior: png(400, 300, (x, y) => (y > 215 ? [150 + (x % 40), 110, 70] : x > 60 && x < 180 && y > 50 && y < 150 ? [170, 210, 240] : x > 360 && x < 420 && y > 90 ? [120, 80, 50] : [235 - y / 8, 230 - y / 8, 220 - y / 8])),
+  // Facade: sky, building with window grid, road.
+  exterior: png(480, 320, (x, y) => (y < 80 ? [135, 190, 235] : y > 280 ? [90, 90, 95] : x > 100 && x < 380 ? ((x - 100) % 50 < 30 && (y - 80) % 50 < 30 ? [60, 90, 120] : [200, 190, 175]) : [150, 170, 150])),
+  // Floor plan: white sheet with black walls and an inner partition.
+  plan: png(600, 420, (x, y) => ((x > 40 && x < 560 && (Math.abs(y - 40) < 4 || Math.abs(y - 380) < 4)) || (y > 40 && y < 380 && (Math.abs(x - 40) < 4 || Math.abs(x - 560) < 4 || (Math.abs(x - 300) < 3 && (y < 180 || y > 240)))) ? [20, 20, 20] : [252, 252, 250])),
+};
+
 const results = [];
 const esc = (text) => String(text).replace(/%/g, '%25').replace(/\r/g, '%0D').replace(/\n/g, '%0A');
 function record(listing, step, status, detail = '') {
@@ -27,7 +47,18 @@ function record(listing, step, status, detail = '') {
 }
 async function check(listing, step, fn) {
   try { const detail = await fn(); record(listing, step, 'PASS', detail || ''); return true; }
-  catch (error) { record(listing, step, 'FAIL', error instanceof Error ? error.message.split('\n')[0].slice(0, 300) : String(error)); return false; }
+  catch (error) {
+    // Artifacts cannot be downloaded from every review environment, so the failure line itself carries the context:
+    // where the page was, its headings and any alert text.
+    const where = await page.evaluate(() => ({
+      path: location.pathname + location.search,
+      headings: [...document.querySelectorAll('h1, h2')].map((el) => (el.textContent || '').trim()).filter(Boolean).slice(0, 6).join(' | '),
+      alerts: [...document.querySelectorAll('.MuiAlert-message')].map((el) => (el.textContent || '').trim().slice(0, 100)).slice(0, 3).join(' | '),
+    })).catch(() => null);
+    const message = error instanceof Error ? error.message.split('\n').map((line) => line.trim()).filter(Boolean).slice(0, 3).join(' ').slice(0, 300) : String(error);
+    record(listing, step, 'FAIL', `${message}${where ? ` @ ${where.path} [h: ${where.headings}]${where.alerts ? ` [alert: ${where.alerts}]` : ''}` : ''}`);
+    return false;
+  }
 }
 function assert(condition, message) { if (!condition) throw new Error(message); }
 
@@ -225,6 +256,73 @@ try {
     });
   }
 
+
+  // 8b. Real photo / floor-plan files through the interior and spatial analysis path (second test listing).
+  //     Spatial Workspace upload → Interior Vision / Floor Plan agent → Interior Workspace counts; Data Room exterior photo →
+  //     property hub and 1P hero. An interior photo must never become the report hero.
+  if (registered[1]) {
+    const target = registered[1];
+    const pid = encodeURIComponent(target.propertyId);
+    const pickCategory = async (label) => {
+      await page.getByLabel('자료 유형').click();
+      await page.getByRole('option', { name: label, exact: true }).click();
+    };
+    await check(target.key, '실내 사진 → Interior Vision 분석', async () => {
+      await page.goto(`${BASE_URL}/spatial?propertyId=${pid}`, { waitUntil: 'domcontentloaded' });
+      await visibleText('Spatial Workspace', 25_000);
+      await pickCategory('인테리어');
+      await page.locator('input[type="file"]').first().setInputFiles({ name: 'e2e-interior-room.png', mimeType: 'image/png', buffer: IMAGES.interior });
+      await visibleText('e2e-interior-room', 30_000);
+      await page.getByText(/공간 자료 \d+건을 등록했습니다/).first().waitFor({ state: 'visible', timeout: 30_000 });
+      const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+      await page.goto(`${BASE_URL}/interior?propertyId=${pid}`, { waitUntil: 'domcontentloaded' });
+      await visibleText('Interior Workspace', 25_000);
+      const counts = await page.evaluate(() => Object.fromEntries([...document.querySelectorAll('[data-testid="interior-kpi"]')].map((el) => [el.getAttribute('data-label'), Number(el.getAttribute('data-value'))])));
+      await shot(`${target.key}-interior-vision`);
+      assert(counts['실내 사진'] === 1, `실내 사진 수 ${counts['실내 사진']} (기대 1)`);
+      assert((counts['Vision 결과'] ?? 0) >= 1 || (counts['검토 대기'] ?? 0) >= 1, `Vision 결과/검토 대기 없음: ${JSON.stringify(counts)}`);
+      const body = await page.locator('body').innerText();
+      assert(body.includes(target.name), 'Interior Workspace가 다른 물건을 표시합니다.');
+      return `Vision 결과 ${counts['Vision 결과']} · 검토 대기 ${counts['검토 대기']}`;
+    });
+    await check(target.key, '도면 이미지 → Floor Plan 자산', async () => {
+      await page.goto(`${BASE_URL}/spatial?propertyId=${pid}`, { waitUntil: 'domcontentloaded' });
+      await visibleText('Spatial Workspace', 25_000);
+      await pickCategory('도면/CAD');
+      await page.getByLabel('층(선택)').fill('1F');
+      await page.locator('input[type="file"]').first().setInputFiles({ name: 'e2e-floor-plan-1f.png', mimeType: 'image/png', buffer: IMAGES.plan });
+      await page.getByText(/공간 자료 \d+건을 등록했습니다/).first().waitFor({ state: 'visible', timeout: 30_000 });
+      await visibleText('e2e-floor-plan-1f.png', 30_000);
+      await shot(`${target.key}-floor-plan`);
+      const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+      return '도면 원본 등록 · Digital Twin 준비 자산 표시';
+    });
+    await check(target.key, '외관 사진 → 상세 허브·1P 대표사진 (실내 사진 제외)', async () => {
+      await page.goto(`${BASE_URL}/property/${pid}/data-room?tab=media`, { waitUntil: 'domcontentloaded' });
+      await visibleText('보고서 미디어 연결', 25_000);
+      await page.getByLabel('캡션').fill('E2E 정면 외관');
+      await page.locator('input[type="file"][accept^="image/jpeg"]').first().setInputFiles({ name: 'e2e-exterior.png', mimeType: 'image/png', buffer: IMAGES.exterior });
+      await visibleText('외관 미디어를 Data Room에 연결했습니다', 25_000);
+      await page.getByRole('button', { name: '대표 지정', exact: true }).first().click();
+      await visibleText('보고서 대표 외관 미디어로 지정했습니다', 25_000);
+      await page.goto(`${BASE_URL}/property/${pid}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForTimeout(800);
+      const heroAlt = await page.locator('img').evaluateAll((imgs) => imgs.map((img) => img.getAttribute('alt') || ''));
+      await page.goto(`${BASE_URL}/document/proposal/${pid}`, { waitUntil: 'domcontentloaded' });
+      await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+      const hero = await page.evaluate(() => { const img = document.querySelector('.d1-hero > img'); return img ? { src: img.getAttribute('src') || '', w: img.naturalWidth } : null; });
+      await shot(`${target.key}-1p-with-photo`);
+      assert(hero && hero.src.startsWith('data:image') && hero.w === 480, `1P 대표사진이 등록한 외관 사진이 아닙니다: ${JSON.stringify(hero && { w: hero.w, src: hero.src.slice(0, 30) })}`);
+      // Regression: exterior photos must not be counted as interior photos.
+      await page.goto(`${BASE_URL}/interior?propertyId=${pid}`, { waitUntil: 'domcontentloaded' });
+      await visibleText('Interior Workspace', 25_000);
+      const interiorCount = await page.locator('[data-testid="interior-kpi"][data-label="실내 사진"]').getAttribute('data-value');
+      assert(interiorCount === '1', `외관 사진 등록 후 실내 사진 수 ${interiorCount} (기대 1)`);
+      const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+      return `허브 이미지 ${heroAlt.length}개 · 1P 대표사진=외관(480px) · 실내 사진 수 유지`;
+    });
+  }
+
   // 9. Home: test registrations appear in the list and KPIs count them.
   await check('전체', '홈 목록·KPI 반영', async () => {
     await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
@@ -245,6 +343,8 @@ try {
       ['입지 브리핑', `/properties/${id}/briefing`],
       ['준비도 센터', '/readiness'],
       ['임대 수익', `/income?propertyId=${id}`],
+      ['Interior Workspace', `/interior?propertyId=${id}`],
+      ['Spatial Workspace', `/spatial?propertyId=${id}`],
     ];
     for (const width of [390, 768]) {
       await page.setViewportSize({ width, height: width === 390 ? 844 : 1024 });

@@ -59,20 +59,28 @@ export default function PropertyDataRoomPage() {
   const [creatingReport, setCreatingReport] = useState(false); const [reviewingCandidateId, setReviewingCandidateId] = useState('');
   const [documentActionId, setDocumentActionId] = useState('');
   const loadRequestRef = useRef(0);
+  // Property whose data is on screen. Reloading the same Property after a save refreshes in place; it used to blank the
+  // page, which unmounted the panels and erased their success messages (E2E real-photo path, 2026-10-30).
+  const loadedIdRef = useRef('');
 
   const load = useCallback(async () => {
     const requestId = ++loadRequestRef.current;
-    setLoading(true); setError('');
-    // Never leave another Property's documents/actions visible during a route change or reload.
-    setProperty(undefined); setBundle(emptyBundle);
+    const refresh = loadedIdRef.current === id;
+    setError('');
+    if (!refresh) {
+      setLoading(true);
+      // Never leave another Property's documents/actions visible during a route change.
+      setProperty(undefined); setBundle(emptyBundle);
+    }
     try {
       const item = await propertyRepository.getById(id);
       if (requestId !== loadRequestRef.current) return;
-      if (!item || item.id !== id) { setError('요청한 물건을 찾을 수 없습니다.'); return; }
+      if (!item || item.id !== id) { loadedIdRef.current = ''; setProperty(undefined); setBundle(emptyBundle); setError('요청한 물건을 찾을 수 없습니다.'); return; }
       const nextBundle = await propertyDataRoomService.getBundle(id);
       if (requestId !== loadRequestRef.current) return;
       // Repository filtering is not a boundary; never render another Property's rows here.
       setProperty(item); setBundle(scopeDataRoomBundle(nextBundle, id));
+      loadedIdRef.current = id;
     } catch (reason) {
       if (requestId === loadRequestRef.current) {
         setError(reason instanceof Error ? reason.message : 'Data Room 자료를 불러오지 못했습니다.');
