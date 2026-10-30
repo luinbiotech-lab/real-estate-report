@@ -53,4 +53,12 @@ jobs:
         run: |
           echo "::error title=Live site check::${{ env.fails }} check(s) failed"
           exit 1
+      - name: Repeated unit price diagnosis (Issue #37)
+        run: |
+          for q2 in "서울특별시 마포구 동교로 212-22" "서울특별시 서초구 동광로1길 49"; do
+            e2=$(jq -rn --arg v "$q2" '$v|@uri')
+            curl -sS -m 40 "$SITE/api/property-discovery?query=$e2" > /tmp/r.json
+            echo "::notice title=Rows $q2::$(jq -c '[(.market.commercial + .market.land)[] | {t: .type, d: .dealDate, amt: .sourceDealAmountTenThousandWon, b: .buildingAreaSqm, l: .landAreaSqm, ppp: .pricePerPyeong, bt: .raw.buildingType, sh: .raw.shareDealingType, plot: .raw.plottageAr, deal: .raw.dealArea, bar: .raw.buildingAr}] | group_by(.ppp) | map(select(length > 1)) | .[:5]' /tmp/r.json | head -c 3500)"
+            echo "::notice title=Building $q2::$(jq -c '{building: (.building // null | if . then (to_entries | map(select(.value != null and .value != "")) | from_entries) else null end), floors: (.floors // [] | length), status, buildingTitle: .providerStatus.buildingTitle}' /tmp/r.json | head -c 2500)"
+          done
 
