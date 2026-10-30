@@ -1,7 +1,7 @@
 import { useEffect, useState, type ChangeEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { AddRounded, ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, SaveRounded } from '@mui/icons-material';
-import { Button, Checkbox, FormControlLabel, MenuItem, TextField } from '@mui/material';
+import { Alert, Button, Checkbox, CircularProgress, FormControlLabel, MenuItem, TextField } from '@mui/material';
 import MapAutomationPanel from '../components/MapAutomationPanel';
 import ExteriorVerificationPanel from '../components/ExteriorVerificationPanel';
 import BrandMapEditor from '../components/BrandMapEditor';
@@ -12,6 +12,7 @@ import { BRIEFING_CATEGORIES } from '../services/briefingService';
 import { streetViewProvenanceService } from '../services/streetViewProvenanceService';
 import { publicPropertyDiscoveryService, type PropertyDiscoveryResult } from '../services/publicPropertyDiscoveryService';
 import { marketPresenceService } from '../services/marketPresenceService';
+import { buildPropertyToSave, parseNonNegativeNumberInput, type EditFormLoadState } from '../domain/propertyDetail/propertyDetailModel';
 import { emptyProperty, type BriefingItem, type BrandMapSettings, type Property, type Settings, type StreetViewVerification } from '../types';
 
 type Field = { label: string; key: keyof Property; type?: string };
@@ -30,11 +31,28 @@ export default function PropertyForm({ settings }: { settings: Settings }) {
   const [property, setProperty] = useState<Property>({ ...emptyProperty, managerName: settings.defaultManager, managerPhone: settings.phone, managerEmail: settings.email, companyName: settings.companyName });
   const [error, setError] = useState('');
   const [discoveryResult, setDiscoveryResult] = useState<PropertyDiscoveryResult>();
+  // Edit mode must not show (or save) the blank default form as if it were the record being edited.
+  const [loadState, setLoadState] = useState<EditFormLoadState>(id ? 'loading' : 'new');
+  const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (id) {
-      propertyRepository.getById(id).then((value) => value && setProperty({ ...emptyProperty, ...value, briefingItems: value.briefingItems ?? [] }));
-      return;
+      let cancelled = false;
+      setLoadState('loading'); setError('');
+      propertyRepository.getById(id)
+        .then((value) => {
+          if (cancelled) return;
+          if (!value || value.id !== id) { setLoadState('not_found'); return; }
+          setProperty({ ...emptyProperty, ...value, briefingItems: value.briefingItems ?? [] });
+          setLoadState('ready');
+        })
+        .catch((reason: unknown) => {
+          if (cancelled) return;
+          setError(reason instanceof Error ? reason.message : '물건 정보를 불러오지 못했습니다.');
+          setLoadState('error');
+        });
+      return () => { cancelled = true; };
     }
+    setLoadState('new');
     const state = location.state as { discoveryResult?: PropertyDiscoveryResult; discoveryPatch?: Partial<Property> } | null;
     if (state?.discoveryResult) {
       setDiscoveryResult(state.discoveryResult);
@@ -42,19 +60,43 @@ export default function PropertyForm({ settings }: { settings: Settings }) {
     }
   }, [id, location.state]);
   const change = (key: keyof Property, value: ChangeValue) => setProperty((previous) => { const next = { ...previous, [key]: value }; if (key === 'landAreaPyeong') next.landAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'landAreaSqm') next.landAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; if (key === 'totalFloorAreaPyeong') next.totalFloorAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'totalFloorAreaSqm') next.totalFloorAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; return next; });
-  const upload = (key: 'mainImage' | 'mapImage' | 'locationAnalysisImage' | 'additionalImages', event: ChangeEvent<HTMLInputElement>) => { const files = [...(event.target.files || [])]; Promise.all(files.map((file) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = reject; reader.readAsDataURL(file); }))).then((urls) => change(key, key === 'additionalImages' ? [...property.additionalImages, ...urls] : urls[0] || '')); };
+  const upload = (key: 'mainImage' | 'mapImage' | 'locationAnalysisImage' | 'additionalImages', event: ChangeEvent<HTMLInputElement>) => {
+    const input = event.target;
+    const files = [...(input.files || [])];
+    Promise.all(files.map((file) => new Promise<string>((resolve, reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result)); reader.onerror = () => reject(reader.error ?? new Error(`${file.name} 파일을 읽지 못했습니다.`)); reader.readAsDataURL(file); })))
+      // Functional update: edits made while files were being read must not be overwritten by a stale snapshot.
+      .then((urls) => setProperty((previous) => ({ ...previous, [key]: key === 'additionalImages' ? [...previous.additionalImages, ...urls] : urls[0] || '' })))
+      .catch((reason: unknown) => setError(reason instanceof Error ? reason.message : '이미지 파일을 읽지 못했습니다.'))
+      .finally(() => { input.value = ''; });
+  };
   const makeAdditionalPrimary = (index: number) => { const selected = property.additionalImages[index]; if (!selected) return; const remaining = property.additionalImages.filter((_, itemIndex) => itemIndex !== index); change('additionalImages', property.mainImage ? [property.mainImage, ...remaining] : remaining); change('mainImage', selected); };
   const addBriefingItem = () => change('briefingItems', [...property.briefingItems, { category: 'fashion', name: '', description: '', source: 'manual' }]);
   const updateBriefingItem = (index: number, patch: Partial<BriefingItem>) => change('briefingItems', property.briefingItems.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
   const removeBriefingItem = (index: number) => change('briefingItems', property.briefingItems.filter((_, itemIndex) => itemIndex !== index));
-  const save = async () => { if (!property.name || !property.address || !property.tradeType) { setError('물건명, 주소, 거래유형은 필수입니다.'); return; } setError(''); try { const now = new Date().toISOString(); const data = { ...property, id: property.id || crypto.randomUUID(), briefingItems: property.briefingItems ?? [], briefingUpdatedAt: property.briefingItems.length ? now : property.briefingUpdatedAt || '', createdAt: property.createdAt || now, updatedAt: now }; await (id ? propertyRepository.update(data) : propertyRepository.create(data)); if (discoveryResult) await publicPropertyDiscoveryService.persist(data.id, discoveryResult); await marketPresenceService.persist(data); await streetViewProvenanceService.ensure(data); navigate('/'); } catch (reason) { setError(reason instanceof Error ? reason.message : '물건 저장에 실패했습니다.'); } };
-  return <><header className="page-header compact"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>목록으로</Button><h1>{id ? '물건 수정' : '개별 물건 등록'}</h1><p>입력한 하나의 물건 데이터가 보고서·제안서·입지 브리핑에 함께 반영됩니다.</p></div><Button variant="contained" startIcon={<SaveRounded />} onClick={save}>저장하기</Button></header>{error && <div className="error-banner">{error}</div>}<div className="form-layout"><div>
+  const save = async () => {
+    if (saving) return;
+    if (!property.name || !property.address || !property.tradeType) { setError('물건명, 주소, 거래유형은 필수입니다.'); return; }
+    setError(''); setSaving(true);
+    try {
+      const data = buildPropertyToSave(property, id, loadState, new Date().toISOString(), () => crypto.randomUUID());
+      await (id ? propertyRepository.update(data) : propertyRepository.create(data));
+      if (discoveryResult) await publicPropertyDiscoveryService.persist(data.id, discoveryResult);
+      await marketPresenceService.persist(data);
+      await streetViewProvenanceService.ensure(data);
+      navigate(id ? `/property/${encodeURIComponent(data.id)}` : '/');
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '물건 저장에 실패했습니다.');
+    } finally { setSaving(false); }
+  };
+  if (id && loadState === 'loading') return <div className="center"><CircularProgress /><p>물건 정보를 불러오는 중입니다.</p></div>;
+  if (id && (loadState === 'not_found' || loadState === 'error')) return <Alert severity="error" action={<Button color="inherit" size="small" onClick={() => navigate('/')}>물건 목록</Button>}>{loadState === 'not_found' ? '수정할 물건을 찾을 수 없습니다. 저장하면 새 물건이 만들어지므로 편집 화면을 열지 않았습니다.' : `물건 정보를 불러오지 못했습니다. ${error}`}</Alert>;
+  return <><header className="page-header compact"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>목록으로</Button><h1>{id ? '물건 수정' : '개별 물건 등록'}</h1><p>입력한 하나의 물건 데이터가 보고서·제안서·입지 브리핑에 함께 반영됩니다.</p></div><Button variant="contained" startIcon={<SaveRounded />} onClick={save} disabled={saving}>저장하기</Button></header>{error && <div className="error-banner">{error}</div>}<div className="form-layout"><div>
     <PropertyPublicDiscoveryPanel
       property={property}
       onResolved={setDiscoveryResult}
       onApply={(patch) => setProperty((previous) => ({ ...previous, ...patch }))}
     />
-    {Object.entries(sections).map(([title, fields]) => <section className="form-section" key={title}><h2>{title}</h2><div className="field-grid">{fields.map((field) => field.key === 'tradeType' ? <TextField select key={field.key} label={field.label} value={property.tradeType} onChange={(event) => change(field.key, event.target.value)}>{['매매', '전세', '월세'].map((value) => <MenuItem key={value} value={value}>{value}</MenuItem>)}</TextField> : <TextField key={field.key} label={field.label} type={field.type || 'text'} value={String(property[field.key] ?? '')} InputLabelProps={field.type === 'date' ? { shrink: true } : undefined} onChange={(event) => change(field.key, field.type === 'number' ? Number(event.target.value) : event.target.value)} />)}</div>{title === '거래정보' && <FormControlLabel control={<Checkbox checked={property.negotiable} onChange={(event) => change('negotiable', event.target.checked)} />} label="가격 협의 가능" />}</section>)}
+    {Object.entries(sections).map(([title, fields]) => <section className="form-section" key={title}><h2>{title}</h2><div className="field-grid">{fields.map((field) => field.key === 'tradeType' ? <TextField select key={field.key} label={field.label} value={property.tradeType} onChange={(event) => change(field.key, event.target.value)}>{['매매', '전세', '월세'].map((value) => <MenuItem key={value} value={value}>{value}</MenuItem>)}</TextField> : <TextField key={field.key} label={field.label} type={field.type || 'text'} value={String(property[field.key] ?? '')} InputLabelProps={field.type === 'date' ? { shrink: true } : undefined} onChange={(event) => { if (field.type !== 'number') { change(field.key, event.target.value); return; } const parsed = parseNonNegativeNumberInput(event.target.value); if (parsed !== undefined) change(field.key, parsed); }} inputProps={field.type === 'number' ? { min: 0 } : undefined} />)}</div>{title === '거래정보' && <FormControlLabel control={<Checkbox checked={property.negotiable} onChange={(event) => change('negotiable', event.target.checked)} />} label="가격 협의 가능" />}</section>)}
     <MarketPresencePanel property={property} onChange={(patch) => setProperty((previous) => ({ ...previous, ...patch }))} />
     <MapAutomationPanel property={property} change={change} />
     <section className="form-section"><h2>분석 / 설명</h2><div className="field-grid textareas">{analysisFields.map((field) => <TextField key={field.key} multiline minRows={3} label={field.label} value={String(property[field.key])} onChange={(event) => change(field.key, event.target.value)} />)}</div></section>
