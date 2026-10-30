@@ -146,8 +146,57 @@ function normalizeTitle(row={}) {
     householdCount:num(row.hhldCnt), familyCount:num(row.fmlyCnt), heightM:num(row.heit),
     elevatorCount:(num(row.rideUseElvtCnt)||0)+(num(row.emgenUseElvtCnt)||0),
     parkingOfficial:parking, completionDate:ymd(row.useAprDay),
-    rawPk:row.mgmBldrgstPk||''
+    rawPk:row.mgmBldrgstPk||'',
+    // Classification inputs (Issue #37): register kind (일반/집합), detailed use text, dong name.
+    registerKind:String(row.regstrKindCdNm||'').trim(),
+    detailUse:String(row.etcPurps||'').trim(),
+    dongName:String(row.dongNm||'').trim(),
+    // A 0 in the register means "not recorded", not a measured zero (e.g. 방배동 765-32 platArea=0 while VWorld has 146.2㎡).
+    unrecordedFields:[['landAreaSqm',landArea],['totalFloorAreaSqm',total],['buildingAreaSqm',build],['buildingCoverageRate',num(row.bcRat)],['floorAreaRatio',num(row.vlRat)]]
+      .filter(([,value])=>!(value>0)).map(([key])=>key)
   };
+}
+
+/*
+ * Property type from public records (Issue #37). Never guesses a unit (호실): several register titles on one lot are reported
+ * as multipleBuildings so the UI can ask the user to choose. basis lists the evidence actually used; when the building
+ * register has no title the result is 'unconfirmed' (not "no building").
+ */
+export const PROPERTY_TYPE_LABELS={
+  land:'토지', apartment:'아파트', row_house:'연립·다세대', officetel:'오피스텔', detached:'단독·다가구',
+  commercial_office:'상가·업무', factory_warehouse:'공장·창고', mixed:'복합(여러 건물)', unconfirmed:'미확인'
+};
+function typeFromTitle(title){
+  const main=String(title?.mainUse||''), detail=String(title?.detailUse||''), kind=String(title?.registerKind||'');
+  const text=`${main} ${detail}`;
+  if(/오피스텔/.test(text)) return 'officetel';
+  if(/아파트/.test(text)) return 'apartment';
+  if(/연립|다세대/.test(text)) return 'row_house';
+  if(/공동주택/.test(main)) return kind.includes('집합') && (title?.householdCount||0)>=20 ? 'apartment' : 'row_house';
+  if(/단독주택|다가구|다중주택/.test(text)) return 'detached';
+  if(/공장|창고/.test(text)) return 'factory_warehouse';
+  if(/근린생활|업무|판매|숙박|의료|교육|문화|위락|노유자|운동/.test(main)) return 'commercial_office';
+  return null;
+}
+export function classifyPropertyType({titles=[],landProfile=null}={}){
+  const basis=[];
+  const types=titles.map(typeFromTitle);
+  if(titles.length){
+    titles.forEach((title,index)=>basis.push(`건축물대장 표제부${titles.length>1?` ${index+1}`:''}: ${[title.mainUse,title.detailUse,title.registerKind].filter(Boolean).join(' · ')||'용도 미기재'}`));
+    const distinct=[...new Set(types.filter(Boolean))];
+    const multipleBuildings=titles.length>1;
+    if(distinct.length===1) return { type:distinct[0], label:PROPERTY_TYPE_LABELS[distinct[0]], confidence:types.every(Boolean)?'register':'partial', basis, multipleBuildings };
+    if(distinct.length>1) return { type:'mixed', label:PROPERTY_TYPE_LABELS.mixed, confidence:'register', basis, multipleBuildings:true, candidates:distinct };
+    return { type:'unconfirmed', label:PROPERTY_TYPE_LABELS.unconfirmed, confidence:'none', basis:[...basis,'표제부 용도로 유형을 판정할 수 없음'], multipleBuildings };
+  }
+  basis.push('건축물대장 표제부 없음 — 건물 부재가 아니라 미확인');
+  const situation=String(landProfile?.landUseSituation||''), category=String(landProfile?.landCategory||'');
+  if(landProfile) basis.push(`VWorld 토지특성: 지목 ${category||'미기재'} · 이용상황 ${situation||'미기재'}`);
+  // Land only when the parcel evidence itself says there is no building use; otherwise stay unconfirmed.
+  if(/나지/.test(situation) || (category && !['대','공장용지','창고용지','주차장','주유소용지'].includes(category) && !/주거|상업|업무|공업/.test(situation))) {
+    return { type:'land', label:PROPERTY_TYPE_LABELS.land, confidence:'parcel_evidence', basis, multipleBuildings:false };
+  }
+  return { type:'unconfirmed', label:PROPERTY_TYPE_LABELS.unconfirmed, confidence:'none', basis, multipleBuildings:false };
 }
 function normalizeFloor(row={}) {
   return { floorType:row.flrGbCdNm||'', floor:row.flrNoNm||'', areaSqm:num(row.area), mainUse:row.mainPurpsCdNm||row.etcPurps||'', structure:row.strctCdNm||row.etcStrct||'' };
@@ -487,6 +536,7 @@ export default async function handler(request,response){
     const usageEvidence=normalizeEnergy(electricityRaw,gasRaw,months);
     return sendJson(response,200,{
       status:Object.values(providerStatus).every((item)=>item.ok) ? 'ok' : 'partial',publicDataConfigured:true,vworldConfigured:Boolean(vworldKey),address,building:buildingTitle,providerStatus,landProfile,
+      propertyType:titleResult.ok ? classifyPropertyType({titles:titles.map(normalizeTitle),landProfile}) : {type:'unconfirmed',label:PROPERTY_TYPE_LABELS.unconfirmed,confidence:'none',basis:['건축물대장 조회 실패 — 유형 미확인'],multipleBuildings:false},
       buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),landUseZones,
       market:{commercial:commercial.slice(0,40),land:land.slice(0,40),summary:marketSummary(marketRows),exactLot:marketRows.filter(row=>row.matchLevel==='exact_lot').slice(0,20)},
       usageEvidence,

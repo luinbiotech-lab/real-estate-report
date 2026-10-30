@@ -13,6 +13,14 @@ export interface DiscoveredBuilding {
   structure: string; mainUse: string; groundFloors: number; basementFloors: number;
   householdCount?: number; familyCount?: number; heightM?: number; elevatorCount?: number; parkingOfficial?: number;
   completionDate: string; rawPk: string;
+  registerKind?: string; detailUse?: string; dongName?: string;
+  /** Register fields recorded as 0/blank — shown as 미기재, never as a measured 0. */
+  unrecordedFields?: string[];
+}
+export type DiscoveredPropertyType = 'land' | 'apartment' | 'row_house' | 'officetel' | 'detached' | 'commercial_office' | 'factory_warehouse' | 'mixed' | 'unconfirmed';
+export interface PropertyTypeClassification {
+  type: DiscoveredPropertyType; label: string; confidence: 'register' | 'partial' | 'parcel_evidence' | 'none';
+  basis: string[]; multipleBuildings: boolean; candidates?: DiscoveredPropertyType[];
 }
 export interface DiscoveredFloor { floorType: string; floor: string; areaSqm?: number; mainUse: string; structure: string }
 export interface DiscoveredTrade {
@@ -66,6 +74,7 @@ export interface KakaoPoiEvidence {
 export interface PropertyDiscoveryResult {
   status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; vworldConfigured?: boolean; address?: DiscoveredAddress;
   building?: DiscoveredBuilding | null; buildingCandidates?: DiscoveredBuilding[]; floors?: DiscoveredFloor[];
+  propertyType?: PropertyTypeClassification;
   landUseZones?: LandUseZone[];
   landProfile?: LandProfile | null;
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[]; summary?: MarketSummary; exactLot?: DiscoveredTrade[] };
