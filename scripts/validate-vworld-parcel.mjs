@@ -68,6 +68,36 @@ try {
   assert.ok(!JSON.stringify(success.body).includes(process.env.VWORLD_API_KEY));
   assert.equal(requests, 1);
 
+  // Fail closed when the provider returns another property or omits its PNU.
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: { status: 'OK', result: { featureCollection: {
+      features: [{ id: 'foreign-parcel', properties: { pnu: '1111010100100010000' }, geometry: null }],
+    } } } }),
+  });
+  const foreign = await call('/api/vworld/parcel?pnu=' + pnu);
+  assert.equal(foreign.status, 502);
+  assert.equal(foreign.body.code, 'VWORLD_PARCEL_MISMATCH');
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: { status: 'OK', result: { featureCollection: {
+      features: [{ id: 'unidentified-parcel', properties: {}, geometry: null }],
+    } } } }),
+  });
+  const unidentified = await call('/api/vworld/parcel?pnu=' + pnu);
+  assert.equal(unidentified.status, 502);
+  assert.equal(unidentified.body.code, 'VWORLD_PARCEL_MISMATCH');
+  globalThis.fetch = async () => ({
+    ok: true,
+    status: 200,
+    json: async () => ({ response: { status: 'OK', result: { featureCollection: { features: [] } } } }),
+  });
+  const empty = await call('/api/vworld/parcel?pnu=' + pnu);
+  assert.equal(empty.status, 200);
+  assert.equal(empty.body.features.length, 0);
+
   globalThis.fetch = async () => ({ ok: false, status: 403 });
   const authFailure = await call('/api/vworld/parcel?pnu=' + pnu);
   assert.equal(authFailure.status, 502);
