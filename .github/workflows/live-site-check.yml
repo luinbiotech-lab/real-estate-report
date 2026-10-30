@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 5
     env:
       # Target: Production by default; a preview URL may be set here temporarily to verify a PR before promotion.
-      SITE: https://real-estate-report-45uh2w88z-luinbiotech-6348.vercel.app
+      SITE: https://real-estate-report-lime.vercel.app
     steps:
       - name: Status and public-data discovery for the three test listings
         run: |
