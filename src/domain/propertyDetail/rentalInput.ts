@@ -22,3 +22,6 @@ export function pickRentalTarget<T extends { id: string }>(rows: T[], requestedI
   }
   return { target: rows[0], missingRequested: false };
 }
+
+/** Generic form of the rule above for any workspace that accepts ?propertyId (Digital Twin, Spatial). */
+export const pickRequestedProperty = pickRentalTarget;

@@ -33,7 +33,9 @@ async function check(singleFlight) {
   const create = (id) => { counts[id]++; return id === 'A' ? a.promise : b.promise; };
   const firstA = singleFlight(pending, 'A', create);
   const secondA = singleFlight(pending, 'A', create);
-  assert.equal(firstA, secondA, 'StrictMode effect replay must share a single draft request');
+  // Explicit check: Node 20's assert.equal ignores the custom message for distinct objects, which broke the negative
+  // control's message match in CI (Node 20) while passing on Node 22.
+  if (firstA !== secondA) throw new Error('StrictMode effect replay must share a single draft request');
   const firstB = singleFlight(pending, 'B', create);
   assert.notEqual(firstB, firstA, 'different Properties must never share a draft');
   await Promise.resolve();

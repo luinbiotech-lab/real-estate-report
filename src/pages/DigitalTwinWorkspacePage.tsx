@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { AutoAwesomeRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import BuildingProductionGatePanel from '../components/BuildingProductionGatePanel';
@@ -28,11 +29,14 @@ import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepo
 import { propertyRepository } from '../repositories/propertyRepository';
 import { agentOrchestratorService } from '../services/agentOrchestratorService';
 import { agentRuntimeService } from '../services/agentRuntimeService';
+import { pickRequestedProperty } from '../domain/propertyDetail/rentalInput';
 import type { Property } from '../types';
 
 export default function DigitalTwinWorkspacePage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
+  // Deep links from the Data Room / Digital Twin intake pass ?propertyId; it used to be ignored (first property shown).
+  const [searchParams, setSearchParams] = useSearchParams();
   const [bundle, setBundle] = useState<Awaited<ReturnType<typeof propertyDataRoomRepository.getBundle>>>({ documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] });
   const [loading, setLoading] = useState(true);
   const [refreshingTwin, setRefreshingTwin] = useState(false);
@@ -46,7 +50,9 @@ export default function DigitalTwinWorkspacePage() {
     (async () => {
       try {
         const list = await propertyRepository.getAll(); setProperties(list);
-        const first = list[0]?.id || ''; setPropertyId(first); if (first) await load(first);
+        const { target, missingRequested } = pickRequestedProperty(list, searchParams.get('propertyId'));
+        if (missingRequested) setError('요청한 물건을 찾을 수 없습니다. 대상 물건을 직접 선택해 주세요.');
+        const first = target?.id || ''; setPropertyId(first); if (first) await load(first);
       } catch (reason) { setError(reason instanceof Error ? reason.message : 'Digital Twin Workspace를 불러오지 못했습니다.'); }
       finally { setLoading(false); }
     })();
@@ -92,7 +98,7 @@ export default function DigitalTwinWorkspacePage() {
     {notice && <Alert severity="info" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20, alignItems: 'center' }}>
-      <FormControl size="small" fullWidth><InputLabel id="twin-property-label">대상 물건</InputLabel><Select labelId="twin-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); setNotice(''); await load(event.target.value); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
+      <FormControl size="small" fullWidth><InputLabel id="twin-property-label">대상 물건</InputLabel><Select labelId="twin-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); setSearchParams({ propertyId: event.target.value }); setNotice(''); setError(''); await load(event.target.value); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
       <Button startIcon={<RefreshRounded />} onClick={() => load()}>새로고침</Button>
       <Button variant="contained" startIcon={<AutoAwesomeRounded />} disabled={!propertyId || refreshingTwin} onClick={() => void refreshTwinCandidate()}>{refreshingTwin ? '후보 생성 중' : 'Twin 후보 갱신'}</Button>
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}

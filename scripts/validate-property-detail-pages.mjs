@@ -179,3 +179,14 @@ const accessPage = readFileSync('src/pages/AccessManagementPage.tsx', 'utf8');
 for (const marker of ['ownerChangeBlockReason(remoteProfiles, remoteSession?.userId, profile, { role })', 'ownerChangeBlockReason(remoteProfiles, remoteSession?.userId, profile, { active: !profile.active })']) if (!accessPage.includes(marker)) fail(`권한 관리 잠금 방지 연결 누락: ${marker.slice(0, 50)}`);
 if ((accessPage.match(/window\.confirm\(`\$\{profile\.email \|\| profile\.userId\}/g) ?? []).length < 2) fail('권한 변경·활성 변경은 확인 후 실행해야 합니다.');
 console.log('Access owner-lockout validation passed.');
+
+// 14. 3D workspaces honor ?propertyId (found by the 2026-10-30 E2E run: intake → workspace showed the first property).
+const twinPage = readFileSync('src/pages/DigitalTwinWorkspacePage.tsx', 'utf8');
+const spatialPage = readFileSync('src/pages/SpatialWorkspacePage.tsx', 'utf8');
+for (const [name, text] of [['Digital Twin Workspace', twinPage], ['Spatial Workspace', spatialPage]]) {
+  if (!text.includes("pickRequestedProperty(list, searchParams.get('propertyId'))")) fail(`${name}가 ?propertyId를 무시하고 첫 물건을 선택합니다.`);
+  if (!text.includes('setSearchParams({ propertyId: event.target.value })')) fail(`${name}에서 물건을 바꾸면 주소(?propertyId)도 갱신되어야 합니다.`);
+}
+const intakePage = readFileSync('src/pages/DigitalTwinIntakePage.tsx', 'utf8');
+if (intakePage.includes("navigate('/digital-twin')")) fail('도면 등록 화면에서 Digital Twin으로 이동할 때 물건 ID를 넘겨야 합니다.');
+console.log('3D workspace property deep-link validation passed.');
