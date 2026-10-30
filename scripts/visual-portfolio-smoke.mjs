@@ -69,6 +69,7 @@ try {
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-hub-failure.png`, fullPage: true });
   console.error('Rendered portfolio operations hub QA: FAIL');
+  console.log(`::error title=Rendered portfolio hub QA::${String(error?.message || error).split('\n').slice(0, 3).join(' | ').slice(0, 900)}`);
   console.error(error);
   throw error;
 } finally {
