@@ -211,3 +211,8 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
   .app-shell .form-section h2{font-size:17px}
   .app-shell .page-header.compact h1{font-size:24px}
 }
+
+/* Desktop property hub: an empty photo slot should not take half the overview. */
+@media(min-width:701px){
+  .property-hub-overview:has(.property-hub-hero:not(:has(img))){grid-template-columns:minmax(220px,.42fr) minmax(0,1.58fr)}
+}
