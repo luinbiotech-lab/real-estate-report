@@ -232,6 +232,50 @@ try {
     await shot('home-after-registration');
     return `${registered.length}건 목록 표시`;
   });
+
+  // 10. Mobile/tablet widths (390 / 768): operational screens must not scroll horizontally and must render without errors.
+  // Same page (IndexedDB test data stays in this browser context); the viewport is restored afterwards.
+  if (registered[0]) {
+    const id = encodeURIComponent(registered[0].propertyId);
+    const routes = [
+      ['홈', '/'],
+      ['물건 상세', `/property/${id}`],
+      ['Data Room', `/property/${id}/data-room`],
+      ['물건 수정', `/property/${id}/edit`],
+      ['입지 브리핑', `/properties/${id}/briefing`],
+      ['준비도 센터', '/readiness'],
+      ['임대 수익', `/income?propertyId=${id}`],
+    ];
+    for (const width of [390, 768]) {
+      await page.setViewportSize({ width, height: width === 390 ? 844 : 1024 });
+      for (const [label, route] of routes) {
+        await check(`모바일${width}`, `${label} 가로 넘침 없음`, async () => {
+          await page.goto(`${BASE_URL}${route}`, { waitUntil: 'domcontentloaded' });
+          await page.waitForLoadState('networkidle', { timeout: 15_000 }).catch(() => undefined);
+          await page.waitForTimeout(600);
+          const layout = await page.evaluate(() => {
+            const vw = document.documentElement.clientWidth;
+            const scroll = document.documentElement.scrollWidth;
+            // Widest offenders, for a diagnosis instead of a bare number (elements inside an own horizontal scroller are allowed).
+            const scrollsX = (el) => { for (let n = el.parentElement; n; n = n.parentElement) { const o = getComputedStyle(n).overflowX; if (o === 'auto' || o === 'scroll' || o === 'hidden') return true; } return false; };
+            const offenders = [...document.body.querySelectorAll('*')]
+              .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1 && !scrollsX(el); })
+              .slice(0, 4)
+              .map((el) => `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''}(${Math.round(el.getBoundingClientRect().right)}px)`);
+            const errorAlerts = document.querySelectorAll('.MuiAlert-standardError, .MuiAlert-filledError').length;
+            return { vw, scroll, offenders, errorAlerts };
+          });
+          await shot(`mobile${width}-${route.split('?')[0].replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'home'}`);
+          const errors = takeErrors();
+          assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+          assert(layout.errorAlerts === 0, `오류 배너 ${layout.errorAlerts}건`);
+          assert(layout.scroll <= layout.vw + 1, `가로 넘침 ${layout.scroll}px > ${layout.vw}px: ${layout.offenders.join(', ')}`);
+          return `${layout.vw}px`;
+        });
+      }
+    }
+    await page.setViewportSize({ width: 1440, height: 1100 });
+  }
 } catch (error) {
   record('전체', '실행 중단', 'FAIL', error instanceof Error ? error.message.split('\n')[0] : String(error));
 } finally {
