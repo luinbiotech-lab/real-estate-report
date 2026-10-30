@@ -17,6 +17,10 @@ const pages = [
   ['interior', `/interior?propertyId=${id}`],
   ['spatial', `/spatial?propertyId=${id}`],
   ['settings', '/settings'],
+  ['access', '/access'],
+  ['backup', '/backup'],
+  ['shares', '/external-shares'],
+  ['income', `/income?propertyId=${id}`],
 ];
 await mkdir(OUT, { recursive: true });
 const browser = await chromium.launch();
