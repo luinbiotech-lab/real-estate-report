@@ -76,7 +76,7 @@ export default function InteriorWorkspacePage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12, marginBottom: 20 }}>
       {[
         ['실내 사진', interiorMedia.length], ['Vision 결과', visionResults.length], ['검토 대기', pendingVision], ['공간 모델', spaces.length], ['3D 연결', linkedRooms], ['위치 승인', approvedEvidencePositions], ['상태 이력', roomConditionHistory.length], ['방별 리노베이션', approvedRoomRenovations],
-      ].map(([label, value]) => <div key={String(label)} data-testid="interior-kpi" data-label={String(label)} data-value={String(value)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 6 }}>{value}</strong></div>)}
+      ].map(([label, value]) => <div key={String(label)} data-testid="interior-kpi" data-label={String(label)} data-value={String(value)} className="ds-card"><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
     <Alert severity="info" sx={{ mb: 2 }}>현재 기본 Vision Provider는 브라우저 로컬 픽셀 분석입니다. 사진·설비의 room-local 위치와 상태/리노베이션 기록은 Human Review 기반이며 측량·법적 BIM·실시설계 확정값으로 자동 승격하지 않습니다.</Alert>
@@ -84,7 +84,7 @@ export default function InteriorWorkspacePage() {
     <InteriorRoomLinkPanel propertyId={propertyId} spaces={spaces} assets={bundle.digitalTwinAssets} links={spaceRoomLinks} onSaved={() => load()} />
     <RoomIntelligencePanel spaces={spaces} assets={bundle.digitalTwinAssets} links={spaceRoomLinks} media={bundle.media} spaceMediaLinks={bundle.spaceMediaLinks ?? []} facilities={facilities} agentResults={bundle.agentResults ?? []} renovationAssessments={bundle.renovationAssessments ?? []} roomRenovationAssessments={roomRenovationAssessments} roomEvidencePositions={roomEvidencePositions} roomConditionHistory={roomConditionHistory} roomRenovationHistory={roomRenovationHistory} onSaved={() => load()} />
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>Vision 분석 기록</h2>
       <div style={{ display: 'grid', gap: 10 }}>
         {visionResults.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt)).map((result) => {
@@ -95,7 +95,7 @@ export default function InteriorWorkspacePage() {
       </div>
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+    <section className="ds-card">
       <h2 style={{ marginTop: 0 }}>승인된 설비 인벤토리</h2>
       <p style={{ color: '#667085' }}>Vision 결과 승인 후 명확하게 연결 가능한 설비만 생성합니다. 상태는 실제 확인 전까지 `unknown`으로 유지합니다.</p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%, 260px),1fr))', gap: 12 }}>

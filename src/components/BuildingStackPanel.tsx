@@ -51,7 +51,7 @@ export default function BuildingStackPanel({ assets, onSaved }: { assets: Digita
   const exportOperationPreview = () => downloadText(JSON.stringify(engineDryRun, null, 2), 'application/json;charset=utf-8', 'daon-geometry-engine-dry-run-v1.json');
 
   return <>
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         <div><h2 style={{ margin: 0 }}>Multi-floor Building Model / 층간 Stack</h2><p style={{ margin: '6px 0 0', color: '#667085' }}>검증된 층 기준고와 slab 두께를 이용해 다층 3D 검토 후보를 구성합니다. 층별 표시를 켜고 끄며 원격검토 관점에서 확인할 수 있습니다.</p></div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>

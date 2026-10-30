@@ -24,7 +24,7 @@ export default function BuildingGeometryReadinessPanel({ assets }: { assets: Dig
   const exportJson = () => downloadText(JSON.stringify(data, null, 2), 'application/json;charset=utf-8', `${REMOTE_INSPECTION_VERSION}.json`);
   const exportHtml = () => downloadText(remoteInspectionService.toHtml(assets), 'text/html;charset=utf-8', `${REMOTE_INSPECTION_VERSION}.html`);
 
-  return <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+  return <section className="ds-card" style={{ marginBottom: 20 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
       <div><h2 style={{ margin: 0 }}>Geometry Readiness · Remote Inspection</h2><p style={{ margin: '6px 0 0', color: '#667085' }}>wall junction merge 준비, opening boolean eligibility, slab/core opening 정합, 다층 원격검토 패키지를 한 곳에서 확인합니다.</p></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

@@ -192,7 +192,7 @@ export default function ExternalShareCenterPage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(130px,1fr))', gap: 10, marginBottom: 18 }}>
       {[
         ['전체 공유', counts.total], ['ACTIVE', counts.active], ['EXPIRED', counts.expired], ['REVOKED', counts.revoked], ['미해결 검토', counts.openReview],
-      ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
+      ].map(([label, value]) => <div key={String(label)} className="ds-card" style={{ padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
     </section>
 
     <Alert severity="warning" sx={{ mb: 1.5 }}><strong>LOCAL / OFFLINE 회수와 REMOTE 회수는 다릅니다.</strong> 이 화면의 기존 LOCAL `REVOKED`는 감사상태 변경이며 이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다. REMOTE / PUBLIC으로 발급한 URL은 서버에서 실제 revoke할 수 있습니다.</Alert>

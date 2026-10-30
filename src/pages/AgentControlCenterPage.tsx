@@ -59,7 +59,7 @@ export default function AgentControlCenterPage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(110px,1fr))', gap: 10, marginBottom: 20 }}>
       {[
         ['문서', bundle.documents.length], ['미디어', bundle.media.length], ['Agent Jobs', jobs.length], ['Review 대기', pendingReviews], ['Blocked Agent', blockedAgents], ['검토 필요 Agent', attentionAgents], ['3D Room 연결', approvedRoomLinks],
-      ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 5 }}>{value}</strong></div>)}
+      ].map(([label, value]) => <div key={String(label)} className="ds-card" style={{ padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 5 }}>{value}</strong></div>)}
     </section>
 
     <Alert severity={failedJobs || blockedAgents ? 'error' : pendingReviews || attentionAgents ? 'warning' : 'success'} sx={{ mb: 2 }}>{failedJobs ? `실패 Job ${failedJobs}건 · ` : ''}{pendingReviews ? `Human Review ${pendingReviews}건 · ` : ''}{blockedAgents ? `Blocked Agent ${blockedAgents}개 · ` : ''}{attentionAgents ? `검토 필요 Agent ${attentionAgents}개` : '현재 주요 병목 없음'}</Alert>
@@ -67,7 +67,7 @@ export default function AgentControlCenterPage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(285px,1fr))', gap: 14 }}>
       {activeAgents.map((agent) => {
         const status = healthByAgent.get(agent.id);
-        return <article key={agent.id} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 17, display: 'grid', gap: 10 }}>
+        return <article key={agent.id} className="ds-card" style={{ padding: 17, display: 'grid', gap: 10 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><div><small style={{ color: '#8b6c2d', fontWeight: 700 }}>{agent.code}</small><h2 style={{ margin: '3px 0 0', fontSize: 18 }}>{agent.name}</h2></div><Chip size="small" color={HEALTH_COLOR[status?.state || 'idle']} label={(status?.state || 'idle').toUpperCase()} /></div>
           <p style={{ color: '#667085', margin: 0, minHeight: 42 }}>{agent.purpose}</p>
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" variant="outlined" label={`Jobs ${status?.jobCount ?? 0}`} /><Chip size="small" variant="outlined" label={`Review ${status?.pendingReviewCount ?? 0}`} /><Chip size="small" variant="outlined" label={`Evidence ${status?.evidenceCount ?? 0}`} /></div>

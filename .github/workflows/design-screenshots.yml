@@ -1,0 +1,44 @@
+name: Design screenshots
+
+# Design review only (owner request 2026-10-30). Runs on pushes to app design branches, captures the local-mode QA app at
+# 390px and 1440px and publishes the PNGs to the orphan branch claude/design-shots (Vercel deployment disabled there).
+on:
+  push:
+    branches: ['claude/app-design-*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  shots:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: |
+          npm install --no-save playwright@1.63.0
+          npx playwright install --with-deps chromium
+      - name: Start Vite QA server (local mode)
+        run: |
+          npm run dev:frontend -- --host 127.0.0.1 --port 4174 > /tmp/vite.log 2>&1 &
+          for i in {1..40}; do curl -fsS http://127.0.0.1:4174/ >/dev/null && exit 0; sleep 1; done
+          cat /tmp/vite.log; exit 1
+      - run: node scripts/design-screenshots.mjs
+      - name: Publish screenshots to claude/design-shots
+        run: |
+          src_sha=$(git rev-parse --short HEAD)
+          mkdir -p /tmp/pub && cp shots/*.png /tmp/pub/
+          cd /tmp/pub
+          printf '{\n  "git": { "deploymentEnabled": false }\n}\n' > vercel.json
+          echo "$src_sha" > SOURCE_SHA
+          git init -q -b claude/design-shots
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "design screenshots for $src_sha"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" claude/design-shots

@@ -107,7 +107,7 @@ export default function DigitalTwinWorkspacePage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(11,minmax(78px,1fr))', gap: 10, marginBottom: 20 }}>
       {[
         ['원본', assets.length], ['Geometry', geometryAssets.length], ['축척', scaleVerifiedAssets.length], ['높이', heightVerifiedAssets.length], ['층배치', floorPlacedAssets.length], ['Layer', semanticReviewed], ['공간 경계', topologyApproved], ['문·창 연결', openingApproved], ['개구부 치수', openingDimensions], ['Review', reviewJobs.length], ['Twin Ready', readyAssets.length],
-      ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 12 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 6 }}>{value}</strong></div>)}
+      ].map(([label, value]) => <div key={String(label)} className="ds-card" style={{ padding: 12 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 24, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
     <Alert severity="warning" sx={{ mb: 2 }}>DXF layer 의미, 축척, 공간 경계, 벽 두께, door/window 연결·치수, 층고·천장고, 층 기준고·slab 두께, 계단·엘리베이터 core 연결은 모두 Human Review 대상입니다. 자동 후보는 실시설계·법정면적·구조·피난·인허가 판단을 대체하지 않습니다.</Alert>
@@ -129,7 +129,7 @@ export default function DigitalTwinWorkspacePage() {
         const dimensionCount = Array.isArray(asset.metadata.openingDimensions) ? asset.metadata.openingDimensions.length : 0;
         const twinModel = asset.metadata.digitalTwinModel && typeof asset.metadata.digitalTwinModel === 'object' ? asset.metadata.digitalTwinModel as Record<string, unknown> : undefined;
         const calibratedBounds = twinModel?.calibratedBounds && typeof twinModel.calibratedBounds === 'object' ? twinModel.calibratedBounds as Record<string, unknown> : undefined;
-        return <section key={asset.id} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+        return <section key={asset.id} className="ds-card">
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 14 }}>
             <div><h2 style={{ margin: 0 }}>{asset.fileName || asset.assetType}</h2><p style={{ margin: '6px 0 0', color: '#667085' }}>{asset.assetType} · {asset.fileFormat} · {asset.floor || '층 미확인'}</p></div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={asset.processingStatus} /><Chip size="small" variant="outlined" label={geometryStatus} />{hasScaleCalibration && <Chip size="small" color="success" variant="outlined" label="Scale verified" />}{hasVerticalDimensions && <Chip size="small" color="success" variant="outlined" label="Height verified" />}{hasFloorPlacement && <Chip size="small" color="success" variant="outlined" label="Floor placed" />}{approvedRooms > 0 && <Chip size="small" color="success" variant="outlined" label={`Room ${approvedRooms}`} />}{approvedOpenings > 0 && <Chip size="small" color="success" variant="outlined" label={`Opening ${approvedOpenings}`} />}{dimensionCount > 0 && <Chip size="small" color="success" variant="outlined" label={`Dimension ${dimensionCount}`} />}{twinModel && <Chip size="small" color="success" variant="outlined" label="Twin metadata" />}</div>
@@ -157,7 +157,7 @@ export default function DigitalTwinWorkspacePage() {
           {twinModel && <div style={{ marginTop: 14, padding: 12, background: '#f7f9fb', borderRadius: 8 }}><strong>Digital Twin 처리 상태</strong><p style={{ margin: '6px 0 0', color: '#667085' }}>measurement: {String(twinModel.measurementStatus || 'unknown')} · topology: {String(twinModel.topologyStatus || 'review_required')} · openings: {String(twinModel.openingTopologyStatus || 'review_required')} · opening dimensions: {String(twinModel.openingDimensionStatus || 'review_required')} · extrusion: {String(twinModel.extrusionStatus || 'blocked')}</p>{calibratedBounds && <p style={{ margin: '6px 0 0', color: '#475467' }}>검증 축척 기준 전체 bounds: {Number(calibratedBounds.widthM || 0).toFixed(2)}m × {Number(calibratedBounds.heightM || 0).toFixed(2)}m · 면적 확정값 아님</p>}</div>}
         </section>;
       })}
-      {!assets.length && <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 36, textAlign: 'center', color: '#7b8794' }}>Spatial Workspace에서 PDF/DWG/DXF 도면 원본을 먼저 등록하세요.</section>}
+      {!assets.length && <section className="ds-card" style={{ padding: 36, textAlign: 'center', color: '#7b8794' }}>Spatial Workspace에서 PDF/DWG/DXF 도면 원본을 먼저 등록하세요.</section>}
     </div>
   </main>;
 }

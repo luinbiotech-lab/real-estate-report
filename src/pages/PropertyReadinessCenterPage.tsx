@@ -85,7 +85,7 @@ export default function PropertyReadinessCenterPage() {
     {loadError && <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(150px,1fr))', gap: 10, marginBottom: 14 }}>
-      {([['전체 물건', metrics.total, '건'], ['보완 필요', metrics.attention, '건'], ['80% 이상', metrics.strong, '건'], ['평균 준비도', metrics.avg, '%']] as const).map(([label, value, unit]) => <div key={label} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><div style={{ display: 'flex', gap: 4, alignItems: 'baseline', marginTop: 4 }}><strong style={{ fontSize: 28 }}>{value}</strong><span style={{ color: '#98a2b3' }}>{unit}</span></div></div>)}
+      {([['전체 물건', metrics.total, '건'], ['보완 필요', metrics.attention, '건'], ['80% 이상', metrics.strong, '건'], ['평균 준비도', metrics.avg, '%']] as const).map(([label, value, unit]) => <div key={label} className="ds-card" style={{ padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><div style={{ display: 'flex', gap: 4, alignItems: 'baseline', marginTop: 4 }}><strong style={{ fontSize: 28 }}>{value}</strong><span style={{ color: '#98a2b3' }}>{unit}</span></div></div>)}
     </section>
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
@@ -118,8 +118,8 @@ export default function PropertyReadinessCenterPage() {
     </section>
 
     <section style={{ display: 'grid', gap: 10 }}>
-      {!filtered.length && <div style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 30, textAlign: 'center', color: '#667085' }}>조건에 맞는 물건이 없습니다.</div>}
-      {filtered.map(({ property, readiness }) => <article key={property.id} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 15 }}><div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,.8fr) 100px 1fr auto', gap: 12, alignItems: 'center' }}>
+      {!filtered.length && <div className="ds-card" style={{ padding: 30, textAlign: 'center', color: '#667085' }}>조건에 맞는 물건이 없습니다.</div>}
+      {filtered.map(({ property, readiness }) => <article key={property.id} className="ds-card" style={{ padding: 15 }}><div style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,.8fr) 100px 1fr auto', gap: 12, alignItems: 'center' }}>
         <div><button className="property-name-link" onClick={() => navigate(`/property/${property.id}`)}>{property.name}</button><small style={{ display: 'block', color: '#667085', marginTop: 4 }}>{property.address}</small><small style={{ display: 'block', color: '#98a2b3', marginTop: 2 }}>{property.propertyNumber || '물건번호 미입력'}</small></div>
         <div style={{ textAlign: 'center' }}><strong style={{ display: 'block', fontSize: 26, color: readiness.scorePct >= 80 ? '#157347' : readiness.scorePct >= 50 ? '#a26200' : '#b42318' }}>{readiness.scorePct}%</strong><small style={{ color: '#667085' }}>준비도</small></div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{readiness.stages.map((stage) => <Chip key={stage.id} size="small" clickable onClick={() => openStage(property.id, stage)} color={stateColor[stage.state]} variant={stage.state === 'ready' ? 'filled' : 'outlined'} label={`${stage.label} · ${stateLabel(stage.state)} · ${stage.detail}`} />)}</div>

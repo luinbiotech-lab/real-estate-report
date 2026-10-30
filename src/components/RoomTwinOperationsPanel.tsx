@@ -11,7 +11,7 @@ export default function RoomTwinOperationsPanel({ bundle }: { bundle: DataRoomBu
   const conditions = bundle.roomConditionHistory ?? [];
   const renovations = bundle.roomRenovationAssessments ?? [];
   const renovationHistory = bundle.roomRenovationHistory ?? [];
-  return <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+  return <section className="ds-card" style={{ marginBottom: 20 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><div><h2 style={{ margin: 0 }}>Digital Twin × Room Intelligence Operations</h2><p style={{ color: '#667085', margin: '6px 0 0' }}>검토된 3D Room과 Interior evidence, 위치 Human Review, 상태·리노베이션 이력을 한 운영 화면에서 확인합니다.</p></div><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" label={`Rooms ${views.length}`} /><Chip size="small" label={`Positions ${positions.filter((item) => item.decision === 'approved').length}`} /><Chip size="small" label={`Conditions ${conditions.length}`} /><Chip size="small" label={`Renovation events ${renovationHistory.length}`} /></div></div>
     {!views.length ? <Alert severity="info" sx={{ mt: 1.5 }}>승인된 Interior ↔ 3D Room 연결이 생기면 통합 운영 현황이 활성화됩니다.</Alert> : <div style={{ display: 'grid', gap: 9, marginTop: 14 }}>{views.map((view) => {
       const roomPositions = positions.filter((item) => item.spaceId === view.space.id && item.roomCandidateId === view.room.roomCandidate.id && item.decision === 'approved');

@@ -20,13 +20,13 @@ export default function AgentWorkspacePage() {
     <Alert severity="warning" icon={<LockRounded />} sx={{ mb: 2 }}>Agent Isolation Rule: 이 Agent는 `Direct Write Owns` 범위만 직접 기록합니다. 다른 Agent 소유 데이터는 contract 결과를 전달하고 해당 Agent/Human Review가 승격합니다.</Alert>
 
     <section style={{ display: 'grid', gridTemplateColumns: '1.15fr .85fr', gap: 16 }}>
-      <article style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+      <article className="ds-card">
         <h2 style={{ marginTop: 0 }}>Owned Modules</h2>
         <p style={{ color: '#667085' }}>이 Agent가 책임지는 데이터/기능 경계입니다.</p>
         <div style={{ display: 'grid', gap: 9 }}>{agent.owns.map((item) => <div key={item} style={{ padding: 12, borderRadius: 9, background: '#f7f9fb', border: '1px solid #e5e9ef' }}><strong>{item}</strong></div>)}</div>
         {agent.launchPath && <Button variant="contained" endIcon={<ArrowForwardRounded />} sx={{ mt: 16 }} onClick={() => navigate(agent.launchPath!)}>현재 기능 화면 열기</Button>}
       </article>
-      <article style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+      <article className="ds-card">
         <h2 style={{ marginTop: 0 }}>Agent Contract</h2>
         <div style={{ marginBottom: 16 }}><small style={{ color: '#667085' }}>Runtime Agent</small><div><Chip sx={{ mt: .7 }} label={agent.runtimeAgentType || 'platform module'} variant="outlined" /></div></div>
         <div style={{ marginBottom: 16 }}><small style={{ color: '#667085' }}>Human Review</small><div><Chip sx={{ mt: .7 }} color={agent.humanReviewRequired ? 'warning' : 'success'} label={agent.humanReviewRequired ? 'REQUIRED' : 'NOT REQUIRED'} /></div></div>
@@ -36,8 +36,8 @@ export default function AgentWorkspacePage() {
     </section>
 
     <section style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-      <article style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}><h2 style={{ marginTop: 0 }}>Contract Input → Output</h2><strong>Accepts</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0 16px' }}>{contract.accepts.map((item) => <Chip key={item} size="small" label={item} />)}</div><strong>Emits</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>{contract.emits.map((item) => <Chip key={item} size="small" color="primary" variant="outlined" label={item} />)}</div></article>
-      <article style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}><h2 style={{ marginTop: 0 }}>Write Boundary</h2><strong>Direct Write Owns</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0 16px' }}>{contract.directWriteOwns.map((item) => <Chip key={item} size="small" color="success" variant="outlined" label={item} />)}</div><strong>Forbidden Direct Writes</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>{contract.forbiddenDirectWrites.map((item) => <Chip key={item} size="small" color="error" variant="outlined" label={item} />)}</div></article>
+      <article className="ds-card"><h2 style={{ marginTop: 0 }}>Contract Input → Output</h2><strong>Accepts</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0 16px' }}>{contract.accepts.map((item) => <Chip key={item} size="small" label={item} />)}</div><strong>Emits</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>{contract.emits.map((item) => <Chip key={item} size="small" color="primary" variant="outlined" label={item} />)}</div></article>
+      <article className="ds-card"><h2 style={{ marginTop: 0 }}>Write Boundary</h2><strong>Direct Write Owns</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, margin: '8px 0 16px' }}>{contract.directWriteOwns.map((item) => <Chip key={item} size="small" color="success" variant="outlined" label={item} />)}</div><strong>Forbidden Direct Writes</strong><div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>{contract.forbiddenDirectWrites.map((item) => <Chip key={item} size="small" color="error" variant="outlined" label={item} />)}</div></article>
     </section>
 
     <section style={{ marginTop: 16, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}><Alert severity="info"><strong>Promotion Rule</strong><br />{contract.promotionRule}</Alert><Alert severity="warning"><strong>Safety Boundary</strong><br />{contract.safetyBoundary}</Alert></section>

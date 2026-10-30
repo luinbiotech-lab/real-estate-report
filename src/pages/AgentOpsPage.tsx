@@ -91,17 +91,17 @@ export default function AgentOpsPage() {
     <header style={{ marginBottom: 24 }}><p className="eyebrow">PROPERTY INTELLIGENCE ORCHESTRATOR</p><h1 style={{ margin: '6px 0' }}>Agent Operations</h1><p style={{ color: '#667085' }}>Interior Vision → Floor Plan → Space Model → Renovation → Risk / Compliance → Digital Twin 흐름을 Job·Result·Human Review로 관리합니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <FormControl fullWidth size="small"><InputLabel id="agent-property-label">대상 물건</InputLabel><Select labelId="agent-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { const id = event.target.value; setPropertyId(id); await loadJobs(id); }}>{properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}</Select></FormControl>
       {selected && <p style={{ margin: '12px 0 0', color: '#5c6775' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</p>}
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>Agent Job 생성</h2><p style={{ color: '#667085' }}>분석 결과는 바로 확정값을 덮어쓰지 않습니다. 승인된 결과만 공간·미디어·리노베이션·사전 리스크 데이터에 반영됩니다.</p>
       <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">{MANUAL_AGENTS.map((agentType) => <Button key={agentType} variant="outlined" startIcon={<AutoAwesomeRounded />} disabled={!propertyId} onClick={() => queue(agentType)}>{AGENT_LABELS[agentType]}</Button>)}</Stack>
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section className="ds-card" style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><div><h2 style={{ margin: 0 }}>Human Review Gate</h2><p style={{ margin: '5px 0 0', color: '#667085' }}>Agent 후보 결과는 승인 전까지 확정 데이터가 아닙니다.</p></div><Chip color={pendingReviews.length ? 'warning' : 'success'} label={`검토 ${pendingReviews.length}건`} /></div>
       <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
         {!pendingReviews.length && <div style={{ padding: 24, textAlign: 'center', color: '#7b8794', background: '#f7f9fb', borderRadius: 8 }}>검토 대기 결과가 없습니다.</div>}
@@ -109,7 +109,7 @@ export default function AgentOpsPage() {
       </div>
     </section>
 
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
+    <section className="ds-card">
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}><div><h2 style={{ margin: 0 }}>Agent Queue</h2><p style={{ margin: '5px 0 0', color: '#667085' }}>문서·사진·도면/CAD 업로드 및 Agent 승인 결과에 따라 후속 Job이 생성됩니다.</p></div><Button startIcon={<RefreshRounded />} onClick={() => loadJobs()}>새로고침</Button></div>
       <div style={{ display: 'grid', gap: 10, marginTop: 18 }}>
         {!jobs.length && <div style={{ padding: 28, textAlign: 'center', color: '#7b8794', background: '#f7f9fb', borderRadius: 8 }}>등록된 Agent Job이 없습니다.</div>}
