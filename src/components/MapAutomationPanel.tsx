@@ -11,8 +11,14 @@ type Props = { property: Property; change: (key: keyof Property, value: string |
 const messageFor = (error: unknown) => error instanceof Error ? error.message : 'API 요청에 실패했습니다.';
 
 export default function MapAutomationPanel({ property, change }: Props) {
-  const [, setProviderRevision] = useState(0);
-  useEffect(() => { void mapService.refreshProviderStatus().then(() => setProviderRevision((value) => value + 1)); }, []);
+  // Provider status is unknown until the first /api/status check returns; showing "disconnected" before that was a false
+  // alarm on every form open (E2E mobile check, 2026-10-30).
+  const [statusChecked, setStatusChecked] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void mapService.refreshProviderStatus().finally(() => { if (active) setStatusChecked(true); });
+    return () => { active = false; };
+  }, []);
   const mapConfigured = mapService.isMapConfigured(); const poiConfigured = mapService.isPoiConfigured();
   const proxyConnected = mapService.isProxyConnected();
   const [addresses, setAddresses] = useState<AddressCandidate[]>([]); const [selectedAddress, setSelectedAddress] = useState('');
@@ -28,9 +34,10 @@ export default function MapAutomationPanel({ property, change }: Props) {
   return <section className="form-section map-automation">
     <div className="section-heading-row"><div><h2>주소 · 지도 · 주변 시설 자동화</h2><p>NAVER가 주소·지도를 우선 처리하고 Kakao가 POI 후보를 제공합니다.</p></div></div>
     <div className="provider-statuses">{mapService.getProviderStatus().map((provider) => <div key={provider.id} className={provider.configured ? 'connected' : ''}><b>{provider.label}</b><span>{provider.configured ? '연결됨' : provider.id === 'google-future' ? '향후 지원' : '미설정'}</span><small>{provider.role}</small></div>)}</div>
-    {!proxyConnected && <Alert severity="error">로컬 API proxy 연결을 확인하고 npm run dev를 다시 실행해 주세요.</Alert>}
-    {!mapConfigured && <Alert severity="warning">NAVER Maps가 미설정이며 Kakao 지도 fallback도 사용할 수 없습니다.</Alert>}
-    {!poiConfigured && <Alert severity="warning">Kakao POI가 미설정되었습니다. 주소 조회와 지도 생성은 계속 사용할 수 있습니다.</Alert>}
+    {!statusChecked && <Alert severity="info">지도·주소 자동화 연결 상태를 확인하는 중입니다.</Alert>}
+    {statusChecked && !proxyConnected && <Alert severity="warning">지도·주소 자동화 서버에 연결하지 못했습니다. 물건 정보 입력과 저장은 계속할 수 있으며, 자동조회는 서버 연결 후 사용할 수 있습니다.</Alert>}
+    {statusChecked && proxyConnected && !mapConfigured && <Alert severity="warning">NAVER Maps가 미설정이며 Kakao 지도 fallback도 사용할 수 없습니다.</Alert>}
+    {statusChecked && proxyConnected && !poiConfigured && <Alert severity="warning">Kakao POI가 미설정되었습니다. 주소 조회와 지도 생성은 계속 사용할 수 있습니다.</Alert>}
     <div className="automation-actions"><Button variant="outlined" startIcon={<AddLocationAltRounded />} disabled={!mapConfigured || busy === 'address'} onClick={findAddress}>위치정보 자동조회</Button><Button variant="outlined" startIcon={<MapRounded />} disabled={!mapConfigured || !coordinatesReady || busy === 'map'} onClick={makeMap}>{property.mapImage ? '기존 지도 교체' : '위치지도 생성'}</Button><TextField select size="small" label="검색 반경" value={radius} onChange={(event) => setRadius(Number(event.target.value))}>{[500, 1000, 2000].map((value) => <MenuItem key={value} value={value}>{value >= 1000 ? `${value / 1000}km` : `${value}m`}</MenuItem>)}</TextField><Button variant="contained" startIcon={<SearchRounded />} disabled={!poiConfigured || !coordinatesReady || busy === 'poi'} onClick={findPois}>주변 시설 검색</Button></div>
     {status && <Alert severity={status.includes('완료') || status.includes('추가') || status.includes('찾았습니다') ? 'success' : 'info'}>{status}</Alert>}
     {addresses.length > 0 && <div className="address-candidates"><h3>주소 후보</h3>{addresses.map((item) => <label key={item.id} className={selectedAddress === item.id ? 'selected' : ''}><Radio checked={selectedAddress === item.id} onChange={() => setSelectedAddress(item.id)} /><span><b>{item.roadAddress || item.officialAddress}</b><small>{item.provider} · 지번 {item.lotAddress || '-'} · 위도 {item.latitude} · 경도 {item.longitude}</small></span></label>)}<Button variant="contained" disabled={!selectedAddress} onClick={applyAddress}>선택 주소 좌표 적용</Button></div>}

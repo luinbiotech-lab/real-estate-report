@@ -190,3 +190,12 @@ for (const [name, text] of [['Digital Twin Workspace', twinPage], ['Spatial Work
 const intakePage = readFileSync('src/pages/DigitalTwinIntakePage.tsx', 'utf8');
 if (intakePage.includes("navigate('/digital-twin')")) fail('도면 등록 화면에서 Digital Twin으로 이동할 때 물건 ID를 넘겨야 합니다.');
 console.log('3D workspace property deep-link validation passed.');
+
+// 15. Map automation panel (property form): no "disconnected" alarm before the first status check, and no
+//     developer instruction ("npm run dev") in user-facing copy (E2E mobile check, 2026-10-30).
+const mapPanel = readFileSync('src/components/MapAutomationPanel.tsx', 'utf8');
+if (mapPanel.includes('npm run dev')) fail('지도 자동화 패널에 개발자용 안내(npm run dev)가 사용자에게 노출됩니다.');
+if (!mapPanel.includes('statusChecked && !proxyConnected')) fail('연결 상태 확인 전에는 연결 실패 경고를 표시하지 않아야 합니다.');
+if (/!proxyConnected && <Alert severity="error"/.test(mapPanel)) fail('자동화 서버 미연결은 입력·저장을 막지 않으므로 오류(error)가 아닌 경고로 표시합니다.');
+if (!mapPanel.includes('.finally(() => { if (active) setStatusChecked(true); })')) fail('상태 확인은 실패해도 완료 처리되고, 언마운트 후 state를 갱신하지 않아야 합니다.');
+console.log('Map automation panel status validation passed.');
