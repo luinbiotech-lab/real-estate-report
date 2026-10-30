@@ -23,6 +23,7 @@ jobs:
       - name: Status and public-data discovery for the three test listings
         run: |
           set -u
+          fails=0
           status=$(curl -sS -m 20 "$SITE/api/status" || echo '{}')
           echo "::notice title=Live status::$(echo "$status" | jq -c '{publicDataConfigured,vworldConfigured,naverConfigured,kakaoConfigured}' 2>/dev/null || echo "$status" | head -c 300)"
           for q in "서울특별시 마포구 동교로 212-22" "서울특별시 서초구 동광로1길 49" "서울특별시 강남구 논현로 339"; do
@@ -31,7 +32,11 @@ jobs:
             region=$(grep -i '^x-vercel-id' /tmp/h | tr -d '\r' | cut -d' ' -f2 | cut -d: -f1-3)
             summary=$(echo "$body" | jq -c '{status, publicDataConfigured, providers: (.providerStatus // {} | with_entries(.value = (if .value.ok then "ok" else (.value.error // "fail") end))), land: (.landProfile // {} | {pnu, officialLandPricePerSqm, landAreaSqm}), building: (.building // {} | {mainPurpsCdNm, totArea, grndFlrCnt, ugrndFlrCnt, useAprDay}), market: (.marketSummary // .market.summary // null)}' 2>/dev/null || echo "$body" | head -c 300)
             echo "::notice title=Live $q ($region)::$summary"
+            failed=$(echo "$body" | jq -r '[.providerStatus // {} | to_entries[] | select(.value.ok != true) | "\(.key): \(.value.error // "fail")"] | join(", ")' 2>/dev/null || echo "응답 파싱 실패")
+            if [ -n "$failed" ]; then echo "::error title=Live provider failure $q::$failed"; fails=$((fails+1)); fi
+            case "$region" in *icn1::icn1*) ;; *) echo "::error title=Live region $q::함수 리전이 서울(icn1)이 아님: $region"; fails=$((fails+1));; esac
           done
+          echo "fails=$fails" >> "$GITHUB_ENV"
       - name: Transaction candidate composition (diagnosis, 논현로 339)
         run: |
           q=$(jq -rn --arg v "서울특별시 강남구 논현로 339" '$v|@uri')
@@ -41,4 +46,9 @@ jobs:
           for kind in commercial land; do
             echo "::notice title=Market $kind composition::$(jq -c --arg k "$kind" '.market[$k] as $r | {rows: ($r|length), byMatch: ($r|group_by(.matchLevel)|map({(.[0].matchLevel): length})|add), buildingType: ($r|map(.raw.buildingType // "-")|group_by(.)|map({(.[0]): length})|add), share: ($r|map(.raw.shareDealingType // "-")|group_by(.)|map({(.[0]): length})|add), cancelled: ($r|map(select((.raw.cdealType // "") != ""))|length), rawKeys: ($r[0].raw // {} | keys), sample: ($r[:4]|map({amt: .sourceDealAmountTenThousandWon, b: .buildingAreaSqm, l: .landAreaSqm, dong: .legalDong, jibun, use: .buildingUse, bt: .raw.buildingType, sh: .raw.shareDealingType, cd: .raw.cdealType}))}' /tmp/d.json | head -c 3000)"
           done
+      - name: Fail the run when a provider or region check failed
+        if: env.fails != '0'
+        run: |
+          echo "::error title=Live site check::${{ env.fails }} check(s) failed"
+          exit 1
 
