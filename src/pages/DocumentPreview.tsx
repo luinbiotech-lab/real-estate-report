@@ -11,6 +11,8 @@ import { createReportDraftOnce } from '../services/reportEngine/reportDraftSingl
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 import { DaonOnePageMaster } from '../components/professionalReport/DaonOnePageMaster';
+import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/professionalReport/ReportBlankFieldsGate';
+import { blankFieldsSignature, needsBlankFieldConfirmation, onePageBlankFields } from '../domain/professionalReport/reportBlankFields';
 import '../daon-one-page-master.css';
 import '../daon-master-refinement.css';
 
@@ -24,6 +26,9 @@ export default function DocumentPreview() {
   const navigate = useNavigate();
   const [view, setView] = useState<PreviewState>({ routeKey: '', phase: 'loading' });
   const contentRef = useRef<HTMLDivElement>(null);
+  // Blank-field pre-publish check: signature of the blank set the user agreed to publish hidden (null = not yet asked).
+  const [blankAcknowledged, setBlankAcknowledged] = useState<string | null>(null);
+  const [blankDialogOpen, setBlankDialogOpen] = useState(false);
   // Per-component scope prevents StrictMode effect replay from persisting two
   // Draft Snapshots; never share pending creations across auth sessions.
   const draftRequests = useRef(new Map<string, Promise<ReportSnapshot>>());
@@ -82,12 +87,27 @@ export default function DocumentPreview() {
   if (kind !== 'proposal') return <div className="center"><CircularProgress /></div>;
 
   const property = current.property;
+  const blankFields = onePageBlankFields(property);
+  const blankAcknowledgedNow = !needsBlankFieldConfirmation(blankFields, blankAcknowledged);
+  const requestPrint = () => {
+    if (!blankAcknowledgedNow) { setBlankDialogOpen(true); return; }
+    print();
+  };
   return <div className="preview-shell">
     <div className="preview-toolbar">
       <Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button>
       <div><b>DA:ON ASSET 1P 요약제안서</b><small>DAON_1P_MASTER · 검증 데이터 기반 동적 렌더링</small></div>
-      <Button variant="contained" startIcon={<PrintRounded />} onClick={() => print()}>인쇄 / PDF 저장</Button>
+      <Button variant="contained" startIcon={<PrintRounded />} onClick={requestPrint}>인쇄 / PDF 저장</Button>
     </div>
+    <ReportBlankFieldsNotice fields={blankFields} acknowledged={blankAcknowledgedNow} className="preview-blank-notice" />
+    <ReportBlankFieldsDialog
+      open={blankDialogOpen}
+      fields={blankFields}
+      actionLabel="인쇄 / PDF 저장"
+      onClose={() => setBlankDialogOpen(false)}
+      onEnterValues={() => { setBlankDialogOpen(false); navigate(`/property/${encodeURIComponent(property.id)}/edit`); }}
+      onContinue={() => { setBlankAcknowledged(blankFieldsSignature(blankFields)); setBlankDialogOpen(false); print(); }}
+    />
     <div className="paper-stage"><div ref={contentRef}><DaonOnePageMaster property={property} /></div></div>
   </div>;
 }
