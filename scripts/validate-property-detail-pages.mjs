@@ -199,3 +199,14 @@ if (!mapPanel.includes('statusChecked && !proxyConnected')) fail('연결 상태 
 if (/!proxyConnected && <Alert severity="error"/.test(mapPanel)) fail('자동화 서버 미연결은 입력·저장을 막지 않으므로 오류(error)가 아닌 경고로 표시합니다.');
 if (!mapPanel.includes('.finally(() => { if (active) setStatusChecked(true); })')) fail('상태 확인은 실패해도 완료 처리되고, 언마운트 후 state를 갱신하지 않아야 합니다.');
 console.log('Map automation panel status validation passed.');
+
+// 16. Interior / Spatial workspaces (E2E real-photo path, 2026-10-30).
+const interiorPage = readFileSync('src/pages/InteriorWorkspacePage.tsx', 'utf8');
+if (!interiorPage.includes("item.mediaType === 'image' && isInternalMediaCategory(item.category)")) fail('Interior Workspace의 실내 사진 수는 실내 분류만 세어야 합니다(외관 사진 제외).');
+if (!interiorPage.includes('if (request === loadRequest.current) setBundle(next);')) fail('Interior Workspace는 이전 물건의 늦은 응답으로 화면을 덮어쓰면 안 됩니다.');
+if (/repeat\(8, minmax\(95px/.test(interiorPage)) fail('Interior KPI 고정 8열은 모바일에서 가로로 넘칩니다.');
+const spatialPageNow = readFileSync('src/pages/SpatialWorkspacePage.tsx', 'utf8');
+if (!spatialPageNow.includes('공간 자료 ${saved}건을 등록했습니다.')) fail('Spatial 업로드는 완료 결과를 사용자에게 알려야 합니다.');
+if (/gridTemplateColumns: '(1fr 220px|1\.2fr \.8fr|1fr 1fr)'/.test(spatialPageNow)) fail('Spatial Workspace 고정 다열 grid는 모바일에서 넘칩니다.');
+for (const [name, text] of [['InteriorWorkspacePage', interiorPage], ['SpatialWorkspacePage', spatialPageNow]]) if (text.includes('<main')) fail(`${name}: Layout 안에 <main>을 중첩하지 않습니다.`);
+console.log('Interior/Spatial workspace validation passed.');

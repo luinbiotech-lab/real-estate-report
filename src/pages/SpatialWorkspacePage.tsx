@@ -35,6 +35,7 @@ export default function SpatialWorkspacePage() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
 
   const selected = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
   const load = async (id = propertyId) => {
@@ -59,14 +60,21 @@ export default function SpatialWorkspacePage() {
 
   const upload = async (files: FileList | null) => {
     if (!propertyId || !files?.length) return;
-    setUploading(true); setError('');
+    setUploading(true); setError(''); setNotice('');
+    let saved = 0;
     try {
       for (const file of Array.from(files)) {
         if (category === 'floor_plan') await spatialIntakeService.uploadPlanAsset(propertyId, file, planFloor);
         else await spatialIntakeService.upload(propertyId, file, category);
+        saved += 1;
       }
       await load();
-    } catch (reason) { setError(reason instanceof Error ? reason.message : '공간 자료를 등록하지 못했습니다.'); }
+      // Upload used to finish silently; say what happened and where the analysis result goes.
+      setNotice(`공간 자료 ${saved}건을 등록했습니다. ${category === 'floor_plan' ? 'Floor Plan Agent' : 'Interior Vision Agent'} 분석 결과는 Human Review 승인 전까지 확정 데이터가 아닙니다.`);
+    } catch (reason) {
+      if (saved) await load().catch(() => undefined);
+      setError(`${saved ? `${saved}건 등록 후 ` : ''}${reason instanceof Error ? reason.message : '공간 자료를 등록하지 못했습니다.'}`);
+    }
     finally { setUploading(false); }
   };
 
@@ -79,7 +87,7 @@ export default function SpatialWorkspacePage() {
   const agentJobs = bundle.agentJobs ?? [];
   const isPlan = category === 'floor_plan';
 
-  return <main style={{ padding: 28, maxWidth: 1360, margin: '0 auto' }}>
+  return <div className="workspace-page" style={{ padding: 28, maxWidth: 1360, margin: '0 auto' }}>
     <header style={{ marginBottom: 24 }}>
       <p className="eyebrow">INTERIOR · FLOOR PLAN · DIGITAL TWIN</p>
       <h1 style={{ margin: '6px 0' }}>Spatial Workspace</h1>
@@ -87,11 +95,12 @@ export default function SpatialWorkspacePage() {
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
+    {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
-    <section style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <FormControl size="small" fullWidth>
         <InputLabel id="spatial-property-label">대상 물건</InputLabel>
-        <Select labelId="spatial-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); setSearchParams({ propertyId: event.target.value }); setError(''); await load(event.target.value); }}>
+        <Select labelId="spatial-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); setSearchParams({ propertyId: event.target.value }); setError(''); setNotice(''); await load(event.target.value); }}>
           {properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}
         </Select>
       </FormControl>
@@ -118,10 +127,10 @@ export default function SpatialWorkspacePage() {
       {isPlan && <p style={{ margin: '10px 0 0', color: '#7b8794', fontSize: 13 }}>도면 원본은 최대 50MB. DWG/DXF/PDF는 원본 Blob을 보존하고 Digital Twin 처리대기 자산으로 승격할 수 있습니다.</p>}
     </section>
 
-    <section style={{ display: 'grid', gridTemplateColumns: '1.2fr .8fr', gap: 20, marginBottom: 20 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))', gap: 20, marginBottom: 20 }}>
       <div style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}><h2 style={{ margin: 0 }}>미디어</h2><Chip label={`${bundle.media.length}개`} /></div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(190px,1fr))', gap: 12, marginTop: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%, 190px),1fr))', gap: 12, marginTop: 16 }}>
           {bundle.media.map((media) => <article key={media.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 10 }}>
             <MediaPreview media={media} />
             <strong style={{ display: 'block', marginTop: 8, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{media.caption || media.fileName}</strong>
@@ -146,7 +155,7 @@ export default function SpatialWorkspacePage() {
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <h2 style={{ marginTop: 0 }}>공간 모델</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%, 240px),1fr))', gap: 12 }}>
         {spaces.map((space) => <article key={space.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 14 }}><strong>{space.name}</strong><p style={{ margin: '6px 0', color: '#667085' }}>{space.spaceType} · {space.floor || '층 미지정'}</p><small>연결 미디어 {links.filter((link) => link.spaceId === space.id).length}개 · {space.verificationStatus}</small></article>)}
         {!spaces.length && <p style={{ color: '#7b8794' }}>승인된 Space Agent 결과가 아직 없습니다.</p>}
       </div>
@@ -159,7 +168,7 @@ export default function SpatialWorkspacePage() {
         {renovations.map((item) => <article key={item.id} style={{ border: '1px solid #ead8b7', background: '#fffdf8', borderRadius: 10, padding: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}><strong>{item.title}</strong><Chip size="small" label={item.scope} /></div>
           <p style={{ color: '#475467' }}>{item.summary}</p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: 16 }}>
             <div><small>권고 점검</small><ul>{item.recommendedItems.slice(0, 6).map((value) => <li key={value}>{value}</li>)}</ul></div>
             <div><small>주의 / 전문가 확인</small><ul>{item.riskItems.slice(0, 6).map((value) => <li key={value}>{value}</li>)}</ul></div>
           </div>
@@ -176,5 +185,5 @@ export default function SpatialWorkspacePage() {
         {!bundle.digitalTwinAssets.length && <p style={{ color: '#7b8794' }}>등록된 도면/CAD 원본이 없습니다.</p>}
       </div>
     </section>
-  </main>;
+  </div>;
 }

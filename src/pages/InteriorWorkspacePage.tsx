@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { RefreshRounded, VisibilityRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select } from '@mui/material';
 import InteriorRoomLinkPanel from '../components/InteriorRoomLinkPanel';
 import RoomIntelligencePanel from '../components/RoomIntelligencePanel';
 import type { PropertyFacility } from '../domain/propertyDataRoom/types';
+import { isInternalMediaCategory } from '../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
@@ -23,7 +24,15 @@ export default function InteriorWorkspacePage() {
   const [error, setError] = useState('');
 
   const selected = useMemo(() => properties.find((item) => item.id === propertyId), [properties, propertyId]);
-  const load = async (id = propertyId) => { if (id) setBundle(await propertyDataRoomRepository.getBundle(id)); };
+  // Only the latest request may update the screen: switching property while a bundle is loading must not show the
+  // previous property's photos under the new selection.
+  const loadRequest = useRef(0);
+  const load = async (id = propertyId) => {
+    if (!id) return;
+    const request = ++loadRequest.current;
+    const next = await propertyDataRoomRepository.getBundle(id);
+    if (request === loadRequest.current) setBundle(next);
+  };
 
   useEffect(() => {
     (async () => {
@@ -39,7 +48,8 @@ export default function InteriorWorkspacePage() {
 
   if (loading) return <div className="center"><CircularProgress /><p>Interior Workspace를 준비하는 중입니다.</p></div>;
 
-  const interiorMedia = bundle.media.filter((item) => item.mediaType === 'image' && item.category !== 'floor_plan');
+  // "실내 사진" counts interior categories only (exterior/road/surroundings photos used to be counted as interior).
+  const interiorMedia = bundle.media.filter((item) => item.mediaType === 'image' && isInternalMediaCategory(item.category));
   const facilities = bundle.facilities ?? [];
   const spaces = bundle.spaces ?? [];
   const spaceRoomLinks = bundle.spaceRoomLinks ?? [];
@@ -53,7 +63,7 @@ export default function InteriorWorkspacePage() {
   const approvedRoomRenovations = roomRenovationAssessments.filter((item) => item.decision === 'approved').length;
   const approvedEvidencePositions = roomEvidencePositions.filter((item) => item.decision === 'approved').length;
 
-  return <main style={{ padding: 28, maxWidth: 1280, margin: '0 auto' }}>
+  return <div className="workspace-page" style={{ padding: 28, maxWidth: 1280, margin: '0 auto' }}>
     <header style={{ marginBottom: 24 }}><p className="eyebrow">INTERIOR INTELLIGENCE · 3D ROOM OPERATIONS</p><h1 style={{ margin: '6px 0' }}>Interior Workspace</h1><p style={{ color: '#667085' }}>실내 사진 → Vision → Human Review → 3D Room 연결 → 사진·설비 위치 검토 → 상태/리노베이션 이력 → 외부 Room Viewer로 이어지는 작업 화면입니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
@@ -63,10 +73,10 @@ export default function InteriorWorkspacePage() {
       {selected && <div style={{ gridColumn: '1 / -1', color: '#667085' }}>{selected.propertyNumber || '물건번호 미입력'} · {selected.name}</div>}
     </section>
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(8, minmax(95px, 1fr))', gap: 12, marginBottom: 20 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: 12, marginBottom: 20 }}>
       {[
         ['실내 사진', interiorMedia.length], ['Vision 결과', visionResults.length], ['검토 대기', pendingVision], ['공간 모델', spaces.length], ['3D 연결', linkedRooms], ['위치 승인', approvedEvidencePositions], ['상태 이력', roomConditionHistory.length], ['방별 리노베이션', approvedRoomRenovations],
-      ].map(([label, value]) => <div key={String(label)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 6 }}>{value}</strong></div>)}
+      ].map(([label, value]) => <div key={String(label)} data-testid="interior-kpi" data-label={String(label)} data-value={String(value)} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 16 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 6 }}>{value}</strong></div>)}
     </section>
 
     <Alert severity="info" sx={{ mb: 2 }}>현재 기본 Vision Provider는 브라우저 로컬 픽셀 분석입니다. 사진·설비의 room-local 위치와 상태/리노베이션 기록은 Human Review 기반이며 측량·법적 BIM·실시설계 확정값으로 자동 승격하지 않습니다.</Alert>
@@ -88,10 +98,10 @@ export default function InteriorWorkspacePage() {
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20 }}>
       <h2 style={{ marginTop: 0 }}>승인된 설비 인벤토리</h2>
       <p style={{ color: '#667085' }}>Vision 결과 승인 후 명확하게 연결 가능한 설비만 생성합니다. 상태는 실제 확인 전까지 `unknown`으로 유지합니다.</p>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(260px,1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(100%, 260px),1fr))', gap: 12 }}>
         {facilities.map((item) => <article key={item.id} style={{ border: '1px solid #e1e6ec', borderRadius: 10, padding: 14 }}><div style={{ display: 'flex', justifyContent: 'space-between', gap: 8 }}><strong>{item.name}</strong><Chip size="small" variant="outlined" label={item.condition} /></div><p style={{ color: '#667085' }}>{FACILITY_LABEL[item.category]} · {item.floor || '층 미확인'}</p><small>{item.notes}</small></article>)}
         {!facilities.length && <p style={{ color: '#7b8794' }}>승인된 설비 인벤토리가 아직 없습니다.</p>}
       </div>
     </section>
-  </main>;
+  </div>;
 }
