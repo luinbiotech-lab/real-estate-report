@@ -17,7 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     env:
-      SITE: https://real-estate-report-lime.vercel.app
+      # Target: Production by default; a preview URL may be set here temporarily to verify a PR before promotion.
+      SITE: https://real-estate-report-45uh2w88z-luinbiotech-6348.vercel.app
     steps:
       - name: Status and public-data discovery for the three test listings
         run: |
@@ -35,6 +36,8 @@ jobs:
         run: |
           q=$(jq -rn --arg v "서울특별시 강남구 논현로 339" '$v|@uri')
           curl -sS -m 40 "$SITE/api/property-discovery?query=$q" > /tmp/d.json
+          echo "::notice title=Market summary (논현로 339)::$(jq -c '.market.summary' /tmp/d.json)"
+          for q2 in "서울특별시 마포구 동교로 212-22" "서울특별시 서초구 동광로1길 49"; do e2=$(jq -rn --arg v "$q2" '$v|@uri'); echo "::notice title=Market summary $q2::$(curl -sS -m 40 "$SITE/api/property-discovery?query=$e2" | jq -c '.market.summary')"; done
           for kind in commercial land; do
             echo "::notice title=Market $kind composition::$(jq -c --arg k "$kind" '.market[$k] as $r | {rows: ($r|length), byMatch: ($r|group_by(.matchLevel)|map({(.[0].matchLevel): length})|add), buildingType: ($r|map(.raw.buildingType // "-")|group_by(.)|map({(.[0]): length})|add), share: ($r|map(.raw.shareDealingType // "-")|group_by(.)|map({(.[0]): length})|add), cancelled: ($r|map(select((.raw.cdealType // "") != ""))|length), rawKeys: ($r[0].raw // {} | keys), sample: ($r[:4]|map({amt: .sourceDealAmountTenThousandWon, b: .buildingAreaSqm, l: .landAreaSqm, dong: .legalDong, jibun, use: .buildingUse, bt: .raw.buildingType, sh: .raw.shareDealingType, cd: .raw.cdealType}))}' /tmp/d.json | head -c 3000)"
           done
