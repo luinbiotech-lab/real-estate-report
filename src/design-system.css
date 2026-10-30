@@ -123,3 +123,11 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
   .app-shell [style*="grid-template-columns: repeat(8"],.app-shell [style*="grid-template-columns: repeat(6"]{grid-template-columns:repeat(auto-fill,minmax(min(100%,120px),1fr))!important}
   .app-shell [style*="grid-template-columns: 1.2fr 0.8fr"],.app-shell [style*="grid-template-columns: 1fr 1fr"],.app-shell [style*="grid-template-columns: 1fr 220px"],.app-shell [style*="grid-template-columns: 1fr auto"]{grid-template-columns:minmax(0,1fr)!important}
 }
+
+/* Fixes from the first screenshot review (2026-10-30) */
+.app-shell .portfolio-focus-hero h2,.app-shell .portfolio-focus-hero h1{color:#fff}
+.app-shell .data-room-summary{background:var(--brand-primary-deep)}
+@media(max-width:900px){
+  /* The menu toggle sits top-left over the open drawer; keep the brand mark clear of it. */
+  .app-shell>aside{padding-top:calc(72px + env(safe-area-inset-top))}
+}
