@@ -262,13 +262,13 @@ try {
               .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.right > vw + 1 && !scrollsX(el); })
               .slice(0, 4)
               .map((el) => `${el.tagName.toLowerCase()}${el.className && typeof el.className === 'string' ? '.' + el.className.trim().split(/\s+/).slice(0, 2).join('.') : ''}(${Math.round(el.getBoundingClientRect().right)}px)`);
-            const errorAlerts = document.querySelectorAll('.MuiAlert-standardError, .MuiAlert-filledError').length;
-            return { vw, scroll, offenders, errorAlerts };
+            const errorAlertTexts = [...document.querySelectorAll('.MuiAlert-standardError, .MuiAlert-filledError')].map((el) => (el.textContent || '').trim().slice(0, 140));
+            return { vw, scroll, offenders, errorAlerts: errorAlertTexts.length, errorAlertTexts };
           });
           await shot(`mobile${width}-${route.split('?')[0].replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '') || 'home'}`);
           const errors = takeErrors();
           assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
-          assert(layout.errorAlerts === 0, `오류 배너 ${layout.errorAlerts}건`);
+          assert(layout.errorAlerts === 0, `오류 배너 ${layout.errorAlerts}건: ${layout.errorAlertTexts.join(' / ')}`);
           assert(layout.scroll <= layout.vw + 1, `가로 넘침 ${layout.scroll}px > ${layout.vw}px: ${layout.offenders.join(', ')}`);
           return `${layout.vw}px`;
         });
