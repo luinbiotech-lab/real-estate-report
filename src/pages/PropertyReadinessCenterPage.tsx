@@ -1,5 +1,5 @@
 import { ArrowForwardRounded, FactCheckRounded, RefreshRounded, TaskAltRounded, WarningAmberRounded } from '@mui/icons-material';
-import { Button, Chip, CircularProgress, MenuItem, TextField } from '@mui/material';
+import { Alert, Button, Chip, CircularProgress, MenuItem, TextField } from '@mui/material';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -8,6 +8,7 @@ import { derivePropertyNextActions, type PropertyNextAction } from '../services/
 import { assessPropertyReadiness, type PropertyReadinessAssessment, type ReadinessStage, type ReadinessState } from '../services/propertyReadinessService';
 import { propertyReadinessWorklogService, type ReadinessWorklogEntry } from '../services/propertyReadinessWorklogService';
 import type { Property } from '../types';
+import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
 
 type Row = { property: Property; readiness: PropertyReadinessAssessment };
 type Filter = 'all' | 'attention' | 'strong';
@@ -21,19 +22,26 @@ export default function PropertyReadinessCenterPage() {
   const [recentProgress, setRecentProgress] = useState<ReadinessWorklogEntry[]>([]);
   const [openWork, setOpenWork] = useState<ReadinessWorklogEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const [query, setQuery] = useState('');
 
   const load = async () => {
-    setLoading(true);
+    setLoading(true); setLoadError('');
     try {
       const properties = await propertyRepository.getAll();
-      const assessments = await Promise.all(properties.map(async (property) => ({ property, readiness: assessPropertyReadiness(property, await propertyDataRoomRepository.getBundle(property.id)) })));
-      const sorted = assessments.sort((a, b) => a.readiness.scorePct - b.readiness.scorePct || b.property.updatedAt.localeCompare(a.property.updatedAt));
+      // One property's Data Room failing must not hide every other property (or look like "no properties").
+      const settled = await Promise.allSettled(properties.map(async (property) => ({ property, readiness: assessPropertyReadiness(property, await propertyDataRoomRepository.getBundle(property.id)) })));
+      const assessments = settled.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+      const failed = settled.flatMap((result, index) => result.status === 'rejected' ? [properties[index].name || properties[index].id] : []);
+      const sorted = assessments.sort((a, b) => a.readiness.scorePct - b.readiness.scorePct || compareByUpdatedAtDesc(a.property, b.property));
       setRows(sorted);
       propertyReadinessWorklogService.reconcile(sorted);
       setRecentProgress(propertyReadinessWorklogService.listRecentProgress());
       setOpenWork(propertyReadinessWorklogService.listOpen());
+      if (failed.length) setLoadError(`일부 물건의 준비도를 계산하지 못했습니다(목록에서 제외): ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ` 외 ${failed.length - 3}건` : ''}`);
+    } catch (reason) {
+      setLoadError(reason instanceof Error ? reason.message : '준비도 자료를 불러오지 못했습니다.');
     } finally { setLoading(false); }
   };
 
@@ -69,11 +77,12 @@ export default function PropertyReadinessCenterPage() {
 
   if (loading) return <div className="center"><CircularProgress /><p>물건 준비도를 계산하는 중입니다.</p></div>;
 
-  return <main style={{ padding: 28, maxWidth: 1480, margin: '0 auto' }}>
+  return <div className="readiness-center" style={{ maxWidth: 1480, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
       <div><p className="eyebrow">PROPERTY READINESS · DATA ROOM PIPELINE</p><h1 style={{ margin: '5px 0' }}>Property Readiness Center</h1><p style={{ margin: 0, color: '#667085' }}>기본정보 → 문서 → 구조화/출처 → 검증 → 미디어 → 보고서 → 3D 준비상태를 실제 저장 데이터로 점검합니다.</p></div>
       <Button startIcon={<RefreshRounded />} onClick={() => void load()}>재검사 / 새로고침</Button>
     </header>
+    {loadError && <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(150px,1fr))', gap: 10, marginBottom: 14 }}>
       {([['전체 물건', metrics.total, '건'], ['보완 필요', metrics.attention, '건'], ['80% 이상', metrics.strong, '건'], ['평균 준비도', metrics.avg, '%']] as const).map(([label, value, unit]) => <div key={label} style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><div style={{ display: 'flex', gap: 4, alignItems: 'baseline', marginTop: 4 }}><strong style={{ fontSize: 28 }}>{value}</strong><span style={{ color: '#98a2b3' }}>{unit}</span></div></div>)}
@@ -120,5 +129,5 @@ export default function PropertyReadinessCenterPage() {
 
     <div style={{ marginTop: 14, display: 'flex', gap: 8, alignItems: 'center', color: '#667085', fontSize: 12 }}><WarningAmberRounded fontSize="small" /><span>준비도는 저장된 자료의 존재와 상태를 보여주는 운영 지표입니다. 법적·기술적 적합성 또는 거래 안전성을 보증하지 않습니다.</span></div>
     <div style={{ marginTop: 6, display: 'flex', gap: 8, alignItems: 'center', color: '#667085', fontSize: 12 }}><FactCheckRounded fontSize="small" /><span>Verification이 없는 imported 자료는 검증 완료로 승격하지 않습니다. 작업 완료도 실제 readiness 변화가 확인될 때만 기록됩니다.</span></div>
-  </main>;
+  </div>;
 }
