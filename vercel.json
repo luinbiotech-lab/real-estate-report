@@ -127,5 +127,10 @@
       "source": "/professional-report/:path*",
       "destination": "/index.html"
     }
-  ]
+  ],
+  "git": {
+    "deploymentEnabled": {
+      "claude/live-monitor": false
+    }
+  }
 }
