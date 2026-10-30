@@ -191,3 +191,14 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
   .property-hub-readiness{margin-top:10px}
   .property-hub-cards button{min-height:96px!important;padding:12px!important}
 }
+
+/* Data Room on phones: compact 3-column summary and no double padding around tab content. */
+@media(max-width:700px){
+  .data-room-summary{grid-template-columns:repeat(3,minmax(0,1fr))!important;border-radius:12px}
+  .data-room-summary>div{padding:10px 12px;border-right:1px solid #ffffff1a;border-bottom:1px solid #ffffff1a}
+  .data-room-summary strong{font-size:18px;margin-top:2px}
+  .data-room-summary>div.attention,.data-room-summary>div.ready{grid-column:1/-1}
+  .data-room-content{padding:12px}
+  .data-room-overview>section{padding:14px;min-height:0}
+  .data-room-header{padding-bottom:12px}
+}
