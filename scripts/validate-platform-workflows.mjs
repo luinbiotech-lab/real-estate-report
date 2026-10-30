@@ -116,7 +116,7 @@ for (const marker of ['도면 · 3D 자료 등록/추가', 'Room Intelligence �
 }
 
 if (!text.twinIntakeService.includes("queueDigitalTwin(saved, 'upload')") || !text.orchestrator.includes('async queueDigitalTwin')) throw new Error('Digital Twin 업로드는 Agent Human Review 흐름에 연결되어야 합니다.');
-if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntakePage.includes("navigate('/digital-twin')")) throw new Error('Digital Twin Intake 화면은 업로드와 Workspace handoff를 제공해야 합니다.');
+if (!text.twinIntakePage.includes('파일 선택 및 등록') || !text.twinIntakePage.includes("navigate(propertyId ? `/digital-twin?propertyId=${encodeURIComponent(propertyId)}` : '/digital-twin')")) throw new Error('Digital Twin Intake 화면은 업로드와 (같은 물건의) Workspace handoff를 제공해야 합니다.');
 if (!text.repository.includes('getDigitalTwinAssets') || !text.repository.includes('saveDigitalTwinAsset')) throw new Error('Digital Twin asset repository read/write 경로를 유지해야 합니다.');
 
 for (const [name, page] of [['Interior Workspace', text.interiorPage], ['Room Twin Operations', text.roomOpsPage]]) {

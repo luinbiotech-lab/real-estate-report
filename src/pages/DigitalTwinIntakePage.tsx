@@ -189,7 +189,7 @@ export default function DigitalTwinIntakePage() {
       </Box>
       <Stack direction="row" spacing={1} alignItems="flex-start">
         <Button startIcon={<RefreshRounded />} onClick={() => void loadAssets(propertyId)}>새로고침</Button>
-        <Button variant="outlined" startIcon={<OpenInNewRounded />} onClick={() => navigate('/digital-twin')}>Digital Twin Workspace</Button>
+        <Button variant="outlined" startIcon={<OpenInNewRounded />} onClick={() => navigate(propertyId ? `/digital-twin?propertyId=${encodeURIComponent(propertyId)}` : '/digital-twin')}>Digital Twin Workspace</Button>
       </Stack>
     </Stack>
 
@@ -264,7 +264,7 @@ export default function DigitalTwinIntakePage() {
           </Box>
           <Stack direction="row" spacing={1} alignItems="center" justifyContent={{ xs: 'flex-start', md: 'flex-end' }}>
             <Chip size="small" label={STATUS_LABELS[asset.processingStatus]} color={asset.processingStatus === 'ready' ? 'success' : asset.processingStatus === 'failed' ? 'error' : 'default'} />
-            <Button size="small" onClick={() => navigate('/digital-twin')}>검토/처리</Button>
+            <Button size="small" onClick={() => navigate(propertyId ? `/digital-twin?propertyId=${encodeURIComponent(propertyId)}` : '/digital-twin')}>검토/처리</Button>
           </Stack>
         </CardContent>
       </Card>)}

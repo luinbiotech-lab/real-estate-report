@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CloudUploadRounded, RefreshRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, FormControl, InputLabel, MenuItem, Select, TextField } from '@mui/material';
 import type { MediaCategory, PropertyMedia } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { spatialIntakeService } from '../services/spatialIntakeService';
+import { pickRequestedProperty } from '../domain/propertyDetail/rentalInput';
 import type { Property } from '../types';
 
 const CATEGORY_LABELS: Partial<Record<MediaCategory, string>> = {
@@ -25,6 +27,8 @@ function MediaPreview({ media }: { media: PropertyMedia }) {
 export default function SpatialWorkspacePage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [propertyId, setPropertyId] = useState('');
+  // Deep links from the Data Room / Digital Twin intake pass ?propertyId; it used to be ignored (first property shown).
+  const [searchParams, setSearchParams] = useSearchParams();
   const [category, setCategory] = useState<MediaCategory>('interior');
   const [planFloor, setPlanFloor] = useState('');
   const [bundle, setBundle] = useState<Awaited<ReturnType<typeof propertyDataRoomRepository.getBundle>>>({ documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] });
@@ -43,7 +47,9 @@ export default function SpatialWorkspacePage() {
       try {
         const list = await propertyRepository.getAll();
         setProperties(list);
-        const first = list[0]?.id || '';
+        const { target, missingRequested } = pickRequestedProperty(list, searchParams.get('propertyId'));
+        if (missingRequested) setError('요청한 물건을 찾을 수 없습니다. 대상 물건을 직접 선택해 주세요.');
+        const first = target?.id || '';
         setPropertyId(first);
         if (first) await load(first);
       } catch (reason) { setError(reason instanceof Error ? reason.message : '공간 데이터를 불러오지 못했습니다.'); }
@@ -85,7 +91,7 @@ export default function SpatialWorkspacePage() {
     <section style={{ display: 'grid', gridTemplateColumns: '1fr 220px', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>
       <FormControl size="small" fullWidth>
         <InputLabel id="spatial-property-label">대상 물건</InputLabel>
-        <Select labelId="spatial-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); await load(event.target.value); }}>
+        <Select labelId="spatial-property-label" label="대상 물건" value={propertyId} onChange={async (event) => { setPropertyId(event.target.value); setSearchParams({ propertyId: event.target.value }); setError(''); await load(event.target.value); }}>
           {properties.map((item) => <MenuItem key={item.id} value={item.id}>{item.name} · {item.address}</MenuItem>)}
         </Select>
       </FormControl>

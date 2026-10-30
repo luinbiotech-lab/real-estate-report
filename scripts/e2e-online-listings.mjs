@@ -178,11 +178,16 @@ try {
       await page.locator('input[type="file"]').first().setInputFiles({ name: 'e2e-test-floor.dxf', mimeType: 'application/dxf', buffer: Buffer.from(dxf, 'utf8') });
       await visibleText('e2e-test-floor.dxf 등록 완료', 25_000);
       await shot(`${first.key}-dxf-intake`);
-      await page.goto(`${BASE_URL}/property/${encodeURIComponent(first.propertyId)}/data-room?tab=digitalTwin`, { waitUntil: 'domcontentloaded' });
+      // Intake → Digital Twin Workspace must keep the same property (it used to open the first property in the list).
+      await page.getByRole('button', { name: 'Digital Twin Workspace' }).first().click();
+      await page.waitForURL(/\/digital-twin\?propertyId=/, { timeout: 20_000 });
+      await visibleText('Digital Twin Workspace', 25_000);
       await visibleText('e2e-test-floor.dxf', 25_000);
-      await shot(`${first.key}-dxf-dataroom`);
+      const selectedText = await page.locator('body').innerText();
+      assert(selectedText.includes(first.name), 'Digital Twin Workspace가 업로드한 물건이 아닌 다른 물건을 표시합니다.');
+      await shot(`${first.key}-dxf-workspace`);
       const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
-      return '자산이 해당 물건 Data Room 3D 탭에 표시';
+      return '같은 물건의 Digital Twin Workspace에 도면 자산 표시';
     });
   }
 
