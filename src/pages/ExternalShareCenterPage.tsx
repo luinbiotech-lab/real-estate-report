@@ -6,6 +6,7 @@ import { buildingReleaseCollaborationService, type BuildingReleaseReviewNote, ty
 import { buildingReleaseSnapshotService } from '../services/buildingReleaseSnapshotService';
 import { externalShareProviderService } from '../services/externalShareProviderService';
 import { releaseSharePackageService } from '../services/releaseSharePackageService';
+import { canReissueShare, safeCsvCell } from '../domain/propertyDetail/shareRules';
 import type { Property } from '../types';
 
 function downloadText(content: string, fileName: string, mime = 'application/json;charset=utf-8') {
@@ -20,10 +21,8 @@ function downloadText(content: string, fileName: string, mime = 'application/jso
   URL.revokeObjectURL(url);
 }
 
-function csvCell(value: unknown) {
-  const text = value == null ? '' : String(value);
-  return `"${text.replace(/"/g, '""')}"`;
-}
+// CSV/formula-injection safe (see shareRules.safeCsvCell).
+const csvCell = safeCsvCell;
 
 const capabilityLabels = [
   ['publicUrl', 'PUBLIC URL'],
@@ -136,6 +135,7 @@ export default function ExternalShareCenterPage() {
   };
 
   const exportManifest = async (share: BuildingReleaseShare) => {
+    if (!canReissueShare(share, new Date().toISOString())) { setNotice(''); setError('회수되었거나 만료된 공유는 Manifest을(를) 다시 만들 수 없습니다. 새 공유를 생성하세요.'); return; }
     setBusyId(share.id); setError(''); setNotice('');
     try {
       const snapshot = await getSnapshot(share);
@@ -146,6 +146,7 @@ export default function ExternalShareCenterPage() {
   };
 
   const exportHtml = async (share: BuildingReleaseShare) => {
+    if (!canReissueShare(share, new Date().toISOString())) { setNotice(''); setError('회수되었거나 만료된 공유는 공유 HTML을(를) 다시 만들 수 없습니다. 새 공유를 생성하세요.'); return; }
     setBusyId(share.id); setError(''); setNotice('');
     try {
       const snapshot = await getSnapshot(share);
@@ -156,6 +157,7 @@ export default function ExternalShareCenterPage() {
   };
 
   const revoke = async (share: BuildingReleaseShare) => {
+    if (!confirm('이 공유를 회수 처리할까요? 감사대장 상태만 REVOKED로 바뀌며, 이미 전달된 HTML 복사본은 원격으로 차단되지 않습니다.')) return;
     setBusyId(share.id); setError(''); setNotice('');
     try {
       await buildingReleaseCollaborationService.revokeShare(share);
@@ -167,7 +169,7 @@ export default function ExternalShareCenterPage() {
 
   if (loading) return <div className="center"><CircularProgress /><p>외부 공유 감사대장을 준비하는 중입니다.</p></div>;
 
-  return <main style={{ padding: 28, maxWidth: 1380, margin: '0 auto' }}>
+  return <div className="external-share-center" style={{ maxWidth: 1380, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 22 }}>
       <div><p className="eyebrow">EXTERNAL SHARE · ACCESS POLICY · REVIEW AUDIT</p><h1 style={{ margin: '5px 0' }}>외부 공유 센터</h1><p style={{ margin: 0, color: '#667085' }}>로컬 standalone 패키지와 production 서버 기반 Public URL 공유를 Provider 단위로 분리해 관리합니다.</p></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Button startIcon={<DownloadRounded />} onClick={exportAuditCsv}>감사대장 CSV</Button><Button startIcon={<DownloadRounded />} onClick={exportAuditJson}>감사대장 JSON</Button><Button startIcon={<RefreshRounded />} onClick={() => void load()}>새로고침</Button></div>
@@ -213,11 +215,11 @@ export default function ExternalShareCenterPage() {
           <small>{share.expiresAt ? new Date(share.expiresAt).toLocaleString('ko-KR') : '만료 없음'}</small>
           <Chip size="small" variant="outlined" label={share.allowDownload ? '허용' : '차단'} />
           <Chip size="small" color={openReview ? 'warning' : 'success'} variant="outlined" label={openReview ? `${openReview} OPEN` : 'CLEAR'} />
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}><Button size="small" startIcon={<OpenInBrowserRounded />} disabled={busyId === share.id} onClick={() => void exportHtml(share)}>공유 HTML</Button><Button size="small" startIcon={<DownloadRounded />} disabled={busyId === share.id} onClick={() => void exportManifest(share)}>Manifest</Button>{share.status === 'active' && <Button size="small" color="warning" startIcon={<BlockRounded />} disabled={busyId === share.id} onClick={() => void revoke(share)}>로컬 회수</Button>}</div>
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}><Button size="small" startIcon={<OpenInBrowserRounded />} disabled={busyId === share.id || !canReissueShare(share, new Date().toISOString())} onClick={() => void exportHtml(share)}>공유 HTML</Button><Button size="small" startIcon={<DownloadRounded />} disabled={busyId === share.id || !canReissueShare(share, new Date().toISOString())} onClick={() => void exportManifest(share)}>Manifest</Button>{share.status === 'active' && <Button size="small" color="warning" startIcon={<BlockRounded />} disabled={busyId === share.id || share.status !== 'active'} onClick={() => void revoke(share)}>로컬 회수</Button>}</div>
         </div>;
       })}
     </section>
 
     <Alert severity="warning" icon={<ShareRounded />} sx={{ mt: 1.5 }}><strong>REMOTE / PUBLIC backend는 CONNECTED입니다.</strong> Public URL 발급·서버 만료·remote revoke 기능은 연결되어 있지만, 실제 운영 OWNER의 issue/list/revoke browser acceptance 전에는 Production 운영 완료로 보지 않습니다. 이 감사대장은 기존 LOCAL 공유 이력을 계속 분리해 보존합니다.</Alert>
-  </main>;
+  </div>;
 }
