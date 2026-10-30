@@ -202,3 +202,12 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
   .data-room-overview>section{padding:14px;min-height:0}
   .data-room-header{padding-bottom:12px}
 }
+
+/* Property form on phones: save stays reachable while scrolling a long form; tighter sections. */
+@media(max-width:700px){
+  .app-shell .form-save-button{position:fixed;left:12px;right:12px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:1100;min-height:48px;box-shadow:var(--brand-shadow-raised)}
+  .app-shell:has(.form-save-button)>main{padding-bottom:88px}
+  .app-shell .form-section{padding:16px}
+  .app-shell .form-section h2{font-size:17px}
+  .app-shell .page-header.compact h1{font-size:24px}
+}
