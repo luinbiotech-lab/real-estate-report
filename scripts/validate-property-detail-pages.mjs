@@ -234,3 +234,21 @@ console.log('Interior/Spatial workspace validation passed.');
   for (const marker of ['data-testid="discovery-summary"', 'data-testid="discovery-building-choice"', "tab === 'market'", 'groupIdenticalTrades(trades)', '건물이 없다는 뜻이 아니며']) if (!panel.includes(marker)) fail(`조회 패널 #37 구조 누락: ${marker}`);
   console.log('Discovery summary (Issue #37) validation passed.');
 }
+
+// 19. Hub core facts (owner check 2026-10-31): blanks are 미입력, never '-' or a made-up 0층.
+{
+  const m = await importTs('src/domain/propertyDetail/propertyDetailModel.ts');
+  const empty = m.hubFactRows({ salePrice: 0, landAreaPyeong: 0, officialLandPricePerSqm: 0, estimatedOfficialLandValue: 0, zoning: '', landCategory: '', landUseSituation: '', groundFloors: 0, basementFloors: 0, nearbyStation: '' });
+  if (empty.some((row) => row.value === '-' || row.value === '')) fail('핵심 정보 공란이 - 로 표시됩니다.');
+  if (!empty.every((row) => row.missing && row.value === m.HUB_MISSING_LABEL)) fail('공란은 모두 미입력(missing)이어야 합니다.');
+  if (empty.find((row) => row.label === '층수').value.includes('0층')) fail('층수 미입력을 지하 0층 · 지상 0층으로 만들면 안 됩니다.');
+  const filled = m.hubFactRows({ salePrice: 4_150_000_000, landAreaPyeong: 50.85, totalFloorAreaSqm: 349.08, zoning: '제2종일반주거지역', officialLandPricePerSqm: 9193000, estimatedOfficialLandValue: 1344016600, landCategory: '대', mainUse: '근생', structure: '세멘벽돌조', groundFloors: 3, basementFloors: 1, nearbyStation: '내방역' });
+  const by = Object.fromEntries(filled.map((row) => [row.label, row]));
+  if (by['매매가'].value !== '41억 5,000만 원') fail(`매매가 표기 오류: ${by['매매가'].value}`);
+  if (by['층수'].value !== '지하 1층 · 지상 3층' || by['층수'].missing) fail('층수 표기 오류');
+  if (!by['공시지가 기준 토지가액'].value.includes('계산값')) fail('공시지가 기준 토지가액은 계산값 표시');
+  if (by['지목 · 이용상황'].value !== '대') fail('지목 단독 표기 오류');
+  const hub = readFileSync('src/pages/PropertyHubPage.tsx', 'utf8');
+  if (!hub.includes('hubFactRows(property)') || !hub.includes('data-testid="hub-core-facts"')) fail('허브 핵심 정보가 hubFactRows를 사용하지 않습니다.');
+  console.log('Hub core facts blank labels validation passed.');
+}

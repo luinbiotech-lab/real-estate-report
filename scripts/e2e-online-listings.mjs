@@ -135,7 +135,10 @@ try {
       assert(text.includes(listing.address), '주소가 허브에 표시되지 않습니다.');
       assert(/억|원/.test(text), '매매가 표시가 없습니다.');
       assert(text.includes(`지상 ${listing.groundFloors}층`), `층수 표시 불일치(지상 ${listing.groundFloors}층 기대)`);
-      return '주소·매매가·층수 표시';
+      const facts = await page.getByTestId('hub-core-facts').locator('dd').allInnerTexts();
+      assert(facts.length >= 10 && !facts.some((value) => value.trim() === '-' || value.trim() === ''), `핵심 정보 공란이 '-'로 표시됨: ${facts.join(' | ')}`);
+      const missing = facts.filter((value) => value.trim() === '미입력').length;
+      return `주소·매매가·층수 표시 · 미입력 ${missing}개`;
     });
 
     // 3. Data Room tabs open without errors.
