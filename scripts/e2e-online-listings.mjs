@@ -177,20 +177,26 @@ try {
 
     // 4b. Owner decision 2026-10-30: blank fields are confirmed with the user before publishing, then hidden.
     await check(tag, '1P 발행 전 공란 확인 안내', async () => {
+      // Owner decision 2026-10-31 (mixed policy): no empty slot in any strip/grid of the printed sheet.
+      const emptySlots = await page.evaluate(() => [...document.querySelectorAll('.d1-price-band > div, .d1-status-strip > div, .d1-highlight-strip > div, .d1-facts-grid > div')]
+        .filter((el) => !(el.textContent || '').trim()).length);
+      assert(emptySlots === 0, `1P 빈 칸 ${emptySlots}개`);
       const notice = page.getByTestId('report-blank-fields-notice');
-      if (!(await notice.count())) return '공란 없음 — 확인 없이 발행';
-      assert((await notice.innerText()).includes('숨김 처리되어 발행'), '숨김 발행 안내가 없습니다.');
+      if (!(await notice.count())) return '공란 없음 — 확인 없이 발행 · 빈 칸 0';
+      const noticeText = await notice.innerText();
+      const requiredMissing = noticeText.includes('발행 불가');
+      assert(requiredMissing ? noticeText.includes('필수 항목') : noticeText.includes('숨김 처리되어 발행'), `공란 안내 오류: ${noticeText.slice(0, 100)}`);
       await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 10_000 });
       const dialogText = await dialog.innerText();
       assert(dialogText.includes('값 입력하러 가기') && dialogText.includes('숨김 처리하고'), `대화상자 선택지 누락: ${dialogText.slice(0, 120)}`);
-      const chips = await dialog.getByTestId('report-blank-fields-list').locator('.MuiChip-root').count();
-      assert(chips > 0, '공란 항목 목록이 비어 있습니다.');
+      const continueDisabled = await dialog.getByTestId('report-blank-fields-continue').isDisabled();
+      assert(continueDisabled === requiredMissing, requiredMissing ? '필수 항목 공란인데 숨김 발행이 가능합니다.' : '선택 항목만 공란인데 숨김 발행이 막혔습니다.');
       await shot(`${tag}-1p-blank-dialog`);
       await dialog.getByRole('button', { name: '취소' }).click();
       await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
-      return `공란 ${chips}개 확인 요청`;
+      return requiredMissing ? '필수 공란 → 발행 차단 · 빈 칸 0' : '선택 공란 확인 요청 · 빈 칸 0';
     });
 
     // 5. 7P professional MASTER (owner standard: Opening → detail-1..7 → Closing, no overflow).
@@ -202,13 +208,21 @@ try {
         const pages = [...master.querySelectorAll('.daon-frame-page, .daon-detail-page')].map((el) => ({
           name: el.getAttribute('data-master-page') || [...el.classList].find((n) => /^daon-detail-page-[1-7]$/.test(n))?.replace('daon-detail-page-', 'detail-') || '',
           sw: el.scrollWidth, cw: el.clientWidth, sh: el.scrollHeight, ch: el.clientHeight, text: el.textContent || '',
+          printed: (el.querySelector('.dd-brand em')?.textContent || '').match(/\|\s*(\d+)/)?.[1] || '',
         }));
         return { templateId: master.getAttribute('data-template-id'), visual: master.getAttribute('data-visual-master'), pages, url: location.pathname };
       });
       await shot(`${tag}-7p`);
       const names = report.pages.map((item) => item.name);
       assert(report.templateId === 'DAON_DETAIL_7P_MASTER', `템플릿 ${report.templateId}`);
-      assert(names.length === 9 && names[0] === 'opening' && names.at(-1) === 'closing' && [1, 2, 3, 4, 5, 6, 7].every((n) => names[n] === `detail-${n}`), `페이지 구성 ${names.join(',')}`);
+      // Owner decision 2026-10-31: thin optional detail pages (3–6) are omitted; 1, 2, 7 always print, order is kept and
+      // printed numbers run 1..n without gaps.
+      const detail = names.slice(1, -1);
+      const detailIds = detail.map((name) => Number(name.replace('detail-', '')));
+      assert(names[0] === 'opening' && names.at(-1) === 'closing' && detail.every((name) => /^detail-[1-7]$/.test(name)), `페이지 구성 ${names.join(',')}`);
+      assert(detailIds.includes(1) && detailIds.includes(2) && detailIds.includes(7) && detailIds.every((id, i) => i === 0 || id > detailIds[i - 1]), `상세 페이지 순서 ${detailIds.join(',')}`);
+      const printed = report.pages.filter((item) => item.name.startsWith('detail-')).map((item) => item.printed);
+      assert(printed.every((num, i) => Number(num) === i + 1), `상세 페이지 번호 ${printed.join(',')}`);
       const overflow = report.pages.filter((item) => item.sh > item.ch + 2 || item.sw > item.cw + 2).map((item) => item.name);
       assert(!overflow.length, `넘침 페이지: ${overflow.join(',')}`);
       // Owner decision 2026-10-30 ("빈칸 숨김"): placeholders are a hard failure, no longer a policy WARN.
@@ -217,10 +231,13 @@ try {
         .filter((item) => item.hit);
       const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
       assert(!placeholders.length, `공란 placeholder 표시: ${placeholders.map((item) => `${item.name}「${item.hit}」`).join(' / ')}`);
+      const emptyMetrics = await page.evaluate(() => [...document.querySelectorAll('.dd-metrics > div, .dd-reason-three > *, .dd-roadmap > *, .dd-dd-grid > *')].filter((el) => !(el.textContent || '').trim()).length);
+      assert(emptyMetrics === 0, `7P 빈 칸 ${emptyMetrics}개`);
       const notice = page.getByTestId('report-blank-fields-notice');
       let blankInfo = '공란 없음';
       if (await notice.count()) {
-        assert((await notice.innerText()).includes('숨김 처리되어 발행'), '7P 숨김 발행 안내가 없습니다.');
+        const noticeText = await notice.innerText();
+        assert(noticeText.includes('숨김 처리되어 발행') || noticeText.includes('발행 불가'), '7P 공란 안내가 없습니다.');
         await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
         const dialog = page.getByRole('dialog');
         await dialog.waitFor({ state: 'visible', timeout: 10_000 });
@@ -229,7 +246,7 @@ try {
         await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
         blankInfo = '발행 전 공란 확인 동작';
       }
-      return `9페이지, 넘침 0, placeholder 0, ${blankInfo}, visual=${report.visual}`;
+      return `${names.length}페이지(상세 ${detailIds.join('·')}), 넘침 0, placeholder 0, 빈 칸 0, ${blankInfo}, visual=${report.visual}`;
     });
 
 
@@ -237,7 +254,7 @@ try {
     //     the page count (1P = 1 page, professional report = Opening + 7 + Closing = 9 pages), and reopen the same
     //     Snapshot URL to confirm it renders the same stored version. First listing only (runtime).
     if (listing === LISTINGS[0]) {
-      await check(tag, 'PDF 출력(1P=1쪽, 리포트=9쪽) · Snapshot 재열람', async () => {
+      await check(tag, 'PDF 출력(1P=1쪽, 리포트=화면 쪽수) · Snapshot 재열람', async () => {
         await page.goto(`${BASE_URL}/document/proposal/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
         await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
         await page.emulateMedia({ media: 'print' });
@@ -263,7 +280,7 @@ try {
         await page.emulateMedia({ media: 'screen' });
         await writeFile(`${OUT}/e2e-${tag}-report.pdf`, reportPdf);
         const report = pdfPageCount(reportPdf);
-        assert(report.pages === 9, `리포트 PDF 페이지 수 ${report.pages} (트리 ${report.treeCount}, 화면 ${before.pages}쪽) — 기대 9`);
+        assert(report.pages === before.pages && before.pages >= 5, `리포트 PDF 페이지 수 ${report.pages} (트리 ${report.treeCount}) — 화면 ${before.pages}쪽과 같아야 함`);
 
         // Reopen: leave, come back to the same Snapshot URL; stored content must render identically.
         await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });

@@ -45,11 +45,14 @@ const filled = JSON.parse(JSON.stringify(nullModel), (key, value) => (value && t
 if (blank.detailBlankFields(filled).length) fail('모든 값이 있는 7P 모델에 공란이 보고되었습니다.');
 
 // 3. Confirmation decision: ask while unacknowledged; acknowledgement is bound to the exact blank set.
-const fields = blank.onePageBlankFields(empty);
+// (Core fields are filled here; a blank core field can never be acknowledged — see section 7.)
+const coreOnly = { ...empty, salePrice: 3_000_000_000, address: '서울 마포구 동교로 212-22', landAreaSqm: 140.8, landAreaPyeong: 42.59, totalFloorAreaSqm: 266, totalFloorAreaPyeong: 80.47, mainUse: '근린생활시설', zoning: '제2종일반주거지역' };
+const fields = blank.onePageBlankFields(coreOnly);
+if (!fields.length || blank.requiredBlankFields(fields).length) fail('핵심 항목만 있는 물건은 선택 항목 공란만 있어야 합니다.');
 if (!blank.needsBlankFieldConfirmation(fields, null)) fail('공란이 있으면 발행 전에 확인을 받아야 합니다.');
 const signature = blank.blankFieldsSignature(fields);
 if (blank.needsBlankFieldConfirmation(fields, signature)) fail('확인한 공란 집합은 다시 묻지 않아야 합니다.');
-const changed = blank.onePageBlankFields({ ...empty, salePrice: 1 });
+const changed = blank.onePageBlankFields({ ...coreOnly, landCategory: '대' });
 if (!blank.needsBlankFieldConfirmation(changed, signature)) fail('공란 집합이 바뀌면 다시 확인해야 합니다.');
 if (blank.needsBlankFieldConfirmation([], null)) fail('공란이 없으면 확인 없이 발행할 수 있어야 합니다.');
 if (!/숨김 처리되어 발행/.test(blank.REPORT_BLANK_HIDE_NOTICE)) fail('숨김 발행 안내 문구가 없습니다.');
@@ -82,5 +85,31 @@ for (const marker of ['값 입력하러 가기', '숨김 처리하고 {actionLab
 const source = readFileSync('src/domain/professionalReport/reportBlankFields.ts', 'utf8');
 const broken = source.replace('return fields.length > 0 && acknowledgedSignature !== blankFieldsSignature(fields);', 'return false;');
 if (broken === source) fail('negative control이 실제 규칙을 변경하지 못했습니다.');
+
+// 7. Mixed policy (owner decision 2026-10-31): core fields cannot be hidden; no empty slots; thin 7P pages omitted.
+const emptyFields = blank.onePageBlankFields(empty);
+const requiredKeys = blank.requiredBlankFields(emptyFields).map((field) => field.key).sort();
+if (JSON.stringify(requiredKeys) !== JSON.stringify([...blank.REQUIRED_REPORT_FIELD_KEYS].sort())) fail(`1P 필수 공란 오류: ${requiredKeys.join(',')}`);
+if (!blank.needsBlankFieldConfirmation(emptyFields, blank.blankFieldsSignature(emptyFields))) fail('필수 항목 공란은 확인(숨김)으로 넘어갈 수 없습니다.');
+if (JSON.stringify(blank.requiredBlankFields(detailAll).map((f) => f.key).sort()) !== JSON.stringify([...blank.REQUIRED_REPORT_FIELD_KEYS].sort())) fail('7P 필수 공란 오류');
+if (gate.indexOf('disabled={required.length > 0}') < 0) fail('필수 공란이 있으면 "숨김 처리하고 계속"이 비활성이어야 합니다.');
+const fill = await importTs('src/domain/professionalReport/reportLayoutFill.ts');
+if (fill.equalColumns(3) !== 'repeat(3, 1fr)' || fill.equalColumns(0) !== 'none') fail('equalColumns 오류');
+const thinPlan = fill.detailPagePlan(nullModel, false, 0);
+if (JSON.stringify(thinPlan.pages.map((p) => p.id)) !== '[1,2,7]') fail(`내용 없는 7P는 1·2·7쪽만 남아야 합니다: ${thinPlan.pages.map((p) => p.id)}`);
+if (JSON.stringify(thinPlan.pages.map((p) => p.number)) !== '[1,2,3]') fail('남은 페이지는 1부터 다시 번호를 매겨야 합니다.');
+if (thinPlan.omitted.length !== 4 || !thinPlan.omitted.every((o) => o.reason.includes('필요'))) fail('생략 페이지와 사유 기록 오류');
+const fullPlan = fill.detailPagePlan(filled, true, 3);
+if (fullPlan.pages.length !== 7 || fullPlan.omitted.length) fail('자료가 충분하면 7쪽 모두 출력해야 합니다.');
+const oneInput = fill.detailPagePlan({ ...nullModel, location: { locationAnalysis: rv('역세권') } }, false, 0);
+if (oneInput.pages.some((p) => p.id === 3)) fail('입지 페이지는 실제 입력 2개 이상일 때만 출력합니다.');
+const withMap = fill.detailPagePlan({ ...nullModel, location: { locationAnalysis: rv('역세권') } }, true, 0);
+if (!withMap.pages.some((p) => p.id === 3)) fail('지도 + 입지 분석이면 입지 페이지를 출력해야 합니다.');
+for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', 'src/components/professionalReport/DaonDetail7PageMaster.tsx']) {
+  const code = stripComments(readFileSync(file, 'utf8'));
+  if (code.includes('aria-hidden="true" />')) fail(`${file}: 빈 자리 채움용 빈 칸(aria-hidden)이 남아 있습니다.`);
+}
+const detailSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+for (const marker of ['detailPagePlan(model', 'shows(3) &&', 'shows(6) &&', 'number={pageNumber(7)}']) if (!detailSource.includes(marker)) fail(`7P 페이지 생략 연결 누락: ${marker}`);
 
 console.log(`Report blank-field policy validation passed (1P blank fields for empty property: ${fields.length}, 7P: ${detailAll.length}).`);

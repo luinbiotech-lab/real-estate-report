@@ -15,6 +15,7 @@ import {
 import type { Property } from '../../types';
 import { formatWon, lines, pricePerPyeong } from '../../utils/format';
 import { DAON_ONE_PAGE_MASTER_TEMPLATE_ID, DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
+import { equalColumns } from '../../domain/professionalReport/reportLayoutFill';
 
 // Blank-value policy (owner decision 2026-10-30): a missing value is hidden, never printed as a '확인 필요' placeholder.
 // Fixed grid cells keep their slot (layout of the approved MASTER is unchanged) and list-like entries are omitted.
@@ -35,9 +36,9 @@ function DaonLogo() {
   </div>;
 }
 
-function Fact({ label, value, icon }: { label: string; value: string; icon: ReactNode }) {
+function Fact({ label, value, icon, wide = false }: { label: string; value: string; icon: ReactNode; wide?: boolean }) {
   if (!value || !value.trim()) return null;
-  return <div className="d1-fact">
+  return <div className="d1-fact" style={wide ? { gridColumn: '1 / -1' } : undefined}>
     <b><span className="d1-fact-icon">{icon}</span><span className="d1-fact-label">{label}</span></b>
     <span className="d1-fact-value" title={value}>{value}</span>
   </div>;
@@ -75,6 +76,31 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
     { text: first(p.developmentPlan, ''), icon: <DescriptionOutlined /> },
   ];
 
+  // Mixed blank policy (owner decision 2026-10-31): present items move forward and each row is re-divided among them,
+  // so a hidden value never leaves an empty slot. Core values (price, address, areas, use, zoning) are mandatory upstream.
+  const priceCells = ([
+    ['희망매매가', p.salePrice ? formatWon(p.salePrice) : ''],
+    ['토지평당', moneyPerPyeong(landUnit)],
+    ['연면적평당', moneyPerPyeong(grossUnit)],
+  ] as Array<[string, string]>).filter(([, value]) => value);
+  const statusCells = [
+    occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>,
+    (p.occupancyStatus || '').includes('소유자') && <div key="owner"><BusinessOutlined className="d1-status-icon" /><b>소유자 직접 사용</b></div>,
+    roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{(p.roadCondition || '').includes('코너') ? '코너 입지' : roadSummary}</b></div>,
+    parking && <div key="parking"><LocalParkingOutlined className="d1-status-icon" /><b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div>,
+  ].filter(Boolean);
+  const presentHighlights = highlightItems.filter((item) => item.text);
+  // The 12 fact slots stay as written (MASTER guard); hidden ones collapse and, when an odd number remain, the last
+  // present fact spans the full row so the grid never ends with an empty half-cell.
+  const factValues: Array<[string, string]> = [
+    ['주소', p.address || ''], ['주용도', p.mainUse || ''], ['토지면적', areaPair(p.landAreaSqm, p.landAreaPyeong)], ['용도지역', p.zoning || ''],
+    ['지목', p.landCategory || ''], ['사용승인일', p.completionDate || ''], ['연면적', areaPair(p.totalFloorAreaSqm, p.totalFloorAreaPyeong)],
+    ['건축면적', p.buildingAreaPyeong ? `${p.buildingAreaPyeong.toFixed(2)}평` : ''], ['규모', floorText(p)], ['공부상 주차', officialParking],
+    ['현장 주차', fieldParking], ['현재 이용·명도', occupancySummary],
+  ];
+  const presentFactLabels = factValues.filter(([, value]) => value && value.trim()).map(([label]) => label);
+  const wideFact = presentFactLabels.length % 2 === 1 ? presentFactLabels[presentFactLabels.length - 1] : '';
+
   return <div className="daon-one-page-master" data-template-id={DAON_ONE_PAGE_MASTER_TEMPLATE_ID} data-template-version={DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION}>
     <article className="d1-sheet">
       <header className="d1-header">
@@ -87,17 +113,12 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         <div className="d1-tagline">More Than Real Estate<br/>A Better Tomorrow</div>
       </header>
 
-      <section className="d1-price-band">
-        <div><small>희망매매가</small><strong>{p.salePrice ? formatWon(p.salePrice) : ''}</strong></div>
-        <div><small>토지평당</small><strong>{moneyPerPyeong(landUnit)}</strong></div>
-        <div><small>연면적평당</small><strong>{moneyPerPyeong(grossUnit)}</strong></div>
+      <section className="d1-price-band" style={{ gridTemplateColumns: ['1.16fr', ...priceCells.slice(1).map(() => '1fr')].join(' ') }}>
+        {priceCells.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
       </section>
 
-      <section className="d1-status-strip">
-        {occupancySummary ? <div><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div> : <div aria-hidden="true" />}
-        {(p.occupancyStatus || '').includes('소유자') ? <div><BusinessOutlined className="d1-status-icon" /><b>소유자 직접 사용</b></div> : <div aria-hidden="true" />}
-        {roadSummary ? <div><LocationOnOutlined className="d1-status-icon" /><b>{(p.roadCondition || '').includes('코너') ? '코너 입지' : roadSummary}</b></div> : <div aria-hidden="true" />}
-        {parking ? <div><LocalParkingOutlined className="d1-status-icon" /><b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div> : <div aria-hidden="true" />}
+      <section className="d1-status-strip" style={{ gridTemplateColumns: statusCells.length ? `${equalColumns(statusCells.length, 'minmax(0,1fr)')} 32mm` : '1fr' }}>
+        {statusCells}
         <span>PRIME LOCATION<br/>VALUABLE ASSET</span>
       </section>
 
@@ -111,18 +132,18 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
             </div>
           </div>
           <div className="d1-facts-grid">
-            <Fact icon={<LocationOnOutlined />} label="주소" value={p.address || ''} />
-            <Fact icon={<BusinessOutlined />} label="주용도" value={p.mainUse || ''} />
-            <Fact icon={<StraightenOutlined />} label="토지면적" value={areaPair(p.landAreaSqm, p.landAreaPyeong)} />
-            <Fact icon={<LayersOutlined />} label="용도지역" value={p.zoning || ''} />
-            <Fact icon={<DescriptionOutlined />} label="지목" value={p.landCategory || ''} />
-            <Fact icon={<CalendarMonthOutlined />} label="사용승인일" value={p.completionDate || ''} />
-            <Fact icon={<StraightenOutlined />} label="연면적" value={areaPair(p.totalFloorAreaSqm, p.totalFloorAreaPyeong)} />
-            <Fact icon={<ApartmentOutlined />} label="건축면적" value={p.buildingAreaPyeong ? `${p.buildingAreaPyeong.toFixed(2)}평` : ''} />
-            <Fact icon={<ApartmentOutlined />} label="규모" value={floorText(p)} />
-            <Fact icon={<LocalParkingOutlined />} label="공부상 주차" value={officialParking} />
-            <Fact icon={<LocalParkingOutlined />} label="현장 주차" value={fieldParking} />
-            <Fact icon={<AssignmentTurnedInOutlined />} label="현재 이용·명도" value={occupancySummary} />
+            <Fact icon={<LocationOnOutlined />} label="주소" value={p.address || ''} wide={wideFact === '주소'} />
+            <Fact icon={<BusinessOutlined />} label="주용도" value={p.mainUse || ''} wide={wideFact === '주용도'} />
+            <Fact icon={<StraightenOutlined />} label="토지면적" value={areaPair(p.landAreaSqm, p.landAreaPyeong)} wide={wideFact === '토지면적'} />
+            <Fact icon={<LayersOutlined />} label="용도지역" value={p.zoning || ''} wide={wideFact === '용도지역'} />
+            <Fact icon={<DescriptionOutlined />} label="지목" value={p.landCategory || ''} wide={wideFact === '지목'} />
+            <Fact icon={<CalendarMonthOutlined />} label="사용승인일" value={p.completionDate || ''} wide={wideFact === '사용승인일'} />
+            <Fact icon={<StraightenOutlined />} label="연면적" value={areaPair(p.totalFloorAreaSqm, p.totalFloorAreaPyeong)} wide={wideFact === '연면적'} />
+            <Fact icon={<ApartmentOutlined />} label="건축면적" value={p.buildingAreaPyeong ? `${p.buildingAreaPyeong.toFixed(2)}평` : ''} wide={wideFact === '건축면적'} />
+            <Fact icon={<ApartmentOutlined />} label="규모" value={floorText(p)} wide={wideFact === '규모'} />
+            <Fact icon={<LocalParkingOutlined />} label="공부상 주차" value={officialParking} wide={wideFact === '공부상 주차'} />
+            <Fact icon={<LocalParkingOutlined />} label="현장 주차" value={fieldParking} wide={wideFact === '현장 주차'} />
+            <Fact icon={<AssignmentTurnedInOutlined />} label="현재 이용·명도" value={occupancySummary} wide={wideFact === '현재 이용·명도'} />
           </div>
         </div>
 
@@ -144,9 +165,9 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         <article><b>LIVING NETWORK</b><div className="d1-network"><span>주거</span><span>본건</span><span>상권</span></div>{first(p.locationAnalysis, '') && <p>{first(p.locationAnalysis, '')}</p>}</article>
       </section>
 
-      <section className="d1-highlight-strip">
-        {highlightItems.map((item, index) => item.text ? <div key={`${item.text}-${index}`}><span className="d1-highlight-icon">{item.icon}</span><b>{item.text}</b></div> : <div key={`blank-${index}`} aria-hidden="true" />)}
-      </section>
+      {presentHighlights.length > 0 && <section className="d1-highlight-strip" style={{ gridTemplateColumns: equalColumns(presentHighlights.length) }}>
+        {presentHighlights.map((item, index) => <div key={`${item.text}-${index}`}><span className="d1-highlight-icon">{item.icon}</span><b>{item.text}</b></div>)}
+      </section>}
 
       <section className="d1-use"><strong><LightbulbOutlined /><span>활용 제안</span></strong><p>{p.recommendedUse || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
 
