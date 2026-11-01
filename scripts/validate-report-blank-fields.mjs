@@ -46,7 +46,7 @@ if (blank.detailBlankFields(filled).length) fail('모든 값이 있는 7P 모델
 
 // 3. Confirmation decision: ask while unacknowledged; acknowledgement is bound to the exact blank set.
 // (Core fields are filled here; a blank core field can never be acknowledged — see section 7.)
-const coreOnly = { ...empty, salePrice: 3_000_000_000, address: '서울 마포구 동교로 212-22', landAreaSqm: 140.8, landAreaPyeong: 42.59, totalFloorAreaSqm: 266, totalFloorAreaPyeong: 80.47, mainUse: '근린생활시설', zoning: '제2종일반주거지역' };
+const coreOnly = { ...empty, salePrice: 3_000_000_000, address: '서울 마포구 동교로 212-22', landAreaSqm: 140.8, landAreaPyeong: 42.59, totalFloorAreaSqm: 266, totalFloorAreaPyeong: 80.47, mainUse: '근린생활시설', zoning: '제2종일반주거지역', investmentPoints: '사옥 적합' };
 const fields = blank.onePageBlankFields(coreOnly);
 if (!fields.length || blank.requiredBlankFields(fields).length) fail('핵심 항목만 있는 물건은 선택 항목 공란만 있어야 합니다.');
 if (!blank.needsBlankFieldConfirmation(fields, null)) fail('공란이 있으면 발행 전에 확인을 받아야 합니다.');
@@ -86,13 +86,14 @@ const source = readFileSync('src/domain/professionalReport/reportBlankFields.ts'
 const broken = source.replace('return fields.length > 0 && acknowledgedSignature !== blankFieldsSignature(fields);', 'return false;');
 if (broken === source) fail('negative control이 실제 규칙을 변경하지 못했습니다.');
 
-// 7. Mixed policy (owner decision 2026-10-31): core fields cannot be hidden; no empty slots; thin 7P pages omitted.
+// 7. Mixed policy (owner decision 2026-10-31): core fields are cautioned (user chooses); no empty slots; thin 7P pages omitted.
 const emptyFields = blank.onePageBlankFields(empty);
 const requiredKeys = blank.requiredBlankFields(emptyFields).map((field) => field.key).sort();
 if (JSON.stringify(requiredKeys) !== JSON.stringify([...blank.REQUIRED_REPORT_FIELD_KEYS].sort())) fail(`1P 필수 공란 오류: ${requiredKeys.join(',')}`);
-if (!blank.needsBlankFieldConfirmation(emptyFields, blank.blankFieldsSignature(emptyFields))) fail('필수 항목 공란은 확인(숨김)으로 넘어갈 수 없습니다.');
+if (!blank.needsBlankFieldConfirmation(emptyFields, null)) fail('필수 항목 공란은 발행 전에 반드시 팝업으로 알려야 합니다.');
+if (blank.needsBlankFieldConfirmation(emptyFields, blank.blankFieldsSignature(emptyFields))) fail('주의사항을 확인하고 선택했으면 다시 막지 않아야 합니다(사용자 선택).');
 if (JSON.stringify(blank.requiredBlankFields(detailAll).map((f) => f.key).sort()) !== JSON.stringify([...blank.REQUIRED_REPORT_FIELD_KEYS].sort())) fail('7P 필수 공란 오류');
-if (gate.indexOf('disabled={required.length > 0}') < 0) fail('필수 공란이 있으면 "숨김 처리하고 계속"이 비활성이어야 합니다.');
+if (!gate.includes('data-testid="report-required-fields"') || !gate.includes('주의사항 확인, ') || gate.includes('disabled={required.length > 0}')) fail('필수 공란은 주의 팝업으로 알리고 사용자가 선택하게 해야 합니다.');
 const fill = await importTs('src/domain/professionalReport/reportLayoutFill.ts');
 if (fill.equalColumns(3) !== 'repeat(3, 1fr)' || fill.equalColumns(0) !== 'none') fail('equalColumns 오류');
 const thinPlan = fill.detailPagePlan(nullModel, false, 0);

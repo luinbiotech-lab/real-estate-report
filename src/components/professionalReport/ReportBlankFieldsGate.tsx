@@ -19,7 +19,7 @@ export function ReportBlankFieldsDialog({ open, fields, actionLabel, onEnterValu
     <DialogTitle id="report-blank-fields-title">입력되지 않은 항목이 {fields.length}개 있습니다</DialogTitle>
     <DialogContent>
       {required.length > 0 && <>
-        <Alert severity="error" sx={{ mb: 1.5 }} data-testid="report-required-fields">{REPORT_REQUIRED_NOTICE}</Alert>
+        <Alert severity="warning" sx={{ mb: 1.5 }} data-testid="report-required-fields"><b>주의 — 필수 항목 {required.length}개 미입력.</b> {REPORT_REQUIRED_NOTICE}</Alert>
         <Stack direction="row" useFlexGap flexWrap="wrap" gap={0.75} sx={{ mb: 1.5 }}>
           {required.map((field) => <Chip key={field.key} size="small" color="error" label={`필수 · ${field.label}`} />)}
         </Stack>
@@ -35,7 +35,7 @@ export function ReportBlankFieldsDialog({ open, fields, actionLabel, onEnterValu
     <DialogActions>
       <Button onClick={onClose}>취소</Button>
       <Button variant={required.length ? 'contained' : 'outlined'} onClick={onEnterValues}>값 입력하러 가기</Button>
-      <Button variant="contained" disabled={required.length > 0} onClick={onContinue} data-testid="report-blank-fields-continue">숨김 처리하고 {actionLabel}</Button>
+      <Button variant={required.length ? 'outlined' : 'contained'} color={required.length ? 'warning' : 'primary'} onClick={onContinue} data-testid="report-blank-fields-continue">{required.length ? '주의사항 확인, ' : ''}숨김 처리하고 {actionLabel}</Button>
     </DialogActions>
   </Dialog>;
 }
@@ -44,8 +44,8 @@ export function ReportBlankFieldsDialog({ open, fields, actionLabel, onEnterValu
 export function ReportBlankFieldsNotice({ fields, acknowledged, className }: { fields: ReportBlankField[]; acknowledged: boolean; className?: string }) {
   if (!fields.length) return null;
   const required = requiredBlankFields(fields);
-  if (required.length) return <Alert severity="error" className={className} data-testid="report-blank-fields-notice">
-    발행 불가 — 필수 항목 미입력: {blankFieldsSummary(required)}. {REPORT_REQUIRED_NOTICE}
+  if (required.length) return <Alert severity={acknowledged ? 'info' : 'error'} className={className} data-testid="report-blank-fields-notice">
+    {acknowledged ? '주의사항 확인됨 — ' : '주의 — '}필수 항목 미입력: {blankFieldsSummary(required)}. 그 외 입력되지 않은 항목 {fields.length - required.length}개. {REPORT_BLANK_HIDE_NOTICE}
   </Alert>;
   return <Alert severity={acknowledged ? 'info' : 'warning'} className={className} data-testid="report-blank-fields-notice">
     {acknowledged ? '확인됨 — ' : `입력되지 않은 항목 ${fields.length}개: `}{blankFieldsSummary(fields)}. {REPORT_BLANK_HIDE_NOTICE}

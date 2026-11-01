@@ -12,7 +12,8 @@ import type { ProfessionalReportViewModel, ReportValue } from './types';
  * never drift from what the MASTER actually hides.
  *
  * Mixed policy (owner decision 2026-10-31, after "빈 항목 때문에 페이지마다 공백이 생긴다"):
- * 3. Core fields (REQUIRED_REPORT_FIELD_KEYS) can never be hidden — publishing is blocked until they are entered.
+ * 3. Core fields (REQUIRED_REPORT_FIELD_KEYS) are flagged as 필수: the pre-publish popup warns about them first and the user
+ *    chooses — enter them, or publish anyway after reading the caution (owner refinement 2026-10-31: warn, let the user choose).
  * 4. Other blanks are hidden AND the remaining items move forward within the same row/strip, so no empty slot is left.
  * 5. 7P detail pages without enough real content are omitted as a whole (see detailPagePlan in reportLayoutFill.ts).
  */
@@ -23,21 +24,21 @@ export interface ReportBlankField {
   key: string;
   label: string;
   group: ReportBlankFieldGroup;
-  /** Core field: cannot be hidden; publishing waits until it is entered. */
+  /** Core field: highlighted as 필수 with a caution in the pre-publish popup; the user decides. */
   required?: boolean;
 }
 
 /** Core fields of both 1P and 7P (owner decision 2026-10-31). */
-export const REQUIRED_REPORT_FIELD_KEYS = ['salePrice', 'address', 'landArea', 'totalFloorArea', 'mainUse', 'zoning'] as const;
+export const REQUIRED_REPORT_FIELD_KEYS = ['salePrice', 'address', 'landArea', 'totalFloorArea', 'mainUse', 'zoning', 'investmentPoints'] as const;
 const markRequired = (field: ReportBlankField): ReportBlankField =>
   (REQUIRED_REPORT_FIELD_KEYS as readonly string[]).includes(field.key) ? { ...field, required: true } : field;
 
-/** Blank core fields — while any remain, the report cannot be published (no "hide and continue"). */
+/** Blank core fields — shown first in the popup with a caution. */
 export function requiredBlankFields(fields: ReportBlankField[]) {
   return fields.filter((field) => field.required);
 }
 
-export const REPORT_REQUIRED_NOTICE = '핵심 항목(희망매매가·주소·토지면적·연면적·주용도·용도지역)은 숨길 수 없어, 입력해야 발행할 수 있습니다.';
+export const REPORT_REQUIRED_NOTICE = '필수 항목이 비어 있습니다. 이대로 발행하면 보고서의 핵심 정보가 빠지고 해당 영역이 비어 보일 수 있습니다. 입력 후 발행을 권장합니다.';
 
 /** Placeholder phrases that must never be printed in a published MASTER (they read as data but carry none). */
 export const REPORT_PLACEHOLDER_PATTERN = /확인 필요|검토 필요|분석 필요/;
@@ -122,8 +123,6 @@ export function blankFieldsSignature(fields: ReportBlankField[]) {
 }
 
 export function needsBlankFieldConfirmation(fields: ReportBlankField[], acknowledgedSignature: string | null) {
-  // A blank core field can never be acknowledged away.
-  if (requiredBlankFields(fields).length > 0) return true;
   return fields.length > 0 && acknowledgedSignature !== blankFieldsSignature(fields);
 }
 

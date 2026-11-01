@@ -181,19 +181,20 @@ try {
       const notice = page.getByTestId('report-blank-fields-notice');
       if (!(await notice.count())) return '공란 없음 — 확인 없이 발행 · 빈 칸 0';
       const noticeText = await notice.innerText();
-      const requiredMissing = noticeText.includes('발행 불가');
-      assert(requiredMissing ? noticeText.includes('필수 항목') : noticeText.includes('숨김 처리되어 발행'), `공란 안내 오류: ${noticeText.slice(0, 100)}`);
+      const requiredMissing = noticeText.includes('필수 항목 미입력');
+      assert(noticeText.includes('숨김 처리되어 발행'), `공란 안내 오류: ${noticeText.slice(0, 100)}`);
       await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 10_000 });
       const dialogText = await dialog.innerText();
       assert(dialogText.includes('값 입력하러 가기') && dialogText.includes('숨김 처리하고'), `대화상자 선택지 누락: ${dialogText.slice(0, 120)}`);
-      const continueDisabled = await dialog.getByTestId('report-blank-fields-continue').isDisabled();
-      assert(continueDisabled === requiredMissing, requiredMissing ? '필수 항목 공란인데 숨김 발행이 가능합니다.' : '선택 항목만 공란인데 숨김 발행이 막혔습니다.');
+      // Owner refinement 2026-10-31: blank 필수 items get a caution in the popup, but the user still chooses.
+      assert(!(await dialog.getByTestId('report-blank-fields-continue').isDisabled()), '사용자가 선택할 수 있어야 하는데 계속 버튼이 비활성입니다.');
+      assert((await dialog.getByTestId('report-required-fields').count() > 0) === requiredMissing, '필수 항목 주의 안내 표시 불일치');
       await shot(`${tag}-1p-blank-dialog`);
       await dialog.getByRole('button', { name: '취소' }).click();
       await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
-      return requiredMissing ? '필수 공란 → 발행 차단 · 빈 칸 0' : '선택 공란 확인 요청 · 빈 칸 0';
+      return requiredMissing ? '필수 공란 → 주의 팝업 + 사용자 선택 · 빈 칸 0' : '선택 공란 확인 요청 · 빈 칸 0';
     });
 
     // 5. 7P professional MASTER (owner standard: Opening → detail-1..7 → Closing, no overflow).
@@ -234,7 +235,7 @@ try {
       let blankInfo = '공란 없음';
       if (await notice.count()) {
         const noticeText = await notice.innerText();
-        assert(noticeText.includes('숨김 처리되어 발행') || noticeText.includes('발행 불가'), '7P 공란 안내가 없습니다.');
+        assert(noticeText.includes('숨김 처리되어 발행'), '7P 공란 안내가 없습니다.');
         await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
         const dialog = page.getByRole('dialog');
         await dialog.waitFor({ state: 'visible', timeout: 10_000 });
