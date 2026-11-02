@@ -1,5 +1,6 @@
 import type { Property } from '../types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
+import { ACHIEVABLE_PRICE_SOURCE_PREFIX, type AchievablePriceEstimate } from '../domain/professionalReport/priceLayerView';
 
 export interface DiscoveredAddress {
   query: string; officialAddress: string; roadAddress: string; lotAddress: string;
@@ -75,6 +76,8 @@ export interface PropertyDiscoveryResult {
   status: 'ok' | 'partial' | 'not_found'; publicDataConfigured: boolean; vworldConfigured?: boolean; address?: DiscoveredAddress;
   building?: DiscoveredBuilding | null; buildingCandidates?: DiscoveredBuilding[]; floors?: DiscoveredFloor[];
   propertyType?: PropertyTypeClassification;
+  /** Server-side achievable-price estimate (DA:ON estimate, not an appraisal). */
+  priceEstimate?: AchievablePriceEstimate;
   landUseZones?: LandUseZone[];
   landProfile?: LandProfile | null;
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[]; summary?: MarketSummary; exactLot?: DiscoveredTrade[] };
@@ -279,6 +282,17 @@ export const publicPropertyDiscoveryService = {
         // 'confirmed' status here used to make the report's nearbyTransactions field look confirmed by automation alone.
         verificationStatus: 'imported',
         metadata: { market: result.market, explicitFields: ['nearbyTransactions'], evidenceSemantics: 'transaction_candidates_not_confirmed_comparables' },
+        createdAt: now,
+      });
+    }
+    if (result.priceEstimate) {
+      // DA:ON estimate (owner decision 2026-11-01): stored as an estimated Data Room source, never as a Property fact.
+      await propertyDataRoomRepository.saveDataSource({
+        id: `${ACHIEVABLE_PRICE_SOURCE_PREFIX}${propertyId}`, propertyId, fieldKey: 'achievablePrice', resourceType: 'achievable_price_estimate',
+        sourceType: 'calculated', sourceName: 'DA:ON 거래가능가격 추정(공개 실거래 비교)',
+        sourceReference: `${result.address.region3 || result.address.region2} 최근 6개월 · ${result.priceEstimate.method}`, collectedAt: now,
+        verificationStatus: 'estimated',
+        metadata: { estimate: result.priceEstimate, explicitFields: ['achievablePrice'], evidenceSemantics: 'daon_estimate_not_appraisal' },
         createdAt: now,
       });
     }

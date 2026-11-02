@@ -113,4 +113,27 @@ for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', '
 const detailSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
 for (const marker of ['detailPagePlan(model', 'shows(3) &&', 'shows(6) &&', 'number={pageNumber(7)}']) if (!detailSource.includes(marker)) fail(`7P 페이지 생략 연결 누락: ${marker}`);
 
+// 8. Price layers view (owner decisions 2026-11-01/02): present cells only, honest labels, broker figure overrides estimate.
+const pv = await importTs('src/domain/professionalReport/priceLayerView.ts');
+const est = { state: 'estimated', method: 'm', note: 'n', computedAt: 't', comparableCount: 5, low: 3021459221, mid: 4019268503, high: 5729742663, unitLow: 70939914, unitMid: 94367172, unitHigh: 134526870 };
+const base8 = { salePrice: 3_000_000_000, landAreaPyeong: 42.59, estimatedOfficialLandValue: 1_125_273_600, officialLandPriceYear: '2026' };
+const four = pv.priceLayerCells(base8, est);
+if (JSON.stringify(four.map((c) => c.key)) !== '["asking","official","market","achievable"]') fail(`가격 4단계 순서 오류: ${four.map((c) => c.key)}`);
+if (four[0].value !== '30억' || four[1].value !== '11.3억' || four[2].value !== '9,437만' || four[3].value !== '30.2억~57.3억') fail(`가격 표기 오류: ${four.map((c) => c.value).join(' | ')}`);
+if (!four[1].badge.includes('감정평가 아님') || !four[3].badge.includes('감정평가 아님')) fail('공시지가·추정은 감정평가 아님 표시');
+const confirmed = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000 }, est);
+if (confirmed[3].state !== 'confirmed' || confirmed[3].value !== '38억' || !confirmed[3].sub.includes('30.2억~57.3억')) fail('중개사 확정가가 추정보다 우선하고 추정 범위를 함께 보여야 합니다.');
+if (pv.priceLayerCells({ salePrice: 3_000_000_000 }, null).length !== 1) fail('없는 단계는 숨김(빈 칸 없음)');
+if (pv.priceLayerCells(base8, { ...est, state: 'insufficient', low: undefined, mid: undefined, high: undefined, unitMid: undefined }).length !== 2) fail('비교거래 부족이면 시세·추정 칸 숨김');
+if (!pv.askingPosition(3_000_000_000, est).includes('낮습니다')) fail('희망가 위치 해석 오류');
+const srcs = [{ id: 'achievable-price:p1', propertyId: 'p1', metadata: { estimate: est } }, { id: 'achievable-price:p2', propertyId: 'p2', metadata: { estimate: { ...est, mid: 1 } } }];
+if (pv.findPriceEstimate(srcs, 'p1')?.mid !== est.mid || pv.findPriceEstimate(srcs, 'p3') !== null) fail('물건별 추정 출처 조회 오류');
+const one8 = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
+const seven8 = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+if (!one8.includes('priceLayerCells(p, priceEstimate)') || !one8.includes('data-testid="d1-price-layers"')) fail('1P 가격띠가 가격 4단계를 쓰지 않습니다.');
+if (!seven8.includes('data-testid="dd-price-layers"') || !seven8.includes('PRICE_ESTIMATE_METHOD_NOTE')) fail('7P 4쪽 가격 4단계·산출 방법 누락');
+if (!seven8.includes('data-page-number={String(number)')) fail('7P 큰 페이지 번호가 출력 번호를 따르지 않습니다.');
+const refinement = readFileSync('src/daon-master-refinement.css', 'utf8');
+if (!refinement.includes('.daon-detail-page .dd-head[data-page-number]:before{content:attr(data-page-number)}')) fail('7P 페이지 번호 배지 CSS 누락');
+
 console.log(`Report blank-field policy validation passed (1P blank fields for empty property: ${fields.length}, 7P: ${detailAll.length}).`);

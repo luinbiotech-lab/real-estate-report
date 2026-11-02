@@ -1,3 +1,4 @@
+import { findPriceEstimate } from '../../domain/professionalReport/priceLayerView';
 import type { DataRoomBundle, DocumentType, VerificationStatus } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportComparable, ProfessionalReportMedia, ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
 import { numericReportValue, reportValue } from '../../domain/professionalReport/valuePolicy';
@@ -132,6 +133,9 @@ export function buildProfessionalReportViewModel(property: Property, inputBundle
     landUnitPrice: numericReportValue(unitPrice, context('landUnitPrice', { calculated: unitPrice !== null, formatter: formatNullableWon as (value: never) => string })),
     negotiable: reportValue(property.negotiable, context('negotiable', { formatter: ((value: boolean) => value ? '협의 가능' : '협의 없음') as (value: never) => string })),
     occupancyStatus: text('occupancyStatus'),
+    priceEstimate: findPriceEstimate(bundle.dataSources, property.id),
+    brokerAchievablePrice: number('brokerAchievablePrice', formatNullableWon),
+    brokerAchievablePriceRationale: text('brokerAchievablePriceRationale'),
     listingStatus: reportValue(
       property.listingStatus && property.listingStatus !== 'unknown' ? property.listingStatus : null,
       context('listingStatus', {

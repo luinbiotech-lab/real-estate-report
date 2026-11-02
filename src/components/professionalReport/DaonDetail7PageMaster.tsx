@@ -1,4 +1,5 @@
 import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/professionalReport/reportLayoutFill';
+import { askingPosition, formatEok, priceLayerCells, PRICE_ESTIMATE_METHOD_NOTE } from '../../domain/professionalReport/priceLayerView';
 import type { ReactNode } from 'react';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
@@ -39,7 +40,7 @@ function Page({ page, number, eyebrow, title, subtitle, snapshot, model, childre
   children: ReactNode;
 }) {
   return <article className={`daon-detail-page daon-detail-page-${page}`} data-detail-page={page}>
-    <header className="dd-head">
+    <header className="dd-head" data-page-number={String(number).padStart(2, '0')}>
       <div><small>{eyebrow}</small><h1>{title}</h1><p>{subtitle}</p></div>
       <div className="dd-brand"><strong>DA:ON</strong><span>ASSET</span><em>EXCLUSIVE SALE REPORT | {String(number).padStart(2, '0')}</em></div>
     </header>
@@ -118,6 +119,17 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const p5RoadmapCount = 2 + (has(display(model.pricing.occupancyStatus)) ? 1 : 0);
   const metrics = ([['건폐율', display(model.building.buildingCoverageRate)], ['용적률', display(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
   const p3CardCount = [display(model.land.roadCondition), display(model.location.locationAnalysis)].filter(has).length + 1;
+  // Price layers (owner decision 2026-11-02, 안 A): 4 cards on page 4 + the deals behind the estimate.
+  const priceEstimate = model.pricing.priceEstimate ?? null;
+  const priceCells = priceLayerCells({
+    salePrice: model.pricing.salePrice.value ?? 0,
+    landAreaPyeong: model.land.landAreaPyeong.value ?? 0, landAreaSqm: model.land.landAreaSqm.value ?? 0,
+    estimatedOfficialLandValue: model.land.estimatedOfficialLandValue?.value ?? 0, officialLandPriceYear: model.land.officialLandPriceYear?.value ?? '',
+    brokerAchievablePrice: model.pricing.brokerAchievablePrice?.value ?? 0,
+  }, priceEstimate);
+  const askingLine = askingPosition(model.pricing.salePrice.value ?? undefined, priceEstimate);
+  const brokerRationale = display(model.pricing.brokerAchievablePriceRationale ?? { value: null, display: '', state: 'missing', sourceIds: [] });
+  const estimateDeals = priceEstimate?.state === 'estimated' ? (priceEstimate.deals ?? []).slice(0, 6) : [];
   const occupancyParking = joinPresent(' · ', display(model.pricing.occupancyStatus), parkingField && `현장 주차 ${parkingField}${parkingFieldNote}`);
 
   return <div className="daon-detail-master" data-template-id={DAON_DETAIL_MASTER_TEMPLATE_ID} data-template-version={DAON_DETAIL_MASTER_TEMPLATE_VERSION}>
@@ -160,9 +172,23 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     </Page>}
 
     {shows(4) && <Page page={4} number={pageNumber(4)} eyebrow="MARKET POSITION" title="주변 시세 및 비교거래 사례" subtitle="실거래 사례 속에서 본건의 토지 평당을 읽는 방법" snapshot={snapshot} model={model}>
-      <SectionBar>가격 포지션</SectionBar>
-      <div className="dd-price-position"><div><small>본건 토지 평당</small><strong>{display(model.pricing.landUnitPrice)}</strong></div><div><b>가격을 설득하는 핵심은 “평균보다 싸다”가 아닙니다.</b><p>도로조건, 명도·실사용 가능성, 기존 건물의 활용성과 같은 개별 조건을 확인된 비교사례와 함께 설명합니다.</p></div></div>
-      {(comparables.length > 0 || model.investment.nearbyTransactions.value) && <>
+      {priceCells.length > 1 ? <>
+        <SectionBar right="PRICE LAYERS">가격 4단계</SectionBar>
+        <div className="dd-price-layers" data-testid="dd-price-layers" style={{ gridTemplateColumns: equalColumns(priceCells.length) }}>{priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key}><small>{cell.label}</small><strong>{cell.value}</strong><span>{cell.sub}</span><em>{cell.badge}</em></div>)}</div>
+        {(askingLine || brokerRationale) && <p className="dd-price-layers-note">{joinPresent(' ', askingLine, brokerRationale && `중개사 확정 근거: ${brokerRationale}`)}</p>}
+      </> : <>
+        <SectionBar>가격 포지션</SectionBar>
+        <div className="dd-price-position"><div><small>본건 토지 평당</small><strong>{display(model.pricing.landUnitPrice)}</strong></div><div><b>가격을 설득하는 핵심은 “평균보다 싸다”가 아닙니다.</b><p>도로조건, 명도·실사용 가능성, 기존 건물의 활용성과 같은 개별 조건을 확인된 비교사례와 함께 설명합니다.</p></div></div>
+      </>}
+      {comparables.length === 0 && estimateDeals.length > 0 && <>
+        <SectionBar right="공개 실거래 후보 · 감정평가 아님">추정에 쓴 비교거래</SectionBar>
+        <div className="dd-comparables dd-estimate-deals"><div style={{ display: 'grid', height: '100%', gridTemplateRows: '8mm repeat(6, minmax(0, 1fr)) auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '.8fr 1.3fr .7fr .65fr .8fr', alignItems: 'center', background: '#f1f5f8', borderBottom: '0.25mm solid #d8dee5', padding: '0 2mm', fontSize: '6.5px', fontWeight: 800 }}><span>거래일</span><span>위치 · 용도</span><span>거래가</span><span>대지</span><span>토지평당</span></div>
+          {estimateDeals.map((deal, index) => <div key={`${deal.dealDate}-${index}`} style={{ display: 'grid', gridTemplateColumns: '.8fr 1.3fr .7fr .65fr .8fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2mm', fontSize: '6.7px', overflow: 'hidden' }}><span>{deal.dealDate}</span><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{joinPresent(' · ', `${deal.legalDong} ${deal.jibun}`, deal.buildingUse)}</span><span>{formatEok(deal.dealAmount)}</span><span>{deal.landAreaSqm}㎡</span><b>{formatEok(deal.landPricePerPyeong)}</b></div>)}
+          <small style={{ fontSize: '6px', color: '#6d7a88', padding: '1.5mm 2mm 0', whiteSpace: 'normal' }}>{PRICE_ESTIMATE_METHOD_NOTE}</small>
+        </div></div>
+      </>}
+      {(comparables.length > 0 || (model.investment.nearbyTransactions.value && estimateDeals.length === 0)) && <>
         <SectionBar right="단위: 입력자료 기준">비교 사례</SectionBar>
         <div className="dd-comparables">{comparables.length ? <div style={{ display: 'grid', height: '100%', gridTemplateRows: '8mm repeat(6, minmax(0, 1fr))' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1.25fr .7fr .65fr .72fr .5fr .72fr', alignItems: 'center', background: '#f1f5f8', borderBottom: '0.25mm solid #d8dee5', padding: '0 2mm', fontSize: '6.5px', fontWeight: 800 }}><span>사례</span><span>거래가</span><span>대지</span><span>토지평당</span><span>승인</span><span>거래일</span></div>

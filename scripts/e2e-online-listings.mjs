@@ -154,6 +154,32 @@ try {
     }
     await shot(`${tag}-dataroom`);
 
+    // 3b. Price layers (owner decision 2026-11-02): for the first listing, store the lookup's price estimate the way the
+    //     discovery flow does (Data Room source achievable-price:<id>, estimated) and the calculated official land value,
+    //     so the 1P band shows all four layers and 7P page 4 shows the price cards + the deals behind the estimate.
+    //     Values: the 2026-11-01 live lookup of 동교로 212-22 (5 comparables after bulk/scale filtering).
+    if (listing === LISTINGS[0]) {
+      await page.evaluate(async ({ id }) => {
+        const db = await new Promise((resolve, reject) => { const r = indexedDB.open('real-estate-report'); r.onsuccess = () => resolve(r.result); r.onerror = () => reject(r.error); });
+        try {
+          const now = new Date().toISOString();
+          const deal = (dealDate, dealAmount, landAreaSqm, landPricePerPyeong, buildingUse) => ({ dealDate, legalDong: '동교동', jibun: '1**', type: 'commercial', buildingUse, dealAmount, landAreaSqm, landPricePerPyeong });
+          const estimate = { state: 'estimated', method: 'land_unit_price_iqr_v1', computedAt: now, comparableCount: 5, landAreaSqm: 140.8,
+            low: 3021459221, mid: 4019268503, high: 5729742663, unitLow: 70939914, unitMid: 94367172, unitHigh: 134526870,
+            note: '비교거래 5건 토지 평당가 하위25%·중앙값·상위25% × 본건 토지 42.59평 · DA:ON 추정, 감정평가 아님',
+            deals: [deal('2026-10-02', 10000000000, 141.7, 233295695, '제2종근린생활'), deal('2026-07-14', 6800000000, 167.1, 134526870, '제2종근린생활'), deal('2026-06-29', 3000000000, 139.8, 70939914, '제2종근린생활'), deal('2026-06-24', 3720000000, 190.7, 64486502, '제1종근린생활'), deal('2026-06-20', 3200000000, 112.1, 94367172, '제1종근린생활')] };
+          await new Promise((resolve, reject) => {
+            const tx = db.transaction(['properties', 'propertyDataSources'], 'readwrite');
+            const store = tx.objectStore('properties');
+            const get = store.get(id);
+            get.onsuccess = () => { store.put({ ...get.result, estimatedOfficialLandValue: 1125273600, officialLandPriceYear: '2026' }); };
+            tx.objectStore('propertyDataSources').put({ id: `achievable-price:${id}`, propertyId: id, fieldKey: 'achievablePrice', resourceType: 'achievable_price_estimate', sourceType: 'calculated', sourceName: 'DA:ON 거래가능가격 추정(공개 실거래 비교)', sourceReference: 'QA', collectedAt: now, verificationStatus: 'estimated', metadata: { estimate, explicitFields: ['achievablePrice'], evidenceSemantics: 'daon_estimate_not_appraisal' }, createdAt: now });
+            tx.oncomplete = () => resolve(); tx.onerror = () => reject(tx.error);
+          });
+        } finally { db.close(); }
+      }, { id: propertyId });
+    }
+
     // 4. 1P MASTER (owner standard: DAON_1P_MASTER, single sheet, no overflow, no '확인 필요' placeholder facts).
     await check(tag, '1P 요약제안서 MASTER 기준', async () => {
       await page.goto(`${BASE_URL}/document/proposal/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
@@ -168,6 +194,12 @@ try {
       assert(one.templateId === 'DAON_1P_MASTER', `템플릿 ${one.templateId}`);
       assert(one.text.includes(listing.name.replace('[테스트] ', '')) || one.text.includes(listing.name), '1P에 물건명이 없습니다.');
       assert(one.facts.length > 0 && one.facts.length <= 12, `표시 항목 수 ${one.facts.length}`);
+      const layers = await page.locator('[data-testid="d1-price-layers"] > div').evaluateAll((cells) => cells.map((cell) => ({ key: cell.getAttribute('data-price-layer'), text: cell.textContent || '', clipped: cell.scrollWidth > cell.clientWidth + 1 })));
+      if (listing === LISTINGS[0]) {
+        assert(layers.map((l) => l.key).join(',') === 'asking,official,market,achievable', `1P 가격 4단계 칸: ${layers.map((l) => l.key).join(',')}`);
+        assert(layers[3].text.includes('30.2억~57.3억') && layers[3].text.includes('감정평가 아님'), `거래가능가격 칸: ${layers[3].text}`);
+      }
+      assert(!layers.some((l) => l.clipped), `1P 가격 칸 잘림: ${layers.filter((l) => l.clipped).map((l) => l.key).join(',')}`);
       const onePlaceholder = one.text.match(/.{0,30}(확인 필요|검토 필요|분석 필요|미등록).{0,20}/);
       assert(!onePlaceholder, `1P에 공란 placeholder 표시: ${onePlaceholder?.[0]}`);
       assert(one.sh <= one.ch + 2 && one.sw <= one.cw + 2, `1P 넘침 ${one.sw}x${one.sh}/${one.cw}x${one.ch}`);
@@ -232,6 +264,16 @@ try {
         .filter((item) => item.hit);
       const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
       assert(!placeholders.length, `공란 placeholder 표시: ${placeholders.map((item) => `${item.name}「${item.hit}」`).join(' / ')}`);
+      if (listing === LISTINGS[0]) {
+        const p4 = await page.evaluate(() => {
+          const page4 = document.querySelector('.daon-detail-page-4');
+          return page4 ? { cards: page4.querySelectorAll('[data-testid="dd-price-layers"] > div').length, deals: page4.querySelectorAll('.dd-estimate-deals').length, text: page4.textContent || '', badge: page4.querySelector('.dd-head')?.getAttribute('data-page-number') } : null;
+        });
+        assert(p4 && p4.cards === 4 && p4.deals === 1, `7P 4쪽 가격 4단계/추정 근거 표: ${JSON.stringify(p4 && { cards: p4.cards, deals: p4.deals })}`);
+        assert(p4.text.includes('감정평가가 아닙니다') || p4.text.includes('감정평가 아님'), '7P 감정평가 아님 표시 누락');
+      }
+      const badges = await page.evaluate(() => [...document.querySelectorAll('.daon-detail-page .dd-head')].map((h) => h.getAttribute('data-page-number')));
+      assert(badges.every((b, i) => b === String(i + 1).padStart(2, '0')), `7P 큰 페이지 번호 ${badges.join(',')}`);
       const emptyMetrics = await page.evaluate(() => [...document.querySelectorAll('.dd-metrics > div, .dd-reason-three > *, .dd-roadmap > *, .dd-dd-grid > *')].filter((el) => !(el.textContent || '').trim()).length);
       assert(emptyMetrics === 0, `7P 빈 칸 ${emptyMetrics}개`);
       const notice = page.getByTestId('report-blank-fields-notice');

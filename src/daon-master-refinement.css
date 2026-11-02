@@ -124,3 +124,20 @@
 .daon-detail-master .dd-acquisition b{font-size:12.5px}
 .daon-detail-master .dd-insight p,
 .daon-detail-master .dd-acquisition p{font-size:8.8px;line-height:1.5}
+/* Price layers band (owner decision 2026-11-02, 안 B): up to four cells, each with a one-line basis (입력값·계산값·후보·추정). */
+.daon-one-page-master .d1-price-band-layers>div{padding:1.6mm 4mm 1.2mm;display:grid;gap:.5mm;align-content:center}
+.daon-one-page-master .d1-price-band-layers strong{font-size:21px;letter-spacing:-.6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daon-one-page-master .d1-price-band-1 strong,.daon-one-page-master .d1-price-band-2 strong{font-size:25px}
+.daon-one-page-master .d1-price-band-layers em{font-style:normal;font-size:6.2px;color:#fbf3e4;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daon-one-page-master .d1-price-band-layers>div[data-price-layer="achievable"]{background:rgba(3,47,86,.28)}
+/* 7P page badge follows the printed page number after thin pages are omitted (fix 2026-11-02: the badge kept the original number). */
+.daon-detail-page .dd-head[data-page-number]:before{content:attr(data-page-number)}
+/* 7P page 4 price layers (owner decision 2026-11-02, 안 A). Same height budget as the price-position block it replaces. */
+.dd-price-layers{display:grid;gap:2.6mm;margin-bottom:2mm}
+.dd-price-layers>div{border:.3mm solid var(--dd-line);border-top:1.2mm solid var(--dd-gold);background:#fff;padding:3mm;min-height:28mm;box-sizing:border-box;display:grid;align-content:start;gap:1mm;overflow:hidden}
+.dd-price-layers>div[data-price-layer="achievable"]{border-color:var(--dd-navy);border-top-color:var(--dd-navy);background:#f6f9fc}
+.dd-price-layers small{font-size:7.5px;font-weight:800;color:#58677a}
+.dd-price-layers strong{font-size:17px;color:var(--dd-navy);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-.4px}
+.dd-price-layers span{font-size:6.6px;color:#58677a;line-height:1.4}
+.dd-price-layers em{font-style:normal;font-size:6.2px;font-weight:800;color:var(--dd-gold-deep)}
+.dd-price-layers-note{margin:0 0 3mm;font-size:7.6px;line-height:1.5;color:#2b3d52;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}

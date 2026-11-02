@@ -26,6 +26,8 @@ export interface Property {
   landAreaPyeong: number; landAreaSqm: number; totalFloorAreaPyeong: number; totalFloorAreaSqm: number; buildingAreaPyeong: number;
   officialLandPricePerSqm?: number; estimatedOfficialLandValue?: number; officialLandPriceYear?: string;
   landCategory?: string; landUseSituation?: string;
+  /** Broker-confirmed achievable price (KRW) and its rationale (owner decision 2026-11-01: auto estimate + broker confirms). Not an appraisal. */
+  brokerAchievablePrice?: number; brokerAchievablePriceRationale?: string; brokerAchievablePriceConfirmedAt?: string;
   zoning: string; mainUse: string; structure: string; basementFloors: number; groundFloors: number; completionDate: string;
   buildingCoverageRate: number; floorAreaRatio: number; elevator: string;
   /** Legacy parking field retained for backward compatibility. */

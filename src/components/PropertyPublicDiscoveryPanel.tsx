@@ -5,6 +5,7 @@ import VerifiedRounded from '@mui/icons-material/VerifiedRounded';
 import type { Property } from '../types';
 import { publicPropertyDiscoveryService, type PropertyDiscoveryResult } from '../services/publicPropertyDiscoveryService';
 import { buildDiscoverySummary, groupIdenticalTrades, registerValue } from '../domain/propertyDetail/discoverySummary';
+import { formatEok } from '../domain/professionalReport/priceLayerView';
 
 type DiscoveryTab = 'summary' | 'official' | 'market' | 'activity';
 
@@ -286,6 +287,15 @@ export default function PropertyPublicDiscoveryPanel({
       </>}
 
       {tab === 'market' && <>
+      {result.priceEstimate && <Box data-testid="discovery-price-estimate" sx={{ mt: 1.5, border: '1px solid #c9d7e8', background: '#f5f9ff', borderRadius: 2, p: 1.25 }}>
+        <strong>거래가능가격 추정 <small style={{ fontWeight: 500, color: '#667085' }}>DA:ON 추정 · 감정평가 아님</small></strong>
+        {result.priceEstimate.state === 'estimated'
+          ? <div style={{ marginTop: 6 }}>
+              <div style={{ fontSize: 18, fontWeight: 800, color: '#073a69' }}>{formatEok(result.priceEstimate.low ?? 0)} ~ {formatEok(result.priceEstimate.high ?? 0)} <small style={{ fontSize: 13, fontWeight: 600 }}>중앙 {formatEok(result.priceEstimate.mid ?? 0)}</small></div>
+              <small style={{ color: '#667085', display: 'block', marginTop: 4 }}>{result.priceEstimate.note}. 최종 금액은 물건 수정 화면의 '중개사 확정 거래가능가격'에 근거와 함께 입력합니다.</small>
+            </div>
+          : <div style={{ marginTop: 6, color: '#667085', fontSize: 13 }}>{result.priceEstimate.note}</div>}
+      </Box>}
       {marketSummary && <Box sx={{ mt: 1.5, display: 'grid', gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' }, gap: 1 }}>
         {[
           ['최근 6개월 후보', `${marketSummary.totalCandidates}건${marketSummary.comparableCount !== undefined ? ` · 비교가능 ${marketSummary.comparableCount}건` : ''}`],

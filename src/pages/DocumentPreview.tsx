@@ -11,6 +11,7 @@ import { createReportDraftOnce } from '../services/reportEngine/reportDraftSingl
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 import { DaonOnePageMaster } from '../components/professionalReport/DaonOnePageMaster';
+import { findPriceEstimate, type AchievablePriceEstimate } from '../domain/professionalReport/priceLayerView';
 import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/professionalReport/ReportBlankFieldsGate';
 import { blankFieldsSignature, needsBlankFieldConfirmation, onePageBlankFields } from '../domain/professionalReport/reportBlankFields';
 import '../daon-one-page-master.css';
@@ -19,7 +20,7 @@ import '../daon-master-refinement.css';
 type PreviewState =
   | { routeKey: string; phase: 'loading' }
   | { routeKey: string; phase: 'error'; error: string }
-  | { routeKey: string; phase: 'ready'; property: Property };
+  | { routeKey: string; phase: 'ready'; property: Property; priceEstimate: AchievablePriceEstimate | null };
 
 export default function DocumentPreview() {
   const { id = '', kind = 'proposal' } = useParams();
@@ -74,7 +75,7 @@ export default function DocumentPreview() {
         const allowInternal = internalPhotoAllowed(value);
         const dataRoomHero = bundle.media.find((item) => item.propertyId === id && !item.deletedAt && item.mediaType === 'image' && item.url && reportMediaCategoryAllowed(item.category, allowInternal))?.url || '';
         const mainImage = allowInternal ? (value.mainImage || dataRoomHero) : dataRoomHero;
-        setView({ routeKey, phase: 'ready', property: { ...value, mainImage } });
+        setView({ routeKey, phase: 'ready', property: { ...value, mainImage }, priceEstimate: findPriceEstimate(bundle.dataSources, id) });
       })
       .catch((reason) => {
         if (!cancelled) setView({ routeKey, phase: 'error', error: reason instanceof Error ? reason.message : '물건을 불러오지 못했습니다.' });
@@ -108,6 +109,6 @@ export default function DocumentPreview() {
       onEnterValues={() => { setBlankDialogOpen(false); navigate(`/property/${encodeURIComponent(property.id)}/edit`); }}
       onContinue={() => { setBlankAcknowledged(blankFieldsSignature(blankFields)); setBlankDialogOpen(false); print(); }}
     />
-    <div className="paper-stage"><div ref={contentRef}><DaonOnePageMaster property={property} /></div></div>
+    <div className="paper-stage"><div ref={contentRef}><DaonOnePageMaster property={property} priceEstimate={current.priceEstimate} /></div></div>
   </div>;
 }

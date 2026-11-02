@@ -90,3 +90,32 @@ export function buildPriceLayers({ askingPrice, landAreaSqm, officialLandPricePe
       : { state: 'missing', label: '중개사 확정 거래가능가격', note: '중개사 확정 전' },
   };
 }
+
+/**
+ * Server-side achievable-price estimate over ALL comparable rows of a lookup (the response lists are truncated, so the
+ * browser cannot compute this). Returns a compact, storable result; the broker confirms the final figure separately.
+ */
+export function estimateAchievablePrice({ landAreaSqm, rows = [], computedAt = new Date().toISOString() }) {
+  const landPyeong = finite(landAreaSqm) ? landAreaSqm / SQM_PER_PYEONG : 0;
+  const { used, dropped, excludedUpstream } = selectLandComparables(rows, landAreaSqm);
+  const unitPrices = used.map((deal) => deal.landPricePerPyeong).sort((a, b) => a - b);
+  const droppedByReason = {};
+  for (const { reason } of dropped) { const key = reason.startsWith('여러 필지') ? 'bulk' : reason.includes('절반') ? 'tooSmall' : 'tooLarge'; droppedByReason[key] = (droppedByReason[key] || 0) + 1; }
+  const base = {
+    method: 'land_unit_price_iqr_v1', landAreaSqm: finite(landAreaSqm) ? landAreaSqm : undefined, comparableCount: used.length,
+    excluded: { upstream: excludedUpstream, ...droppedByReason }, computedAt,
+    areaRange: finite(landAreaSqm) ? { minSqm: Math.round(landAreaSqm * AREA_RATIO_MIN * 10) / 10, maxSqm: Math.round(landAreaSqm * AREA_RATIO_MAX * 10) / 10 } : undefined,
+    deals: used.sort((a, b) => String(b.dealDate).localeCompare(String(a.dealDate))).slice(0, 8).map((deal) => ({
+      dealDate: deal.dealDate, legalDong: deal.legalDong, jibun: deal.jibun, type: deal.type, buildingUse: deal.buildingUse || '',
+      dealAmount: deal.dealAmount, landAreaSqm: Math.round(deal.landAreaSqm * 100) / 100, landPricePerPyeong: deal.landPricePerPyeong,
+    })),
+  };
+  if (!landPyeong) return { ...base, state: 'no_land_area', note: '토지면적 미확인 — 추정하지 않음' };
+  if (unitPrices.length < MIN_COMPARABLES) return { ...base, state: 'insufficient', note: `비교거래 부족(${unitPrices.length}건 < ${MIN_COMPARABLES}건) — 추정하지 않음` };
+  const unitLow = percentile(unitPrices, 0.25), unitMid = percentile(unitPrices, 0.5), unitHigh = percentile(unitPrices, 0.75);
+  return {
+    ...base, state: 'estimated', unitLow, unitMid, unitHigh,
+    low: Math.round(unitLow * landPyeong), mid: Math.round(unitMid * landPyeong), high: Math.round(unitHigh * landPyeong),
+    note: `비교거래 ${unitPrices.length}건 토지 평당가 하위25%·중앙값·상위25% × 본건 토지 ${Math.round(landPyeong * 100) / 100}평 · DA:ON 추정, 감정평가 아님`,
+  };
+}

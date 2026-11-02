@@ -1,4 +1,5 @@
 import { allowedOrigin, fail, securityHeaders, sendJson } from './_lib/providerProxy.mjs';
+import { estimateAchievablePrice } from './_lib/priceLayers.mjs';
 
 const KAKAO_ADDRESS = 'https://dapi.kakao.com/v2/local/search/address.json';
 const KAKAO_CATEGORY = 'https://dapi.kakao.com/v2/local/search/category.json';
@@ -534,7 +535,11 @@ export default async function handler(request,response){
     const marketRows=[...commercial,...land].sort((a,b)=>b.dealDate.localeCompare(a.dealDate));
     const landUseZones=zones.map(normalizeZone).filter(zone=>zone.name);
     const usageEvidence=normalizeEnergy(electricityRaw,gasRaw,months);
+    // Owner request 2026-11-01: achievable-price estimate from ALL comparable rows (the lists below are truncated to 40).
+    const subjectLandAreaSqm=(landProfile?.landAreaSqm>0 ? landProfile.landAreaSqm : buildingTitle?.landAreaSqm>0 ? buildingTitle.landAreaSqm : undefined);
+    const priceEstimate=estimateAchievablePrice({landAreaSqm:subjectLandAreaSqm,rows:marketRows});
     return sendJson(response,200,{
+      priceEstimate,
       status:Object.values(providerStatus).every((item)=>item.ok) ? 'ok' : 'partial',publicDataConfigured:true,vworldConfigured:Boolean(vworldKey),address,building:buildingTitle,providerStatus,landProfile,
       propertyType:titleResult.ok ? classifyPropertyType({titles:titles.map(normalizeTitle),landProfile}) : {type:'unconfirmed',label:PROPERTY_TYPE_LABELS.unconfirmed,confidence:'none',basis:['건축물대장 조회 실패 — 유형 미확인'],multipleBuildings:false},
       buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),landUseZones,
