@@ -127,7 +127,9 @@ for (const marker of ['listing-status:', 'market_listing_status', 'externalProvi
 if (!form.includes('marketPresenceService.persist')) throw new Error('PropertyForm market presence provenance 연결 누락');
 if (!reportDataBuilder.includes("officialLandPricePerSqm: number('officialLandPricePerSqm'") || !reportDataBuilder.includes("context('estimatedOfficialLandValue', { calculated: true")) throw new Error('공시지가/계산토지가액 Report Snapshot 연결 누락');
 if (!reportTypes.includes('officialLandPricePerSqm: ReportValue<number>') || !reportTypes.includes('estimatedOfficialLandValue: ReportValue<number>')) throw new Error('Report land public-data type 계약 누락');
-if (!propertyHub.includes('개별공시지가') || !propertyHub.includes('공시지가 기준 토지가액')) throw new Error('Property Hub 공시지가 노출 누락');
+// The hub's core-fact rows moved into propertyDetailModel.hubFactRows (PR #41); check the labels there and the wiring in the hub.
+const hubModel = read('src/domain/propertyDetail/propertyDetailModel.ts');
+if (!propertyHub.includes('hubFactRows(property)') || !hubModel.includes("'개별공시지가'") || !hubModel.includes("'공시지가 기준 토지가액'")) throw new Error('Property Hub 공시지가 노출 누락');
 for (const marker of ['sourceDealAmountTenThousandWon?: number', "dealAmountSourceUnit?: '만원'", "currency?: 'KRW'"]) if (!service.includes(marker)) throw new Error(`실거래 원문 단위 TypeScript 계약 누락: ${marker}`);
 for (const marker of ['market_listing_observation', 'listing_observation_not_property_status_confirmation', 'propertyStatusAutoUpdated: false', 'offMarketConfirmed: false', 'saveVerificationCandidate', "candidateValue: 'external_observed'"]) if (!listingSupplyService.includes(marker)) throw new Error(`실제 매물 공급원 정규화 계약 누락: ${marker}`);
 for (const marker of ['통합 정보 판정', '공적정보', '시장정보', '사용상태', '매물상태', '동일지번도 동일건물 확정 거래로 승격하지 않음', '점유 확정값이 아니며 현장확인 필요']) if (!discoveryPage.includes(marker)) throw new Error(`Discovery 통합 정보계층 UI 누락: ${marker}`);
@@ -232,6 +234,31 @@ assert.strictEqual(typeOf([{ mainUse: '공동주택', detailUse: '아파트' }, 
 assert.ok(typeOf([], null).basis.some((line) => line.includes('미확인')), '표제부 없음은 건물 부재가 아니라 미확인');
 const discoverySource = readFileSync('api/property-discovery.mjs', 'utf8');
 if (!discoverySource.includes('unrecordedFields')) throw new Error('건축물대장 0/공란을 미기재로 구분하는 unrecordedFields 누락');
+
+// R-ONE (한국부동산원 부동산통계) read-only proxy — owner request 2026-11-03 (executable).
+{
+  const rone = await import(new URL('../api/_lib/roneStats.mjs', import.meta.url).href);
+  const u = new URL(rone.buildRoneUrl('data', new URLSearchParams({ STATBL_ID: 'A_2024_00900', DTACYCLE_CD: 'YY', KEY: 'attacker', SERVICE: 'x' }), 'SERVERKEY'));
+  assert.strictEqual(u.origin + u.pathname, 'https://www.reb.or.kr/r-one/openapi/SttsApiTblData.do');
+  assert.strictEqual(u.searchParams.get('KEY'), 'SERVERKEY', '키는 서버 환경변수만 사용(요청 파라미터 무시)');
+  assert.strictEqual(u.searchParams.get('SERVICE'), null, '허용 목록 밖 파라미터는 전달하지 않음');
+  assert.strictEqual(u.searchParams.get('Type'), 'json');
+  assert.throws(() => rone.buildRoneUrl('data', new URLSearchParams({ STATBL_ID: 'A&KEY=1', DTACYCLE_CD: 'YY' }), ''), /형식/);
+  assert.throws(() => rone.buildRoneUrl('items', new URLSearchParams({}), ''), /STATBL_ID/);
+  assert.throws(() => rone.buildRoneUrl('drop', new URLSearchParams({}), ''), /op/);
+  assert.strictEqual(new URL(rone.buildRoneUrl('tables', new URLSearchParams({ pSize: '99999' }), '')).searchParams.get('pSize'), '100', 'pSize 상한');
+  // Envelope shapes observed 2026-11-03 (sample mode from GitHub runner).
+  const ok = rone.parseRoneResponse('tables', 200, JSON.stringify({ SttsApiTbl: [{ head: [{ list_total_count: 769 }, { RESULT: { CODE: 'INFO-000', MESSAGE: '정상 처리되었습니다.' } }] }, { row: [{ STATBL_ID: 'A_2024_00900', STATBL_NM: '(연) 지역별 지가지수', DTACYCLE_CD: 'YY' }] }] }));
+  assert.ok(ok.ok && ok.total === 769 && ok.rows[0].STATBL_ID === 'A_2024_00900');
+  const err = rone.parseRoneResponse('items', 200, JSON.stringify({ RESULT: { CODE: 'ERROR-300', MESSAGE: '필수 값이 누락되어 있습니다.' } }));
+  assert.ok(!err.ok && err.code === 'ERROR-300');
+  assert.ok(!rone.parseRoneResponse('data', 500, '<html>').ok);
+  const proxy = read('api/rone-stats.mjs');
+  const responses = proxy.split('\n').filter((line) => line.includes('sendJson(') || line.includes('fail('));
+  if (!proxy.includes("process.env.RONE_API_KEY") || responses.some((line) => /\burl\b/.test(line))) throw new Error('R-ONE 키는 서버 전용이며 요청 URL을 응답에 넣으면 안 됩니다');
+  if (!read('.env.example').includes('RONE_API_KEY=') || !read('scripts/scan-build-secrets.mjs').includes('process.env.RONE_API_KEY')) throw new Error('RONE_API_KEY 서버 전용 등록·빌드 비밀 스캔 누락');
+  console.log('PASS R-ONE read-only proxy (key server-only, whitelisted params)');
+}
 
 console.log('PASS public property discovery contract');
 console.log('PASS MOLIT dealAmount 만원→KRW normalization regression');
