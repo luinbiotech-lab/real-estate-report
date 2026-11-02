@@ -168,6 +168,18 @@ try {
       assert(one.templateId === 'DAON_1P_MASTER', `템플릿 ${one.templateId}`);
       assert(one.text.includes(listing.name.replace('[테스트] ', '')) || one.text.includes(listing.name), '1P에 물건명이 없습니다.');
       assert(one.facts.length > 0 && one.facts.length <= 12, `표시 항목 수 ${one.facts.length}`);
+      // Fix 2026-11-02: (A) app heading styles must not darken the white MASTER title; (B) the footer must fill the last
+      // row (a removed highlight strip used to shift rows, clipping the footer and leaving a white band).
+      const look = await page.evaluate(() => {
+        const sheet = document.querySelector('.d1-sheet').getBoundingClientRect();
+        const footer = document.querySelector('.d1-footer');
+        const fr = footer.getBoundingClientRect();
+        const rgb = (el) => (getComputedStyle(el).color.match(/\d+/g) || []).slice(0, 3).map(Number);
+        const lum = ([r, g, b]) => (0.299 * r + 0.587 * g + 0.114 * b);
+        return { title: lum(rgb(document.querySelector('.d1-head-copy h1'))), section: lum(rgb(document.querySelector('.d1-section-title b'))), footerGap: Math.round(sheet.bottom - fr.bottom), footerClipped: footer.scrollHeight > footer.clientHeight + 1, footerH: Math.round(fr.height) };
+      });
+      assert(look.title > 200 && look.section > 200, `1P 제목 글자색이 어둡습니다(밝기 ${Math.round(look.title)}/${Math.round(look.section)})`);
+      assert(Math.abs(look.footerGap) <= 2 && !look.footerClipped && look.footerH >= 70, `1P 하단 푸터 잘림/공백: ${JSON.stringify(look)}`);
       const onePlaceholder = one.text.match(/.{0,30}(확인 필요|검토 필요|분석 필요|미등록).{0,20}/);
       assert(!onePlaceholder, `1P에 공란 placeholder 표시: ${onePlaceholder?.[0]}`);
       assert(one.sh <= one.ch + 2 && one.sw <= one.cw + 2, `1P 넘침 ${one.sw}x${one.sh}/${one.cw}x${one.ch}`);

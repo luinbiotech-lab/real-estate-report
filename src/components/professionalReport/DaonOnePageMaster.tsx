@@ -102,7 +102,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const wideFact = presentFactLabels.length % 2 === 1 ? presentFactLabels[presentFactLabels.length - 1] : '';
 
   return <div className="daon-one-page-master" data-template-id={DAON_ONE_PAGE_MASTER_TEMPLATE_ID} data-template-version={DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION}>
-    <article className="d1-sheet">
+    <article className={`d1-sheet${presentHighlights.length ? '' : ' d1-sheet-no-highlight'}`}>
       <header className="d1-header">
         <div className="d1-head-copy">
           <small>가치를 보는 안목, 새로운 가능성을 만듭니다.</small>
