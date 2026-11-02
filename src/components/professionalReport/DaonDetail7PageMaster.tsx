@@ -182,7 +182,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       </>}
       {comparables.length === 0 && estimateDeals.length > 0 && <>
         <SectionBar right="공개 실거래 후보 · 감정평가 아님">추정에 쓴 비교거래</SectionBar>
-        <div className="dd-comparables dd-estimate-deals"><div style={{ display: 'grid', height: '100%', gridTemplateRows: '8mm repeat(6, minmax(0, 1fr)) auto' }}>
+        <div className="dd-comparables dd-estimate-deals" style={{ whiteSpace: 'normal' }}><div style={{ display: 'grid', width: '100%', height: '100%', gridTemplateRows: '8mm repeat(6, minmax(0, 1fr)) auto' }}>
           <div style={{ display: 'grid', gridTemplateColumns: '.8fr 1.3fr .7fr .65fr .8fr', alignItems: 'center', background: '#f1f5f8', borderBottom: '0.25mm solid #d8dee5', padding: '0 2mm', fontSize: '6.5px', fontWeight: 800 }}><span>거래일</span><span>위치 · 용도</span><span>거래가</span><span>대지</span><span>토지평당</span></div>
           {estimateDeals.map((deal, index) => <div key={`${deal.dealDate}-${index}`} style={{ display: 'grid', gridTemplateColumns: '.8fr 1.3fr .7fr .65fr .8fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2mm', fontSize: '6.7px', overflow: 'hidden' }}><span>{deal.dealDate}</span><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{joinPresent(' · ', `${deal.legalDong} ${deal.jibun}`, deal.buildingUse)}</span><span>{formatEok(deal.dealAmount)}</span><span>{deal.landAreaSqm}㎡</span><b>{formatEok(deal.landPricePerPyeong)}</b></div>)}
           <small style={{ fontSize: '6px', color: '#6d7a88', padding: '1.5mm 2mm 0', whiteSpace: 'normal' }}>{PRICE_ESTIMATE_METHOD_NOTE}</small>

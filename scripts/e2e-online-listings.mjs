@@ -267,10 +267,13 @@ try {
       if (listing === LISTINGS[0]) {
         const p4 = await page.evaluate(() => {
           const page4 = document.querySelector('.daon-detail-page-4');
-          return page4 ? { cards: page4.querySelectorAll('[data-testid="dd-price-layers"] > div').length, deals: page4.querySelectorAll('.dd-estimate-deals').length, text: page4.textContent || '', badge: page4.querySelector('.dd-head')?.getAttribute('data-page-number') } : null;
+          const box = page4?.querySelector('.dd-estimate-deals');
+          const table = box?.firstElementChild;
+          return page4 ? { cards: page4.querySelectorAll('[data-testid="dd-price-layers"] > div').length, deals: page4.querySelectorAll('.dd-estimate-deals').length, text: page4.textContent || '', badge: page4.querySelector('.dd-head')?.getAttribute('data-page-number'), tableFill: box && table ? table.getBoundingClientRect().width / box.clientWidth : 0 } : null;
         });
         assert(p4 && p4.cards === 4 && p4.deals === 1, `7P 4쪽 가격 4단계/추정 근거 표: ${JSON.stringify(p4 && { cards: p4.cards, deals: p4.deals })}`);
         assert(p4.text.includes('감정평가가 아닙니다') || p4.text.includes('감정평가 아님'), '7P 감정평가 아님 표시 누락');
+        assert(p4.tableFill > 0.85, `추정 근거 표가 좁게 표시됨(너비 ${Math.round(p4.tableFill * 100)}%)`);
       }
       const badges = await page.evaluate(() => [...document.querySelectorAll('.daon-detail-page .dd-head')].map((h) => h.getAttribute('data-page-number')));
       assert(badges.every((b, i) => b === String(i + 1).padStart(2, '0')), `7P 큰 페이지 번호 ${badges.join(',')}`);
