@@ -60,6 +60,20 @@ jobs:
           e2=$(jq -rn --arg v "서울특별시 마포구 동교로 212-22" '$v|@uri')
           curl -sS -m 40 "$SITE/api/property-discovery?query=$e2" > /tmp/f.json
           echo "::notice title=Sample facts::$(jq -c '{address: .address | {officialAddress, roadAddress, lotAddress, latitude, longitude}, propertyType: .propertyType | {type, label}, building: .building, landProfile: (.landProfile // {} | del(.raw)), zones: .landUseZones, floors: .floors}' /tmp/f.json | head -c 6000)"
+      - name: R-ONE Open API discovery (sample mode, no key, read-only, 2026-11-03)
+        run: |
+          B=https://www.reb.or.kr/r-one
+          curl -sS -m 30 "$B/portal/openapi/openApiListPage.do" -o /tmp/list.html || true
+          echo "::notice title=R-ONE list page refs::$(grep -oE "[A-Za-z/_.-]*\.do[^\"' ]*" /tmp/list.html | sort -u | head -40 | tr '\n' ' ')"
+          for js in $(grep -oE 'src="[^"]*openapi[^"]*\.js[^"]*"' /tmp/list.html | cut -d'"' -f2 | head -5); do curl -sS -m 20 "https://www.reb.or.kr$js" | grep -oE "[A-Za-z/_.-]*\.do" | sort -u | head -20 | sed "s#^#$js: #"; done | head -40 | while read l; do echo "::notice title=R-ONE js refs::$l"; done
+          for svc in SttsApiTbl SttsApiTblItm SttsApiTblCls SttsApiTblData; do
+            r=$(curl -sS -m 30 "$B/openapi/$svc.do?Type=json&pIndex=1&pSize=5" | head -c 1500)
+            echo "::notice title=R-ONE $svc sample::$r"
+          done
+          for kw in 지가 상업용 매매가격지수 전세가격지수 임대; do
+            enc=$(jq -rn --arg v "$kw" '$v|@uri')
+            echo "::notice title=R-ONE table search $kw::$(curl -sS -m 30 "$B/openapi/SttsApiTbl.do?Type=json&STATBL_NM=$enc" | head -c 2500)"
+          done
       - name: Fail the run when a provider or region check failed
         if: env.fails != '0'
         run: |
