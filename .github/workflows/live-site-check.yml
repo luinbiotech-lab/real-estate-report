@@ -55,6 +55,11 @@ jobs:
             curl -sS -m 40 "$SITE/api/property-discovery?query=$e2" > /tmp/p.json
             echo "::notice title=Price sample $q2::$(jq -c '([.market.commercial[]?, .market.land[]?] | map(select(.comparableExclusion == null and (.landPricePerPyeong // 0) > 0))) as $c | ($c | map(.landPricePerPyeong) | sort) as $v | {land: (.landProfile // {} | {landAreaSqm, officialLandPricePerSqm, estimatedOfficialLandValue, standardYear}), summary: .market.summary, comparableRowsReturned: ($c|length), p25: (if ($v|length)>0 then $v[(($v|length)-1)*25/100|floor] else null end), p50: (if ($v|length)>0 then $v[(($v|length)-1)/2|floor] else null end), p75: (if ($v|length)>0 then $v[(($v|length)-1)*75/100|floor] else null end), rows: ($c | sort_by(.dealDate) | reverse | map({t: .type, d: .dealDate, dong: .legalDong, j: .jibun, amt: .dealAmount, l: .landAreaSqm, ppy: .landPricePerPyeong, use: .buildingUse}))}' /tmp/p.json | head -c 6000)"
           done
+      - name: Public facts for the final report sample (동교로 212-22, read-only, 2026-11-02)
+        run: |
+          e2=$(jq -rn --arg v "서울특별시 마포구 동교로 212-22" '$v|@uri')
+          curl -sS -m 40 "$SITE/api/property-discovery?query=$e2" > /tmp/f.json
+          echo "::notice title=Sample facts::$(jq -c '{address: .address | {officialAddress, roadAddress, lotAddress, latitude, longitude}, propertyType: .propertyType | {type, label}, building: .building, landProfile: (.landProfile // {} | del(.raw)), zones: .landUseZones, floors: .floors}' /tmp/f.json | head -c 6000)"
       - name: Fail the run when a provider or region check failed
         if: env.fails != '0'
         run: |
