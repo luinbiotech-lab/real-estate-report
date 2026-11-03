@@ -207,3 +207,37 @@
 .daon-detail-master .dd-floor-placeholder>div{font-size:12.4px!important;text-align:center;justify-items:center}
 .daon-detail-master .dd-floor-placeholder>div:first-child{font-size:12px!important}
 .daon-detail-master .dd-floor-placeholder>div:nth-child(odd):not(:first-child){background:#f4f7fa}
+
+/* Third pass (2026-11-04): reference body copy is still ~1.15x larger at the same page size. */
+.daon-detail-master .dd-head h1{font-size:34px}
+.daon-detail-master .dd-head h1[lang=en]{font-size:32px}
+.daon-detail-master .dd-head p{font-size:13.6px}
+.daon-detail-master .dd-foot{font-size:9.4px}
+.daon-detail-master .dd-section-bar b{font-size:14.6px}
+.daon-detail-master .dd-number-card b,.daon-detail-master .dd-gold-card b{font-size:18px}
+.daon-detail-master .dd-number-card p,.daon-detail-master .dd-gold-card p{font-size:13.6px;-webkit-line-clamp:6}
+.daon-detail-master .dd-insight b,.daon-detail-master .dd-acquisition b{font-size:19px}
+.daon-detail-master .dd-insight p,.daon-detail-master .dd-acquisition p{font-size:13.6px}
+.daon-detail-master .dd-key-list b{font-size:15px}
+.daon-detail-master .dd-key-list p{font-size:14px}
+.daon-detail-master .dd-info-row b,.daon-detail-master .dd-info-row span{font-size:13.6px}
+.daon-detail-master .dd-image figcaption{font-size:11.4px}
+.daon-detail-master .dd-scenarios h3{font-size:11.2px}
+.daon-detail-master .dd-scenarios article>p{font-size:13.2px}
+.daon-detail-master .dd-photo-card-copy b{font-size:16.4px}
+.daon-detail-master .dd-photo-card-copy p{font-size:13.2px}
+.daon-detail-master .dd-bar-row b{font-size:13.6px}
+.daon-detail-master .dd-bar-row b small{font-size:10px}
+.daon-detail-master .dd-bar-row strong{font-size:13.6px}
+.daon-detail-master .dd-analysis-box b{font-size:15.4px}
+.daon-detail-master .dd-analysis-box p{font-size:13.4px}
+.daon-detail-master .dd-checklist li{font-size:15px;min-height:12.6mm}
+.daon-detail-master .dd-checklist li::before{width:8.4mm;height:8.4mm;font-size:11px}
+.daon-detail-master .dd-key-list>div>span{width:8.4mm;height:8.4mm;font-size:11px}
+.daon-detail-master .dd-floor-placeholder>div{font-size:13.4px!important}
+.daon-detail-master .dd-floor-placeholder>div:first-child{font-size:13px!important}
+.daon-detail-master .dd-contact-band b{font-size:14px}
+.daon-detail-master .dd-contact-band p{font-size:11.6px}
+.daon-detail-master .dd-metrics strong{font-size:27px}
+.daon-detail-master .dd-price-position b{font-size:17px}
+.daon-detail-master .dd-price-position p{font-size:13.4px}
