@@ -248,3 +248,10 @@
 .daon-detail-master .daon-detail-page-3 .dd-gold-card{padding:3.6mm 3.8mm}
 .daon-detail-master .dd-image.map img{object-fit:contain;background:#f3f5f8}
 .daon-detail-master .daon-detail-page-3 .dd-key-list>div{min-height:10.5mm}
+/* Long English titles (page 4/6) must fit without an ellipsis; roadmap icons must not cover copy. */
+.daon-detail-master .dd-head-copy{max-width:150mm}
+.daon-detail-master .dd-brand{min-width:38mm}
+.daon-detail-master .dd-head h1[lang=en]{font-size:28px;letter-spacing:0}
+.daon-detail-master .dd-roadmap .dd-number-card{padding-bottom:13mm}
+.daon-detail-master .dd-roadmap .dd-number-card p{-webkit-line-clamp:4}
+.daon-detail-master .dd-number-icon{width:9mm;height:9mm;bottom:3mm}
