@@ -201,7 +201,8 @@
 .daon-detail-master .dd-contact-band p{font-size:10.6px}
 .daon-detail-master .dd-hero-copy b{font-size:21px}
 /* Floor table: the legacy rule shrank its cells to 7.5px; let them inherit the row size and give the table room. */
-.daon-detail-master .dd-floor-placeholder{height:44mm;border:0}
+.daon-detail-master .dd-floor-placeholder{height:38mm;border:0}
+.daon-detail-master .daon-detail-page-2 .dd-profile-grid{height:90mm}
 .daon-detail-master .dd-floor-placeholder span,.daon-detail-master .dd-floor-placeholder b{font-size:inherit;max-width:none;color:inherit}
 .daon-detail-master .dd-floor-placeholder>div{font-size:12.4px!important;text-align:center;justify-items:center}
 .daon-detail-master .dd-floor-placeholder>div:first-child{font-size:12px!important}
