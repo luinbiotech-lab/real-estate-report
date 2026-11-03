@@ -29,7 +29,8 @@ function mediaItems(property: Property, bundle: DataRoomBundle): ProfessionalRep
 
   // Legacy primary photos have no exterior classification: fail closed when restricted.
   if (allowInternal && property.mainImage) items.push({ id: 'property-main', category: 'main', url: property.mainImage, caption: '대표사진', isPrimary: true, verificationStatus: 'confirmed' });
-  if (allowInternal) property.additionalImages.filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
+  // Older or imported records may lack additionalImages; a missing list must not abort report generation.
+  if (allowInternal) (property.additionalImages ?? []).filter(Boolean).forEach((url, index) => items.push({ id: `property-additional-${index}`, category: 'additional', url, caption: `추가사진 ${index + 1}`, isPrimary: false, verificationStatus: 'confirmed' }));
   if (property.mapImage) items.push({ id: 'property-map', category: 'map', url: property.mapImage, caption: '위치지도', isPrimary: false, verificationStatus: 'imported' });
   if (property.locationAnalysisImage) items.push({ id: 'property-location-analysis', category: 'location_analysis', url: property.locationAnalysisImage, caption: '입지분석 이미지', isPrimary: false, verificationStatus: 'confirmed' });
 
