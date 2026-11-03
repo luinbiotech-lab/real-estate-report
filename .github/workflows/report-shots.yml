@@ -1,0 +1,36 @@
+name: Report screenshots
+
+# Throwaway branch claude/report-shots only: builds the local-mode (cutover, browser IndexedDB, no Production backend)
+# frontend and publishes the static build to the orphan branch claude/report-shots-out, so report captures can be made
+# offline with private sample photos that must never be pushed to this public repository.
+on:
+  push:
+    branches: [claude/report-shots]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+      - run: npx vite build --mode cutover --outDir dist-cutover
+      - name: Publish local-mode build
+        run: |
+          src_sha=$(git rev-parse --short HEAD)
+          cp -r dist-cutover /tmp/pub
+          cd /tmp/pub
+          printf '{\n  "git": { "deploymentEnabled": false }\n}\n' > vercel.json
+          echo "$src_sha" > SOURCE_SHA
+          git init -q -b claude/report-shots-out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "local-mode build for $src_sha"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" claude/report-shots-out
