@@ -88,3 +88,36 @@ export function parseNonNegativeNumberInput(raw: string): number | undefined {
   if (!Number.isFinite(value) || value < 0) return undefined;
   return value;
 }
+
+/*
+ * Hub "핵심 정보" rows (owner check 2026-10-31: blank values showed as '-', which reads like data). A field the record
+ * does not have yet is labelled 미입력 and flagged `missing` so the hub can grey it out and point to where it is filled.
+ * Values are never invented; 0 floors are not a fact unless the record has at least one floor count.
+ */
+export const HUB_MISSING_LABEL = '미입력';
+export interface HubFactRow { label: string; value: string; missing: boolean }
+
+const wonText = (value?: number) => {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return '';
+  const eok = Math.floor(value / 100_000_000), man = Math.round((value % 100_000_000) / 10_000);
+  return `${eok ? `${eok.toLocaleString('ko-KR')}억 ` : ''}${man ? `${man.toLocaleString('ko-KR')}만 ` : ''}원`.replace(' 만', '만').trim();
+};
+const positive = (value?: number) => typeof value === 'number' && Number.isFinite(value) && value > 0;
+
+export function hubFactRows(p: Partial<Property>): HubFactRow[] {
+  const floorsKnown = positive(p.groundFloors) || positive(p.basementFloors);
+  const rows: Array<[string, string]> = [
+    ['매매가', wonText(p.salePrice)],
+    ['대지면적', positive(p.landAreaPyeong) ? `${p.landAreaPyeong!.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}평` : ''],
+    ['연면적', positive(p.totalFloorAreaSqm) ? `${p.totalFloorAreaSqm!.toFixed(2)}㎡` : ''],
+    ['용도지역', String(p.zoning ?? '').trim()],
+    ['개별공시지가', positive(p.officialLandPricePerSqm) ? `${p.officialLandPricePerSqm!.toLocaleString('ko-KR')}원/㎡` : ''],
+    ['공시지가 기준 토지가액', positive(p.estimatedOfficialLandValue) ? `${wonText(p.estimatedOfficialLandValue)} · 계산값` : ''],
+    ['지목 · 이용상황', [p.landCategory, p.landUseSituation].map((v) => String(v ?? '').trim()).filter(Boolean).join(' · ')],
+    ['주용도', String(p.mainUse ?? '').trim()],
+    ['구조', String(p.structure ?? '').trim()],
+    ['층수', floorsKnown ? `지하 ${p.basementFloors || 0}층 · 지상 ${p.groundFloors || 0}층` : ''],
+    ['인근역', String(p.nearbyStation ?? '').trim()],
+  ];
+  return rows.map(([label, value]) => ({ label, value: value || HUB_MISSING_LABEL, missing: !value }));
+}

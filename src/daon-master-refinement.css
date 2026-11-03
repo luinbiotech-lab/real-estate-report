@@ -124,3 +124,9 @@
 .daon-detail-master .dd-acquisition b{font-size:12.5px}
 .daon-detail-master .dd-insight p,
 .daon-detail-master .dd-acquisition p{font-size:8.8px;line-height:1.5}
+/* Fix 2026-11-02 (A): app design-system headings (#39) must never recolour report MASTER text; header title and section
+   titles stay white on navy. */
+.daon-one-page-master .d1-head-copy h1,.daon-one-page-master .d1-section-title b,.daon-one-page-master .d1-hero-copy h2{color:#fff}
+/* Fix 2026-11-02 (B): when the highlight strip has no items it is not rendered (#42); drop its grid row so the use row and
+   footer keep their own rows instead of the footer being squeezed and clipped. */
+.daon-one-page-master .d1-sheet.d1-sheet-no-highlight{grid-template-rows:31mm 19mm 12mm minmax(0,1fr) 31mm 14mm 23mm}

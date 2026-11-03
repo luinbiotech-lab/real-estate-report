@@ -6,10 +6,9 @@ import { VERIFICATION_LABELS } from '../domain/propertyDataRoom/labels';
 import type { DataRoomBundle } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomService } from '../services/propertyDataRoomService';
 import { scopeDataRoomBundle } from '../services/propertyReadinessService';
-import { formatUnitPricePerPyeong, selectHubHeroMedia, summarizeComparables } from '../domain/propertyDetail/propertyDetailModel';
+import { formatUnitPricePerPyeong, hubFactRows, selectHubHeroMedia, summarizeComparables } from '../domain/propertyDetail/propertyDetailModel';
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
-import { formatArea, formatWon } from '../utils/format';
 
 const emptyBundle: DataRoomBundle = { documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
 
@@ -56,6 +55,8 @@ export default function PropertyHubPage() {
   if (loading) return <div className="center"><CircularProgress /><p>물건 상세 허브를 준비하는 중입니다.</p></div>;
   if (!property) return <div className="property-hub"><Alert severity="error" action={<Button color="inherit" size="small" onClick={() => navigate('/')}>물건 목록</Button>}>{error || '물건을 찾을 수 없습니다.'}</Alert></div>;
 
+  const factRows = hubFactRows(property);
+  const missingFacts = factRows.filter((row) => row.missing).length;
   const cards = [
     { label: '사진 · 미디어', detail: `${summary?.media ?? 0}개 미디어 · 내부사진 정책 적용`, icon: <ImageRounded />, action: () => navigate(`/property/${id}/data-room?tab=media`) },
     { label: '문서 · 공적자료', detail: `${summary?.documents ?? 0}건 문서 · ${summary?.officiallyVerified ?? 0}건 공식확인`, icon: <DescriptionRounded />, action: () => navigate(`/property/${id}/data-room?tab=documents`) },
@@ -85,17 +86,10 @@ export default function PropertyHubPage() {
 
       <div style={{ border: '1px solid #d9e0e8', borderRadius: 14, background: '#fff', padding: 18 }}>
         <p className="eyebrow" style={{ marginTop: 0 }}>CORE PROPERTY PROFILE</p><h2 style={{ marginTop: 4 }}>핵심 정보</h2>
-        <dl className="property-hub-facts">
-          {[
-            ['매매가', formatWon(property.salePrice)], ['대지면적', formatArea(property.landAreaPyeong)],
-            ['연면적', property.totalFloorAreaSqm ? `${property.totalFloorAreaSqm.toFixed(2)}㎡` : '-'], ['용도지역', property.zoning || '-'],
-            ['개별공시지가', property.officialLandPricePerSqm ? `${property.officialLandPricePerSqm.toLocaleString('ko-KR')}원/㎡` : '-'],
-            ['공시지가 기준 토지가액', property.estimatedOfficialLandValue ? `${formatWon(property.estimatedOfficialLandValue)} · 계산값` : '-'],
-            ['지목 · 이용상황', [property.landCategory, property.landUseSituation].filter(Boolean).join(' · ') || '-'],
-            ['주용도', property.mainUse || '-'], ['구조', property.structure || '-'],
-            ['층수', `지하 ${property.basementFloors || 0}층 · 지상 ${property.groundFloors || 0}층`], ['인근역', property.nearbyStation || '-'],
-          ].map(([label, value]) => <div key={label} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', borderTop: '1px solid #edf0f4', padding: '10px 0' }}><dt style={{ color: '#667085', fontSize: 13 }}>{label}</dt><dd style={{ margin: 0, fontWeight: 700 }}>{value}</dd></div>)}
+        <dl className="property-hub-facts" data-testid="hub-core-facts">
+          {factRows.map(({ label, value, missing }) => <div key={label} style={{ display: 'grid', gridTemplateColumns: '110px 1fr', borderTop: '1px solid #edf0f4', padding: '10px 0' }}><dt style={{ color: '#667085', fontSize: 13 }}>{label}</dt><dd style={{ margin: 0, fontWeight: missing ? 500 : 700, color: missing ? '#98a2b3' : undefined }}>{value}</dd></div>)}
         </dl>
+        {missingFacts > 0 && <button type="button" onClick={() => navigate(`/property/${property.id}/edit`)} style={{ marginTop: 8, border: 0, background: 'none', padding: 0, color: '#073a69', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>미입력 {missingFacts}개 항목 입력하기 →</button>}
         <div className="property-hub-readiness">
           {[
             ['층별 데이터', floors.length ? `${distinctFloorCount}개 층 · ${floors.length}개 공간` : '미연결'], ['층별 합계', floorArea ? `${floorArea.toFixed(2)}㎡` : '-'],

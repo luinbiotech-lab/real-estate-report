@@ -10,6 +10,12 @@ import type { ProfessionalReportViewModel, ReportValue } from './types';
  *    fields hidden, and the page keeps saying so.
  * The lists below are the single source for both the pre-publish check and the regression validator, so the check can
  * never drift from what the MASTER actually hides.
+ *
+ * Mixed policy (owner decision 2026-10-31, after "빈 항목 때문에 페이지마다 공백이 생긴다"):
+ * 3. Core fields (REQUIRED_REPORT_FIELD_KEYS) are flagged as 필수: the pre-publish popup warns about them first and the user
+ *    chooses — enter them, or publish anyway after reading the caution (owner refinement 2026-10-31: warn, let the user choose).
+ * 4. Other blanks are hidden AND the remaining items move forward within the same row/strip, so no empty slot is left.
+ * 5. 7P detail pages without enough real content are omitted as a whole (see detailPagePlan in reportLayoutFill.ts).
  */
 
 export type ReportBlankFieldGroup = '가격' | '공적자료' | '현장·이용' | '입지' | '투자 검토';
@@ -18,7 +24,21 @@ export interface ReportBlankField {
   key: string;
   label: string;
   group: ReportBlankFieldGroup;
+  /** Core field: highlighted as 필수 with a caution in the pre-publish popup; the user decides. */
+  required?: boolean;
 }
+
+/** Core fields of both 1P and 7P (owner decision 2026-10-31). */
+export const REQUIRED_REPORT_FIELD_KEYS = ['salePrice', 'address', 'landArea', 'totalFloorArea', 'mainUse', 'zoning', 'investmentPoints'] as const;
+const markRequired = (field: ReportBlankField): ReportBlankField =>
+  (REQUIRED_REPORT_FIELD_KEYS as readonly string[]).includes(field.key) ? { ...field, required: true } : field;
+
+/** Blank core fields — shown first in the popup with a caution. */
+export function requiredBlankFields(fields: ReportBlankField[]) {
+  return fields.filter((field) => field.required);
+}
+
+export const REPORT_REQUIRED_NOTICE = '필수 항목이 비어 있습니다. 이대로 발행하면 보고서의 핵심 정보가 빠지고 해당 영역이 비어 보일 수 있습니다. 입력 후 발행을 권장합니다.';
 
 /** Placeholder phrases that must never be printed in a published MASTER (they read as data but carry none). */
 export const REPORT_PLACEHOLDER_PATTERN = /확인 필요|검토 필요|분석 필요/;
@@ -57,7 +77,7 @@ export function onePageBlankFields(p: Property): ReportBlankField[] {
     [blankLines(p.recommendedUse), { key: 'recommendedUse', label: '활용 제안', group: '투자 검토' }],
     [blankLines(p.developmentPlan), { key: 'developmentPlan', label: '개발·인허가 계획', group: '투자 검토' }],
   ];
-  return checks.filter(([blank]) => blank).map(([, field]) => field);
+  return checks.filter(([blank]) => blank).map(([, field]) => markRequired(field));
 }
 
 const blankValue = (item: ReportValue<unknown> | undefined) => !item || item.value === null || item.value === undefined || item.value === ''
@@ -89,7 +109,7 @@ export function detailBlankFields(model: ProfessionalReportViewModel): ReportBla
     [blankValue(model.investment.overallOpinion), { key: 'overallOpinion', label: '종합 의견', group: '투자 검토' }],
     [blankValue(model.risks.risks), { key: 'risks', label: '권리·리스크', group: '투자 검토' }],
   ];
-  return checks.filter(([blank]) => blank).map(([, field]) => field);
+  return checks.filter(([blank]) => blank).map(([, field]) => markRequired(field));
 }
 
 export type ReportPublishAction = 'print' | 'finalize';

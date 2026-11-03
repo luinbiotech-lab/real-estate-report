@@ -56,6 +56,9 @@ jobs:
 
       - name: Validate property detail pages
         run: node scripts/validate-property-detail-pages.mjs
+      # Added 2026-11-02: validate:discovery was not run in CI, so a broken assertion went unnoticed after PR #41.
+      - name: Validate public property discovery and price layers
+        run: npm run validate:discovery
 
       - name: Validate property record guard
         run: node scripts/validate-property-record-guard.mjs

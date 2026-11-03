@@ -136,7 +136,10 @@ try {
       assert(text.includes(listing.address), '주소가 허브에 표시되지 않습니다.');
       assert(/억|원/.test(text), '매매가 표시가 없습니다.');
       assert(text.includes(`지상 ${listing.groundFloors}층`), `층수 표시 불일치(지상 ${listing.groundFloors}층 기대)`);
-      return '주소·매매가·층수 표시';
+      const facts = await page.getByTestId('hub-core-facts').locator('dd').allInnerTexts();
+      assert(facts.length >= 10 && !facts.some((value) => value.trim() === '-' || value.trim() === ''), `핵심 정보 공란이 '-'로 표시됨: ${facts.join(' | ')}`);
+      const missing = facts.filter((value) => value.trim() === '미입력').length;
+      return `주소·매매가·층수 표시 · 미입력 ${missing}개`;
     });
 
     // 3. Data Room tabs open without errors.
@@ -166,6 +169,18 @@ try {
       assert(one.templateId === 'DAON_1P_MASTER', `템플릿 ${one.templateId}`);
       assert(one.text.includes(listing.name.replace('[테스트] ', '')) || one.text.includes(listing.name), '1P에 물건명이 없습니다.');
       assert(one.facts.length > 0 && one.facts.length <= 12, `표시 항목 수 ${one.facts.length}`);
+      // Fix 2026-11-02: (A) app heading styles must not darken the white MASTER title; (B) the footer must fill the last
+      // row (a removed highlight strip used to shift rows, clipping the footer and leaving a white band).
+      const look = await page.evaluate(() => {
+        const sheet = document.querySelector('.d1-sheet').getBoundingClientRect();
+        const footer = document.querySelector('.d1-footer');
+        const fr = footer.getBoundingClientRect();
+        const rgb = (el) => (getComputedStyle(el).color.match(/\d+/g) || []).slice(0, 3).map(Number);
+        const lum = ([r, g, b]) => (0.299 * r + 0.587 * g + 0.114 * b);
+        return { title: lum(rgb(document.querySelector('.d1-head-copy h1'))), section: lum(rgb(document.querySelector('.d1-section-title b'))), footerGap: Math.round(sheet.bottom - fr.bottom), footerClipped: footer.scrollHeight > footer.clientHeight + 1, footerH: Math.round(fr.height) };
+      });
+      assert(look.title > 200 && look.section > 200, `1P 제목 글자색이 어둡습니다(밝기 ${Math.round(look.title)}/${Math.round(look.section)})`);
+      assert(Math.abs(look.footerGap) <= 2 && !look.footerClipped && look.footerH >= 70, `1P 하단 푸터 잘림/공백: ${JSON.stringify(look)}`);
       const onePlaceholder = one.text.match(/.{0,30}(확인 필요|검토 필요|분석 필요|미등록).{0,20}/);
       assert(!onePlaceholder, `1P에 공란 placeholder 표시: ${onePlaceholder?.[0]}`);
       assert(one.sh <= one.ch + 2 && one.sw <= one.cw + 2, `1P 넘침 ${one.sw}x${one.sh}/${one.cw}x${one.ch}`);
@@ -175,20 +190,27 @@ try {
 
     // 4b. Owner decision 2026-10-30: blank fields are confirmed with the user before publishing, then hidden.
     await check(tag, '1P 발행 전 공란 확인 안내', async () => {
+      // Owner decision 2026-10-31 (mixed policy): no empty slot in any strip/grid of the printed sheet.
+      const emptySlots = await page.evaluate(() => [...document.querySelectorAll('.d1-price-band > div, .d1-status-strip > div, .d1-highlight-strip > div, .d1-facts-grid > div')]
+        .filter((el) => !(el.textContent || '').trim()).length);
+      assert(emptySlots === 0, `1P 빈 칸 ${emptySlots}개`);
       const notice = page.getByTestId('report-blank-fields-notice');
-      if (!(await notice.count())) return '공란 없음 — 확인 없이 발행';
-      assert((await notice.innerText()).includes('숨김 처리되어 발행'), '숨김 발행 안내가 없습니다.');
+      if (!(await notice.count())) return '공란 없음 — 확인 없이 발행 · 빈 칸 0';
+      const noticeText = await notice.innerText();
+      const requiredMissing = noticeText.includes('필수 항목 미입력');
+      assert(noticeText.includes('숨김 처리되어 발행'), `공란 안내 오류: ${noticeText.slice(0, 100)}`);
       await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 10_000 });
       const dialogText = await dialog.innerText();
       assert(dialogText.includes('값 입력하러 가기') && dialogText.includes('숨김 처리하고'), `대화상자 선택지 누락: ${dialogText.slice(0, 120)}`);
-      const chips = await dialog.getByTestId('report-blank-fields-list').locator('.MuiChip-root').count();
-      assert(chips > 0, '공란 항목 목록이 비어 있습니다.');
+      // Owner refinement 2026-10-31: blank 필수 items get a caution in the popup, but the user still chooses.
+      assert(!(await dialog.getByTestId('report-blank-fields-continue').isDisabled()), '사용자가 선택할 수 있어야 하는데 계속 버튼이 비활성입니다.');
+      assert((await dialog.getByTestId('report-required-fields').count() > 0) === requiredMissing, '필수 항목 주의 안내 표시 불일치');
       await shot(`${tag}-1p-blank-dialog`);
       await dialog.getByRole('button', { name: '취소' }).click();
       await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
-      return `공란 ${chips}개 확인 요청`;
+      return requiredMissing ? '필수 공란 → 주의 팝업 + 사용자 선택 · 빈 칸 0' : '선택 공란 확인 요청 · 빈 칸 0';
     });
 
     // 5. 7P professional MASTER (owner standard: Opening → detail-1..7 → Closing, no overflow).
@@ -200,13 +222,21 @@ try {
         const pages = [...master.querySelectorAll('.daon-frame-page, .daon-detail-page')].map((el) => ({
           name: el.getAttribute('data-master-page') || [...el.classList].find((n) => /^daon-detail-page-[1-7]$/.test(n))?.replace('daon-detail-page-', 'detail-') || '',
           sw: el.scrollWidth, cw: el.clientWidth, sh: el.scrollHeight, ch: el.clientHeight, text: el.textContent || '',
+          printed: (el.querySelector('.dd-brand em')?.textContent || '').match(/\|\s*(\d+)/)?.[1] || '',
         }));
         return { templateId: master.getAttribute('data-template-id'), visual: master.getAttribute('data-visual-master'), pages, url: location.pathname };
       });
       await shot(`${tag}-7p`);
       const names = report.pages.map((item) => item.name);
       assert(report.templateId === 'DAON_DETAIL_7P_MASTER', `템플릿 ${report.templateId}`);
-      assert(names.length === 9 && names[0] === 'opening' && names.at(-1) === 'closing' && [1, 2, 3, 4, 5, 6, 7].every((n) => names[n] === `detail-${n}`), `페이지 구성 ${names.join(',')}`);
+      // Owner decision 2026-10-31: thin optional detail pages (3–6) are omitted; 1, 2, 7 always print, order is kept and
+      // printed numbers run 1..n without gaps.
+      const detail = names.slice(1, -1);
+      const detailIds = detail.map((name) => Number(name.replace('detail-', '')));
+      assert(names[0] === 'opening' && names.at(-1) === 'closing' && detail.every((name) => /^detail-[1-7]$/.test(name)), `페이지 구성 ${names.join(',')}`);
+      assert(detailIds.includes(1) && detailIds.includes(2) && detailIds.includes(7) && detailIds.every((id, i) => i === 0 || id > detailIds[i - 1]), `상세 페이지 순서 ${detailIds.join(',')}`);
+      const printed = report.pages.filter((item) => item.name.startsWith('detail-')).map((item) => item.printed);
+      assert(printed.every((num, i) => Number(num) === i + 1), `상세 페이지 번호 ${printed.join(',')}`);
       const overflow = report.pages.filter((item) => item.sh > item.ch + 2 || item.sw > item.cw + 2).map((item) => item.name);
       assert(!overflow.length, `넘침 페이지: ${overflow.join(',')}`);
       // Owner decision 2026-10-30 ("빈칸 숨김"): placeholders are a hard failure, no longer a policy WARN.
@@ -215,10 +245,13 @@ try {
         .filter((item) => item.hit);
       const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
       assert(!placeholders.length, `공란 placeholder 표시: ${placeholders.map((item) => `${item.name}「${item.hit}」`).join(' / ')}`);
+      const emptyMetrics = await page.evaluate(() => [...document.querySelectorAll('.dd-metrics > div, .dd-reason-three > *, .dd-roadmap > *, .dd-dd-grid > *')].filter((el) => !(el.textContent || '').trim()).length);
+      assert(emptyMetrics === 0, `7P 빈 칸 ${emptyMetrics}개`);
       const notice = page.getByTestId('report-blank-fields-notice');
       let blankInfo = '공란 없음';
       if (await notice.count()) {
-        assert((await notice.innerText()).includes('숨김 처리되어 발행'), '7P 숨김 발행 안내가 없습니다.');
+        const noticeText = await notice.innerText();
+        assert(noticeText.includes('숨김 처리되어 발행'), '7P 공란 안내가 없습니다.');
         await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
         const dialog = page.getByRole('dialog');
         await dialog.waitFor({ state: 'visible', timeout: 10_000 });
@@ -227,7 +260,7 @@ try {
         await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
         blankInfo = '발행 전 공란 확인 동작';
       }
-      return `9페이지, 넘침 0, placeholder 0, ${blankInfo}, visual=${report.visual}`;
+      return `${names.length}페이지(상세 ${detailIds.join('·')}), 넘침 0, placeholder 0, 빈 칸 0, ${blankInfo}, visual=${report.visual}`;
     });
 
 
@@ -235,7 +268,7 @@ try {
     //     the page count (1P = 1 page, professional report = Opening + 7 + Closing = 9 pages), and reopen the same
     //     Snapshot URL to confirm it renders the same stored version. First listing only (runtime).
     if (listing === LISTINGS[0]) {
-      await check(tag, 'PDF 출력(1P=1쪽, 리포트=9쪽) · Snapshot 재열람', async () => {
+      await check(tag, 'PDF 출력(1P=1쪽, 리포트=화면 쪽수) · Snapshot 재열람', async () => {
         await page.goto(`${BASE_URL}/document/proposal/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
         await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
         await page.emulateMedia({ media: 'print' });
@@ -261,7 +294,7 @@ try {
         await page.emulateMedia({ media: 'screen' });
         await writeFile(`${OUT}/e2e-${tag}-report.pdf`, reportPdf);
         const report = pdfPageCount(reportPdf);
-        assert(report.pages === 9, `리포트 PDF 페이지 수 ${report.pages} (트리 ${report.treeCount}, 화면 ${before.pages}쪽) — 기대 9`);
+        assert(report.pages === before.pages && before.pages >= 5, `리포트 PDF 페이지 수 ${report.pages} (트리 ${report.treeCount}) — 화면 ${before.pages}쪽과 같아야 함`);
 
         // Reopen: leave, come back to the same Snapshot URL; stored content must render identically.
         await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });

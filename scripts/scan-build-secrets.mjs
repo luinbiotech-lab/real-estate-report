@@ -8,6 +8,7 @@ const sentinels = [
   process.env.KAKAO_REST_API_KEY,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   process.env.DAON_OWNER_BOOTSTRAP_KEY,
+  process.env.RONE_API_KEY,
 ].map((value) => value?.trim()).filter((value) => value && value.length >= 12);
 
 async function walk(directory) {
