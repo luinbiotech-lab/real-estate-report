@@ -141,4 +141,17 @@
 .daon-detail-master .dd-contact-cta{border-left:.3mm solid #ffffff40;padding-left:4mm}
 .daon-detail-master .dd-contact-cta b{color:#e9c77f}
 
+.daon-detail-master .dd-comparables.has-bars{height:62mm}
+/* Fill the page like the reference: taller hero/rows, taller photo strip without a floor table, photo cards on page 4 */
+.daon-detail-master .dd-p1-top{height:132mm}
+.daon-detail-master .daon-detail-page-1 .dd-key-list>div{min-height:13mm}
+.daon-detail-master .dd-photo-three.tall{height:72mm}
+.daon-detail-master .dd-reason-three.with-photos{height:92mm}
+.daon-detail-master .dd-gold-card.photo-card{display:grid;grid-template-columns:1fr;grid-template-rows:46mm 1fr;padding:0;gap:0;border-top:1.1mm solid var(--dq-gold)}
+.daon-detail-master .dd-gold-card.photo-card>.dd-image{height:100%;border-radius:0}
+.daon-detail-master .dd-photo-card-copy{padding:3.4mm 3.8mm;min-height:0;overflow:hidden}
+.daon-detail-master .dd-photo-card-copy b{display:flex;align-items:center;gap:2mm;white-space:nowrap}
+.daon-detail-master .dd-badge{width:7.6mm;height:7.6mm;flex:0 0 auto;border-radius:50%;display:grid;place-items:center;background:linear-gradient(#d3a24c,#ad7424);color:#fff;font-size:9.5px;font-weight:800}
+.daon-detail-master .dd-photo-card-copy p{font-size:10.4px;line-height:1.55;color:var(--dq-body);margin:1.6mm 0 0;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}
+
 @media print{.daon-detail-master .dd-number-card,.daon-detail-master .dd-gold-card{box-shadow:none}}

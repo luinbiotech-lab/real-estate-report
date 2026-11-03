@@ -97,8 +97,9 @@ function NumberedPoint({ index, title, copy, icon }: { index: number; title: str
   return <article className="dd-number-card"><span>{String(index).padStart(2, '0')}</span><div><b>{title}</b><p>{copy}</p></div>{icon && <Icon name={icon} className="dd-icon dd-number-icon" />}</article>;
 }
 
-function GoldCard({ title, copy, wide = false, icon }: { title: string; copy: string; wide?: boolean; icon?: DetailIconName }) {
+function GoldCard({ title, copy, wide = false, icon, photo, index }: { title: string; copy: string; wide?: boolean; icon?: DetailIconName; photo?: string | null; index?: number }) {
   if (!copy) return null;
+  if (photo) return <article className="dd-gold-card photo-card"><figure className="dd-image"><img src={photo} alt={title} /></figure><div className="dd-photo-card-copy"><b>{index !== undefined && <span className="dd-badge">{String(index).padStart(2, '0')}</span>}{title}</b><p>{copy}</p></div></article>;
   return <article className={`dd-gold-card${icon ? ' with-icon' : ''}`} style={wide ? { gridColumn: '1 / -1' } : undefined}>{icon ? <span className="dd-icon-badge"><Icon name={icon} /></span> : <span>●</span>}<div><b>{title}</b><p>{copy}</p></div></article>;
 }
 
@@ -179,12 +180,12 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       {model.building.floors.length > 0 && <>
         <SectionBar>층별 구성과 현재 활용</SectionBar>
         <div className="dd-floor-placeholder" style={{ display: 'grid', placeItems: 'stretch', alignContent: 'stretch', gap: 0 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', background: '#f1f5f8', borderBottom: '0.25mm solid #d8dee5', padding: '0 2.5mm', fontSize: '6.7px', fontWeight: 800 }}><span>층</span><span>공적대장 용도</span><span>면적</span><span>현재 이용 / 비고</span></div>
-          {model.building.floors.slice(0, 4).map((floor) => <div key={floor.id} style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2.5mm', minHeight: 0, fontSize: '6.8px', overflow: 'hidden' }}><b style={{ fontSize: '7.2px' }}>{floor.floor}</b><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{floor.name}</span><span>{formatFloorArea(floor.areaSqm)}</span><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#6d7a88' }}>{floor.currentCondition || '-'}</span></div>)}
+          <div style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', background: '#062f55', color: '#fff', borderRadius: '1.6mm 1.6mm 0 0', padding: '0 2.5mm', fontSize: '9.6px', fontWeight: 800 }}><span>층</span><span>공적대장 용도</span><span>면적</span><span>현재 이용 / 비고</span></div>
+          {model.building.floors.slice(0, 4).map((floor) => <div key={floor.id} style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2.5mm', minHeight: 0, fontSize: '10px', overflow: 'hidden' }}><b style={{ fontSize: '10.4px' }}>{floor.floor}</b><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{floor.name}</span><span>{formatFloorArea(floor.areaSqm)}</span><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#6d7a88' }}>{floor.currentCondition || '-'}</span></div>)}
         </div>
       </>}
       <SectionBar>공간에서 보이는 가능성</SectionBar>
-      <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권·주변 상권" /><ImageSlot src={imageAt(2)} caption="주변 상업·업무 환경" /></div>
+      <div className={`dd-photo-three${model.building.floors.length ? '' : ' tall'}`}><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권·주변 상권" /><ImageSlot src={imageAt(2)} caption="주변 상업·업무 환경" /></div>
       <Insight compact icon="building" title="현재 활용을 존중하면서 다음 용도를 설계할 수 있습니다." copy={display(model.investment.recommendedUse, '사옥, 주거, 업무, 복합공간 등 활용 방향은 인허가 및 현장검토 후 확정합니다.')} />
     </Page>
 
@@ -206,7 +207,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       </>}
       <div className="dd-analysis-box"><b>해석</b><p>{display(model.investment.overallOpinion, '단순 평균으로 적정가격을 확정하지 않고, 입지·규모·도로조건·건물상태를 함께 검토합니다.')}</p></div>
       <SectionBar>가격을 매입 논리로 바꾸는 세 가지 포인트</SectionBar>
-      <div className="dd-reason-three" style={{ gridTemplateColumns: equalColumns(p4ReasonCount) }}><GoldCard icon="chart" title="총액과 규모의 균형" copy={display(model.land.landAreaPyeong) ? `${display(model.land.landAreaPyeong)} 토지와 기존 건물을 함께 확보하는 구조를 검토합니다.` : '토지와 기존 건물을 함께 확보하는 구조를 검토합니다.'} /><GoldCard icon="pin" title="입지 프리미엄의 근거" copy={display(model.land.roadCondition)} /><GoldCard icon="search" title="리스크의 투명성" copy={risks[0] || '공적자료·현장·권리관계를 확인해 가격 리스크를 투명하게 제시합니다.'} /></div>
+      <div className={`dd-reason-three${imageAt(0) ? ' with-photos' : ''}`} style={{ gridTemplateColumns: equalColumns(p4ReasonCount) }}><GoldCard photo={imageAt(0)} index={1} icon="chart" title="총액과 규모의 균형" copy={display(model.land.landAreaPyeong) ? `${display(model.land.landAreaPyeong)} 토지와 기존 건물을 함께 확보하는 구조를 검토합니다.` : '토지와 기존 건물을 함께 확보하는 구조를 검토합니다.'} /><GoldCard photo={imageAt(1)} index={2} icon="pin" title="입지 프리미엄의 근거" copy={display(model.land.roadCondition)} /><GoldCard photo={imageAt(2)} index={3} icon="search" title="리스크의 투명성" copy={risks[0] || '공적자료·현장·권리관계를 확인해 가격 리스크를 투명하게 제시합니다.'} /></div>
     </Page>}
 
     {shows(5) && <Page page={5} number={pageNumber(5)} eyebrow="VALUE CREATION SCENARIOS" title="가치 확장 시나리오" en="VALUE CREATION SCENARIOS" source="활용 제안은 인허가·구조·소방·주차 등 별도 검토가 필요합니다" subtitle="매입 후 바로 실행할 수 있는 세 가지 방향" snapshot={snapshot} model={model}>
