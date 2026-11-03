@@ -1,4 +1,5 @@
 import { allowedOrigin, fail, securityHeaders, sendJson } from './_lib/providerProxy.mjs';
+import { RESIDENTIAL_APIS, residentialMarket } from './_lib/residentialTrades.mjs';
 
 const KAKAO_ADDRESS = 'https://dapi.kakao.com/v2/local/search/address.json';
 const KAKAO_CATEGORY = 'https://dapi.kakao.com/v2/local/search/category.json';
@@ -460,6 +461,13 @@ export function normalizeTrade(row,type,resolved){
     raw:row
   };
 }
+/** Residential type whose sale/rent APIs apply; for a mixed lot the first residential candidate (user still picks the building). */
+export function residentialTypeFor(propertyType){
+  if(!propertyType) return null;
+  if(RESIDENTIAL_APIS[propertyType.type]) return propertyType.type;
+  if(propertyType.type==='mixed') return (propertyType.candidates||[]).find((type)=>RESIDENTIAL_APIS[type])||null;
+  return null;
+}
 export function marketSummary(rows){
   const exact=rows.filter(row=>row.matchLevel==='exact_lot');
   // Medians use comparable rows only: cancelled deals, share (지분) deals and collective-building units (집합) describe a
@@ -534,9 +542,16 @@ export default async function handler(request,response){
     const marketRows=[...commercial,...land].sort((a,b)=>b.dealDate.localeCompare(a.dealDate));
     const landUseZones=zones.map(normalizeZone).filter(zone=>zone.name);
     const usageEvidence=normalizeEnergy(electricityRaw,gasRaw,months);
+    const propertyType=titleResult.ok ? classifyPropertyType({titles:titles.map(normalizeTitle),landProfile}) : {type:'unconfirmed',label:PROPERTY_TYPE_LABELS.unconfirmed,confidence:'none',basis:['건축물대장 조회 실패 — 유형 미확인'],multipleBuildings:false};
+    // Issue #37 phase 2: residential sale/jeonse/monthly APIs are called only for a residential type (each needs its own approval).
+    const residentialType=residentialTypeFor(propertyType);
+    const residential=residentialType
+      ? await residentialMarket({propertyType:residentialType,resolved:address,key,months,target:{complexName:buildingTitle?.buildingName||''},xmlItems,fetcher:(url)=>fetchWithTimeout(url)}).catch((error)=>({propertyType:residentialType,error:error instanceof Error?error.message:String(error),apiStatus:{}}))
+      : null;
     return sendJson(response,200,{
       status:Object.values(providerStatus).every((item)=>item.ok) ? 'ok' : 'partial',publicDataConfigured:true,vworldConfigured:Boolean(vworldKey),address,building:buildingTitle,providerStatus,landProfile,
-      propertyType:titleResult.ok ? classifyPropertyType({titles:titles.map(normalizeTitle),landProfile}) : {type:'unconfirmed',label:PROPERTY_TYPE_LABELS.unconfirmed,confidence:'none',basis:['건축물대장 조회 실패 — 유형 미확인'],multipleBuildings:false},
+      propertyType,
+      residential,
       buildingCandidates:titles.map(normalizeTitle),floors:floors.map(normalizeFloor),landUseZones,
       market:{commercial:commercial.slice(0,40),land:land.slice(0,40),summary:marketSummary(marketRows),exactLot:marketRows.filter(row=>row.matchLevel==='exact_lot').slice(0,20)},
       usageEvidence,
@@ -547,6 +562,7 @@ export default async function handler(request,response){
         building:'국토교통부 건축HUB 건축물대장정보',
         commercial:'국토교통부 상업업무용 부동산 매매 실거래가',
         land:'국토교통부 토지 매매 실거래가',
+        residential:residentialType ? RESIDENTIAL_APIS[residentialType].map((api)=>api.label).join(' · ') : '',
         energy:'국토교통부 건축HUB 건물에너지정보',
         operatingBusinesses:'소상공인시장진흥공단 상가(상권)정보',
         kakaoPoi:'Kakao Local Category Search',
