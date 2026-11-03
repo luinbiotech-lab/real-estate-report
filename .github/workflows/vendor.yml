@@ -1,0 +1,27 @@
+name: Vendor Pretendard font
+# Throwaway branch: fetch the OFL-licensed Pretendard webfont from the npm registry and publish it to claude/vendor-font-out.
+on:
+  push:
+    branches: [claude/vendor-font-tmp]
+permissions:
+  contents: write
+jobs:
+  vendor:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          mkdir -p /tmp/w /tmp/out && cd /tmp/w
+          npm pack pretendard@1.3.9
+          tar -xzf pretendard-1.3.9.tgz
+          ls package package/dist/web || true
+          find package -name "*.woff2" | grep -i variable | head -20
+          cp "$(find package -name 'PretendardVariable.woff2' | head -1)" /tmp/out/
+          cp package/LICENSE* /tmp/out/ 2>/dev/null || find package -iname "license*" -exec cp {} /tmp/out/ \;
+          ls -la /tmp/out
+          cd /tmp/out
+          printf '{\n  "git": { "deploymentEnabled": false }\n}\n' > vercel.json
+          git init -q -b claude/vendor-font-out
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "Pretendard 1.3.9 variable woff2 + license"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" claude/vendor-font-out
