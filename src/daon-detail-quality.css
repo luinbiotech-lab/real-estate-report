@@ -1,0 +1,139 @@
+/* DAON_DETAIL_7P_MASTER — reference-quality pass (owner 2026-11-03).
+   The owner supplied the reference 7P PDF and said the report must reach at least that quality. Page order, items and
+   data rules are unchanged; this layer only restores the reference look: full-width navy title band with large English
+   title, navy tab section labels, larger and bolder type, gold number badges, line icons, navy photo captions, the
+   page-4 price bars and a light source footer. Loaded after daon-master-refinement.css so it wins. */
+.daon-detail-master{--dq-navy:#062f55;--dq-navy-2:#0b4a80;--dq-gold:#c6943b;--dq-gold-deep:#a86f20;--dq-ink:#0f2c50;--dq-body:#34465b;--dq-muted:#6b7886;--dq-line:#dfe4ea;--dq-cream:#fbf7ef;--dq-cream-line:#e2cfa6}
+
+/* Page frame */
+.daon-detail-master .daon-detail-page{grid-template-rows:31mm minmax(0,1fr) 11mm;background:#fff}
+
+/* Title band */
+.daon-detail-master .dd-head{height:31mm;padding:5.6mm 8mm 4.6mm;background:linear-gradient(120deg,var(--dq-navy) 0%,#083d6b 55%,var(--dq-navy-2) 100%);color:#fff;border-bottom:1.1mm solid var(--dq-gold);align-items:center}
+.daon-detail-master .dd-head:before,.daon-detail-master .dd-head:after{content:none;display:none}
+.daon-detail-master .dd-head-copy{min-width:0;max-width:136mm}
+.daon-detail-master .dd-head small{display:block;color:#e2bd73;font-size:7.6px;font-weight:700;letter-spacing:1.6px;margin:0 0 1.2mm}
+.daon-detail-master .dd-head h1{margin:0;color:#fff;font-size:27px;font-weight:800;line-height:1.05;letter-spacing:-.4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daon-detail-master .dd-head h1[lang=en]{font-size:25px;letter-spacing:.2px}
+.daon-detail-master .dd-head p{margin:1.8mm 0 0;color:#e8eef5;font-size:10.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daon-detail-master .dd-brand{display:grid;grid-template-columns:auto auto;grid-template-rows:auto auto;column-gap:2.2mm;align-items:center;justify-items:start;min-width:44mm}
+.daon-detail-master .dd-mark{grid-row:1;width:9mm;height:9mm;display:grid;place-items:center;border:.45mm solid #e2bd73;color:#e2bd73;font-family:Georgia,'Times New Roman',serif;font-size:17px;line-height:1}
+.daon-detail-master .dd-brand-word{display:grid;line-height:1}
+.daon-detail-master .dd-brand strong{font-family:Georgia,'Times New Roman',serif;font-size:19px;color:#e9c77f;letter-spacing:.3px}
+.daon-detail-master .dd-brand-word span{font-size:6.4px;letter-spacing:3.4px;color:#e9c77f;margin-top:.9mm}
+.daon-detail-master .dd-brand em{grid-column:1/-1;justify-self:end;font-style:normal;font-size:6.6px;letter-spacing:.9px;color:#fff;margin-top:2mm}
+
+/* Body + footer */
+.daon-detail-master .dd-body{padding:5.2mm 8mm 3.6mm;background:#fff}
+.daon-detail-master .dd-foot{background:#fff;color:#6b7886;border-top:.3mm solid #cfd6de;margin:0 8mm;padding:0;font-size:7px}
+.daon-detail-master .dd-foot span:last-child{color:#6b7886}
+
+/* Section label: navy tab + hairline */
+.daon-detail-master .dd-section-bar{height:8mm;background:none;color:var(--dq-ink);padding:0;margin:0 0 2.6mm;border:0;border-radius:0;box-shadow:none;display:flex;align-items:center;gap:3mm}
+.daon-detail-master .dd-section-bar:after{content:'';order:1;flex:1;height:.3mm;background:#cfd6de}
+.daon-detail-master .dd-section-bar b{order:0;flex:0 0 auto;min-width:46mm;height:7.4mm;box-sizing:border-box;display:flex;align-items:center;padding:0 3.6mm;background:var(--dq-navy);color:#fff;border-radius:1.6mm 1.6mm 0 0;font-size:12px;font-weight:800;letter-spacing:-.2px}
+.daon-detail-master .dd-section-bar span{order:2;flex:0 0 auto;font-size:6.8px;letter-spacing:1.3px;color:var(--dq-muted)}
+
+/* Type scale for content */
+.daon-detail-master .dd-number-card b,.daon-detail-master .dd-gold-card b{font-size:13.2px;font-weight:800;color:var(--dq-ink);line-height:1.25}
+.daon-detail-master .dd-number-card p,.daon-detail-master .dd-gold-card p{font-size:10px;line-height:1.55;color:var(--dq-body);margin-top:1.6mm}
+.daon-detail-master .dd-gold-card p{-webkit-line-clamp:5}
+.daon-detail-master .dd-insight b,.daon-detail-master .dd-acquisition b{font-size:14.5px;font-weight:800;color:var(--dq-ink);line-height:1.3}
+.daon-detail-master .dd-insight p,.daon-detail-master .dd-acquisition p{font-size:10.2px;line-height:1.55;color:var(--dq-body)}
+
+/* Gold number badge */
+.daon-detail-master .dd-number-card>span,.daon-detail-master .dd-key-list>div>span,.daon-detail-master .dd-checklist li::before{background:linear-gradient(#d3a24c,#ad7424);color:#fff;font-weight:800}
+.daon-detail-master .dd-number-card{position:relative;grid-template-columns:12mm 1fr;align-items:start;border:.3mm solid var(--dq-line);border-radius:1.6mm;background:#fff;box-shadow:0 .5mm 1.6mm #10243c10;padding:4.6mm 4.6mm}
+.daon-detail-master .dd-number-card>span{width:10mm;height:10mm;font-size:11px}
+.daon-detail-master .dd-number-card>div{justify-content:flex-start}
+.daon-detail-master .dd-number-icon{position:absolute;right:4mm;bottom:3.6mm;width:11mm;height:11mm;stroke:var(--dq-ink);opacity:.85}
+
+/* Icons */
+.daon-detail-master .dd-icon{width:5.2mm;height:5.2mm;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:0 0 auto}
+.daon-detail-master .dd-icon-badge{width:10mm;height:10mm;border-radius:50%;display:grid;place-items:center;background:#f6ecd9;color:var(--dq-ink)}
+.daon-detail-master .dd-icon-badge.large{width:13mm;height:13mm}
+.daon-detail-master .dd-icon-badge.large .dd-icon{width:7mm;height:7mm}
+.daon-detail-master .dd-icon-badge.solid{background:linear-gradient(#d3a24c,#ad7424);color:#fff}
+
+/* Gold card: gold top rule, icon badge */
+.daon-detail-master .dd-gold-card{border:.3mm solid var(--dq-line);border-top:1.1mm solid var(--dq-gold);border-left:.3mm solid var(--dq-line);border-radius:0 0 1.6mm 1.6mm;background:#fff;box-shadow:0 .5mm 1.6mm #10243c0d;align-items:start;padding:4.4mm 4.2mm}
+.daon-detail-master .dd-gold-card.with-icon{grid-template-columns:12mm 1fr;gap:3mm}
+.daon-detail-master .dd-gold-card>div{justify-content:flex-start}
+.daon-detail-master .dd-gold-card b{white-space:normal}
+
+/* Insight box: icon + strong line */
+.daon-detail-master .dd-insight,.daon-detail-master .dd-acquisition{border:.35mm solid var(--dq-cream-line);border-bottom:1.6mm solid var(--dq-gold);border-left:.35mm solid var(--dq-cream-line);border-radius:1.6mm;background:var(--dq-cream);box-shadow:none;padding:4.4mm 5mm}
+.daon-detail-master .dd-insight.with-icon,.daon-detail-master .dd-acquisition.with-icon{display:grid;grid-template-columns:15mm 1fr;gap:3.5mm;align-items:center}
+.daon-detail-master .dd-insight small{display:block;font-size:6.8px;letter-spacing:1.4px;color:var(--dq-gold-deep);font-weight:700;margin-bottom:1mm}
+.daon-detail-master .dd-insight p{-webkit-line-clamp:3}
+
+/* Key rows with icon */
+.daon-detail-master .dd-key-list{border-top:0;background:none}
+.daon-detail-master .dd-key-list>div{grid-template-columns:10mm 34mm 1fr;min-height:11.5mm;background:none;border-bottom:.3mm solid var(--dq-line)}
+.daon-detail-master .dd-key-list.three>div{grid-template-columns:10mm 36mm 1fr}
+.daon-detail-master .dd-key-list>div>span{width:7.4mm;height:7.4mm;font-size:9px}
+.daon-detail-master .dd-key-list b{display:flex;align-items:center;gap:2.2mm;font-size:11.5px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-key-list b .dd-icon{width:5.4mm;height:5.4mm;color:var(--dq-ink)}
+.daon-detail-master .dd-key-list p{font-size:10.2px;color:var(--dq-body)}
+
+/* Fact table */
+.daon-detail-master .dd-info-table{border-top:.3mm solid var(--dq-line)}
+.daon-detail-master .dd-info-row{grid-template-columns:27mm 1fr;min-height:9.6mm}
+.daon-detail-master .dd-info-row b{background:none;font-size:10.4px;font-weight:800;color:var(--dq-ink);padding-left:3mm}
+.daon-detail-master .dd-info-row span{font-size:10.4px;color:var(--dq-body)}
+
+/* Photos: navy caption band */
+.daon-detail-master .dd-image{border:0;border-radius:.6mm}
+.daon-detail-master .dd-image figcaption{background:rgba(6,47,85,.94);color:#fff;font-size:8.6px;font-weight:700;border-top:0;min-height:7.4mm}
+.daon-detail-master .dd-photo-three>.dd-image{border-bottom:.9mm solid var(--dq-gold)}
+.daon-detail-master .dd-scenarios h3{background:var(--dq-navy);font-size:8.6px;padding:2.2mm 3mm}
+.daon-detail-master .dd-scenarios article>p{font-size:9.6px;line-height:1.55;color:var(--dq-body);-webkit-line-clamp:5}
+.daon-detail-master .dd-scenarios .dd-image figcaption{display:none}
+
+/* Price cards */
+.daon-detail-master .dd-price-card{border:.35mm solid var(--dq-cream-line);border-left:.35mm solid var(--dq-cream-line);border-radius:1.6mm;background:var(--dq-cream);padding:5mm}
+.daon-detail-master .dd-price-card small{font-size:10.5px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-price-card strong{font-size:30px;font-weight:800;color:var(--dq-gold-deep);letter-spacing:-.6px}
+.daon-detail-master .dd-price-card span{font-size:9.4px;color:var(--dq-muted);border-top:.3mm solid var(--dq-cream-line);padding-top:2mm}
+.daon-detail-master .dd-price-position>div{border-radius:1.6mm}
+.daon-detail-master .dd-price-position>div:first-child{background:var(--dq-cream);border-color:var(--dq-cream-line)}
+.daon-detail-master .dd-price-position small{font-size:10.5px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-price-position strong{font-size:27px;font-weight:800;letter-spacing:-.5px}
+.daon-detail-master .dd-price-position b{font-size:13px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-price-position p{font-size:10px;line-height:1.55;color:var(--dq-body)}
+.daon-detail-master .dd-metrics>div{border-radius:1.6mm;border:.3mm solid var(--dq-line);background:#fff}
+.daon-detail-master .dd-metrics small{font-size:10px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-metrics strong{font-size:20px;font-weight:800;color:var(--dq-ink)}
+
+/* Page 4 unit-price bars */
+.daon-detail-master .dd-comparables.has-bars{border:0;padding:1mm 0 0;background:none;white-space:normal}
+.daon-detail-master .dd-bars{height:100%;display:grid;grid-auto-rows:minmax(0,1fr);gap:1.2mm}
+.daon-detail-master .dd-bar-row{display:grid;grid-template-columns:52mm 1fr 20mm;align-items:center;gap:3mm}
+.daon-detail-master .dd-bar-row b{display:block;font-size:10.4px;font-weight:700;color:var(--dq-ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daon-detail-master .dd-bar-row b small{display:block;font-size:7.6px;font-weight:500;color:var(--dq-muted);margin-top:.4mm}
+.daon-detail-master .dd-bar-track{height:4.2mm;background:#e8ecf0;border-radius:2.1mm;overflow:hidden}
+.daon-detail-master .dd-bar-track i{display:block;height:100%;background:#7f97ae;border-radius:2.1mm}
+.daon-detail-master .dd-bar-row strong{text-align:right;font-size:10.6px;font-weight:700;color:var(--dq-ink)}
+.daon-detail-master .dd-bar-row.own b,.daon-detail-master .dd-bar-row.own strong{color:var(--dq-gold-deep);font-weight:800}
+.daon-detail-master .dd-bar-track i{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.daon-detail-master .dd-bar-row.own .dd-bar-track i{background:linear-gradient(90deg,#c6943b,#a86f20)}
+.daon-detail-master .dd-analysis-box{border:.35mm solid var(--dq-cream-line);border-radius:1.6mm;background:var(--dq-cream)}
+.daon-detail-master .dd-analysis-box b{font-size:12px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-analysis-box p{font-size:10px;line-height:1.55;color:var(--dq-body)}
+
+/* Checklist */
+.daon-detail-master .dd-checklist{background:none}
+.daon-detail-master .dd-checklist li{grid-template-columns:11mm 1fr;min-height:10.6mm;font-size:11.4px;font-weight:500;color:var(--dq-ink);border-bottom:.3mm solid var(--dq-line)}
+.daon-detail-master .dd-checklist li::before{width:7.6mm;height:7.6mm;font-size:9.5px}
+
+/* Page 7 contact band */
+.daon-detail-master .dd-contact-band{margin-top:3.6mm;background:var(--dq-navy);color:#fff;border-radius:1.6mm;display:grid;grid-template-columns:36mm 1fr 52mm;align-items:center;gap:4mm;padding:3.6mm 5mm;min-height:17mm;box-sizing:border-box}
+.daon-detail-master .dd-contact-brand{display:grid;line-height:1;border-right:.3mm solid #ffffff40;padding-right:4mm}
+.daon-detail-master .dd-contact-brand strong{font-family:Georgia,'Times New Roman',serif;font-size:20px;color:#e9c77f}
+.daon-detail-master .dd-contact-brand span{font-size:6.4px;letter-spacing:3.4px;color:#e9c77f;margin-top:1mm}
+.daon-detail-master .dd-contact-band b{font-size:11px;font-weight:800}
+.daon-detail-master .dd-contact-band p{margin:1.2mm 0 0;font-size:9px;color:#e8eef5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.daon-detail-master .dd-contact-cta{border-left:.3mm solid #ffffff40;padding-left:4mm}
+.daon-detail-master .dd-contact-cta b{color:#e9c77f}
+
+@media print{.daon-detail-master .dd-number-card,.daon-detail-master .dd-gold-card{box-shadow:none}}
