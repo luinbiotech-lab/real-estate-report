@@ -241,3 +241,10 @@
 .daon-detail-master .dd-metrics strong{font-size:27px}
 .daon-detail-master .dd-price-position b{font-size:17px}
 .daon-detail-master .dd-price-position p{font-size:13.4px}
+/* Page 3 fit after the type scale-up: shorter map row and photo strip, map shown whole. */
+.daon-detail-master .daon-detail-page-3 .dd-location-grid{height:100mm}
+.daon-detail-master .daon-detail-page-3 .dd-photo-three{height:44mm}
+.daon-detail-master .daon-detail-page-3 .dd-gold-card p{-webkit-line-clamp:4}
+.daon-detail-master .daon-detail-page-3 .dd-gold-card{padding:3.6mm 3.8mm}
+.daon-detail-master .dd-image.map img{object-fit:contain;background:#f3f5f8}
+.daon-detail-master .daon-detail-page-3 .dd-key-list>div{min-height:10.5mm}
