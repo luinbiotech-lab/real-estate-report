@@ -14,6 +14,8 @@ import { DaonOnePageMaster } from '../components/professionalReport/DaonOnePageM
 import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/professionalReport/ReportBlankFieldsGate';
 import { blankFieldsSignature, needsBlankFieldConfirmation, onePageBlankFields } from '../domain/professionalReport/reportBlankFields';
 import '../daon-one-page-master.css';
+import '../assets/fonts/noto-sans-kr/index.css';
+import '../assets/fonts/montserrat/index.css';
 import '../daon-master-refinement.css';
 import '../daon-one-page-quality.css';
 

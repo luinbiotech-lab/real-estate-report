@@ -1,8 +1,7 @@
 /* DAON_1P_MASTER — reference-quality pass (owner 2026-11-04, after the 7P pass). Compared with the owner's reference 1P
    image rendered with the same photo and copy: heavier title, white price band with large brown figures (the
    reference), larger status strip, gold check badges and larger copy. Layout grid and items are unchanged. */
-@font-face{font-family:'DAON Pretendard';src:url('./assets/fonts/pretendard/PretendardVariable.woff2') format('woff2-variations'),url('./assets/fonts/pretendard/PretendardVariable.woff2') format('woff2');font-weight:45 920;font-style:normal;font-display:block}
-.daon-one-page-master,.daon-one-page-master *{font-family:'DAON Pretendard',Pretendard,'Noto Sans KR','Malgun Gothic',sans-serif}
+.daon-one-page-master,.daon-one-page-master *{font-family:'Noto Sans KR Variable','Noto Sans KR',Pretendard,'Malgun Gothic',sans-serif}
 .daon-one-page-master .d1-logo strong,.daon-one-page-master .d1-tagline{font-family:Georgia,'Times New Roman',serif}
 
 /* Title */
