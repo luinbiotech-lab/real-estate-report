@@ -79,7 +79,7 @@ for (const marker of ['detailBlankFields(model)', "onClick={() => requestPublish
 }
 if (/onClick=\{markReady\}|onClick=\{\(\) => print\(\)\}/.test(snapshotPage)) fail('7P 확정/인쇄 버튼이 공란 확인을 우회합니다.');
 const gate = readFileSync('src/components/professionalReport/ReportBlankFieldsGate.tsx', 'utf8');
-for (const marker of ['값 입력하러 가기', '숨김 처리하고 {actionLabel}', 'REPORT_BLANK_HIDE_NOTICE']) if (!gate.includes(marker)) fail(`공란 확인 대화상자 누락: ${marker}`);
+for (const marker of ['값 입력하러 가기', "'숨김 처리하고 ' : '그대로 '}{actionLabel}", 'REPORT_BLANK_HIDE_NOTICE']) if (!gate.includes(marker)) fail(`공란 확인 대화상자 누락: ${marker}`);
 
 // 6. Negative control: a gate that never asks must be detected.
 const source = readFileSync('src/domain/professionalReport/reportBlankFields.ts', 'utf8');
@@ -112,5 +112,15 @@ for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', '
 }
 const detailSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
 for (const marker of ['detailPagePlan(model', 'shows(3) &&', 'shows(6) &&', 'number={pageNumber(7)}']) if (!detailSource.includes(marker)) fail(`7P 페이지 생략 연결 누락: ${marker}`);
+
+// 1P short labels / length warning (owner decision 2026-11-04, Luin review on PR #46): originals are never shortened.
+const longText = '현재 소유자 직접 사용 중이며 잔금일 기준 전체 명도 협의가 가능합니다';
+const longWarn = blank.onePageLengthWarnings({ ...full, occupancyStatus: longText, shortOccupancyLabel: '' });
+if (!longWarn.some((f) => f.key === 'shortOccupancyLabel' && f.tooLong)) fail('긴 명도 문구는 발행 전 길이 경고를 내야 합니다.');
+if (blank.onePageLengthWarnings({ ...full, occupancyStatus: longText, shortOccupancyLabel: '전체 명도 협의 가능' }).some((f) => f.key === 'shortOccupancyLabel')) fail('짧은 표시 문구가 있으면 길이 경고가 없어야 합니다.');
+if (blank.onePageLengthWarnings({ ...full, occupancyStatus: '전체 명도 불가' }).length && blank.onePageLengthWarnings({ ...full, occupancyStatus: '전체 명도 불가' }).some((f) => f.key === 'shortOccupancyLabel')) fail('짧은 원문에는 길이 경고가 없어야 합니다.');
+const onePageSource = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
+for (const marker of ['p.shortOccupancyLabel', 'p.shortRoadLabel', 'p.shortUseLabel', 'p.shortDevelopmentLabel']) if (!onePageSource.includes(marker)) fail(`1P 짧은 표시 문구 연결 누락: ${marker}`);
+if (!readFileSync('src/pages/DocumentPreview.tsx', 'utf8').includes('onePageLengthWarnings(property)')) fail('1P 발행 전 길이 경고 연결 누락');
 
 console.log(`Report blank-field policy validation passed (1P blank fields for empty property: ${fields.length}, 7P: ${detailAll.length}).`);

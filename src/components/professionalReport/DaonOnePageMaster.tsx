@@ -74,14 +74,15 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const parkingNote = hasNumber(p.parkingField) ? `* ${p.parkingFieldNote || '현장 이용 기준'}` : '';
   const heroHeadline = first(p.investmentPoints, first(p.features, '입지와 활용가치를 함께 검토하는 자산'));
   const locationCaption = [p.nearbyStation || '', p.roadCondition || ''].filter(Boolean).join(' · ');
-  const occupancySummary = first(p.occupancyStatus, '');
-  const roadSummary = first(p.roadCondition, '');
+  // Broker-checked short labels win; otherwise the stored first line is printed as written (owner decision 2026-11-04).
+  const occupancySummary = (p.shortOccupancyLabel || '').trim() || first(p.occupancyStatus, '');
+  const roadSummary = (p.shortRoadLabel || '').trim() || first(p.roadCondition, '');
   const roadAddress = p.address ? p.address.split(' ').slice(-2).join(' ') : '';
   const highlightItems = [
     { text: roadSummary, icon: <LocationOnOutlined /> },
     { text: occupancySummary, icon: <GroupsOutlined /> },
-    { text: first(p.recommendedUse, ''), icon: <ApartmentOutlined /> },
-    { text: first(p.developmentPlan, ''), icon: <DescriptionOutlined /> },
+    { text: (p.shortUseLabel || '').trim() || first(p.recommendedUse, ''), icon: <ApartmentOutlined /> },
+    { text: (p.shortDevelopmentLabel || '').trim() || first(p.developmentPlan, ''), icon: <DescriptionOutlined /> },
   ];
 
   // Mixed blank policy (owner decision 2026-10-31): present items move forward and each row is re-divided among them,
