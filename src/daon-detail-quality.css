@@ -3,7 +3,7 @@
    data rules are unchanged; this layer only restores the reference look: full-width navy title band with large English
    title, navy tab section labels, larger and bolder type, gold number badges, line icons, navy photo captions, the
    page-4 price bars and a light source footer. Loaded after daon-master-refinement.css so it wins. */
-/* Self-hosted Noto Sans KR + Montserrat (SIL OFL 1.1, assets/fonts/*/LICENSE), the faces of the owner's reference report,
+/* Self-hosted Noto Sans KR + Montserrat (SIL OFL 1.1, assets/fonts/<font>/LICENSE), the faces of the owner's reference report,
    so weights and sizes render the same on every PC and in print (owner 2026-11-04: "font and size matter"). */
 .daon-detail-master,.daon-detail-master *{font-family:'Noto Sans KR Variable','Noto Sans KR',Pretendard,'Malgun Gothic',sans-serif}
 .daon-detail-master .dd-brand strong,.daon-detail-master .dd-mark,.daon-detail-master .dd-contact-brand strong{font-family:Georgia,'Times New Roman',serif}
