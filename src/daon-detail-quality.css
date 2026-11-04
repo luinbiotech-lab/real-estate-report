@@ -278,13 +278,10 @@
 
 /* Body: a column whose spare height is shared out before each section instead of collecting under the last block. */
 .daon-detail-master .dd-body{display:flex;flex-direction:column;padding:5.5mm 9mm 2mm;overflow:hidden}
-.daon-detail-master .dd-body>*{flex:0 0 auto;margin-top:0;margin-bottom:0}
-.daon-detail-master .dd-body>*+*{margin-top:4.2mm}
-.daon-detail-master .dd-body>.dd-section-bar+*{margin-top:0}
-.daon-detail-master .dd-body>.dd-section-bar:not(:first-child),.daon-detail-master .dd-body>.dd-insight,.daon-detail-master .dd-body>.dd-acquisition{margin-top:auto;padding-top:0}
-.daon-detail-master .dd-body>.dd-section-bar:not(:first-child){border-top:4.2mm solid transparent;background-clip:padding-box;height:calc(7.4mm + 4.2mm)}
-.daon-detail-master .dd-body>.dd-insight,.daon-detail-master .dd-body>.dd-acquisition{border-top-width:.35mm;margin-top:auto}
-.daon-detail-master .dd-body>.dd-insight::before{content:none}
+.daon-detail-master .dd-body>*{flex:0 0 auto;margin:0 0 4.6mm}
+.daon-detail-master .dd-body>:last-child{margin-bottom:0}
+.daon-detail-master .dd-body>.dd-section-bar{margin-bottom:3mm}
+.daon-detail-master .dd-body>.dd-section-bar:not(:first-child),.daon-detail-master .dd-body>.dd-insight,.daon-detail-master .dd-body>.dd-acquisition{margin-top:auto}
 
 /* Section tab: rounded navy tab, Noto Sans KR bold, hairline continues to the right */
 .daon-detail-master .dd-section-bar{height:7.4mm;margin-bottom:3mm}
