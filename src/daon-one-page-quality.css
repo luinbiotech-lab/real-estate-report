@@ -43,3 +43,19 @@
 /* Long point sentences wrap to two lines instead of being cut, using the panel's spare height. */
 .daon-one-page-master .d1-points li{align-items:start;padding-top:.6mm}
 .daon-one-page-master .d1-points li b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.35}
+
+/* Owner review 2026-11-04 against the reference 1P: one-line title, figure + small unit, compact hero copy, readable
+   facts, short chips instead of cut sentences. */
+.daon-one-page-master .d1-header{grid-template-columns:1fr 34mm 30mm;gap:3mm;padding:4mm 7mm 3mm}
+.daon-one-page-master .d1-head-copy h1{font-size:27px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;letter-spacing:-1.1px}
+.daon-one-page-master .d1-logo strong{font-size:18px}
+.daon-one-page-master .d1-logo-mark.d1-logo-svg{width:10mm;height:11.5mm}
+.daon-one-page-master .d1-price-band strong{font-size:34px;letter-spacing:-1.2px}
+.daon-one-page-master .d1-price-band .d1-price-unit{font-size:19px;font-weight:800;margin-left:.6mm;letter-spacing:-.4px}
+.daon-one-page-master .d1-hero-copy{width:40%;height:auto;max-height:46%;padding:4.4mm 4.8mm}
+.daon-one-page-master .d1-hero-copy h2{font-size:15.5px;line-height:1.38;-webkit-line-clamp:3}
+.daon-one-page-master .d1-points li b{font-size:12.2px;font-weight:600}
+.daon-one-page-master .d1-fact b,.daon-one-page-master .d1-fact b .d1-fact-label{font-size:10.4px}
+.daon-one-page-master .d1-fact>span.d1-fact-value{font-size:10.4px}
+.daon-one-page-master .d1-highlight-strip div{font-size:12.4px}
+.daon-one-page-master .d1-status-strip b{font-size:12.6px}
