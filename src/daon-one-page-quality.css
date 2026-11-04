@@ -1,0 +1,43 @@
+/* DAON_1P_MASTER — reference-quality pass (owner 2026-11-04, after the 7P pass). Compared with the owner's reference 1P
+   image rendered with the same photo and copy: heavier title, white price band with large brown figures (the
+   reference), larger status strip, gold check badges and larger copy. Layout grid and items are unchanged. */
+@font-face{font-family:'DAON Pretendard';src:url('./assets/fonts/pretendard/PretendardVariable.woff2') format('woff2-variations'),url('./assets/fonts/pretendard/PretendardVariable.woff2') format('woff2');font-weight:45 920;font-style:normal;font-display:block}
+.daon-one-page-master,.daon-one-page-master *{font-family:'DAON Pretendard',Pretendard,'Noto Sans KR','Malgun Gothic',sans-serif}
+.daon-one-page-master .d1-logo strong,.daon-one-page-master .d1-tagline{font-family:Georgia,'Times New Roman',serif}
+
+/* Title */
+.daon-one-page-master .d1-head-copy h1{font-size:29px;font-weight:900;letter-spacing:-.9px;line-height:1.08}
+.daon-one-page-master .d1-head-copy p{font-size:12.4px;font-weight:500}
+.daon-one-page-master .d1-head-copy small{font-size:9px}
+
+/* Price band: white with large brown figures, gold rules */
+.daon-one-page-master .d1-price-band{background:#fff;border-bottom:.5mm solid #c9a15a}
+.daon-one-page-master .d1-price-band>div{border-right:.35mm solid #d9bd85;padding:1.8mm 6mm 1.4mm}
+.daon-one-page-master .d1-price-band small{font-size:11.5px;font-weight:800;color:#2a3442}
+.daon-one-page-master .d1-price-band strong{font-size:33px;font-weight:900;color:#8f5d1d;letter-spacing:-1px;line-height:1.02}
+
+/* Status strip */
+.daon-one-page-master .d1-status-strip>div{font-size:13px;gap:2mm}
+.daon-one-page-master .d1-status-strip b{font-size:13px;font-weight:800;color:#0a2f5a}
+.daon-one-page-master .d1-status-icon{width:8mm;height:8mm;border:0;background:none;color:#0a3470;padding:0}
+.daon-one-page-master .d1-status-strip small{font-size:7px}
+
+/* Key points: gold check badges, larger copy */
+.daon-one-page-master .d1-section-title b{font-size:16px;font-weight:800}
+.daon-one-page-master .d1-points li{grid-template-columns:8mm 1fr;min-height:8.4mm}
+.daon-one-page-master .d1-points li span{width:6.8mm;height:6.8mm;background:linear-gradient(#d3a24c,#a96d1f);color:#fff;font-size:9px}
+.daon-one-page-master .d1-points li b{font-size:12.6px;font-weight:600;color:#0a2f5a}
+
+/* Facts */
+.daon-one-page-master .d1-fact b,.daon-one-page-master .d1-fact b .d1-fact-label{font-size:11px;font-weight:800;color:#0a2f5a}
+.daon-one-page-master .d1-fact>span.d1-fact-value{font-size:11px;font-weight:500;color:#1f3550}
+
+/* Mini cards, highlight strip, use row */
+.daon-one-page-master .d1-mini-grid article>b{font-size:9.6px}
+.daon-one-page-master .d1-mini-grid p{font-size:9.6px}
+.daon-one-page-master .d1-mini-grid small{font-size:7.8px}
+.daon-one-page-master .d1-highlight-strip div{font-size:12.6px;gap:2mm}
+.daon-one-page-master .d1-highlight-strip b{font-weight:800;color:#0a2f5a}
+.daon-one-page-master .d1-highlight-icon svg{width:6.4mm;height:6.4mm}
+.daon-one-page-master .d1-use strong{font-size:14px;font-weight:800}
+.daon-one-page-master .d1-use p{font-size:11.6px;font-weight:600;line-height:1.4}

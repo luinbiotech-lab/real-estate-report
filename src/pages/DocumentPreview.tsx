@@ -15,6 +15,7 @@ import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/
 import { blankFieldsSignature, needsBlankFieldConfirmation, onePageBlankFields } from '../domain/professionalReport/reportBlankFields';
 import '../daon-one-page-master.css';
 import '../daon-master-refinement.css';
+import '../daon-one-page-quality.css';
 
 type PreviewState =
   | { routeKey: string; phase: 'loading' }
