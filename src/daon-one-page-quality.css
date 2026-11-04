@@ -41,3 +41,6 @@
 .daon-one-page-master .d1-highlight-icon svg{width:6.4mm;height:6.4mm}
 .daon-one-page-master .d1-use strong{font-size:14px;font-weight:800}
 .daon-one-page-master .d1-use p{font-size:11.6px;font-weight:600;line-height:1.4}
+/* Long point sentences wrap to two lines instead of being cut, using the panel's spare height. */
+.daon-one-page-master .d1-points li{align-items:start;padding-top:.6mm}
+.daon-one-page-master .d1-points li b{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.35}
