@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { DaonMark } from '../brand/DaonMark';
 import {
   ApartmentOutlined,
   AssignmentTurnedInOutlined,
@@ -31,7 +32,7 @@ const floorText = (p: Property) => {
 
 function DaonLogo() {
   return <div className="d1-logo" aria-label="DA:ON ASSET">
-    <div className="d1-logo-mark">D</div>
+    <DaonMark className="d1-logo-mark d1-logo-svg" />
     <div><strong>DA:ON</strong><span>ASSET</span></div>
   </div>;
 }

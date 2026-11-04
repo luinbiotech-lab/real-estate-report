@@ -257,3 +257,7 @@
 .daon-detail-master .dd-number-icon{width:9mm;height:9mm;bottom:3mm}
 .daon-detail-master .daon-detail-page-4 .dd-head h1[lang=en]{font-size:25px}
 .daon-detail-master .daon-detail-page-3 .dd-gold-card p{-webkit-line-clamp:3}
+/* DA:ON monogram (2026-11-04) in the title band and the page-7 contact band. */
+.daon-detail-master .dd-mark{grid-row:1;width:10.5mm;height:12mm;border:0;display:block}
+.daon-detail-master .dd-contact-brand{grid-template-columns:9mm auto;column-gap:2.4mm;align-items:center}
+.daon-detail-master .dd-contact-mark{grid-row:1/3;width:9mm;height:10.5mm;display:block}

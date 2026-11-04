@@ -130,3 +130,5 @@
 /* Fix 2026-11-02 (B): when the highlight strip has no items it is not rendered (#42); drop its grid row so the use row and
    footer keep their own rows instead of the footer being squeezed and clipped. */
 .daon-one-page-master .d1-sheet.d1-sheet-no-highlight{grid-template-rows:31mm 19mm 12mm minmax(0,1fr) 31mm 14mm 23mm}
+/* DA:ON monogram (2026-11-04): the boxed "D" is replaced by the vector DaonMark; no frame, keep the same footprint. */
+.daon-one-page-master .d1-logo-mark.d1-logo-svg{border:0;width:12mm;height:13.5mm;display:block}
