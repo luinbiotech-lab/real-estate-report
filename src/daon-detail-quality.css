@@ -314,3 +314,6 @@
 .daon-detail-master .dd-scenarios{height:auto}
 .daon-detail-master .dd-scenarios .dd-image{height:62mm}
 .daon-detail-master .dd-scenarios article>p{min-height:22mm}
+.daon-detail-master .daon-detail-page-4 .dd-head h1[lang=en],.daon-detail-master .daon-detail-page-6 .dd-head h1[lang=en]{font-size:24.5px;letter-spacing:0}
+.daon-detail-master .dd-roadmap{height:52mm}
+.daon-detail-master .dd-roadmap .dd-number-card p{padding-right:10mm}
