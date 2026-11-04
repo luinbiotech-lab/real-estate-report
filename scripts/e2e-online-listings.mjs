@@ -225,7 +225,41 @@ try {
       });
       await page.emulateMedia({ media: null });
       assert(!clip.facts.length, `1P 사실표 인쇄 잘림: ${clip.facts.join(' | ')}`);
-      if (!clip.chips.length) return '사실표·칩 잘림 0';
+      // Exercise the warning path with a long stored sentence (QA browser IndexedDB only), then restore the record.
+      const longText = '현재 소유자 직접 사용 중이며 잔금일 기준 전체 명도 협의가 가능하고 인도 범위는 계약서에 명시합니다';
+      const original = await page.evaluate(async ({ id, text }) => {
+        const db = await new Promise((res, rej) => { const r = indexedDB.open('real-estate-report'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+        try {
+          const rec = await new Promise((res, rej) => { const g = db.transaction('properties').objectStore('properties').get(id); g.onsuccess = () => res(g.result); g.onerror = () => rej(g.error); });
+          if (!rec) return null;
+          await new Promise((res, rej) => { const tx = db.transaction('properties', 'readwrite'); tx.objectStore('properties').put({ ...rec, occupancyStatus: text, shortOccupancyLabel: '' }); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+          return { occupancyStatus: rec.occupancyStatus ?? '', shortOccupancyLabel: rec.shortOccupancyLabel ?? '' };
+        } finally { db.close(); }
+      }, { id: propertyId, text: longText });
+      let longChecked = 'QA 저장소 접근 불가 — 길이 경고 경로 미검증';
+      if (original) {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+        const statusText = await page.locator('.d1-status-strip').innerText();
+        assert(statusText.replace(/\s+/g, ' ').includes('현재 소유자 직접 사용 중이며'), '긴 원문이 1P에 원문 그대로 시작하지 않습니다.');
+        await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+        const longDialog = page.getByRole('dialog');
+        await longDialog.waitFor({ state: 'visible', timeout: 10_000 });
+        assert(await longDialog.getByTestId('report-long-fields').count() > 0, '긴 명도 원문인데 발행 전 길이 경고가 없습니다.');
+        await longDialog.getByRole('button', { name: '취소' }).click();
+        await longDialog.waitFor({ state: 'hidden', timeout: 10_000 });
+        await page.evaluate(async ({ id, original }) => {
+          const db = await new Promise((res, rej) => { const r = indexedDB.open('real-estate-report'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+          try {
+            const rec = await new Promise((res, rej) => { const g = db.transaction('properties').objectStore('properties').get(id); g.onsuccess = () => res(g.result); g.onerror = () => rej(g.error); });
+            await new Promise((res, rej) => { const tx = db.transaction('properties', 'readwrite'); tx.objectStore('properties').put({ ...rec, ...original }); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+          } finally { db.close(); }
+        }, { id: propertyId, original });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+        longChecked = '긴 원문 → 원문 인쇄 + 발행 전 길이 경고 클릭 확인 · 복원';
+      }
+      if (!clip.chips.length) return `사실표·칩 잘림 0 · ${longChecked}`;
       const longNotice = page.getByTestId('report-long-fields-notice').or(page.getByTestId('report-blank-fields-notice'));
       await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
       const dialog = page.getByRole('dialog');
