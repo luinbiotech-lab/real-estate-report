@@ -51,7 +51,7 @@ function Fact({ label, value, icon, wide = false }: { label: string; value: stri
  * never invents wording.
  */
 export function chipLabel(text: string, max = 14) {
-  const clause = (text || '').split(/\r?\n|[.,·;]|이며|으로서|하고 /)[0].trim();
+  const clause = (text || '').split(/\r?\n|[.,;]|이며|으로서|하고 /)[0].trim();
   return clause.length > max ? `${clause.slice(0, max).trim()}…` : clause;
 }
 

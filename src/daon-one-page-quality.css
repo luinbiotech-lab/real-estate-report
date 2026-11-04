@@ -59,3 +59,6 @@
 .daon-one-page-master .d1-fact>span.d1-fact-value{font-size:10.4px}
 .daon-one-page-master .d1-highlight-strip div{font-size:12.4px}
 .daon-one-page-master .d1-status-strip b{font-size:12.6px}
+.daon-one-page-master .d1-price-band small.d1-price-unit{display:inline;color:inherit}
+.daon-one-page-master .d1-status-strip{grid-template-columns:1.15fr 1.15fr .85fr 1.1fr 30mm!important}
+.daon-one-page-master .d1-status-strip>div b{overflow:visible;text-overflow:clip}
