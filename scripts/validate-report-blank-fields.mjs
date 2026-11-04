@@ -124,10 +124,9 @@ for (const marker of ['p.shortOccupancyLabel', 'p.shortRoadLabel', 'p.shortUseLa
 if (!readFileSync('src/pages/DocumentPreview.tsx', 'utf8').includes('onePageLengthWarnings(property)')) fail('1P 발행 전 길이 경고 연결 누락');
 
 // Luin review 2026-11-04 (re-review): negated / uncertain road or owner text must never become a positive label.
-const phrases = await importTs('src/domain/professionalReport/factPhrases.ts');
-for (const [text, expected] of [['양면 도로 접면 코너', true], ['코너 아님', false], ['코너 여부 미확인', false], ['코너 아닌 중로변', false], ['', false], ['세로 한면 접면', false]]) {
-  if (phrases.statesPlainly(text, '코너') !== expected) fail(`코너 판정 오류: '${text}' → ${!expected}`);
-}
+const detailTitleSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+// 7P titles must not infer a corner from free text, incl. '코너 · 여부 미확인', '코너로 보기 어렵다', '코너; 앞 문구는 오기'.
+if (/isCorner|statesPlainly|includes\('코너'\)|'보이는 코너'|'가시성 높은 코너 입지'|'코너 대지의 존재감'/.test(detailTitleSource)) fail('7P 제목은 자유 문장에서 코너를 추론하면 안 됩니다(중립 제목 고정).');
 if (/key="owner"/.test(onePageSource)) fail('1P는 명도 원문에서 "소유자 직접 사용" 배지를 추론하면 안 됩니다.');
 if (/'코너 입지'/.test(onePageSource)) fail('1P 도로 칩은 원문 또는 짧은 표시 문구만 사용해야 합니다.');
 

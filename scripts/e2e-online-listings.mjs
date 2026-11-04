@@ -213,6 +213,30 @@ try {
       return requiredMissing ? '필수 공란 → 주의 팝업 + 사용자 선택 · 빈 칸 0' : '선택 공란 확인 요청 · 빈 칸 0';
     });
 
+    // 4c. Luin review on PR #46 (2026-11-04): printed 1P facts are never cut. Under print media, fact values must show in
+    // full; any status/highlight chip that is cut must be announced by the pre-publish 1P length warning (short labels).
+    await check(tag, '1P 인쇄 사실값 잘림 0 · 길이 경고', async () => {
+      await page.emulateMedia({ media: 'print' });
+      const clip = await page.evaluate(() => {
+        const cut = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+        const facts = [...document.querySelectorAll('.d1-fact')].filter((el) => cut(el) || cut(el.querySelector('.d1-fact-value') || el)).map((el) => (el.textContent || '').trim().slice(0, 40));
+        const chips = [...document.querySelectorAll('.d1-status-strip > div > b, .d1-highlight-strip b')].filter(cut).map((el) => (el.textContent || '').trim().slice(0, 40));
+        return { facts, chips };
+      });
+      await page.emulateMedia({ media: null });
+      assert(!clip.facts.length, `1P 사실표 인쇄 잘림: ${clip.facts.join(' | ')}`);
+      if (!clip.chips.length) return '사실표·칩 잘림 0';
+      const longNotice = page.getByTestId('report-long-fields-notice').or(page.getByTestId('report-blank-fields-notice'));
+      await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+      assert(await dialog.getByTestId('report-long-fields').count() > 0, `칩 ${clip.chips.length}개가 잘리는데 발행 전 길이 경고가 없습니다: ${clip.chips.join(' | ')}`);
+      await dialog.getByRole('button', { name: '취소' }).click();
+      await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
+      assert(await longNotice.count() > 0, '길이 경고 안내 줄 누락');
+      return `사실표 잘림 0 · 잘리는 칩 ${clip.chips.length}개 → 발행 전 길이 경고 확인`;
+    });
+
     // 5. 7P professional MASTER (owner standard: Opening → detail-1..7 → Closing, no overflow).
     await check(tag, '7P 상세보고서 MASTER 구조(Opening→7P→Closing)', async () => {
       await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });

@@ -1,7 +1,6 @@
 import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/professionalReport/reportLayoutFill';
 import type { ReactNode } from 'react';
 import { DaonMark } from '../brand/DaonMark';
-import { statesPlainly } from '../../domain/professionalReport/factPhrases';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
 import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
@@ -130,10 +129,9 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const scenarios = splitLines(model.investment.recommendedUse, 3);
   const risks = splitLines(model.risks.risks, 6);
   const comparables = model.investment.comparables ?? [];
-  // Corner wording only switches section titles, and only when the road text states a corner plainly ('코너 아님',
-  // '코너 여부 미확인' stay neutral). Printed facts always show the stored text (Luin review on PR #46).
-  const isCorner = statesPlainly(model.land.roadCondition.value, '코너');
-  const heroStatement = points[0] || (isCorner ? '코너 입지와 활용가치를 함께 검토하는 자산' : '입지와 활용가치를 함께 검토하는 자산');
+  // Titles never infer a corner from free text (Luin review on PR #46, 2026-11-04): neutral titles until a verified
+  // structured road state exists. The stored road text itself is still printed as written.
+  const heroStatement = points[0] || ('입지와 활용가치를 함께 검토하는 자산');
   const parkingOfficial = display(model.building.parkingOfficial);
   const parkingField = display(model.building.parkingField);
   const parkingFieldNote = model.building.parkingFieldNote.value ? ` · ${model.building.parkingFieldNote.display}` : '';
@@ -170,7 +168,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
         <div className="dd-p1-side" style={{ gridTemplateRows: p1SideCount ? `34mm ${equalColumns(p1SideCount)}` : '34mm' }}>
           <section className="dd-price-card"><small>희망매매가</small><strong>{display(model.pricing.salePrice)}</strong><span>{model.identity.address.display}</span></section>
           <NumberedPoint index={1} title="즉시 활용성" copy={display(model.pricing.occupancyStatus)} />
-          <NumberedPoint index={2} title={isCorner ? '코너 대지의 존재감' : '도로·접근 조건'} copy={display(model.land.roadCondition)} />
+          <NumberedPoint index={2} title={'도로·접근 조건'} copy={display(model.land.roadCondition)} />
         </div>
       </div>
       {points.length > 0 && <SectionBar right="KEY INVESTMENT POINTS">매입 검토 포인트</SectionBar>}
@@ -195,8 +193,8 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
 
     {shows(3) && <Page page={3} number={pageNumber(3)} eyebrow="LOCATION LEVERAGE" title="입지 분석" en="LOCATION LEVERAGE" source="입지표현: 공개 지도·현장 확인 기준" subtitle="입지와 생활권 수요를 매입 가치로 연결하는 방법" snapshot={snapshot} model={model}>
       <SectionBar right="LOCATION MAP">입지의 핵심 구조</SectionBar>
-      <div className="dd-location-grid"><div className="dd-map-wrap"><ImageSlot src={map} caption="입지 지도" className="map" /></div><div className="dd-location-cards" style={{ gridTemplateRows: equalColumns(p3CardCount) }}><GoldCard icon="pin" title={isCorner ? '보이는 코너' : '도로 접근성'} copy={display(model.land.roadCondition)} /><GoldCard icon="people" title="생활권 안의 목적형 자산" copy={display(model.location.locationAnalysis)} /><GoldCard icon="chart" title="실사용 매수자에게 맞는 규모" copy={joinPresent(' ', display(model.land.landAreaPyeong), '토지 규모와 기존 건물 활용성을 함께 검토합니다.')} /></div></div>
-      <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권과 다양한 상권" /><ImageSlot src={imageAt(2)} caption={isCorner ? '가시성 높은 코너 입지' : '주변 도로·접근 환경'} /></div>
+      <div className="dd-location-grid"><div className="dd-map-wrap"><ImageSlot src={map} caption="입지 지도" className="map" /></div><div className="dd-location-cards" style={{ gridTemplateRows: equalColumns(p3CardCount) }}><GoldCard icon="pin" title={'도로 접근성'} copy={display(model.land.roadCondition)} /><GoldCard icon="people" title="생활권 안의 목적형 자산" copy={display(model.location.locationAnalysis)} /><GoldCard icon="chart" title="실사용 매수자에게 맞는 규모" copy={joinPresent(' ', display(model.land.landAreaPyeong), '토지 규모와 기존 건물 활용성을 함께 검토합니다.')} /></div></div>
+      <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권과 다양한 상권" /><ImageSlot src={imageAt(2)} caption={'주변 도로·접근 환경'} /></div>
       <SectionBar right="KEY POINTS">매수자 관점에서 읽는 입지</SectionBar>
       <div className="dd-key-list three">{['사옥','F&B / 브랜드','문화 / 콘텐츠'].map((title, i) => <div key={title}><span>{i + 1}</span><b>{title}</b><p>{points[i] || '확인된 입지·수요 데이터 기반으로 활용성을 검토합니다.'}</p></div>)}</div>
       <Insight compact icon="bulb" title="입지는 “유동인구 숫자”보다 어떤 매수자가 이 공간을 필요로 하는지를 보여줘야 합니다." copy={display(model.location.locationAnalysis)} />
