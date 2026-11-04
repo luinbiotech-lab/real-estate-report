@@ -45,16 +45,6 @@ function Fact({ label, value, icon, wide = false }: { label: string; value: stri
   </div>;
 }
 
-/**
- * Short chip label for the status strip and highlight strip (owner review 2026-11-04: the reference 1P uses short
- * phrases such as "전체 명도 가능"; long sentences were cut with an ellipsis). Takes the first clause of the stored text,
- * never invents wording.
- */
-export function chipLabel(text: string, max = 14) {
-  const clause = (text || '').split(/\r?\n|[.,;]|이며|으로서|하고 /)[0].trim();
-  return clause.length > max ? `${clause.slice(0, max).trim()}…` : clause;
-}
-
 /** Large figure with a smaller unit, as in the reference price band ("41억 5,000만원"). */
 function PriceFigure({ value }: { value: string }) {
   const match = value.match(/^(.*?)(\s*만?\s*원)$/);
@@ -86,7 +76,6 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const locationCaption = [p.nearbyStation || '', p.roadCondition || ''].filter(Boolean).join(' · ');
   const occupancySummary = first(p.occupancyStatus, '');
   const roadSummary = first(p.roadCondition, '');
-  const occupancyChip = (p.occupancyStatus || '').includes('전체 명도') ? '전체 명도 가능' : chipLabel(occupancySummary);
   const roadAddress = p.address ? p.address.split(' ').slice(-2).join(' ') : '';
   const highlightItems = [
     { text: roadSummary, icon: <LocationOnOutlined /> },
@@ -103,7 +92,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
     ['연면적평당', moneyPerPyeong(grossUnit)],
   ] as Array<[string, string]>).filter(([, value]) => value);
   const statusCells = [
-    occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancyChip}</b></div>,
+    occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>,
     (p.occupancyStatus || '').includes('소유자') && <div key="owner"><BusinessOutlined className="d1-status-icon" /><b>소유자 직접 사용</b></div>,
     roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{(p.roadCondition || '').includes('코너') ? '코너 입지' : roadSummary}</b></div>,
     parking && <div key="parking"><LocalParkingOutlined className="d1-status-icon" /><b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div>,
@@ -185,7 +174,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       </section>
 
       {presentHighlights.length > 0 && <section className="d1-highlight-strip" style={{ gridTemplateColumns: equalColumns(presentHighlights.length) }}>
-        {presentHighlights.map((item, index) => <div key={`${item.text}-${index}`}><span className="d1-highlight-icon">{item.icon}</span><b>{chipLabel(item.text, 16)}</b></div>)}
+        {presentHighlights.map((item, index) => <div key={`${item.text}-${index}`}><span className="d1-highlight-icon">{item.icon}</span><b>{item.text}</b></div>)}
       </section>}
 
       <section className="d1-use"><strong><LightbulbOutlined /><span>활용 제안</span></strong><p>{p.recommendedUse || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
