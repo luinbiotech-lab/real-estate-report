@@ -123,4 +123,12 @@ const onePageSource = readFileSync('src/components/professionalReport/DaonOnePag
 for (const marker of ['p.shortOccupancyLabel', 'p.shortRoadLabel', 'p.shortUseLabel', 'p.shortDevelopmentLabel']) if (!onePageSource.includes(marker)) fail(`1P 짧은 표시 문구 연결 누락: ${marker}`);
 if (!readFileSync('src/pages/DocumentPreview.tsx', 'utf8').includes('onePageLengthWarnings(property)')) fail('1P 발행 전 길이 경고 연결 누락');
 
+// Luin review 2026-11-04 (re-review): negated / uncertain road or owner text must never become a positive label.
+const phrases = await importTs('src/domain/professionalReport/factPhrases.ts');
+for (const [text, expected] of [['양면 도로 접면 코너', true], ['코너 아님', false], ['코너 여부 미확인', false], ['코너 아닌 중로변', false], ['', false], ['세로 한면 접면', false]]) {
+  if (phrases.statesPlainly(text, '코너') !== expected) fail(`코너 판정 오류: '${text}' → ${!expected}`);
+}
+if (/key="owner"/.test(onePageSource)) fail('1P는 명도 원문에서 "소유자 직접 사용" 배지를 추론하면 안 됩니다.');
+if (/'코너 입지'/.test(onePageSource)) fail('1P 도로 칩은 원문 또는 짧은 표시 문구만 사용해야 합니다.');
+
 console.log(`Report blank-field policy validation passed (1P blank fields for empty property: ${fields.length}, 7P: ${detailAll.length}).`);

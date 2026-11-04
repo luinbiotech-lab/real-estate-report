@@ -1,6 +1,7 @@
 import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/professionalReport/reportLayoutFill';
 import type { ReactNode } from 'react';
 import { DaonMark } from '../brand/DaonMark';
+import { statesPlainly } from '../../domain/professionalReport/factPhrases';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
 import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
@@ -129,7 +130,9 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const scenarios = splitLines(model.investment.recommendedUse, 3);
   const risks = splitLines(model.risks.risks, 6);
   const comparables = model.investment.comparables ?? [];
-  const isCorner = String(model.land.roadCondition.value || '').includes('코너');
+  // Corner wording only switches section titles, and only when the road text states a corner plainly ('코너 아님',
+  // '코너 여부 미확인' stay neutral). Printed facts always show the stored text (Luin review on PR #46).
+  const isCorner = statesPlainly(model.land.roadCondition.value, '코너');
   const heroStatement = points[0] || (isCorner ? '코너 입지와 활용가치를 함께 검토하는 자산' : '입지와 활용가치를 함께 검토하는 자산');
   const parkingOfficial = display(model.building.parkingOfficial);
   const parkingField = display(model.building.parkingField);

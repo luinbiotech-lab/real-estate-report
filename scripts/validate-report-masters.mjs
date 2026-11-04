@@ -56,7 +56,7 @@ const reportSmoke = readFileSync('scripts/visual-report-smoke.mjs', 'utf8');
 
 // Luin review 2026-11-04 (P0): the 1P must print stored facts as written. No keyword-based status rewriting
 // (e.g. '전체 명도 불가' printed as '전체 명도 가능') and no clause splitting on '.' or ',' (82.5% -> 82, 1,000만원 -> 1).
-if (/includes\('전체 명도'\)/.test(onePage) || /chipLabel/.test(onePage) || /split\(\/[^/]*\[[^\]]*[.,][^\]]*\]/.test(onePage)) {
+if (/includes\('(전체 명도|코너|소유자)'\)/.test(onePage) || /includes\('코너'\)/.test(detail) || /chipLabel/.test(onePage) || /split\(\/[^/]*\[[^\]]*[.,][^\]]*\]/.test(onePage)) {
   throw new Error('1P는 명도·수치 등 사실 문구를 키워드 치환이나 마침표·쉼표 분할로 바꾸면 안 됩니다.');
 }
 const onePageQualityCss = existsSync('src/daon-one-page-quality.css') ? readFileSync('src/daon-one-page-quality.css', 'utf8') : '';

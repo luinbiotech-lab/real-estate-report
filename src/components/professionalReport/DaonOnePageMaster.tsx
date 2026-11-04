@@ -94,8 +94,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   ] as Array<[string, string]>).filter(([, value]) => value);
   const statusCells = [
     occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>,
-    (p.occupancyStatus || '').includes('소유자') && <div key="owner"><BusinessOutlined className="d1-status-icon" /><b>소유자 직접 사용</b></div>,
-    roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{(p.roadCondition || '').includes('코너') ? '코너 입지' : roadSummary}</b></div>,
+    roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{roadSummary}</b></div>,
     parking && <div key="parking"><LocalParkingOutlined className="d1-status-icon" /><b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div>,
   ].filter(Boolean);
   const presentHighlights = highlightItems.filter((item) => item.text);
