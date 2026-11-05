@@ -1,6 +1,7 @@
 import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/professionalReport/reportLayoutFill';
 import type { ReactNode } from 'react';
 import { DaonLogoImage } from '../brand/DaonLogoImage';
+import { coverageDisplay, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
 import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
@@ -143,7 +144,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const comparables = model.investment.comparables ?? [];
   // Titles never infer a corner from free text (Luin review on PR #46, 2026-11-04): neutral titles until a verified
   // structured road state exists. The stored road text itself is still printed as written.
-  const heroStatement = (model.identity.shortHeadline?.value || '').trim() || points[0] || ('입지와 활용가치를 함께 검토하는 자산');
+  const heroStatement = shortOrFirstLine(model.identity.shortHeadline?.value, points[0], '입지와 활용가치를 함께 검토하는 자산');
   const parkingOfficial = display(model.building.parkingOfficial);
   const parkingField = display(model.building.parkingField);
   const parkingFieldNote = model.building.parkingFieldNote.value ? ` · ${model.building.parkingFieldNote.display}` : '';
@@ -173,10 +174,9 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const positive = (item: ReportValue<number>) => typeof item.value === 'number' && item.value > 0 ? display(item) : '';
   // Register coverage 0 = unrecorded. When building and land areas exist, print a clearly labelled calculated value
   // (owner reference page 6: "단순 건폐율 약 48.8%" with a note), never as the register value.
-  const bArea = typeof model.building.buildingAreaPyeong.value === 'number' ? model.building.buildingAreaPyeong.value : 0;
-  const lArea = typeof model.land.landAreaPyeong.value === 'number' ? model.land.landAreaPyeong.value : 0;
-  const calcCoverage = !positive(model.building.buildingCoverageRate) && bArea > 0 && lArea > 0 ? `약 ${(Math.round((bArea / lArea) * 1000) / 10).toLocaleString('ko-KR')}%` : '';
-  const metrics = ([[calcCoverage ? '단순 건폐율' : '건폐율', positive(model.building.buildingCoverageRate) || calcCoverage], ['용적률', positive(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
+  const coverage = coverageDisplay(model.building.buildingCoverageRate.value, display(model.building.buildingCoverageRate), model.building.buildingAreaPyeong.value, model.land.landAreaPyeong.value);
+  const calcCoverage = coverage?.calculated ? coverage.value : '';
+  const metrics = ([[coverage?.label ?? '건폐율', coverage?.value ?? ''], ['용적률', positive(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
   const p3CardCount = [display(model.land.roadCondition), display(model.location.locationAnalysis)].filter(has).length + 1;
   const occupancyParking = joinPresent(' · ', display(model.pricing.occupancyStatus), parkingField && `현장 주차 ${parkingField}${parkingFieldNote}`);
 
