@@ -114,7 +114,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       <header className="d1-header">
         <div className="d1-head-copy">
           <small>가치를 보는 안목, 새로운 가능성을 만듭니다.</small>
-          <h1>전속매각 | {p.name}</h1>
+          <h1 className={`전속매각 | ${p.name}`.length > 22 ? 'd1-title-long' : undefined}>전속매각 | {p.name}</h1>
           <p>{p.address}{p.detailAddress ? ` ${p.detailAddress}` : ''}</p>
         </div>
         <DaonLogo />

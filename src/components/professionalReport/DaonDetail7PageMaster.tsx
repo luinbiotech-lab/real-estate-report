@@ -45,7 +45,7 @@ function Page({ page, number, eyebrow, title, en, subtitle, snapshot, model, sou
 }) {
   return <article className={`daon-detail-page daon-detail-page-${page}`} data-detail-page={page}>
     <header className="dd-head">
-      <div className="dd-head-copy"><small>{en ? title : eyebrow}</small><h1 lang={en ? 'en' : undefined}>{en || title}</h1><p>{subtitle}</p></div>
+      <div className="dd-head-copy"><small>{en ? title : eyebrow}</small><h1 lang={en ? 'en' : undefined} className={!en && title.length > 16 ? 'dd-title-long' : undefined}>{en || title}</h1><p>{subtitle}</p></div>
       <div className="dd-brand"><DaonMark className="dd-mark" /><div className="dd-brand-word"><strong>DA:ON</strong><span>ASSET</span></div><em>EXCLUSIVE SALE REPORT | {String(number).padStart(2, '0')}</em></div>
     </header>
     <main className="dd-body">{children}</main>

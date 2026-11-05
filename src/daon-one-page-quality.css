@@ -76,3 +76,6 @@
    blank 19mm band. Row order: header, price, status, main, mini, highlight, use, footer. */
 .daon-one-page-master .d1-sheet.d1-sheet-no-price{grid-template-rows:31mm 12mm minmax(0,1fr) 31mm 10mm 14mm 23mm}
 .daon-one-page-master .d1-sheet.d1-sheet-no-price.d1-sheet-no-highlight{grid-template-rows:31mm 12mm minmax(0,1fr) 31mm 14mm 23mm}
+/* Long property names wrap to two lines at a smaller size instead of being cut (2026-11-05 owner test). */
+.daon-one-page-master .d1-head-copy h1{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.12}
+.daon-one-page-master .d1-head-copy h1.d1-title-long{font-size:22px}
