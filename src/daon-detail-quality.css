@@ -424,3 +424,9 @@
 .daon-detail-master .daon-detail-page-2 .dd-floor-placeholder{height:auto;min-height:38mm}
 /* Long exact amounts on page 4 cards: smaller and wrapping at spaces, never cut (2026-11-06). */
 .daon-detail-master .dd-price-layers>div[data-long="true"] strong{font-size:19px;white-space:normal;word-break:keep-all}
+/* Four price cards share the row (~44mm each): smaller figures, and any figure may wrap at spaces — never overflow
+   the card (e2e 2026-11-06 caught "평당 9,437만원" / "30.2억~57.3억원" running past the card edge). */
+.daon-detail-master .dd-price-layers strong{white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.daon-detail-master .dd-price-layers:has(>div:nth-child(4)) strong{font-size:19px}
+.daon-detail-master .dd-price-layers:has(>div:nth-child(4))>div[data-long="true"] strong{font-size:16px}
+.daon-detail-master .dd-price-layers:has(>div:nth-child(4))>div{padding:4mm 3.4mm}
