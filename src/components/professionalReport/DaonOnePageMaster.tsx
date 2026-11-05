@@ -97,12 +97,12 @@ export function DaonOnePageMaster({ property: p, priceEstimate = null }: { prope
     value: cell.key === 'asking' && p.salePrice ? formatWon(p.salePrice) : cell.value,
     note: cell.badge === '입력값' ? cell.sub : cell.badge,
   }));
-  // No price layer at all (no asking price, no official land value, no estimate): stored area facts fill the band
-  // instead of collapsing it (multi-model review 2026-11-05).
+  // Fewer than two price layers (e.g. an analysis report with no asking price and no estimate): stored area facts lead
+  // the band so it does not shrink to one lonely cell (multi-model review 2026-11-05). Price layers are never dropped.
   const pyeong = (v?: number) => v && v > 0 ? `${v.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평` : '';
-  const priceCells: BandCell[] = layerCells.length ? layerCells
-    : ([['land', '대지면적', pyeong(p.landAreaPyeong)], ['gross', '연면적', pyeong(p.totalFloorAreaPyeong)]] as Array<[string, string, string]>)
-      .filter(([, , value]) => value).map(([key, label, value]) => ({ key, label, value, note: '' }));
+  const areaCells: BandCell[] = ([['land', '대지면적', pyeong(p.landAreaPyeong)], ['gross', '연면적', pyeong(p.totalFloorAreaPyeong)]] as Array<[string, string, string]>)
+    .filter(([, , value]) => value).map(([key, label, value]) => ({ key, label, value, note: '' }));
+  const priceCells: BandCell[] = layerCells.length >= 2 ? layerCells : [...areaCells, ...layerCells];
   const statusCells = [
     occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>,
     roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{roadSummary}</b></div>,
