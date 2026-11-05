@@ -410,9 +410,13 @@
 @media print{.daon-detail-master .dd-price-layers>div{box-shadow:none}}
 /* Page 4 height budget when the price layers are present (same A4 body; the layers take ~38mm). */
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-comparables.has-bars{height:50mm}
-.daon-detail-master .daon-detail-page-4 .dd-estimate-deals{height:auto;padding:2mm 3mm}
-.daon-detail-master .daon-detail-page-4 .dd-estimate-deals>div>div{min-height:6.4mm}
-.daon-detail-master .daon-detail-page-4 .dd-estimate-deals>div>small{line-height:1.45}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-reason-three.with-photos{height:80mm}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-analysis-box{margin:2.6mm 0}
 .daon-detail-master .daon-detail-page-4:has(.dd-estimate-deals) .dd-reason-three.with-photos{height:72mm}
+/* Estimate comparables table (page 4, shown when no confirmed comparables exist). Class-based so the generic
+   .dd-comparables span sizes cannot shrink it; nothing is cut — rows wrap instead of ellipsis. */
+.daon-detail-master .dd-estimate-deals{margin-bottom:3mm;border-top:1mm solid var(--dq-gold);background:#fff}
+.daon-detail-master .dd-est-row{display:grid;grid-template-columns:.8fr 1.5fr .6fr .65fr .75fr;align-items:center;gap:2mm;min-height:7.2mm;padding:.8mm 3mm;border-bottom:.25mm solid #e2e6eb;font-size:11.6px;color:var(--dq-body);word-break:keep-all}
+.daon-detail-master .dd-est-row b{font-size:12.4px;color:var(--dq-ink);font-weight:800}
+.daon-detail-master .dd-est-head{min-height:7.6mm;background:#f1f5f8;font-size:10.8px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-estimate-deals>small{display:block;padding:2mm 3mm 0;font-size:10.2px;line-height:1.5;color:var(--dq-muted)}
