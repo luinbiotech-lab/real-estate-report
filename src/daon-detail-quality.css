@@ -388,3 +388,10 @@
 .daon-detail-master .dd-p1-side>.dd-number-card{align-content:center}
 .daon-detail-master .dd-foot span:first-child{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3}
 .daon-detail-master .dd-foot span:last-child{max-width:48%}
+
+/* Temporary sample logo image (owner instruction 2026-11-05; original file to come) */
+.daon-detail-master .dd-brand.dd-brand-image{display:flex;flex-direction:column;align-items:flex-end;justify-content:center;gap:1.4mm;min-width:38mm}
+.daon-detail-master .dd-brand-image .dd-logo-img{display:block;height:15mm;width:auto}
+.daon-detail-master .dd-brand-image em{margin-top:0}
+.daon-detail-master .dd-contact-brand.dd-contact-brand-image{display:flex;align-items:center;justify-content:center}
+.daon-detail-master .dd-contact-logo-img{display:block;height:12mm;width:auto}

@@ -1,6 +1,6 @@
 import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/professionalReport/reportLayoutFill';
 import type { ReactNode } from 'react';
-import { DaonMark } from '../brand/DaonMark';
+import { DaonLogoImage } from '../brand/DaonLogoImage';
 import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
@@ -47,7 +47,7 @@ function Page({ page, number, eyebrow, title, en, subtitle, snapshot, model, sou
   return <article className={`daon-detail-page daon-detail-page-${page}`} data-detail-page={page}>
     <header className="dd-head">
       <div className="dd-head-copy"><small>{en ? title : eyebrow}</small><h1 lang={en ? 'en' : undefined} className={!en && title.length > 16 ? 'dd-title-long' : undefined}>{en || title}</h1><p>{subtitle}</p></div>
-      <div className="dd-brand"><DaonMark className="dd-mark" /><div className="dd-brand-word"><strong>DA:ON</strong><span>ASSET</span></div><em>{reportWording(model.identity.reportPurpose?.value).pageTag} | {String(number).padStart(2, '0')}</em></div>
+      <div className="dd-brand dd-brand-image"><DaonLogoImage className="dd-logo-img" /><em>{reportWording(model.identity.reportPurpose?.value).pageTag} | {String(number).padStart(2, '0')}</em></div>
     </header>
     <main className="dd-body">{children}</main>
     <footer className="dd-foot">
@@ -256,7 +256,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <SectionBar>매수자 체크리스트</SectionBar>
       <ol className="dd-checklist"><li>최신 토지·건물 등기사항전부증명서 재발급</li><li>토지거래허가구역 적용 여부 및 매수인 요건 확인</li><li>대지 경계·접도 폭·현황도로·건축선 확인</li><li>주차·일조·높이·피난·내진 등 신축/대수선 사전검토</li><li>누수·균열·설비·전기용량·배수 등 현장실사</li><li>잔금일 기준 명도 및 인도 범위 계약서 명문화</li></ol>
       <div className="dd-acquisition with-icon"><span className="dd-icon-badge large solid"><Icon name="edit" /></span><div><b>ACQUISITION CASE</b><p>{display(model.investment.overallOpinion, '확인된 토지·건물·입지·명도·권리 정보를 종합해 매입 판단 근거를 확정합니다.')}</p></div></div>
-      {has(display(model.identity.managerName)) && <div className="dd-contact-band"><div className="dd-contact-brand"><DaonMark className="dd-contact-mark" /><strong>DA:ON</strong><span>ASSET</span></div><div><b>{display(model.identity.managerName)}</b><p>{joinPresent('   ', display(model.identity.managerPhone) && `M ${display(model.identity.managerPhone)}`, display(model.identity.managerEmail) && `E ${display(model.identity.managerEmail)}`)}</p></div><div className="dd-contact-cta"><b>{reportWording(model.identity.reportPurpose?.value).contactCta}</b><p>{display(model.identity.companyName, 'DA:ON ASSET')}</p></div></div>}
+      {has(display(model.identity.managerName)) && <div className="dd-contact-band"><div className="dd-contact-brand dd-contact-brand-image"><DaonLogoImage className="dd-contact-logo-img" /></div><div><b>{display(model.identity.managerName)}</b><p>{joinPresent('   ', display(model.identity.managerPhone) && `M ${display(model.identity.managerPhone)}`, display(model.identity.managerEmail) && `E ${display(model.identity.managerEmail)}`)}</p></div><div className="dd-contact-cta"><b>{reportWording(model.identity.reportPurpose?.value).contactCta}</b><p>{display(model.identity.companyName, 'DA:ON ASSET')}</p></div></div>}
     </Page>
   </div>;
 }

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { DaonMark } from '../brand/DaonMark';
+import { DaonLogoImage } from '../brand/DaonLogoImage';
 import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import {
   ApartmentOutlined,
@@ -32,9 +32,8 @@ const floorText = (p: Property) => {
 };
 
 function DaonLogo() {
-  return <div className="d1-logo" aria-label="DA:ON ASSET">
-    <DaonMark className="d1-logo-mark d1-logo-svg" />
-    <div><strong>DA:ON</strong><span>ASSET</span></div>
+  return <div className="d1-logo d1-logo-image" aria-label="DA:ON ASSET">
+    <DaonLogoImage className="d1-logo-img" />
   </div>;
 }
 
