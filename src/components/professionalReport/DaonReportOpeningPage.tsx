@@ -13,7 +13,7 @@ export function DaonReportOpeningPage({ model }: { model: ProfessionalReportView
   const location = display(model.identity.address, '');
   const use = [display(model.building.mainUse, ''), display(model.land.zoning, '')].filter(Boolean).join(' · ');
   const author = [display(model.identity.managerName, ''), display(model.identity.companyName, '')].filter(Boolean).join(' · ');
-  const region = (display(model.identity.address, '').split(' ').slice(0, 3).join(' ')) || '';
+  const region = [display(model.identity.address, '').split(' ').slice(0, 2).join(' '), display(model.location.nearbyStation, '')].filter(Boolean).join(' · ');
   const detail = display(model.identity.detailAddress, '');
   const coverFacts = ([['물건명', display(model.identity.name, '')], ['위치', region], ['소재지', [location, detail].filter(Boolean).join(' ')], ['작성', author], ['발행일', '']] as Array<[string, string]>);
   const generated = new Date(model.generated.generatedAt);
