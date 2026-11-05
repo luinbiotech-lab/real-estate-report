@@ -368,3 +368,7 @@
 .daon-detail-master .dd-section-bar span{font-size:8px}
 .daon-detail-master .dd-foot{font-size:9.6px}
 .daon-detail-master .dd-gold-card b{white-space:normal}
+.daon-detail-master .daon-detail-page-2 .dd-profile-grid{height:auto;min-height:90mm}
+.daon-detail-master .daon-detail-page-2 .dd-info-row{min-height:9.4mm}
+.daon-detail-master .dd-roadmap{height:auto;min-height:60mm}
+.daon-detail-master .dd-roadmap .dd-number-card p{-webkit-line-clamp:10}
