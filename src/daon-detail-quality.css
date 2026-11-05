@@ -386,3 +386,5 @@
 .daon-detail-master .daon-detail-page-3 .dd-location-grid{min-height:86mm}
 .daon-detail-master .daon-detail-page-3 .dd-map-wrap,.daon-detail-master .daon-detail-page-3 .dd-map-wrap>.dd-image{min-height:86mm}
 .daon-detail-master .dd-p1-side>.dd-number-card{align-content:center}
+.daon-detail-master .dd-foot span:first-child{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3}
+.daon-detail-master .dd-foot span:last-child{max-width:48%}
