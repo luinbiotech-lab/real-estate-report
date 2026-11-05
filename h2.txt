@@ -1,0 +1,15 @@
+HTTP/2 200 
+age: 0
+cache-control: no-store
+content-type: application/json; charset=utf-8
+date: Thu, 05 Nov 2026 01:17:34 GMT
+permissions-policy: camera=(), microphone=()
+referrer-policy: no-referrer
+server: Vercel
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+x-content-type-options: nosniff
+x-frame-options: DENY
+x-vercel-cache: MISS
+x-vercel-id: iad1::icn1::z62bd-1793841453799-cef356b286dd
+content-length: 91403
+
