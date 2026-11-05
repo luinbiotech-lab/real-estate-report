@@ -399,7 +399,7 @@
 /* 7P page 4 price layers at the quality type scale (merge of #43 with #46, 2026-11-06). The #43 cards were sized for the
    old 7–8px body text; they now match the 11–13px cards on the same page. */
 .daon-detail-master .dd-price-layers{gap:3.4mm;margin-bottom:2.4mm}
-.daon-detail-master .dd-price-layers>div{min-height:34mm;padding:4mm 4.4mm;gap:1.2mm;border:.3mm solid var(--dq-line);border-top:1.1mm solid var(--dq-gold);border-radius:0 0 1.6mm 1.6mm;box-shadow:0 .5mm 1.6mm #10243c0d}
+.daon-detail-master .dd-price-layers>div{min-height:30mm;padding:4mm 4.4mm;gap:1.2mm;border:.3mm solid var(--dq-line);border-top:1.1mm solid var(--dq-gold);border-radius:0 0 1.6mm 1.6mm;box-shadow:0 .5mm 1.6mm #10243c0d}
 .daon-detail-master .dd-price-layers>div[data-price-layer="achievable"]{border-color:var(--dq-navy);border-top-color:var(--dq-navy);background:#f6f9fc}
 .daon-detail-master .dd-price-layers small{font-size:11.5px;font-weight:700;color:var(--dq-ink)}
 .daon-detail-master .dd-price-layers strong{font-size:25px;font-weight:800;color:var(--dq-gold-deep);letter-spacing:-.6px;white-space:nowrap;overflow:visible;text-overflow:clip}
@@ -408,3 +408,8 @@
 .daon-detail-master .dd-price-layers em{font-style:normal;font-size:10px;font-weight:700;color:var(--dq-gold-deep)}
 .daon-detail-master .dd-price-layers-note{margin:0 0 3.4mm;font-size:11.4px;line-height:1.5;color:var(--dq-body);display:block;overflow:visible}
 @media print{.daon-detail-master .dd-price-layers>div{box-shadow:none}}
+/* Page 4 height budget when the price layers are present (same A4 body; the layers take ~38mm). */
+.daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-comparables.has-bars{height:50mm}
+.daon-detail-master .daon-detail-page-4 .dd-estimate-deals{height:64mm;padding:2.4mm 3mm}
+.daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-reason-three.with-photos{height:80mm}
+.daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-analysis-box{margin:2.6mm 0}
