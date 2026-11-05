@@ -410,6 +410,9 @@
 @media print{.daon-detail-master .dd-price-layers>div{box-shadow:none}}
 /* Page 4 height budget when the price layers are present (same A4 body; the layers take ~38mm). */
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-comparables.has-bars{height:50mm}
-.daon-detail-master .daon-detail-page-4 .dd-estimate-deals{height:64mm;padding:2.4mm 3mm}
+.daon-detail-master .daon-detail-page-4 .dd-estimate-deals{height:auto;padding:2mm 3mm}
+.daon-detail-master .daon-detail-page-4 .dd-estimate-deals>div>div{min-height:6.4mm}
+.daon-detail-master .daon-detail-page-4 .dd-estimate-deals>div>small{line-height:1.45}
+.daon-detail-master .daon-detail-page-4:has(.dd-estimate-deals) .dd-reason-three.with-photos{height:72mm}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-reason-three.with-photos{height:80mm}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-analysis-box{margin:2.6mm 0}
