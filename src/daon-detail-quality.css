@@ -337,4 +337,4 @@
    report and the 7P master) applied while printing and pushed every page 6.35mm right, cutting its right edge. */
 @media print{.daon-professional-report-master,.daon-detail-master{margin:0!important;width:210mm}}
 /* Long Korean page-1 titles (property names) shrink instead of being cut (2026-11-05 owner test). */
-.daon-detail-master .dd-head h1.dd-title-long{font-size:23px;white-space:normal;line-height:1.15;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.daon-detail-master .dd-head h1.dd-title-long{font-size:21px;white-space:normal;text-overflow:clip;line-height:1.15;max-height:2.3em;overflow:hidden;word-break:keep-all}
