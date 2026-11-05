@@ -317,3 +317,18 @@
 .daon-detail-master .daon-detail-page-4 .dd-head h1[lang=en],.daon-detail-master .daon-detail-page-6 .dd-head h1[lang=en]{font-size:24.5px;letter-spacing:0}
 .daon-detail-master .dd-roadmap{height:52mm}
 .daon-detail-master .dd-roadmap .dd-number-card p{padding-right:10mm}
+
+/* No-ellipsis pass (2026-11-05, Luin PDF review): stored sentences must print in full on the reference sample.
+   Measured in print media: page 2 address row, page 3 cards and page 5 roadmap were cut. Space is moved from photos to
+   text; the photo strips stay at the reference proportions. */
+.daon-detail-master .dd-info-row span{white-space:normal;overflow:visible;text-overflow:clip;line-height:1.3;padding-top:1.2mm;padding-bottom:1.2mm}
+.daon-detail-master .daon-detail-page-3 .dd-location-grid{height:112mm}
+.daon-detail-master .daon-detail-page-3 .dd-photo-three{height:38mm}
+.daon-detail-master .daon-detail-page-3 .dd-gold-card{padding:3.4mm 3.6mm}
+.daon-detail-master .daon-detail-page-3 .dd-gold-card b{white-space:normal;font-size:15.5px}
+.daon-detail-master .daon-detail-page-3 .dd-gold-card p{font-size:11.8px;line-height:1.5;-webkit-line-clamp:7}
+.daon-detail-master .daon-detail-page-3 .dd-key-list>div{min-height:9.6mm}
+.daon-detail-master .dd-roadmap{height:66mm}
+.daon-detail-master .dd-roadmap .dd-number-card p{-webkit-line-clamp:7;font-size:11.8px;line-height:1.5}
+.daon-detail-master .dd-scenarios .dd-image{height:50mm}
+.daon-detail-master .dd-scenarios article>p{min-height:0;-webkit-line-clamp:4}
