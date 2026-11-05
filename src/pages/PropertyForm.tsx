@@ -60,7 +60,7 @@ export default function PropertyForm({ settings }: { settings: Settings }) {
       setProperty((previous) => ({ ...previous, ...(state.discoveryPatch ?? publicPropertyDiscoveryService.patchFrom(state.discoveryResult!)) }));
     }
   }, [id, location.state]);
-  const change = (key: keyof Property, value: ChangeValue) => setProperty((previous) => { const next = { ...previous, [key]: value }; if (key === 'landAreaPyeong') next.landAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'landAreaSqm') next.landAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; if (key === 'totalFloorAreaPyeong') next.totalFloorAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'totalFloorAreaSqm') next.totalFloorAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; return next; });
+  const change = (key: keyof Property, value: ChangeValue) => setProperty((previous) => { const next = { ...previous, [key]: value }; if (key === 'brokerAchievablePrice' || key === 'brokerAchievablePriceRationale') next.brokerAchievablePriceConfirmedAt = new Date().toISOString(); if (key === 'landAreaPyeong') next.landAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'landAreaSqm') next.landAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; if (key === 'totalFloorAreaPyeong') next.totalFloorAreaSqm = Math.round(Number(value) * 3.3058 * 100) / 100; if (key === 'totalFloorAreaSqm') next.totalFloorAreaPyeong = Math.round(Number(value) / 3.3058 * 100) / 100; return next; });
   const upload = (key: 'mainImage' | 'mapImage' | 'locationAnalysisImage' | 'additionalImages', event: ChangeEvent<HTMLInputElement>) => {
     const input = event.target;
     const files = [...(input.files || [])];

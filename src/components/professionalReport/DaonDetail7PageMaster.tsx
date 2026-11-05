@@ -186,6 +186,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     landAreaPyeong: model.land.landAreaPyeong.value ?? 0, landAreaSqm: model.land.landAreaSqm.value ?? 0,
     estimatedOfficialLandValue: model.land.estimatedOfficialLandValue?.value ?? 0, officialLandPriceYear: model.land.officialLandPriceYear?.value ?? '',
     brokerAchievablePrice: model.pricing.brokerAchievablePrice?.value ?? 0,
+    brokerAchievablePriceRationale: model.pricing.brokerAchievablePriceRationale?.value ?? '',
   }, priceEstimate);
   const askingLine = askingPosition(model.pricing.salePrice.value ?? undefined, priceEstimate);
   const brokerRationale = display(model.pricing.brokerAchievablePriceRationale ?? { value: null, display: '', state: 'missing', sourceIds: [] });
@@ -214,7 +215,8 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
         <SectionBar>층별 구성과 현재 활용</SectionBar>
         <div className="dd-floor-placeholder" style={{ display: 'grid', placeItems: 'stretch', alignContent: 'stretch', gap: 0 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', background: '#062f55', color: '#fff', borderRadius: '1.6mm 1.6mm 0 0', padding: '0 2.5mm', fontSize: '9.6px', fontWeight: 800 }}><span>층</span><span>공적대장 용도</span><span>면적</span><span>현재 이용 / 비고</span></div>
-          {model.building.floors.slice(0, 4).map((floor) => <div key={floor.id} style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2.5mm', minHeight: 0, fontSize: '10px', overflow: 'hidden' }}><b style={{ fontSize: '10.4px' }}>{floor.floor}</b><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{floor.name}</span><span>{formatFloorArea(floor.areaSqm)}</span><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#6d7a88' }}>{floor.currentCondition || '-'}</span></div>)}
+          {model.building.floors.slice(0, 4).map((floor) => <div key={floor.id} style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2.5mm', minHeight: 0, fontSize: '10px', overflow: 'hidden' }}><b style={{ fontSize: '10.4px' }}>{floor.floor}</b><span style={{ whiteSpace: 'normal', wordBreak: 'keep-all' }}>{floor.name}</span><span>{formatFloorArea(floor.areaSqm)}</span><span style={{ whiteSpace: 'normal', wordBreak: 'keep-all', color: '#6d7a88' }}>{floor.currentCondition || '-'}</span></div>)}
+          {model.building.floors.length > 4 && <div className="dd-floor-more" style={{ padding: '1.4mm 2.5mm', fontSize: '10px', color: '#6d7a88' }}>외 {model.building.floors.length - 4}개 층은 Data Room 층별 자료에서 확인할 수 있습니다.</div>}
         </div>
       </>}
       {hasPhotos && <SectionBar>공간에서 보이는 가능성</SectionBar>}
@@ -234,7 +236,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     {shows(4) && <Page page={4} number={pageNumber(4)} eyebrow="MARKET POSITION" title="주변 시세 및 비교거래 사례" en="MARKET POSITION & PRICE RATIONALE" source="비교거래: 확인된 공개 실거래 기준" subtitle="실거래 사례 속에서 본건의 토지 평당을 읽는 방법" snapshot={snapshot} model={model}>
       {priceCells.length > 1 ? <>
         <SectionBar right="PRICE LAYERS">가격 4단계</SectionBar>
-        <div className="dd-price-layers" data-testid="dd-price-layers" style={{ gridTemplateColumns: equalColumns(priceCells.length) }}>{priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key}><small>{cell.label}</small><strong>{cell.value}</strong><span>{cell.sub}</span><em>{cell.badge}</em></div>)}</div>
+        <div className="dd-price-layers" data-testid="dd-price-layers" style={{ gridTemplateColumns: equalColumns(priceCells.length) }}>{priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key} data-price-unit={cell.unit}><small>{cell.label}</small><strong>{cell.value}</strong><span>{cell.sub}</span><em>{cell.badge}</em></div>)}</div>
         {(askingLine || brokerRationale) && <p className="dd-price-layers-note">{joinPresent(' ', askingLine, brokerRationale && `중개사 확정 근거: ${brokerRationale}`)}</p>}
       </> : <>
         <SectionBar>가격 포지션</SectionBar>

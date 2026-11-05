@@ -16,7 +16,7 @@ import {
   StraightenOutlined,
 } from '@mui/icons-material';
 import type { Property } from '../../types';
-import { formatWon, lines } from '../../utils/format';
+import { lines } from '../../utils/format';
 import { priceLayerCells, type AchievablePriceEstimate } from '../../domain/professionalReport/priceLayerView';
 import { DAON_ONE_PAGE_MASTER_TEMPLATE_ID, DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { equalColumns } from '../../domain/professionalReport/reportLayoutFill';
@@ -53,7 +53,7 @@ function PriceFigure({ value }: { value: string }) {
   return <strong title={value}>{match[1]}<small className="d1-price-unit">{match[2].replace(/\s+/g, '')}</small></strong>;
 }
 
-interface BandCell { key: string; label: string; value: string; note: string }
+interface BandCell { key: string; label: string; value: string; note: string; unit?: 'total' | 'per_pyeong' }
 
 export function DaonOnePageMaster({ property: p, priceEstimate = null }: { property: Property; priceEstimate?: AchievablePriceEstimate | null }) {
   const wording = reportWording(p.reportPurpose);
@@ -93,9 +93,9 @@ export function DaonOnePageMaster({ property: p, priceEstimate = null }: { prope
   // Only present layers are drawn and the band is re-divided among them (no empty cell). The asking price keeps the
   // reference band's full figure ("41억 5,000만원"); each cell carries its basis line (입력값·계산값·후보·추정).
   const layerCells: BandCell[] = priceLayerCells(p, priceEstimate).map((cell) => ({
-    key: cell.key, label: cell.label,
-    value: cell.key === 'asking' && p.salePrice ? formatWon(p.salePrice) : cell.value,
-    note: cell.badge === '입력값' ? cell.sub : cell.badge,
+    key: cell.key, label: cell.label, value: cell.value, unit: cell.unit,
+    // Basis line; the land unit-price cell also says it is not a total (루인 review on #43).
+    note: cell.unit === 'per_pyeong' ? `${cell.badge} · 총액 아님` : cell.badge === '입력값' ? cell.sub : cell.badge,
   }));
   // Fewer than two price layers (e.g. an analysis report with no asking price and no estimate): stored area facts lead
   // the band so it does not shrink to one lonely cell (multi-model review 2026-11-05). Price layers are never dropped.
@@ -133,7 +133,7 @@ export function DaonOnePageMaster({ property: p, priceEstimate = null }: { prope
       </header>
 
       {priceCells.length > 0 && <section className={`d1-price-band d1-price-band-layers d1-price-band-${priceCells.length}`} style={{ gridTemplateColumns: equalColumns(priceCells.length, 'minmax(0,1fr)') }} data-testid="d1-price-layers">
-        {priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key}><small>{cell.label}</small><PriceFigure value={cell.value} />{cell.note && <em>{cell.note}</em>}</div>)}
+        {priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key} data-price-unit={cell.unit}><small>{cell.label}</small><PriceFigure value={cell.value} />{cell.note && <em>{cell.note}</em>}</div>)}
       </section>}
 
       <section className="d1-status-strip" style={{ gridTemplateColumns: statusCells.length ? `${equalColumns(statusCells.length, 'minmax(0,1fr)')} 32mm` : '1fr' }}>

@@ -419,3 +419,6 @@
 .daon-detail-master .dd-est-row b{font-size:12.4px;color:var(--dq-ink);font-weight:800}
 .daon-detail-master .dd-est-head{min-height:7.6mm;background:#f1f5f8;font-size:10.8px;font-weight:800;color:var(--dq-ink)}
 .daon-detail-master .dd-estimate-deals>small{display:block;padding:2mm 3mm 0;font-size:10.2px;line-height:1.5;color:var(--dq-muted)}
+/* Land unit-price card (원/평) is set apart from total-amount cards (루인 #43). Floor table grows instead of cutting text. */
+.daon-detail-master .dd-price-layers>div[data-price-unit="per_pyeong"]{border-top-style:dashed;background:#faf7f1}
+.daon-detail-master .daon-detail-page-2 .dd-floor-placeholder{height:auto;min-height:38mm}

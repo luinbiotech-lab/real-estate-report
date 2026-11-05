@@ -119,10 +119,24 @@ const est = { state: 'estimated', method: 'm', note: 'n', computedAt: 't', compa
 const base8 = { salePrice: 3_000_000_000, landAreaPyeong: 42.59, estimatedOfficialLandValue: 1_125_273_600, officialLandPriceYear: '2026' };
 const four = pv.priceLayerCells(base8, est);
 if (JSON.stringify(four.map((c) => c.key)) !== '["asking","official","market","achievable"]') fail(`가격 4단계 순서 오류: ${four.map((c) => c.key)}`);
-if (four[0].value !== '30억' || four[1].value !== '11.3억' || four[2].value !== '9,437만' || four[3].value !== '30.2억~57.3억') fail(`가격 표기 오류: ${four.map((c) => c.value).join(' | ')}`);
+if (four[0].value !== '30억원' || four[1].value !== '약 11.3억원' || four[2].value !== '평당 9,437만원' || four[3].value !== '30.2억~57.3억원') fail(`가격 표기 오류: ${four.map((c) => c.value).join(' | ')}`);
+// Units (루인 review on #43): ③ is a land unit price, ①②④ are totals; raw amounts kept for exact-value checks.
+if (JSON.stringify(four.map((c) => c.unit)) !== '["total","total","per_pyeong","total"]') fail(`가격 단위 구분 오류: ${four.map((c) => c.unit)}`);
+if (four[0].amount !== 3_000_000_000 || four[2].amount !== 94367172 || JSON.stringify(four[3].amount) !== JSON.stringify([3021459221, 5729742663])) fail('가격 원값(amount) 보존 오류');
+if (!four[2].sub.includes('총액 아님')) fail('단가 칸은 총액이 아님을 표시해야 합니다.');
+// Exact entered amount vs rounded calculated amount.
+if (pv.formatExactWon(4_150_000_000) !== '41억 5,000만원' || pv.formatExactWon(4_100_000_000) !== '41억원' || pv.formatExactWon(98_000_000) !== '9,800만원' || pv.formatExactWon(1_234_567_890) !== '12억 3,457만원') fail('정확 금액 표기 오류');
+if (pv.priceLayerCells({ salePrice: 4_155_000_000 }, null)[0].value !== '41억 5,500만원') fail('매도 희망가는 반올림 없이 만원 단위 전체 금액');
+if (pv.formatEok(99_995_000) !== '1억' || pv.formatEok(99_994_999) !== '9,999만' || pv.formatEok(1_000_000_000) !== '10억' || pv.formatEok(12_345_678_901) !== '123억' || pv.formatEok(1_234_567_890) !== '12.3억' || pv.formatEok(123_456_789) !== '1.23억') fail(`추정·계산값 반올림 경계 오류: ${[99_995_000, 99_994_999, 1e9, 12_345_678_901, 1_234_567_890, 123_456_789].map(pv.formatEok).join(' | ')}`);
+// A broker figure without a written basis is not shown as "확정".
+const noBasis = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000 }, est)[3];
+if (noBasis.badge.includes('확정') || !noBasis.badge.includes('근거 미입력')) fail(`근거 없는 중개사 가격은 확정으로 표시하면 안 됩니다: ${noBasis.badge}`);
+const withBasis = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000, brokerAchievablePriceRationale: '인근 2건 매수 문의', brokerAchievablePriceConfirmedAt: '2026-11-06T01:00:00Z' }, est)[3];
+if (!withBasis.badge.startsWith('중개사 확정 2026-11-06')) fail(`근거·확정일이 있으면 확정 표시: ${withBasis.badge}`);
+if (!pv.PRICE_ESTIMATE_METHOD_NOTE.includes('5건 이상') || pv.PRICE_ESTIMATE_METHOD_NOTE.includes('공인중개사의 가격 의견')) fail('산출 방법 문구가 서버 산식과 다릅니다.');
 if (!four[1].badge.includes('감정평가 아님') || !four[3].badge.includes('감정평가 아님')) fail('공시지가·추정은 감정평가 아님 표시');
-const confirmed = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000 }, est);
-if (confirmed[3].state !== 'confirmed' || confirmed[3].value !== '38억' || !confirmed[3].sub.includes('30.2억~57.3억')) fail('중개사 확정가가 추정보다 우선하고 추정 범위를 함께 보여야 합니다.');
+const confirmed = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000, brokerAchievablePriceRationale: '근거' }, est);
+if (confirmed[3].state !== 'confirmed' || confirmed[3].value !== '38억원' || !confirmed[3].sub.includes('30.2억~57.3억')) fail('중개사 확정가가 추정보다 우선하고 추정 범위를 함께 보여야 합니다.');
 if (pv.priceLayerCells({ salePrice: 3_000_000_000 }, null).length !== 1) fail('없는 단계는 숨김(빈 칸 없음)');
 if (pv.priceLayerCells(base8, { ...est, state: 'insufficient', low: undefined, mid: undefined, high: undefined, unitMid: undefined }).length !== 2) fail('비교거래 부족이면 시세·추정 칸 숨김');
 if (!pv.askingPosition(3_000_000_000, est).includes('낮습니다')) fail('희망가 위치 해석 오류');
