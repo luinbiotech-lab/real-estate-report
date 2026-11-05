@@ -288,3 +288,23 @@
 .daon-opening-page .df-cover-facts span{font-size:12.5px;font-weight:600;color:#0f2c50;line-height:1.35}
 .daon-opening-page .df-cover-facts>div:nth-child(3){grid-column:1/-1}
 .daon-opening-page .df-cover-pillars{margin-top:7mm;padding:6mm 0}
+
+/* Simple company cover (owner decision 2026-11-05) */
+.daon-cover-simple{display:flex;flex-direction:column;align-items:center;background:linear-gradient(160deg,#04284b 0%,#073a69 60%,#0a4677 100%)!important;color:#fff;padding:0 18mm;box-sizing:border-box;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.daon-cover-simple *{word-break:keep-all}
+.daon-cover-simple .dcs-brand{margin-top:58mm;display:flex;flex-direction:column;align-items:center}
+.daon-cover-simple .dcs-mark{width:34mm;height:39mm;display:block}
+.daon-cover-simple .dcs-brand strong{margin-top:6mm;font-family:Georgia,'Times New Roman',serif;font-size:54px;font-weight:700;letter-spacing:2px;color:#ecc77f;line-height:1}
+.daon-cover-simple .dcs-brand span{margin-top:3mm;font-size:13px;letter-spacing:9px;color:#ecc77f;padding-left:9px}
+.daon-cover-simple .dcs-brand i{display:block;width:44mm;height:.4mm;background:#c6943b;margin:8mm 0 4mm}
+.daon-cover-simple .dcs-brand em{font-style:normal;font-family:'Montserrat Variable',Montserrat,sans-serif;font-size:10px;letter-spacing:3.4px;color:#cfd8e2}
+.daon-cover-simple .dcs-title{margin-top:30mm;text-align:center}
+.daon-cover-simple .dcs-title small{display:block;font-size:16px;font-weight:600;letter-spacing:4px;color:#e2bd73}
+.daon-cover-simple .dcs-title h1{margin:4mm 0 0;font-family:'Noto Sans KR Variable','Noto Sans KR',sans-serif;font-size:32px;font-weight:800;letter-spacing:-.6px;color:#fff;line-height:1.25}
+.daon-cover-simple .dcs-facts{margin:14mm 0 0;width:130mm;border-top:.3mm solid rgba(226,189,115,.6);padding-top:5mm}
+.daon-cover-simple .dcs-facts>div{display:grid;grid-template-columns:22mm 1fr;padding:1.6mm 0}
+.daon-cover-simple .dcs-facts dt{font-size:12px;font-weight:700;color:#e2bd73}
+.daon-cover-simple .dcs-facts dd{margin:0;font-size:13px;color:#eef3f8;line-height:1.45}
+.daon-cover-simple .dcs-foot{margin-top:auto;margin-bottom:16mm;text-align:center}
+.daon-cover-simple .dcs-foot b{display:block;font-family:Georgia,'Times New Roman',serif;font-size:20px;letter-spacing:1.5px;color:#ecc77f}
+.daon-cover-simple .dcs-foot span{display:block;margin-top:2mm;font-size:10.5px;color:#cfd8e2}
