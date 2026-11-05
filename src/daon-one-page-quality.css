@@ -99,3 +99,5 @@
 .daon-one-page-master .d1-logo.d1-logo-image{display:flex;align-items:center;justify-content:center}
 .daon-one-page-master .d1-logo-image .d1-logo-img{display:block;height:17mm;width:auto}
 .daon-one-page-master .d1-footer .d1-logo-image .d1-logo-img{height:14mm}
+/* Title box holds the full Noto Sans KR line box (glyph box ~1.45em) so overflow:hidden never clips descenders */
+.daon-one-page-master .d1-head-copy h1,.daon-one-page-master .d1-head-copy h1.d1-title-long{line-height:1.2;padding-bottom:1mm}
