@@ -22,7 +22,8 @@ async function waitForQaImages(page, selector, minimumImages) {
   await page.waitForFunction(({ selector, minimumImages }) => {
     const root = document.querySelector(selector);
     if (!root) return false;
-    const images = [...root.querySelectorAll('img')];
+    // Bundled brand logo (.daon-logo-img, 2026-11-05) is a build asset, not property media: exclude it from the QA-media check.
+    const images = [...root.querySelectorAll('img:not(.daon-logo-img)')];
     return images.length >= minimumImages
       && images.every((image) => (image.getAttribute('src') || '').startsWith('/__qa__/'))
       && images.every((image) => image.complete && image.naturalWidth > 0 && image.naturalHeight > 0);
@@ -113,7 +114,8 @@ try {
     if (!(sheet instanceof HTMLElement)) throw new Error('1P sheet missing');
     const root = document.querySelector('.daon-one-page-master');
     const facts = [...document.querySelectorAll('.d1-fact')].map((item) => item.textContent?.trim() || '');
-    const images = [...sheet.querySelectorAll('img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
+    const logos = [...sheet.querySelectorAll('img.daon-logo-img')].map((image) => image.complete && image.naturalWidth > 0);
+    const images = [...sheet.querySelectorAll('img:not(.daon-logo-img)')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
     const rect = sheet.getBoundingClientRect();
     const title = sheet.querySelector('.d1-head-copy h1');
     const titleContainer = sheet.querySelector('.d1-head-copy');
@@ -129,6 +131,7 @@ try {
       clientHeight: sheet.clientHeight,
       facts,
       images,
+      logos,
       templateId: root?.getAttribute('data-template-id'),
       templateVersion: root?.getAttribute('data-template-version'),
       text: sheet.textContent || '',
@@ -148,6 +151,7 @@ try {
   assert(onePage.titleText === '전속매각 | 방배동 815-11 코너빌딩', `1P header title mismatch: ${onePage.titleText}`);
   assert(onePage.titleTextOverflow !== 'ellipsis', '1P header title uses ellipsis');
   assert(onePage.titleWithinContainer, '1P header title is clipped outside its header cell');
+  assert(onePage.logos.length > 0 && onePage.logos.every(Boolean), '1P brand logo image missing or failed to load');
   assert(onePage.images.length >= 2 && onePage.images.every((image) => image.width > 0 && image.height > 0), '1P QA fixture images failed to render');
   assert(onePage.images.every((image) => image.src.startsWith('/__qa__/')), '1P unexpected production media dependency in rendered QA');
   assert(onePage.scrollHeight <= onePage.clientHeight + 2, `1P vertical overflow: ${onePage.scrollHeight}/${onePage.clientHeight}`);
@@ -159,7 +163,8 @@ try {
   await waitForQaImages(page, '.daon-professional-report-master', 2);
   const professional = await page.evaluate(() => {
     const master = document.querySelector('.daon-professional-report-master');
-    const images = [...master.querySelectorAll('img')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
+    const logos = [...master.querySelectorAll('img.daon-logo-img')].map((image) => image.complete && image.naturalWidth > 0);
+    const images = [...master.querySelectorAll('img:not(.daon-logo-img)')].map((image) => ({ src: image.getAttribute('src') || '', width: image.naturalWidth, height: image.naturalHeight }));
     const pages = [...master.querySelectorAll('.daon-frame-page, .daon-detail-page')].map((node) => {
       const el = node;
       return {
@@ -178,6 +183,7 @@ try {
       visualMaster: master?.getAttribute('data-visual-master'),
       pages,
       images,
+      logos,
       text: master?.textContent || '',
     };
   });
@@ -198,6 +204,7 @@ try {
     assert(item.scrollHeight <= item.clientHeight + 2, `Professional page ${index + 1} vertical overflow: ${item.scrollHeight}/${item.clientHeight}`);
     assert(item.scrollWidth <= item.clientWidth + 2, `Professional page ${index + 1} horizontal overflow: ${item.scrollWidth}/${item.clientWidth}`);
   }
+  assert(professional.logos.length > 0 && professional.logos.every(Boolean), 'Professional MASTER brand logo image missing or failed to load');
   assert(professional.images.length > 0 && professional.images.every((image) => image.width > 0 && image.height > 0), 'Professional MASTER contains broken images');
   assert(professional.images.every((image) => image.src.startsWith('/__qa__/')), 'Professional MASTER has unexpected production media dependency in rendered QA');
   assert(professional.text.includes('DAON 소개'), 'Professional MASTER closing content missing');
