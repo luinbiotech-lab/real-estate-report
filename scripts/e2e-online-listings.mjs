@@ -475,7 +475,7 @@ try {
         await page.goto(`${BASE_URL}/property/${encodeURIComponent(propertyId)}/edit`, { waitUntil: 'domcontentloaded' });
         await page.getByLabel('중개사 확정 거래가능가격 (원, 감정평가 아님)', { exact: true }).fill('3950123456');
         await page.getByLabel('거래가능가격 확정 근거', { exact: true }).fill('테스트: 인근 매수 문의 2건 기준');
-        const today = new Date().toISOString().slice(0, 10);
+        const today = new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10); // KST calendar date
         await page.getByRole('button', { name: /저장/ }).first().click();
         await page.waitForURL(/\/property\/(?!new$)[^/]+$/, { timeout: 20_000 });
         const readCell = (selector) => page.evaluate((sel) => { const cell = document.querySelector(sel); return cell ? { value: (cell.querySelector('strong')?.textContent || '').replace(/\s+/g, ''), badge: cell.querySelector('em')?.textContent?.trim() || '' } : null; }, selector);

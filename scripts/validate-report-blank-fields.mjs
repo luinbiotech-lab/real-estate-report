@@ -133,6 +133,8 @@ const noBasis = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_
 if (noBasis.state !== 'entered' || noBasis.badge.includes('확정') || !noBasis.badge.includes('근거 미입력')) fail(`근거 없는 중개사 가격은 확정으로 표시하면 안 됩니다: ${noBasis.badge}`);
 const withBasis = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000, brokerAchievablePriceRationale: '인근 2건 매수 문의', brokerAchievablePriceConfirmedAt: '2026-11-06T01:00:00Z' }, est)[3];
 if (withBasis.state !== 'confirmed' || !withBasis.badge.startsWith('중개사 확정 2026-11-06')) fail(`근거·확정일이 있으면 확정 표시: ${withBasis.badge}`);
+// Confirmation date is the Korean calendar date (UTC 2026-11-05T16:00Z = KST 2026-11-06 01:00).
+if (pv.koreaDate('2026-11-05T16:00:00Z') !== '2026-11-06' || pv.koreaDate('2026-11-05T14:59:59Z') !== '2026-11-05' || pv.koreaDate('') !== '' || pv.koreaDate('not-a-date') !== '') fail('확정일은 한국 날짜로 표시해야 합니다.');
 // 1P (whole Property) and 7P (report model) must carry the same confirmation date (루인 review on #43).
 const builderSrc = readFileSync('src/services/reportEngine/reportDataBuilder.ts', 'utf8');
 if (!builderSrc.includes("brokerAchievablePriceConfirmedAt: text('brokerAchievablePriceConfirmedAt')") || !readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes('brokerAchievablePriceConfirmedAt: model.pricing.brokerAchievablePriceConfirmedAt')) fail('7P 가격 칸에 중개사 확정일이 전달되지 않습니다(1P와 불일치).');

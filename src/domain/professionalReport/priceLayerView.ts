@@ -76,6 +76,13 @@ export interface PriceLayerCell {
 }
 
 /** Present cells only (blank-value policy: a missing layer is hidden, never printed as a placeholder). */
+/** Stored timestamps are UTC ISO; the report shows the Korean calendar date (KST 00:00–08:59 is the previous UTC day). */
+export function koreaDate(iso: string | undefined | null) {
+  const time = Date.parse(iso ?? '');
+  if (!Number.isFinite(time)) return '';
+  return new Date(time + 9 * 3_600_000).toISOString().slice(0, 10);
+}
+
 export function priceLayerCells(p: Partial<Property>, estimate: AchievablePriceEstimate | null): PriceLayerCell[] {
   const cells: PriceLayerCell[] = [];
   const landPyeong = positive(p.landAreaPyeong) ? p.landAreaPyeong : positive(p.landAreaSqm) ? p.landAreaSqm / SQM_PER_PYEONG : 0;
@@ -90,7 +97,7 @@ export function priceLayerCells(p: Partial<Property>, estimate: AchievablePriceE
   }
   if (positive(p.brokerAchievablePrice)) {
     const rationale = (p.brokerAchievablePriceRationale ?? '').trim();
-    const confirmedAt = (p.brokerAchievablePriceConfirmedAt ?? '').slice(0, 10);
+    const confirmedAt = koreaDate(p.brokerAchievablePriceConfirmedAt);
     // A broker figure without a written basis is shown as an entered value, not as "확정" (루인 review on #43).
     const badge = rationale ? `중개사 확정${confirmedAt ? ` ${confirmedAt}` : ''} · ${NOT_APPRAISAL}` : `중개사 입력 · 근거 미입력 · ${NOT_APPRAISAL}`;
     cells.push({ key: 'achievable', label: '거래가능가격', value: formatExactWon(p.brokerAchievablePrice), sub: estimate?.state === 'estimated' ? `DA:ON 추정 ${formatEok(estimate.low!)}~${formatEok(estimate.high!)}원` : '중개사 입력값', badge, state: rationale ? 'confirmed' : 'entered', unit: 'total', amount: p.brokerAchievablePrice });
