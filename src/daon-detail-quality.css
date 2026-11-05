@@ -353,3 +353,9 @@
 .daon-detail-master .daon-detail-page-3 .dd-map-wrap,.daon-detail-master .daon-detail-page-3 .dd-map-wrap>.dd-image{height:100%;min-height:100mm}
 .daon-detail-master .dd-metrics small em{font-style:normal;font-weight:500;color:#8a6a33;margin-left:1mm}
 .daon-detail-master .dd-metric-note{margin:-2mm 0 0;font-size:9.6px;color:#6b7886}
+.daon-detail-master .dd-insight p{-webkit-line-clamp:4;font-size:12.4px}
+.daon-detail-master .daon-detail-page-3 .dd-photo-three{height:34mm}
+.daon-detail-master .daon-detail-page-3 .dd-location-grid{min-height:92mm}
+.daon-detail-master .daon-detail-page-3 .dd-map-wrap,.daon-detail-master .daon-detail-page-3 .dd-map-wrap>.dd-image{min-height:92mm}
+.daon-detail-master .daon-detail-page-3 .dd-insight b{font-size:16.5px}
+.daon-detail-master .daon-detail-page-3 .dd-insight p{-webkit-line-clamp:2}

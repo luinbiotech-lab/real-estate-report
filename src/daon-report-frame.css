@@ -264,3 +264,12 @@
 .daon-opening-page .df-cover-pillars b{display:block;margin-top:2mm;font-size:14px;font-weight:800;color:#0f2c50}
 .daon-opening-page .df-cover-pillars span{display:block;margin-top:1.5mm;font-size:10.5px;line-height:1.5;color:#4a5d72}
 .daon-opening-page .df-frame-footer{margin-top:auto}
+.daon-opening-page .df-cover-photo{height:138mm;border:.3mm solid #d9dee5}
+.daon-opening-page .df-cover-title{margin-top:10mm}
+.daon-opening-page .df-cover-title h1{font-size:30px}
+.daon-opening-page .df-cover-title h1 small{font-size:22px}
+.daon-opening-page .df-cover-title p{font-size:16px}
+.daon-opening-page .df-cover-pillars{margin-top:9mm;padding:8mm 0}
+.daon-opening-page .df-cover-pillars svg{width:12mm;height:12mm}
+.daon-opening-page .df-cover-pillars b{font-size:16px}
+.daon-opening-page .df-cover-pillars span{font-size:11.5px}
