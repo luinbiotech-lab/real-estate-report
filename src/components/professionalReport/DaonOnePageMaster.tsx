@@ -72,7 +72,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         ? `${p.parkingSpaces}대`
         : '';
   const parkingNote = hasNumber(p.parkingField) ? `* ${p.parkingFieldNote || '현장 이용 기준'}` : '';
-  const heroHeadline = first(p.investmentPoints, first(p.features, '입지와 활용가치를 함께 검토하는 자산'));
+  const heroHeadline = (p.shortHeadline || '').trim() || first(p.investmentPoints, first(p.features, '입지와 활용가치를 함께 검토하는 자산'));
   const locationCaption = [p.nearbyStation || '', p.roadCondition || ''].filter(Boolean).join(' · ');
   // Broker-checked short labels win; otherwise the stored first line is printed as written (owner decision 2026-11-04).
   const occupancySummary = (p.shortOccupancyLabel || '').trim() || first(p.occupancyStatus, '');

@@ -338,3 +338,18 @@
 @media print{.daon-professional-report-master,.daon-detail-master{margin:0!important;width:210mm}}
 /* Long Korean page-1 titles (property names) shrink instead of being cut (2026-11-05 owner test). */
 .daon-detail-master .dd-head h1.dd-title-long{font-size:21px;white-space:normal;text-overflow:clip;line-height:1.15;max-height:2.3em;overflow:hidden;word-break:keep-all}
+
+/* Owner comparison 2026-11-05 (party HQ test vs reference) */
+/* p1: hero copy top-left like the reference; right column cards share the height when there is no price card */
+.daon-detail-master .dd-hero-copy{top:5mm;bottom:auto;width:66%;padding:5mm 5.4mm}
+.daon-detail-master .dd-hero-copy b{font-size:20px;line-height:1.32;-webkit-line-clamp:3}
+.daon-detail-master .dd-p1-side>.dd-number-card{min-height:0}
+.daon-detail-master .dd-insight.with-icon{grid-template-columns:15mm 1fr 30mm}
+.daon-detail-master .dd-insight.with-icon::after{content:'MORE THAN\A REAL ESTATE\A A BETTER\A TOMORROW';white-space:pre;font-family:'Montserrat Variable',Montserrat,sans-serif;font-size:7.6px;letter-spacing:1.4px;line-height:1.7;color:#b8893a;border-left:.3mm solid #e2cfa6;padding-left:4mm;align-self:center}
+.daon-detail-master .dd-insight.with-icon.compact::after{content:none}
+.daon-detail-master .dd-insight.with-icon.compact{grid-template-columns:15mm 1fr}
+/* p3: the map/cards row grew with its text and photos overlapped the map caption */
+.daon-detail-master .daon-detail-page-3 .dd-location-grid{height:auto;min-height:100mm;align-items:stretch}
+.daon-detail-master .daon-detail-page-3 .dd-map-wrap,.daon-detail-master .daon-detail-page-3 .dd-map-wrap>.dd-image{height:100%;min-height:100mm}
+.daon-detail-master .dd-metrics small em{font-style:normal;font-weight:500;color:#8a6a33;margin-left:1mm}
+.daon-detail-master .dd-metric-note{margin:-2mm 0 0;font-size:9.6px;color:#6b7886}

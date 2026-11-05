@@ -30,7 +30,7 @@ export interface Property {
    * Optional broker-checked short labels for the 1P status/highlight chips (owner decision 2026-11-04, Luin review on
    * PR #46). When blank the stored original sentence is printed as written; nothing is shortened automatically.
    */
-  shortOccupancyLabel?: string; shortRoadLabel?: string; shortUseLabel?: string; shortDevelopmentLabel?: string;
+  shortHeadline?: string; shortOccupancyLabel?: string; shortRoadLabel?: string; shortUseLabel?: string; shortDevelopmentLabel?: string;
   zoning: string; mainUse: string; structure: string; basementFloors: number; groundFloors: number; completionDate: string;
   buildingCoverageRate: number; floorAreaRatio: number; elevator: string;
   /** Legacy parking field retained for backward compatibility. */

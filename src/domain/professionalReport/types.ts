@@ -138,6 +138,8 @@ export interface ProfessionalReportViewModel {
     id: string; propertyNumber: ReportValue<string>; name: ReportValue<string>; buildingName: ReportValue<string>;
     tradeType: ReportValue<string>; address: ReportValue<string>; detailAddress: ReportValue<string>;
     managerName: ReportValue<string>; managerPhone: ReportValue<string>; managerEmail: ReportValue<string>; companyName: ReportValue<string>;
+    /** Optional broker-checked hero line (owner decision 2026-11-05). */
+    shortHeadline?: ReportValue<string>;
   };
   pricing: {
     salePrice: ReportValue<number>; deposit: ReportValue<number>; monthlyRent: ReportValue<number>;

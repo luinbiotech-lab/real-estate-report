@@ -132,7 +132,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const comparables = model.investment.comparables ?? [];
   // Titles never infer a corner from free text (Luin review on PR #46, 2026-11-04): neutral titles until a verified
   // structured road state exists. The stored road text itself is still printed as written.
-  const heroStatement = points[0] || ('입지와 활용가치를 함께 검토하는 자산');
+  const heroStatement = (model.identity.shortHeadline?.value || '').trim() || points[0] || ('입지와 활용가치를 함께 검토하는 자산');
   const parkingOfficial = display(model.building.parkingOfficial);
   const parkingField = display(model.building.parkingField);
   const parkingFieldNote = model.building.parkingFieldNote.value ? ` · ${model.building.parkingFieldNote.display}` : '';
@@ -160,7 +160,12 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const p5RoadmapCount = 2 + (has(display(model.pricing.occupancyStatus)) ? 1 : 0);
   // A 0% coverage/FAR is how the building register reports an unrecorded value, not a fact (2026-11-05 owner test).
   const positive = (item: ReportValue<number>) => typeof item.value === 'number' && item.value > 0 ? display(item) : '';
-  const metrics = ([['건폐율', positive(model.building.buildingCoverageRate)], ['용적률', positive(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
+  // Register coverage 0 = unrecorded. When building and land areas exist, print a clearly labelled calculated value
+  // (owner reference page 6: "단순 건폐율 약 48.8%" with a note), never as the register value.
+  const bArea = typeof model.building.buildingAreaPyeong.value === 'number' ? model.building.buildingAreaPyeong.value : 0;
+  const lArea = typeof model.land.landAreaPyeong.value === 'number' ? model.land.landAreaPyeong.value : 0;
+  const calcCoverage = !positive(model.building.buildingCoverageRate) && bArea > 0 && lArea > 0 ? `약 ${(Math.round((bArea / lArea) * 1000) / 10).toLocaleString('ko-KR')}%` : '';
+  const metrics = ([[calcCoverage ? '단순 건폐율' : '건폐율', positive(model.building.buildingCoverageRate) || calcCoverage], ['용적률', positive(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
   const p3CardCount = [display(model.land.roadCondition), display(model.location.locationAnalysis)].filter(has).length + 1;
   const occupancyParking = joinPresent(' · ', display(model.pricing.occupancyStatus), parkingField && `현장 주차 ${parkingField}${parkingFieldNote}`);
 
@@ -227,7 +232,8 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       {hasPhotos && <SectionBar>현황 건물에서 읽는 실사용 가치</SectionBar>}
       {hasPhotos && <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="본건 및 주변 건물 전경" /><ImageSlot src={imageAt(1)} caption="주변 랜드마크·배후수요" /><ImageSlot src={imageAt(2)} caption="주변 도로·생활권 전경" /></div>}
       {metrics.length > 0 && <SectionBar>건물 지표</SectionBar>}
-      {metrics.length > 0 && <div className="dd-metrics" style={{ gridTemplateColumns: equalColumns(metrics.length) }}>{metrics.map(([label, value]) => <div key={label}><span>●</span><small>{label}</small><strong>{value}</strong></div>)}</div>}
+      {metrics.length > 0 && <div className="dd-metrics" style={{ gridTemplateColumns: equalColumns(metrics.length) }}>{metrics.map(([label, value]) => <div key={label}><span>●</span><small>{label}{label === '단순 건폐율' && <em>(산출)</em>}</small><strong>{value}</strong></div>)}</div>}
+      {calcCoverage && <p className="dd-metric-note">※ 건축물대장 건폐율 미기재. 건축면적÷대지면적으로 단순 산출한 값이며 공부상 수치가 아닙니다.</p>}
       <SectionBar>매입 후 의사결정 포인트</SectionBar>
       <div className="dd-reason-three"><GoldCard icon="building" title="기존 건물 유지" copy="초기 투자비를 통제하면서 사옥·업무·콘텐츠 공간으로 활용하는 전략을 검토합니다." /><GoldCard icon="tools" title="리노베이션" copy="외관과 동선, 설비, 층별 기능 재배치를 검토합니다." /><GoldCard icon="search" title="신축 검토" copy={display(model.investment.developmentPlan, '용도지역·도로·주차·일조·높이·건축선 등을 사전 검토합니다.')} /></div>
       <Insight compact icon="building" title="기존 건물의 연식과 상태는 의사결정의 출발점입니다." copy="현재 사용 가능한 공간을 확보하면서 향후 리노베이션 또는 신축 여부를 선택할 수 있는 구조인지 확인합니다." />

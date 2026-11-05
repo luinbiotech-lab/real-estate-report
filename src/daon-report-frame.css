@@ -245,3 +245,22 @@
 @media print{
   .daon-core-page{page:daon-professional-master;margin:0;box-shadow:none}
 }
+
+/* Cover, reference layout (owner 2026-11-05) */
+.daon-opening-page{display:flex;flex-direction:column}
+.daon-opening-page .df-cover-photo{margin:0 9mm;height:112mm;position:relative;overflow:hidden}
+.daon-opening-page .df-cover-photo:after{content:none}
+.daon-opening-page .df-cover-photo img{width:100%;height:100%;object-fit:cover}
+.daon-opening-page .df-cover-title{margin:9mm 9mm 0;text-align:center}
+.daon-opening-page .df-cover-title h1{margin:0;display:flex;align-items:center;justify-content:center;gap:5mm;font-family:'Noto Sans KR Variable','Noto Sans KR',sans-serif;font-weight:800;font-size:27px;letter-spacing:-.8px;color:#0f2c50;line-height:1.2}
+.daon-opening-page .df-cover-title h1 small{font-size:20px;font-weight:700;color:#a86f20;padding:1mm 5mm 1mm 0;border-right:.4mm solid #c6943b;border-top:.6mm solid #c6943b;white-space:nowrap}
+.daon-opening-page .df-cover-title h1 span{word-break:keep-all}
+.daon-opening-page .df-cover-title p{margin:3mm 0 0;font-size:15px;font-weight:600;color:#2f4258}
+.daon-opening-page .df-cover-title time{display:block;width:40mm;margin:4mm auto 0;padding-top:3mm;border-top:.3mm solid #c6943b;font-family:Georgia,serif;font-size:14px;color:#0f2c50}
+.daon-opening-page .df-cover-pillars{margin:8mm 9mm 0;background:#f4f6f8;display:grid;grid-template-columns:repeat(3,1fr);padding:6mm 0}
+.daon-opening-page .df-cover-pillars article{text-align:center;border-right:.3mm solid #d3dae2;padding:0 4mm}
+.daon-opening-page .df-cover-pillars article:last-child{border-right:0}
+.daon-opening-page .df-cover-pillars svg{width:10mm;height:10mm;fill:none;stroke:#0f2c50;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.daon-opening-page .df-cover-pillars b{display:block;margin-top:2mm;font-size:14px;font-weight:800;color:#0f2c50}
+.daon-opening-page .df-cover-pillars span{display:block;margin-top:1.5mm;font-size:10.5px;line-height:1.5;color:#4a5d72}
+.daon-opening-page .df-frame-footer{margin-top:auto}
