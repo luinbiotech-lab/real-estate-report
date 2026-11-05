@@ -13,9 +13,12 @@ import type { Property } from '../types';
 import { DaonOnePageMaster } from '../components/professionalReport/DaonOnePageMaster';
 import { findPriceEstimate, type AchievablePriceEstimate } from '../domain/professionalReport/priceLayerView';
 import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/professionalReport/ReportBlankFieldsGate';
-import { blankFieldsSignature, needsBlankFieldConfirmation, onePageBlankFields } from '../domain/professionalReport/reportBlankFields';
+import { blankFieldsSignature, needsBlankFieldConfirmation, onePageBlankFields, onePageLengthWarnings } from '../domain/professionalReport/reportBlankFields';
 import '../daon-one-page-master.css';
+import '../assets/fonts/noto-sans-kr/index.css';
+import '../assets/fonts/montserrat/index.css';
 import '../daon-master-refinement.css';
+import '../daon-one-page-quality.css';
 
 type PreviewState =
   | { routeKey: string; phase: 'loading' }
@@ -88,7 +91,7 @@ export default function DocumentPreview() {
   if (kind !== 'proposal') return <div className="center"><CircularProgress /></div>;
 
   const property = current.property;
-  const blankFields = onePageBlankFields(property);
+  const blankFields = [...onePageBlankFields(property), ...onePageLengthWarnings(property)];
   const blankAcknowledgedNow = !needsBlankFieldConfirmation(blankFields, blankAcknowledged);
   const requestPrint = () => {
     if (!blankAcknowledgedNow) { setBlankDialogOpen(true); return; }

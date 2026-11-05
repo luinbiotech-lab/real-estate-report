@@ -50,7 +50,7 @@ body{background:var(--brand-canvas);color:var(--brand-ink);font-family:var(--bra
 .app-shell .eyebrow{color:var(--brand-accent)!important;letter-spacing:1.6px}
 .app-shell .page-header h1{color:var(--brand-ink);letter-spacing:-.025em}
 .app-shell .page-header p{color:var(--brand-muted)}
-.app-shell h1,.app-shell h2,.app-shell h3{color:var(--brand-ink)}
+.app-shell :is(h1,h2,h3):not(:is(.daon-one-page-master,.daon-detail-master,.daon-professional-report-master,.daon-frame-page) *){color:var(--brand-ink)}
 
 /* ---------- Surfaces ---------- */
 .app-shell .panel,.app-shell .form-section,.app-shell .dropzone,.app-shell .settings-card,

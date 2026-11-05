@@ -141,3 +141,11 @@
 .dd-price-layers span{font-size:6.6px;color:#58677a;line-height:1.4}
 .dd-price-layers em{font-style:normal;font-size:6.2px;font-weight:800;color:var(--dd-gold-deep)}
 .dd-price-layers-note{margin:0 0 3mm;font-size:7.6px;line-height:1.5;color:#2b3d52;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+/* Fix 2026-11-02 (A): app design-system headings (#39) must never recolour report MASTER text; header title and section
+   titles stay white on navy. */
+.daon-one-page-master .d1-head-copy h1,.daon-one-page-master .d1-section-title b,.daon-one-page-master .d1-hero-copy h2{color:#fff}
+/* Fix 2026-11-02 (B): when the highlight strip has no items it is not rendered (#42); drop its grid row so the use row and
+   footer keep their own rows instead of the footer being squeezed and clipped. */
+.daon-one-page-master .d1-sheet.d1-sheet-no-highlight{grid-template-rows:31mm 19mm 12mm minmax(0,1fr) 31mm 14mm 23mm}
+/* DA:ON monogram (2026-11-04): the boxed "D" is replaced by the vector DaonMark; no frame, keep the same footprint. */
+.daon-one-page-master .d1-logo-mark.d1-logo-svg{border:0;width:12mm;height:13.5mm;display:block}

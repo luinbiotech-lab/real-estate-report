@@ -7,6 +7,7 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { deflateSync } from 'node:zlib';
 import { chromium } from 'playwright';
 import { classifyPropertyType, marketSummary as summarizeMarket, normalizeTrade } from '../api/property-discovery.mjs';
+import { normalizeResidentialDeal, residentialSummary } from '../api/_lib/residentialTrades.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const OUT = 'artifacts/agent-qa';
@@ -200,6 +201,18 @@ try {
         assert(layers[3].text.includes('30.2억~57.3억') && layers[3].text.includes('감정평가 아님'), `거래가능가격 칸: ${layers[3].text}`);
       }
       assert(!layers.some((l) => l.clipped), `1P 가격 칸 잘림: ${layers.filter((l) => l.clipped).map((l) => l.key).join(',')}`);
+      // Fix 2026-11-02: (A) app heading styles must not darken the white MASTER title; (B) the footer must fill the last
+      // row (a removed highlight strip used to shift rows, clipping the footer and leaving a white band).
+      const look = await page.evaluate(() => {
+        const sheet = document.querySelector('.d1-sheet').getBoundingClientRect();
+        const footer = document.querySelector('.d1-footer');
+        const fr = footer.getBoundingClientRect();
+        const rgb = (el) => (getComputedStyle(el).color.match(/\d+/g) || []).slice(0, 3).map(Number);
+        const lum = ([r, g, b]) => (0.299 * r + 0.587 * g + 0.114 * b);
+        return { title: lum(rgb(document.querySelector('.d1-head-copy h1'))), section: lum(rgb(document.querySelector('.d1-section-title b'))), footerGap: Math.round(sheet.bottom - fr.bottom), footerClipped: footer.scrollHeight > footer.clientHeight + 1, footerH: Math.round(fr.height) };
+      });
+      assert(look.title > 200 && look.section > 200, `1P 제목 글자색이 어둡습니다(밝기 ${Math.round(look.title)}/${Math.round(look.section)})`);
+      assert(Math.abs(look.footerGap) <= 2 && !look.footerClipped && look.footerH >= 70, `1P 하단 푸터 잘림/공백: ${JSON.stringify(look)}`);
       const onePlaceholder = one.text.match(/.{0,30}(확인 필요|검토 필요|분석 필요|미등록).{0,20}/);
       assert(!onePlaceholder, `1P에 공란 placeholder 표시: ${onePlaceholder?.[0]}`);
       assert(one.sh <= one.ch + 2 && one.sw <= one.cw + 2, `1P 넘침 ${one.sw}x${one.sh}/${one.cw}x${one.ch}`);
@@ -232,6 +245,70 @@ try {
       return requiredMissing ? '필수 공란 → 주의 팝업 + 사용자 선택 · 빈 칸 0' : '선택 공란 확인 요청 · 빈 칸 0';
     });
 
+    // 4c. Luin review on PR #46 (2026-11-04): printed 1P facts are never cut. Under print media, fact values must show in
+    // full; any status/highlight chip that is cut must be announced by the pre-publish 1P length warning (short labels).
+    await check(tag, '1P 인쇄 사실값 잘림 0 · 길이 경고', async () => {
+      await page.emulateMedia({ media: 'print' });
+      const clip = await page.evaluate(() => {
+        const cut = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+        const facts = [...document.querySelectorAll('.d1-fact')].filter((el) => cut(el) || cut(el.querySelector('.d1-fact-value') || el)).map((el) => (el.textContent || '').trim().slice(0, 40));
+        const chips = [...document.querySelectorAll('.d1-status-strip > div > b, .d1-highlight-strip b')].filter(cut).map((el) => (el.textContent || '').trim().slice(0, 40));
+        return { facts, chips };
+      });
+      // A printer lays the page out at A4 width (~794 CSS px), so measure the print position at that width.
+      const viewport1p = page.viewportSize();
+      await page.setViewportSize({ width: 794, height: 1123 });
+      const sheetLeft = await page.evaluate(() => Math.round(document.querySelector('.d1-sheet').getBoundingClientRect().left));
+      if (viewport1p) await page.setViewportSize(viewport1p);
+      await page.emulateMedia({ media: null });
+      assert(Math.abs(sheetLeft) <= 1, `1P 인쇄 시 용지 왼쪽에서 ${sheetLeft}px 밀림`);
+      assert(!clip.facts.length, `1P 사실표 인쇄 잘림: ${clip.facts.join(' | ')}`);
+      // Exercise the warning path with a long stored sentence (QA browser IndexedDB only), then restore the record.
+      const longText = '현재 소유자 직접 사용 중이며 잔금일 기준 전체 명도 협의가 가능하고 인도 범위는 계약서에 명시합니다';
+      const original = await page.evaluate(async ({ id, text }) => {
+        const db = await new Promise((res, rej) => { const r = indexedDB.open('real-estate-report'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+        try {
+          const rec = await new Promise((res, rej) => { const g = db.transaction('properties').objectStore('properties').get(id); g.onsuccess = () => res(g.result); g.onerror = () => rej(g.error); });
+          if (!rec) return null;
+          await new Promise((res, rej) => { const tx = db.transaction('properties', 'readwrite'); tx.objectStore('properties').put({ ...rec, occupancyStatus: text, shortOccupancyLabel: '' }); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+          return { occupancyStatus: rec.occupancyStatus ?? '', shortOccupancyLabel: rec.shortOccupancyLabel ?? '' };
+        } finally { db.close(); }
+      }, { id: propertyId, text: longText });
+      let longChecked = 'QA 저장소 접근 불가 — 길이 경고 경로 미검증';
+      if (original) {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+        const statusText = await page.locator('.d1-status-strip').innerText();
+        assert(statusText.replace(/\s+/g, ' ').includes('현재 소유자 직접 사용 중이며'), '긴 원문이 1P에 원문 그대로 시작하지 않습니다.');
+        await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+        const longDialog = page.getByRole('dialog');
+        await longDialog.waitFor({ state: 'visible', timeout: 10_000 });
+        assert(await longDialog.getByTestId('report-long-fields').count() > 0, '긴 명도 원문인데 발행 전 길이 경고가 없습니다.');
+        await longDialog.getByRole('button', { name: '취소' }).click();
+        await longDialog.waitFor({ state: 'hidden', timeout: 10_000 });
+        await page.evaluate(async ({ id, original }) => {
+          const db = await new Promise((res, rej) => { const r = indexedDB.open('real-estate-report'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+          try {
+            const rec = await new Promise((res, rej) => { const g = db.transaction('properties').objectStore('properties').get(id); g.onsuccess = () => res(g.result); g.onerror = () => rej(g.error); });
+            await new Promise((res, rej) => { const tx = db.transaction('properties', 'readwrite'); tx.objectStore('properties').put({ ...rec, ...original }); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+          } finally { db.close(); }
+        }, { id: propertyId, original });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+        longChecked = '긴 원문 → 원문 인쇄 + 발행 전 길이 경고 클릭 확인 · 복원';
+      }
+      if (!clip.chips.length) return `사실표·칩 잘림 0 · ${longChecked}`;
+      const longNotice = page.getByTestId('report-long-fields-notice').or(page.getByTestId('report-blank-fields-notice'));
+      await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+      assert(await dialog.getByTestId('report-long-fields').count() > 0, `칩 ${clip.chips.length}개가 잘리는데 발행 전 길이 경고가 없습니다: ${clip.chips.join(' | ')}`);
+      await dialog.getByRole('button', { name: '취소' }).click();
+      await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
+      assert(await longNotice.count() > 0, '길이 경고 안내 줄 누락');
+      return `사실표 잘림 0 · 잘리는 칩 ${clip.chips.length}개 → 발행 전 길이 경고 확인`;
+    });
+
     // 5. 7P professional MASTER (owner standard: Opening → detail-1..7 → Closing, no overflow).
     await check(tag, '7P 상세보고서 MASTER 구조(Opening→7P→Closing)', async () => {
       await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
@@ -245,6 +322,13 @@ try {
         }));
         return { templateId: master.getAttribute('data-template-id'), visual: master.getAttribute('data-visual-master'), pages, url: location.pathname };
       });
+      const viewport7p = page.viewportSize();
+      await page.setViewportSize({ width: 794, height: 1123 });
+      await page.emulateMedia({ media: 'print' });
+      const printOffset = await page.evaluate(() => [...document.querySelectorAll('.daon-detail-page, .daon-frame-page')].map((el) => Math.round(el.getBoundingClientRect().left)).filter((x) => Math.abs(x) > 1));
+      await page.emulateMedia({ media: null });
+      if (viewport7p) await page.setViewportSize(viewport7p);
+      assert(!printOffset.length, `7P 인쇄 시 페이지가 왼쪽 기준에서 밀림: ${printOffset.slice(0, 3).join(',')}px`);
       await shot(`${tag}-7p`);
       const names = report.pages.map((item) => item.name);
       assert(report.templateId === 'DAON_DETAIL_7P_MASTER', `템플릿 ${report.templateId}`);
@@ -555,6 +639,75 @@ try {
         const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
         assert(layout.scroll <= layout.vw + 1, `가로 넘침 ${layout.scroll}px > ${layout.vw}px`);
         return `${width}px · 유형 ${fixture.propertyType.label}`;
+      });
+    }
+    await page.unroute('**/api/property-discovery**');
+    await page.setViewportSize({ width: 1440, height: 1100 });
+  }
+
+  // 12. Issue #37 phase 2: apartment complex comparison on phones. Rows are normalised by the real server functions from
+  //     response-shaped samples (AptRent sample fields verified 2025-01); the rent API answered only 4 of 6 months, which
+  //     the UI must show instead of presenting the counts as complete.
+  {
+    const resolved = { bun: '0237', ji: '0000', region3: '명륜2가', sigunguCd: '11110' };
+    const target = { complexName: '명륜동주상복합아남아파트' };
+    const meta = (dealKind) => ({ propertyType: 'apartment', dealKind, apiId: dealKind === 'sale' ? 'aptTrade' : 'aptRent' });
+    const raw = (extra) => ({ aptNm: '명륜동주상복합아남아파트', jibun: '237', umdNm: '명륜2가', dealYear: '2026', buildYear: '1999', ...extra });
+    const rows = [
+      normalizeResidentialDeal(raw({ dealAmount: '87,000', dealMonth: '9', dealDay: '5', excluUseAr: '50.49', floor: '7' }), meta('sale'), resolved, target),
+      normalizeResidentialDeal(raw({ dealAmount: '91,000', dealMonth: '10', dealDay: '2', excluUseAr: '50.12', floor: '11' }), meta('sale'), resolved, target),
+      normalizeResidentialDeal(raw({ dealAmount: '12,000', dealMonth: '10', dealDay: '3', excluUseAr: '50.49', floor: '3', cdealType: 'O' }), meta('sale'), resolved, target),
+      normalizeResidentialDeal(raw({ deposit: '43,500', monthlyRent: '0', dealMonth: '8', dealDay: '20', excluUseAr: '50.49', floor: '2' }), meta('rent'), resolved, target),
+      normalizeResidentialDeal(raw({ deposit: '5,000', monthlyRent: '120', dealMonth: '9', dealDay: '11', excluUseAr: '50.49', floor: '5' }), meta('rent'), resolved, target),
+      normalizeResidentialDeal(raw({ dealAmount: '135,000', dealMonth: '9', dealDay: '28', excluUseAr: '84.97', floor: '15' }), meta('sale'), resolved, target),
+    ];
+    const titles = [{ buildingName: '명륜동주상복합아남아파트', lotAddress: '서울특별시 종로구 명륜2가 237', roadAddress: '', totalFloorAreaSqm: 30210, structure: '철근콘크리트구조', mainUse: '공동주택', detailUse: '아파트', registerKind: '집합', householdCount: 180, groundFloors: 15, basementFloors: 2, completionDate: '1999-06-30', rawPk: 'APT' }];
+    const residential = {
+      propertyType: 'apartment', target: { complexName: target.complexName, lot: '237' },
+      apiStatus: { aptTrade: { status: 'ok', label: '국토교통부 아파트 매매 실거래가', detail: '', okMonths: 6, totalMonths: 6 }, aptRent: { status: 'partial', label: '국토교통부 아파트 전월세 실거래가', detail: 'HTTP 500', okMonths: 4, totalMonths: 6 } },
+      summary: residentialSummary(rows), complexDeals: rows, neighbourhoodDeals: [], months: ['202610', '202609', '202608', '202607', '202606', '202605'],
+      interpretation: '모든 거래는 후보입니다. 동일 지번·단지명 일치도 호실 거래로 확정하지 않습니다. 전세가율은 같은 면적대 중앙값으로 계산한 값입니다.',
+    };
+    const aptFixture = {
+      status: 'ok', publicDataConfigured: true, vworldConfigured: true,
+      address: { query: '서울 종로구 명륜2가 237', officialAddress: '서울특별시 종로구 명륜2가 237', roadAddress: '', lotAddress: '서울 종로구 명륜2가 237', latitude: 37.5873, longitude: 126.9973, region1: '서울', region2: '종로구', region3: '명륜2가', bCode: '1111017400', sigunguCd: '11110', bjdongCd: '17400', mountainYn: 'N', bun: '0237', ji: '0000' },
+      building: titles[0], buildingCandidates: titles, floors: [], landUseZones: [], landProfile: null,
+      propertyType: classifyPropertyType({ titles }), residential,
+      market: { commercial: [], land: [], summary: summarizeMarket([]), exactLot: [] },
+      usageEvidence: { state: 'no_public_record', interpretation: '', positiveMonths: 0, monthly: [] },
+      operatingBusinessEvidence: { state: 'no_public_record', interpretation: '', sameAddress: [], nearby: [] },
+      kakaoPoiEvidence: { state: 'not_configured', interpretation: '', sameAddress: [], nearby: [] },
+      providerStatus: { buildingTitle: { ok: true } }, collectedAt: '2026-10-31T00:00:00Z',
+    };
+    assert(aptFixture.propertyType.type === 'apartment', `아파트 유형 판정 실패: ${aptFixture.propertyType.type}`);
+    await page.route('**/api/property-discovery**', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(aptFixture) }));
+    for (const width of [320, 375, 390, 430]) {
+      await check(`단지${width}`, '아파트 단지 비교 — 면적대·매매/전세/월세·미승인 표시(Issue #37 2단계)', async () => {
+        await page.setViewportSize({ width, height: 860 });
+        await page.goto(`${BASE_URL}/property/new`, { waitUntil: 'domcontentloaded' });
+        await page.getByLabel('건물 조회 주소').fill('서울 종로구 명륜2가 237');
+        await page.getByRole('button', { name: '건물 조회' }).click();
+        await page.getByTestId('discovery-summary').waitFor({ state: 'visible', timeout: 15_000 });
+        await page.getByRole('tab', { name: '단지 비교' }).click();
+        const panel = page.getByTestId('residential-complex');
+        await panel.waitFor({ state: 'visible', timeout: 5_000 });
+        const panelText = await panel.innerText();
+        assert(panelText.includes('일부 조회(4/6개월)'), '일부 월만 조회된 API 상태가 표시되지 않습니다.');
+        assert(await page.getByTestId('residential-unapproved').count() === 0, '미승인 API가 없는데 미승인 안내가 표시됩니다.');
+        const bands = await page.getByTestId('residential-area-bands').getByRole('button').count();
+        assert(bands === 2, `면적대 ${bands}개 (기대 2: 50㎡대·84㎡대)`);
+        const stats = await page.getByTestId('residential-band-stats').innerText();
+        assert(stats.includes('8.9억원'), `50㎡대 매매 중앙값(8.7억·9.1억 → 8.9억, 해제 제외) 오류: ${stats.slice(0, 120)}`);
+        assert(stats.includes('해제 1건 제외'), '해제 거래 제외 표시 누락');
+        assert(stats.includes('전세가율') && stats.includes('계산값'), '전세가율 계산값 표시 누락');
+        await page.getByRole('button', { name: '월세' }).click();
+        const deals = await page.getByTestId('residential-deals').innerText();
+        assert(deals.includes('월 120만원') && !deals.includes('매매 ·'), `월세 필터 오류: ${deals.slice(0, 120)}`);
+        const layout = await page.evaluate(() => ({ vw: document.documentElement.clientWidth, scroll: document.documentElement.scrollWidth }));
+        await shot(`complex-${width}`);
+        const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+        assert(layout.scroll <= layout.vw + 1, `가로 넘침 ${layout.scroll}px > ${layout.vw}px`);
+        return `${width}px · 면적대 ${bands}개`;
       });
     }
     await page.unroute('**/api/property-discovery**');

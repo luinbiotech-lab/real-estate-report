@@ -32,6 +32,40 @@ export interface DiscoveredTrade {
   pricePerSqm?: number; pricePerPyeong?: number;
   buildingType?: string; comparableExclusion?: 'cancelled' | 'share_deal' | 'collective_unit'; landPricePerPyeong?: number;
 }
+export type ResidentialDealKind = 'sale' | 'jeonse' | 'monthly';
+export interface ResidentialDeal {
+  propertyType: DiscoveredPropertyType; apiId: string; dealKind: ResidentialDealKind;
+  complexName: string; complexDong: string; houseType: string; legalDong: string; jibun: string; floor: string;
+  buildYear?: number; exclusiveAreaSqm?: number; exclusiveAreaPyeong?: number; areaBasis: 'exclusive' | 'total_floor' | 'unknown';
+  landAreaSqm?: number; dealDate: string;
+  matchLevel: 'exact_lot' | 'masked_address_candidate' | 'same_dong_candidate' | 'regional_candidate';
+  complexMatch: 'lot_and_name' | 'lot' | 'name' | 'none';
+  comparableExclusion?: 'cancelled';
+  dealAmount?: number; sourceDealAmountTenThousandWon?: number; pricePerSqm?: number; pricePerPyeong?: number; dealingType?: string;
+  deposit?: number; sourceDepositTenThousandWon?: number; monthlyRent?: number; sourceMonthlyRentTenThousandWon?: number;
+  contractType?: string; contractTerm?: string; previousDeposit?: number; previousMonthlyRent?: number; depositPerPyeong?: number;
+  currency?: 'KRW';
+}
+export interface ResidentialKindStats {
+  count: number; comparableCount: number; cancelledCount: number; latestDealDate?: string;
+  medianDealAmount?: number; medianPricePerPyeong?: number; medianDeposit?: number; medianMonthlyRent?: number;
+}
+export interface ResidentialScopeStats { sale: ResidentialKindStats; jeonse: ResidentialKindStats; monthly: ResidentialKindStats }
+export interface ResidentialAreaBand extends ResidentialScopeStats {
+  key: string; minAreaSqm?: number; maxAreaSqm?: number; jeonseRatioPercent?: number; jeonseRatioBasis?: string;
+}
+export interface ResidentialApiStatus { status: 'ok' | 'partial' | 'not_authorized' | 'error'; label: string; detail: string; okMonths: number; totalMonths: number }
+export interface ResidentialMarket {
+  propertyType: DiscoveredPropertyType;
+  target?: { complexName: string; lot: string };
+  apiStatus: Record<string, ResidentialApiStatus>;
+  summary?: { totalCandidates: number; complexCandidateCount: number; complexNames: string[]; neighbourhood: ResidentialScopeStats; complex: ResidentialScopeStats; areaBands: ResidentialAreaBand[] };
+  complexDeals?: ResidentialDeal[];
+  neighbourhoodDeals?: ResidentialDeal[];
+  months?: string[];
+  interpretation?: string;
+  error?: string;
+}
 export interface LandUseZone { type: string; code: string; name: string; representativeYn: string }
 export interface LandProfile {
   pnu: string; standardYear: string;
@@ -78,6 +112,7 @@ export interface PropertyDiscoveryResult {
   propertyType?: PropertyTypeClassification;
   /** Server-side achievable-price estimate (DA:ON estimate, not an appraisal). */
   priceEstimate?: AchievablePriceEstimate;
+  residential?: ResidentialMarket | null;
   landUseZones?: LandUseZone[];
   landProfile?: LandProfile | null;
   market?: { commercial: DiscoveredTrade[]; land: DiscoveredTrade[]; summary?: MarketSummary; exactLot?: DiscoveredTrade[] };
@@ -149,9 +184,11 @@ export const publicPropertyDiscoveryService = {
     if (landProfile?.landCategory) patch.landCategory = landProfile.landCategory;
     if (landProfile?.landUseSituation) patch.landUseSituation = landProfile.landUseSituation;
 
+    // landProfile.useZones mixes the zoning district with every overlay (구역·지구·권역), so it must not become the
+    // Property zoning; the primary district comes first (found by the 2026-11-05 owner test, 여의도동 14-26).
     const zoning = (result.landUseZones || []).map((zone) => zone.name).filter(Boolean).join(', ')
-      || landProfile?.useZones?.join(', ')
       || landProfile?.primaryUseZone
+      || (landProfile?.useZones || []).filter((zone) => /지역$/.test(zone) && !/^도시지역$/.test(zone)).join(', ')
       || '';
     if (zoning) patch.zoning = zoning;
 

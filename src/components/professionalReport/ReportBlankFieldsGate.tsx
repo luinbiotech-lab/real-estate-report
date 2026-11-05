@@ -14,9 +14,11 @@ export function ReportBlankFieldsDialog({ open, fields, actionLabel, onEnterValu
   onClose: () => void;
 }) {
   const required = requiredBlankFields(fields);
-  const optional = fields.filter((field) => !field.required);
+  const long = fields.filter((field) => field.tooLong);
+  const optional = fields.filter((field) => !field.required && !field.tooLong);
+  const blankCount = required.length + optional.length;
   return <Dialog open={open} onClose={onClose} aria-labelledby="report-blank-fields-title" fullWidth maxWidth="sm">
-    <DialogTitle id="report-blank-fields-title">입력되지 않은 항목이 {fields.length}개 있습니다</DialogTitle>
+    <DialogTitle id="report-blank-fields-title">{blankCount ? `입력되지 않은 항목이 ${blankCount}개 있습니다` : `1P에서 잘리는 문구가 ${long.length}개 있습니다`}</DialogTitle>
     <DialogContent>
       {required.length > 0 && <>
         <Alert severity="warning" sx={{ mb: 1.5 }} data-testid="report-required-fields"><b>주의 — 필수 항목 {required.length}개 미입력.</b> {REPORT_REQUIRED_NOTICE}</Alert>
@@ -31,17 +33,25 @@ export function ReportBlankFieldsDialog({ open, fields, actionLabel, onEnterValu
         </Stack>
         <Alert severity="info" sx={{ mt: 2 }}>{REPORT_BLANK_HIDE_NOTICE}</Alert>
       </>}
+      {long.length > 0 && <Alert severity="warning" sx={{ mt: blankCount ? 2 : 0 }} data-testid="report-long-fields">
+        <b>1P에서 잘리는 문구 {long.length}개:</b> {blankFieldsSummary(long)}. 원문은 바꾸지 않고 두 줄까지만 인쇄됩니다. 물건 수정의 「1P 짧은 표시 문구」에 확인한 짧은 문구를 입력하면 잘리지 않습니다.
+      </Alert>}
     </DialogContent>
     <DialogActions>
       <Button onClick={onClose}>취소</Button>
       <Button variant={required.length ? 'contained' : 'outlined'} onClick={onEnterValues}>값 입력하러 가기</Button>
-      <Button variant={required.length ? 'outlined' : 'contained'} color={required.length ? 'warning' : 'primary'} onClick={onContinue} data-testid="report-blank-fields-continue">{required.length ? '주의사항 확인, ' : ''}숨김 처리하고 {actionLabel}</Button>
+      <Button variant={required.length ? 'outlined' : 'contained'} color={required.length ? 'warning' : 'primary'} onClick={onContinue} data-testid="report-blank-fields-continue">{required.length ? '주의사항 확인, ' : ''}{blankCount ? '숨김 처리하고 ' : '그대로 '}{actionLabel}</Button>
     </DialogActions>
   </Dialog>;
 }
 
 /** Persistent notice next to the report (never inside the printable sheet). */
-export function ReportBlankFieldsNotice({ fields, acknowledged, className }: { fields: ReportBlankField[]; acknowledged: boolean; className?: string }) {
+export function ReportBlankFieldsNotice({ fields: allFields, acknowledged, className }: { fields: ReportBlankField[]; acknowledged: boolean; className?: string }) {
+  const fields = allFields.filter((field) => !field.tooLong);
+  const long = allFields.filter((field) => field.tooLong);
+  if (!fields.length && long.length) return <Alert severity={acknowledged ? 'info' : 'warning'} className={className} data-testid="report-long-fields-notice">
+    {acknowledged ? '확인됨 — ' : ''}1P에서 잘리는 문구: {blankFieldsSummary(long)}. 「1P 짧은 표시 문구」에 입력하면 잘리지 않습니다.
+  </Alert>;
   if (!fields.length) return null;
   const required = requiredBlankFields(fields);
   if (required.length) return <Alert severity={acknowledged ? 'info' : 'error'} className={className} data-testid="report-blank-fields-notice">
