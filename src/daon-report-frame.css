@@ -297,7 +297,7 @@
 .daon-cover-simple .dcs-brand{flex:0 0 112mm;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7mm;background:linear-gradient(120deg,#062f55 0%,#083d6b 55%,#0b4a80 100%);border-bottom:1.1mm solid #c6943b}
 .daon-cover-simple .dcs-logo{display:block;width:auto;height:46mm}
 .daon-cover-simple .dcs-brand em{font-style:normal;font-family:'Montserrat Variable',Montserrat,sans-serif;font-size:9.5px;font-weight:500;letter-spacing:3.4px;color:#cfd8e2}
-.daon-cover-simple .dcs-body{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;padding:30mm 24mm 0}
+.daon-cover-simple .dcs-body{flex:1 1 auto;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:0 24mm 14mm}
 .daon-cover-simple .dcs-title{text-align:center}
 .daon-cover-simple .dcs-title small{display:block;font-size:14px;font-weight:700;letter-spacing:5px;color:#a86f20}
 .daon-cover-simple .dcs-title h1{margin:5mm 0 0;font-family:'Noto Sans KR Variable','Noto Sans KR',sans-serif;font-size:24px;font-weight:700;letter-spacing:-.4px;color:#0f2c50;line-height:1.35}
