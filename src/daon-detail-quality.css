@@ -413,6 +413,6 @@
 .daon-detail-master .daon-detail-page-4 .dd-estimate-deals{height:auto;padding:2mm 3mm}
 .daon-detail-master .daon-detail-page-4 .dd-estimate-deals>div>div{min-height:6.4mm}
 .daon-detail-master .daon-detail-page-4 .dd-estimate-deals>div>small{line-height:1.45}
-.daon-detail-master .daon-detail-page-4:has(.dd-estimate-deals) .dd-reason-three.with-photos{height:72mm}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-reason-three.with-photos{height:80mm}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-analysis-box{margin:2.6mm 0}
+.daon-detail-master .daon-detail-page-4:has(.dd-estimate-deals) .dd-reason-three.with-photos{height:72mm}
