@@ -16,13 +16,13 @@ import {
   StraightenOutlined,
 } from '@mui/icons-material';
 import type { Property } from '../../types';
-import { formatWon, lines, pricePerPyeong } from '../../utils/format';
+import { lines } from '../../utils/format';
+import { priceLayerCells, type AchievablePriceEstimate } from '../../domain/professionalReport/priceLayerView';
 import { DAON_ONE_PAGE_MASTER_TEMPLATE_ID, DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
 import { equalColumns } from '../../domain/professionalReport/reportLayoutFill';
 
 // Blank-value policy (owner decision 2026-10-30): a missing value is hidden, never printed as a '확인 필요' placeholder.
 // Fixed grid cells keep their slot (layout of the approved MASTER is unchanged) and list-like entries are omitted.
-const moneyPerPyeong = (value: number) => value ? `약 ${formatWon(value)}` : '';
 const areaPair = (sqm: number, py: number) => sqm || py ? `${sqm ? `${sqm.toFixed(2).replace(/\.00$/, '')}㎡` : '-'} (${py ? `${py.toFixed(2).replace(/\.00$/, '')}평` : '-'})` : '';
 const first = (value: string, fallback: string) => lines(value)[0] || fallback;
 const hasNumber = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value);
@@ -49,14 +49,14 @@ function Fact({ label, value, icon, wide = false }: { label: string; value: stri
 /** Large figure with a smaller unit, as in the reference price band ("41억 5,000만원"). */
 function PriceFigure({ value }: { value: string }) {
   const match = value.match(/^(.*?)(\s*만?\s*원)$/);
-  if (!match) return <strong>{value}</strong>;
-  return <strong>{match[1]}<small className="d1-price-unit">{match[2].replace(/\s+/g, '')}</small></strong>;
+  if (!match) return <strong title={value}>{value}</strong>;
+  return <strong title={value}>{match[1]}<small className="d1-price-unit">{match[2].replace(/\s+/g, '')}</small></strong>;
 }
 
-export function DaonOnePageMaster({ property: p }: { property: Property }) {
+interface BandCell { key: string; label: string; value: string; note: string; unit?: 'total' | 'per_pyeong' }
+
+export function DaonOnePageMaster({ property: p, priceEstimate = null }: { property: Property; priceEstimate?: AchievablePriceEstimate | null }) {
   const wording = reportWording(p.reportPurpose);
-  const landUnit = pricePerPyeong(p);
-  const grossUnit = p.salePrice && p.totalFloorAreaPyeong ? Math.round(p.salePrice / p.totalFloorAreaPyeong) : 0;
   const points = [...lines(p.features), ...lines(p.investmentPoints)].filter(Boolean).slice(0, 7);
   const officialParking = hasNumber(p.parkingOfficial)
     ? `${p.parkingOfficial}대`
@@ -89,18 +89,20 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
 
   // Mixed blank policy (owner decision 2026-10-31): present items move forward and each row is re-divided among them,
   // so a hidden value never leaves an empty slot. Core values (price, address, areas, use, zoning) are mandatory upstream.
-  const priceCells = ([
-    ['희망매매가', p.salePrice ? formatWon(p.salePrice) : ''],
-    ['토지평당', moneyPerPyeong(landUnit)],
-    ['연면적평당', moneyPerPyeong(grossUnit)],
-  ] as Array<[string, string]>).filter(([, value]) => value);
-  // No asking price (e.g. an analysis-only building): the headline band shows stored area facts and the official-price
-  // land value instead of collapsing (multi-model review 2026-11-05). The land value is labelled as calculated.
-  if (!p.salePrice) {
-    const pyeong = (v?: number) => v && v > 0 ? `${v.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평` : '';
-    const eok = p.estimatedOfficialLandValue && p.estimatedOfficialLandValue > 0 ? `약 ${(Math.round(p.estimatedOfficialLandValue / 1e7) / 10).toLocaleString('ko-KR')}억 원` : '';
-    priceCells.splice(0, priceCells.length, ...([['대지면적', pyeong(p.landAreaPyeong)], ['연면적', pyeong(p.totalFloorAreaPyeong)], ['공시지가 기준 토지가액(산출)', eok]] as Array<[string, string]>).filter(([, value]) => value));
-  }
+  // Price layers (owner decision 2026-11-02, 안 B): 매도 희망가 · 공시지가 기준 토지가액 · 주변 실거래 토지 평당 · 거래가능가격.
+  // Only present layers are drawn and the band is re-divided among them (no empty cell). The asking price keeps the
+  // reference band's full figure ("41억 5,000만원"); each cell carries its basis line (입력값·계산값·후보·추정).
+  const layerCells: BandCell[] = priceLayerCells(p, priceEstimate).map((cell) => ({
+    key: cell.key, label: cell.label, value: cell.value, unit: cell.unit,
+    // Basis line; the land unit-price cell also says it is not a total (루인 review on #43).
+    note: cell.unit === 'per_pyeong' ? `${cell.badge} · 총액 아님` : cell.badge === '입력값' ? cell.sub : cell.badge,
+  }));
+  // Fewer than two price layers (e.g. an analysis report with no asking price and no estimate): stored area facts lead
+  // the band so it does not shrink to one lonely cell (multi-model review 2026-11-05). Price layers are never dropped.
+  const pyeong = (v?: number) => v && v > 0 ? `${v.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평` : '';
+  const areaCells: BandCell[] = ([['land', '대지면적', pyeong(p.landAreaPyeong)], ['gross', '연면적', pyeong(p.totalFloorAreaPyeong)]] as Array<[string, string, string]>)
+    .filter(([, , value]) => value).map(([key, label, value]) => ({ key, label, value, note: '' }));
+  const priceCells: BandCell[] = layerCells.length >= 2 ? layerCells : [...areaCells, ...layerCells];
   const statusCells = [
     occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>,
     roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{roadSummary}</b></div>,
@@ -130,8 +132,8 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         <div className="d1-tagline">More Than Real Estate<br/>A Better Tomorrow</div>
       </header>
 
-      {priceCells.length > 0 && <section className="d1-price-band" style={{ gridTemplateColumns: ['1.16fr', ...priceCells.slice(1).map(() => '1fr')].join(' ') }}>
-        {priceCells.map(([label, value]) => <div key={label}><small>{label}</small><PriceFigure value={value} /></div>)}
+      {priceCells.length > 0 && <section className={`d1-price-band d1-price-band-layers d1-price-band-${priceCells.length}`} style={{ gridTemplateColumns: equalColumns(priceCells.length, 'minmax(0,1fr)') }} data-testid="d1-price-layers">
+        {priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key} data-price-unit={cell.unit} data-long={cell.value.length > 13 ? 'true' : undefined}><small>{cell.label}</small><PriceFigure value={cell.value} />{cell.note && <em>{cell.note}</em>}</div>)}
       </section>}
 
       <section className="d1-status-strip" style={{ gridTemplateColumns: statusCells.length ? `${equalColumns(statusCells.length, 'minmax(0,1fr)')} 32mm` : '1fr' }}>

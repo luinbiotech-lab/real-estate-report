@@ -1,3 +1,4 @@
+import type { AchievablePriceEstimate } from './priceLayerView';
 import type { BriefingItem } from '../../types';
 import type { DataSourceType, DocumentType, MediaCategory, SpaceType, VerificationStatus } from '../propertyDataRoom/types';
 
@@ -147,6 +148,9 @@ export interface ProfessionalReportViewModel {
     salePrice: ReportValue<number>; deposit: ReportValue<number>; monthlyRent: ReportValue<number>;
     landUnitPrice: ReportValue<number>; negotiable: ReportValue<boolean>; occupancyStatus: ReportValue<string>;
     listingStatus: ReportValue<string>;
+    /** DA:ON achievable-price estimate frozen into the Snapshot (owner decision 2026-11-01; not an appraisal). Absent in older Snapshots. */
+    priceEstimate?: AchievablePriceEstimate | null;
+    brokerAchievablePrice?: ReportValue<number>; brokerAchievablePriceRationale?: ReportValue<string>; brokerAchievablePriceConfirmedAt?: ReportValue<string>;
   };
   building: {
     totalFloorAreaSqm: ReportValue<number>; totalFloorAreaPyeong: ReportValue<number>; buildingAreaPyeong: ReportValue<number>;

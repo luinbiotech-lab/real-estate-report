@@ -395,3 +395,38 @@
 .daon-detail-master .dd-brand-image em{margin-top:0}
 .daon-detail-master .dd-contact-brand.dd-contact-brand-image{display:flex;align-items:center;justify-content:center}
 .daon-detail-master .dd-contact-logo-img{display:block;height:12mm;width:auto}
+
+/* 7P page 4 price layers at the quality type scale (merge of #43 with #46, 2026-11-06). The #43 cards were sized for the
+   old 7–8px body text; they now match the 11–13px cards on the same page. */
+.daon-detail-master .dd-price-layers{gap:3.4mm;margin-bottom:2.4mm}
+.daon-detail-master .dd-price-layers>div{min-height:30mm;padding:4mm 4.4mm;gap:1.2mm;border:.3mm solid var(--dq-line);border-top:1.1mm solid var(--dq-gold);border-radius:0 0 1.6mm 1.6mm;box-shadow:0 .5mm 1.6mm #10243c0d}
+.daon-detail-master .dd-price-layers>div[data-price-layer="achievable"]{border-color:var(--dq-navy);border-top-color:var(--dq-navy);background:#f6f9fc}
+.daon-detail-master .dd-price-layers small{font-size:11.5px;font-weight:700;color:var(--dq-ink)}
+.daon-detail-master .dd-price-layers strong{font-size:25px;font-weight:800;color:var(--dq-gold-deep);letter-spacing:-.6px;white-space:nowrap;overflow:visible;text-overflow:clip}
+.daon-detail-master .dd-price-layers>div[data-price-layer="achievable"] strong{color:var(--dq-navy)}
+.daon-detail-master .dd-price-layers span{font-size:10.6px;color:var(--dq-body);line-height:1.45}
+.daon-detail-master .dd-price-layers em{font-style:normal;font-size:10px;font-weight:700;color:var(--dq-gold-deep)}
+.daon-detail-master .dd-price-layers-note{margin:0 0 3.4mm;font-size:11.4px;line-height:1.5;color:var(--dq-body);display:block;overflow:visible}
+@media print{.daon-detail-master .dd-price-layers>div{box-shadow:none}}
+/* Page 4 height budget when the price layers are present (same A4 body; the layers take ~38mm). */
+.daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-comparables.has-bars{height:50mm}
+.daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-reason-three.with-photos{height:80mm}
+.daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-analysis-box{margin:2.6mm 0}
+/* Estimate comparables table (page 4, shown when no confirmed comparables exist). Class-based so the generic
+   .dd-comparables span sizes cannot shrink it; nothing is cut — rows wrap instead of ellipsis. */
+.daon-detail-master .dd-estimate-deals{margin-bottom:3mm;border-top:1mm solid var(--dq-gold);background:#fff}
+.daon-detail-master .dd-est-row{display:grid;grid-template-columns:.8fr 1.5fr .6fr .65fr .75fr;align-items:center;gap:2mm;min-height:7.2mm;padding:.8mm 3mm;border-bottom:.25mm solid #e2e6eb;font-size:11.6px;color:var(--dq-body);word-break:keep-all}
+.daon-detail-master .dd-est-row b{font-size:12.4px;color:var(--dq-ink);font-weight:800}
+.daon-detail-master .dd-est-head{min-height:7.6mm;background:#f1f5f8;font-size:10.8px;font-weight:800;color:var(--dq-ink)}
+.daon-detail-master .dd-estimate-deals>small{display:block;padding:2mm 3mm 0;font-size:10.2px;line-height:1.5;color:var(--dq-muted)}
+/* Land unit-price card (원/평) is set apart from total-amount cards (루인 #43). Floor table grows instead of cutting text. */
+.daon-detail-master .dd-price-layers>div[data-price-unit="per_pyeong"]{border-top-style:dashed;background:#faf7f1}
+.daon-detail-master .daon-detail-page-2 .dd-floor-placeholder{height:auto;min-height:38mm}
+/* Long exact amounts on page 4 cards: smaller and wrapping at spaces, never cut (2026-11-06). */
+.daon-detail-master .dd-price-layers>div[data-long="true"] strong{font-size:19px;white-space:normal;word-break:keep-all}
+/* Four price cards share the row (~44mm each): smaller figures, and any figure may wrap at spaces — never overflow
+   the card (e2e 2026-11-06 caught "평당 9,437만원" / "30.2억~57.3억원" running past the card edge). */
+.daon-detail-master .dd-price-layers strong{white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.daon-detail-master .dd-price-layers:has(>div:nth-child(4)) strong{font-size:19px}
+.daon-detail-master .dd-price-layers:has(>div:nth-child(4))>div[data-long="true"] strong{font-size:16px}
+.daon-detail-master .dd-price-layers:has(>div:nth-child(4))>div{padding:4mm 3.4mm}

@@ -26,6 +26,8 @@ export interface Property {
   landAreaPyeong: number; landAreaSqm: number; totalFloorAreaPyeong: number; totalFloorAreaSqm: number; buildingAreaPyeong: number;
   officialLandPricePerSqm?: number; estimatedOfficialLandValue?: number; officialLandPriceYear?: string;
   landCategory?: string; landUseSituation?: string;
+  /** Broker-confirmed achievable price (KRW) and its rationale (owner decision 2026-11-01: auto estimate + broker confirms). Not an appraisal. */
+  brokerAchievablePrice?: number; brokerAchievablePriceRationale?: string; brokerAchievablePriceConfirmedAt?: string;
   /**
    * Optional broker-checked short labels for the 1P status/highlight chips (owner decision 2026-11-04, Luin review on
    * PR #46). When blank the stored original sentence is printed as written; nothing is shortened automatically.

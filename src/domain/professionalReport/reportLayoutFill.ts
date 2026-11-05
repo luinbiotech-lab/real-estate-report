@@ -39,7 +39,7 @@ export function detailPagePlan(model: ProfessionalReportViewModel, hasMap: boole
   const count = (...flags: boolean[]) => flags.filter(Boolean).length;
   const checks: Array<[DetailPageId, number, number, string]> = [
     [3, count(hasMap, present(model.location.locationAnalysis), present(model.land.roadCondition)), 2, '입지 지도·입지 분석·도로 조건 중 2개 이상 필요'],
-    [4, count(present(model.pricing.landUnitPrice), comparableCount > 0 || present(model.investment.nearbyTransactions), present(model.investment.overallOpinion)), 2, '토지 평당가·비교거래·종합 의견 중 2개 이상 필요'],
+    [4, count(present(model.pricing.landUnitPrice), comparableCount > 0 || present(model.investment.nearbyTransactions) || model.pricing.priceEstimate?.state === 'estimated', present(model.investment.overallOpinion)), 2, '토지 평당가·비교거래(또는 거래가능가격 추정)·종합 의견 중 2개 이상 필요'],
     [5, count(present(model.pricing.occupancyStatus), present(model.investment.features), present(model.investment.developmentPlan), present(model.investment.recommendedUse)), 2, '현재 이용·특징·개발 계획·활용 시나리오 중 2개 이상 필요'],
     [6, count(present(model.building.buildingCoverageRate), present(model.building.floorAreaRatio), present(model.building.completionDate), present(model.investment.developmentPlan)), 2, '건폐율·용적률·사용승인일·개발 계획 중 2개 이상 필요'],
   ];

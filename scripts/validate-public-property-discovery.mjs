@@ -235,6 +235,47 @@ assert.ok(typeOf([], null).basis.some((line) => line.includes('미확인')), '�
 const discoverySource = readFileSync('api/property-discovery.mjs', 'utf8');
 if (!discoverySource.includes('unrecordedFields')) throw new Error('건축물대장 0/공란을 미기재로 구분하는 unrecordedFields 누락');
 
+// Owner request 2026-11-01: price layers — achievable-price estimate (executable, real rows observed 2026-11-01 동교동).
+{
+  const price = await import(new URL('../api/_lib/priceLayers.mjs', import.meta.url).href);
+  const row = (type, dealDate, jibun, dealAmount, landAreaSqm, buildingUse = '', extra = {}) => ({ type, dealDate, legalDong: '동교동', jibun, dealAmount, landAreaSqm, buildingUse, landPricePerPyeong: Math.round(dealAmount / (landAreaSqm / 3.3058)), ...extra });
+  const rows = [
+    // One 6-parcel deal published as 6 rows (same date, dong, unit price) — must count once and, being block-size, be dropped.
+    row('land', '2026-10-02', '1**', 267870000, 5.9), row('land', '2026-10-02', '1**', 99880000, 2.2), row('land', '2026-10-02', '1**', 3995390000, 88),
+    row('land', '2026-10-02', '1**', 794540000, 17.5), row('land', '2026-10-02', '1**', 31186730000, 686.9), row('land', '2026-10-02', '1**', 12817020000, 282.3),
+    row('commercial', '2026-10-02', '1**', 10000000000, 141.7, '제2종근린생활'), row('commercial', '2026-09-28', '1**', 22000000000, 375.2, '제2종근린생활'),
+    row('commercial', '2026-07-23', '1**', 150000000000, 1693.8, '업무'), row('commercial', '2026-07-14', '1**', 6800000000, 167.1, '제2종근린생활'),
+    row('commercial', '2026-07-13', '1**', 265000000000, 2739.7, '기타'), row('commercial', '2026-06-29', '1**', 3000000000, 139.8, '제2종근린생활'),
+    row('land', '2026-06-26', '1**', 1400000000, 11.2), row('commercial', '2026-06-24', '2**', 3720000000, 190.7, '제1종근린생활'),
+    row('land', '2026-06-20', '1**', 1800000000, 52.2), row('land', '2026-06-20', '1**', 390000000, 16.7),
+    row('commercial', '2026-06-20', '1**', 3200000000, 112.1, '제1종근린생활'), row('commercial', '2026-06-20', '1**', 1000000000, 48.9, '제2종근린생활'),
+    row('commercial', '2026-06-20', '1**', 1300000000, 46.3, '제1종근린생활'),
+    row('commercial', '2026-06-18', '1**', 900000000, 150, '', { comparableExclusion: 'share_deal' }),
+  ];
+  const merged = price.mergeBulkDeals(rows.filter((r) => !r.comparableExclusion));
+  assert.strictEqual(merged.filter((d) => d.parcelCount === 6).length, 1, '6필지 일괄 거래는 1건으로 병합');
+  const est = price.estimateAchievablePrice({ landAreaSqm: 140.8, rows, computedAt: '2026-11-01T00:00:00Z' });
+  assert.strictEqual(est.state, 'estimated');
+  assert.strictEqual(est.comparableCount, 5, '대지 70.4~281.6㎡ 비교거래 5건');
+  assert.deepStrictEqual(est.excluded, { upstream: 1, bulk: 1, tooLarge: 3, tooSmall: 5 });
+  assert.strictEqual(est.unitMid, 94367172, '토지 평당 중앙값');
+  assert.strictEqual(est.unitLow, 70939914); assert.strictEqual(est.unitHigh, 134526870);
+  const pyeong = 140.8 / 3.3058;
+  assert.strictEqual(est.mid, Math.round(94367172 * pyeong), '중앙 추정 = 평당 중앙값 × 토지 평');
+  assert.ok(est.low < est.mid && est.mid < est.high);
+  assert.ok(est.note.includes('감정평가 아님'), '감정평가 아님 표시');
+  assert.ok(est.deals.length <= 8 && est.deals.every((d) => d.landAreaSqm >= 70.4 && d.landAreaSqm <= 281.6));
+  const few = price.estimateAchievablePrice({ landAreaSqm: 140.8, rows: rows.slice(6, 9) });
+  assert.strictEqual(few.state, 'insufficient', '비교거래 5건 미만은 추정하지 않음');
+  assert.strictEqual(few.low, undefined);
+  assert.strictEqual(price.estimateAchievablePrice({ landAreaSqm: 0, rows }).state, 'no_land_area');
+  if (!discoverySource.includes('estimateAchievablePrice({landAreaSqm:subjectLandAreaSqm,rows:marketRows})')) throw new Error('추정은 잘리기 전 전체 거래(marketRows)로 계산해야 합니다');
+  const svc = readFileSync('src/services/publicPropertyDiscoveryService.ts', 'utf8');
+  const block = svc.slice(svc.indexOf('ACHIEVABLE_PRICE_SOURCE_PREFIX}${propertyId}'), svc.indexOf('ACHIEVABLE_PRICE_SOURCE_PREFIX}${propertyId}') + 700);
+  if (!block.includes("verificationStatus: 'estimated'") || !block.includes('daon_estimate_not_appraisal')) throw new Error('추정값은 estimated 상태의 Data Room 출처로만 저장');
+  console.log('PASS price layers: achievable-price estimate (bulk merge, scale filter, IQR range)');
+}
+
 // Issue #37 phase 2: residential sale / jeonse / monthly candidates and complex comparison (executable).
 const residentialLib = await import(new URL('../api/_lib/residentialTrades.mjs', import.meta.url).href);
 const { residentialTypeFor } = await import(new URL('../api/property-discovery.mjs', import.meta.url).href);
