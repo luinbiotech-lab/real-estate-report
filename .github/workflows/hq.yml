@@ -1,0 +1,26 @@
+name: HQ public data lookup
+# Throwaway branch: read-only GET of the Production public-data discovery API for two addresses (owner test 2026-11-05).
+on:
+  push:
+    branches: [claude/hq-lookup]
+permissions:
+  contents: write
+jobs:
+  lookup:
+    runs-on: ubuntu-latest
+    env:
+      SITE: https://real-estate-report-lime.vercel.app
+    steps:
+      - run: |
+          mkdir -p /tmp/out && cd /tmp/out
+          curl -sS -m 30 "$SITE/api/status" > status.json || true
+          i=0
+          for q in "서울특별시 영등포구 국회대로68길 7" "서울특별시 영등포구 국회대로74길 12"; do
+            i=$((i+1)); enc=$(jq -rn --arg v "$q" '$v|@uri')
+            curl -sS -m 60 -D h$i.txt "$SITE/api/property-discovery?query=$enc" > d$i.json || true
+            echo "::notice title=$q::$(jq -c '{status, address: .address, building: (.building // {} | {buildingName, mainUse, totalFloorAreaSqm, groundFloors, basementFloors, completionDate}), land: (.landProfile // {} | {landAreaSqm, officialLandPricePerSqm, landCategory}), providers: (.providerStatus // {} | with_entries(.value = (.value.ok // false)))}' d$i.json | head -c 2500)"
+          done
+          printf '{\n  "git": { "deploymentEnabled": false }\n}\n' > vercel.json
+          git init -q -b claude/hq-lookup-out
+          git config user.name "github-actions[bot]"; git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A && git commit -qm "public discovery responses" && git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}.git" claude/hq-lookup-out
