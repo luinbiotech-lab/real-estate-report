@@ -133,7 +133,7 @@ export function DaonOnePageMaster({ property: p, priceEstimate = null }: { prope
       </header>
 
       {priceCells.length > 0 && <section className={`d1-price-band d1-price-band-layers d1-price-band-${priceCells.length}`} style={{ gridTemplateColumns: equalColumns(priceCells.length, 'minmax(0,1fr)') }} data-testid="d1-price-layers">
-        {priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key} data-price-unit={cell.unit}><small>{cell.label}</small><PriceFigure value={cell.value} />{cell.note && <em>{cell.note}</em>}</div>)}
+        {priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key} data-price-unit={cell.unit} data-long={cell.value.length > 13 ? 'true' : undefined}><small>{cell.label}</small><PriceFigure value={cell.value} />{cell.note && <em>{cell.note}</em>}</div>)}
       </section>}
 
       <section className="d1-status-strip" style={{ gridTemplateColumns: statusCells.length ? `${equalColumns(statusCells.length, 'minmax(0,1fr)')} 32mm` : '1fr' }}>

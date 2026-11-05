@@ -422,3 +422,5 @@
 /* Land unit-price card (원/평) is set apart from total-amount cards (루인 #43). Floor table grows instead of cutting text. */
 .daon-detail-master .dd-price-layers>div[data-price-unit="per_pyeong"]{border-top-style:dashed;background:#faf7f1}
 .daon-detail-master .daon-detail-page-2 .dd-floor-placeholder{height:auto;min-height:38mm}
+/* Long exact amounts on page 4 cards: smaller and wrapping at spaces, never cut (2026-11-06). */
+.daon-detail-master .dd-price-layers>div[data-long="true"] strong{font-size:19px;white-space:normal;word-break:keep-all}

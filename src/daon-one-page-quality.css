@@ -113,3 +113,7 @@
 .daon-one-page-master .d1-price-band.d1-price-band-4>div{padding:1.3mm 3.6mm 1.1mm}
 /* Land unit-price cell (원/평) is visually set apart from the total-amount cells so it is not read as a total (루인 #43). */
 .daon-one-page-master .d1-price-band.d1-price-band-layers>div[data-price-unit="per_pyeong"]{background:#faf7f1;border-left:.5mm dashed #c9a15a}
+/* Long exact amounts (e.g. "39억 5,012만 3,456원") get a smaller figure and may wrap at spaces — never cut (2026-11-06). */
+.daon-one-page-master .d1-price-band.d1-price-band-layers>div[data-long="true"] strong{font-size:22px;white-space:normal;word-break:keep-all}
+.daon-one-page-master .d1-price-band.d1-price-band-4>div[data-long="true"] strong{font-size:17px}
+.daon-one-page-master .d1-price-band.d1-price-band-layers>div[data-long="true"] .d1-price-unit{font-size:13px}
