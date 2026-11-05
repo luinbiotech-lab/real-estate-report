@@ -333,3 +333,6 @@
 .daon-detail-master .dd-scenarios .dd-image{height:50mm}
 .daon-detail-master .dd-scenarios article>p{min-height:0;-webkit-line-clamp:4}
 @media print{.daon-detail-master .dd-head h1,.daon-detail-master .dd-head h1[lang=en]{background:none;-webkit-background-clip:border-box;background-clip:border-box;color:#ecc77f}}
+/* Print fix (2026-11-05): the print viewport is A4 width (~794px), so the <=860px mobile rules (margin 0 12px on the
+   report and the 7P master) applied while printing and pushed every page 6.35mm right, cutting its right edge. */
+@media print{.daon-professional-report-master,.daon-detail-master{margin:0!important;width:210mm}}

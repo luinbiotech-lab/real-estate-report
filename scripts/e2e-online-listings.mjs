@@ -223,7 +223,9 @@ try {
         const chips = [...document.querySelectorAll('.d1-status-strip > div > b, .d1-highlight-strip b')].filter(cut).map((el) => (el.textContent || '').trim().slice(0, 40));
         return { facts, chips };
       });
+      const sheetLeft = await page.evaluate(() => Math.round(document.querySelector('.d1-sheet').getBoundingClientRect().left - (document.querySelector('.paper-stage')?.getBoundingClientRect().left ?? 0)));
       await page.emulateMedia({ media: null });
+      assert(Math.abs(sheetLeft) <= 1, `1P 인쇄 시 용지 왼쪽에서 ${sheetLeft}px 밀림`);
       assert(!clip.facts.length, `1P 사실표 인쇄 잘림: ${clip.facts.join(' | ')}`);
       // Exercise the warning path with a long stored sentence (QA browser IndexedDB only), then restore the record.
       const longText = '현재 소유자 직접 사용 중이며 잔금일 기준 전체 명도 협의가 가능하고 인도 범위는 계약서에 명시합니다';
@@ -284,6 +286,10 @@ try {
         }));
         return { templateId: master.getAttribute('data-template-id'), visual: master.getAttribute('data-visual-master'), pages, url: location.pathname };
       });
+      await page.emulateMedia({ media: 'print' });
+      const printOffset = await page.evaluate(() => [...document.querySelectorAll('.daon-detail-page, .daon-frame-page')].map((el) => Math.round(el.getBoundingClientRect().left)).filter((x) => Math.abs(x) > 1));
+      await page.emulateMedia({ media: null });
+      assert(!printOffset.length, `7P 인쇄 시 페이지가 왼쪽 기준에서 밀림: ${printOffset.slice(0, 3).join(',')}px`);
       await shot(`${tag}-7p`);
       const names = report.pages.map((item) => item.name);
       assert(report.templateId === 'DAON_DETAIL_7P_MASTER', `템플릿 ${report.templateId}`);

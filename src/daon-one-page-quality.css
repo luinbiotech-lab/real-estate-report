@@ -70,3 +70,5 @@
 .daon-one-page-master .d1-mini-grid p,.daon-one-page-master .d1-mini-grid small{white-space:normal;overflow:hidden;text-overflow:clip;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-height:1.3}
 .daon-one-page-master .d1-mini-grid small{font-size:7.4px}
 .daon-one-page-master .d1-mini-grid p{-webkit-line-clamp:3;font-size:8.6px;line-height:1.28}
+/* Print fix (2026-11-05): keep the sheet at the page origin; the <=860px mobile margin must not apply when printing. */
+@media print{.daon-one-page-master{margin:0!important;width:210mm}}
