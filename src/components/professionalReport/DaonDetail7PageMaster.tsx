@@ -125,6 +125,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const map = model.media.mapImage.value || null;
   const supporting = visibleMedia.filter((item) => item.url !== hero && item.category !== 'map').map((item) => item.url as string);
   const imageAt = (index: number) => supporting[index] || hero;
+  const hasPhotos = Boolean(imageAt(0));
   const points = [...splitLines(model.investment.investmentPoints, 8), ...splitLines(model.investment.features, 8)].filter(Boolean).slice(0, 6);
   const scenarios = splitLines(model.investment.recommendedUse, 3);
   const risks = splitLines(model.risks.risks, 6);
@@ -157,7 +158,9 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const p1SideCount = [display(model.pricing.occupancyStatus), display(model.land.roadCondition)].filter(has).length;
   const p4ReasonCount = 2 + (has(display(model.land.roadCondition)) ? 1 : 0);
   const p5RoadmapCount = 2 + (has(display(model.pricing.occupancyStatus)) ? 1 : 0);
-  const metrics = ([['건폐율', display(model.building.buildingCoverageRate)], ['용적률', display(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
+  // A 0% coverage/FAR is how the building register reports an unrecorded value, not a fact (2026-11-05 owner test).
+  const positive = (item: ReportValue<number>) => typeof item.value === 'number' && item.value > 0 ? display(item) : '';
+  const metrics = ([['건폐율', positive(model.building.buildingCoverageRate)], ['용적률', positive(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
   const p3CardCount = [display(model.land.roadCondition), display(model.location.locationAnalysis)].filter(has).length + 1;
   const occupancyParking = joinPresent(' · ', display(model.pricing.occupancyStatus), parkingField && `현장 주차 ${parkingField}${parkingFieldNote}`);
 
@@ -166,7 +169,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <div className="dd-p1-top">
         <div className="dd-p1-hero"><ImageSlot src={hero} caption="대표 외관" /><div className="dd-hero-copy"><b>{heroStatement}</b><span>실사용 + 리포지셔닝 + 장기 가치</span></div></div>
         <div className="dd-p1-side" style={{ gridTemplateRows: p1SideCount ? `34mm ${equalColumns(p1SideCount)}` : '34mm' }}>
-          <section className="dd-price-card"><small>희망매매가</small><strong>{display(model.pricing.salePrice)}</strong><span>{model.identity.address.display}</span></section>
+          {display(model.pricing.salePrice) && <section className="dd-price-card"><small>희망매매가</small><strong>{display(model.pricing.salePrice)}</strong><span>{model.identity.address.display}</span></section>}
           <NumberedPoint index={1} title="즉시 활용성" copy={display(model.pricing.occupancyStatus)} />
           <NumberedPoint index={2} title={'도로·접근 조건'} copy={display(model.land.roadCondition)} />
         </div>
@@ -186,15 +189,15 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
           {model.building.floors.slice(0, 4).map((floor) => <div key={floor.id} style={{ display: 'grid', gridTemplateColumns: '12mm 1fr 25mm 1.05fr', alignItems: 'center', borderBottom: '0.2mm solid #e2e6eb', padding: '0 2.5mm', minHeight: 0, fontSize: '10px', overflow: 'hidden' }}><b style={{ fontSize: '10.4px' }}>{floor.floor}</b><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{floor.name}</span><span>{formatFloorArea(floor.areaSqm)}</span><span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#6d7a88' }}>{floor.currentCondition || '-'}</span></div>)}
         </div>
       </>}
-      <SectionBar>공간에서 보이는 가능성</SectionBar>
-      <div className={`dd-photo-three${model.building.floors.length ? '' : ' tall'}`}><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권·주변 상권" /><ImageSlot src={imageAt(2)} caption="주변 상업·업무 환경" /></div>
+      {hasPhotos && <SectionBar>공간에서 보이는 가능성</SectionBar>}
+      {hasPhotos && <div className={`dd-photo-three${model.building.floors.length ? '' : ' tall'}`}><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권·주변 상권" /><ImageSlot src={imageAt(2)} caption="주변 상업·업무 환경" /></div>}
       <Insight compact icon="building" title="현재 활용을 존중하면서 다음 용도를 설계할 수 있습니다." copy={display(model.investment.recommendedUse, '사옥, 주거, 업무, 복합공간 등 활용 방향은 인허가 및 현장검토 후 확정합니다.')} />
     </Page>
 
     {shows(3) && <Page page={3} number={pageNumber(3)} eyebrow="LOCATION LEVERAGE" title="입지 분석" en="LOCATION LEVERAGE" source="입지표현: 공개 지도·현장 확인 기준" subtitle="입지와 생활권 수요를 매입 가치로 연결하는 방법" snapshot={snapshot} model={model}>
       <SectionBar right="LOCATION MAP">입지의 핵심 구조</SectionBar>
       <div className="dd-location-grid"><div className="dd-map-wrap"><ImageSlot src={map} caption="입지 지도" className="map" /></div><div className="dd-location-cards" style={{ gridTemplateRows: equalColumns(p3CardCount) }}><GoldCard icon="pin" title={'도로 접근성'} copy={display(model.land.roadCondition)} /><GoldCard icon="people" title="생활권 안의 목적형 자산" copy={display(model.location.locationAnalysis)} /><GoldCard icon="chart" title="실사용 매수자에게 맞는 규모" copy={joinPresent(' ', display(model.land.landAreaPyeong), '토지 규모와 기존 건물 활용성을 함께 검토합니다.')} /></div></div>
-      <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권과 다양한 상권" /><ImageSlot src={imageAt(2)} caption={'주변 도로·접근 환경'} /></div>
+      {hasPhotos && <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권과 다양한 상권" /><ImageSlot src={imageAt(2)} caption={'주변 도로·접근 환경'} /></div>}
       <SectionBar right="KEY POINTS">매수자 관점에서 읽는 입지</SectionBar>
       <div className="dd-key-list three">{['사옥','F&B / 브랜드','문화 / 콘텐츠'].map((title, i) => <div key={title}><span>{i + 1}</span><b>{title}</b><p>{points[i] || '확인된 입지·수요 데이터 기반으로 활용성을 검토합니다.'}</p></div>)}</div>
       <Insight compact icon="bulb" title="입지는 “유동인구 숫자”보다 어떤 매수자가 이 공간을 필요로 하는지를 보여줘야 합니다." copy={display(model.location.locationAnalysis)} />
@@ -221,8 +224,8 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     </Page>}
 
     {shows(6) && <Page page={6} number={pageNumber(6)} eyebrow="BUILDING & DEVELOPMENT REVIEW" title="건물 및 개발 검토" en="BUILDING & DEVELOPMENT REVIEW" source="자료기준: 일반건축물대장" subtitle="기존 건물의 활용성과 중장기 개발 검토 포인트" snapshot={snapshot} model={model}>
-      <SectionBar>현황 건물에서 읽는 실사용 가치</SectionBar>
-      <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="본건 및 주변 건물 전경" /><ImageSlot src={imageAt(1)} caption="주변 랜드마크·배후수요" /><ImageSlot src={imageAt(2)} caption="주변 도로·생활권 전경" /></div>
+      {hasPhotos && <SectionBar>현황 건물에서 읽는 실사용 가치</SectionBar>}
+      {hasPhotos && <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="본건 및 주변 건물 전경" /><ImageSlot src={imageAt(1)} caption="주변 랜드마크·배후수요" /><ImageSlot src={imageAt(2)} caption="주변 도로·생활권 전경" /></div>}
       {metrics.length > 0 && <SectionBar>건물 지표</SectionBar>}
       {metrics.length > 0 && <div className="dd-metrics" style={{ gridTemplateColumns: equalColumns(metrics.length) }}>{metrics.map(([label, value]) => <div key={label}><span>●</span><small>{label}</small><strong>{value}</strong></div>)}</div>}
       <SectionBar>매입 후 의사결정 포인트</SectionBar>

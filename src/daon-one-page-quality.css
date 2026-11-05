@@ -72,3 +72,7 @@
 .daon-one-page-master .d1-mini-grid p{-webkit-line-clamp:3;font-size:8.6px;line-height:1.28}
 /* Print fix (2026-11-05): keep the sheet at the page origin; the <=860px mobile margin must not apply when printing. */
 @media print{.daon-one-page-master{margin:0!important;width:210mm}}
+/* No asking price (e.g. an analysis-only building, 2026-11-05 owner test): drop the price-band row instead of leaving a
+   blank 19mm band. Row order: header, price, status, main, mini, highlight, use, footer. */
+.daon-one-page-master .d1-sheet.d1-sheet-no-price{grid-template-rows:31mm 12mm minmax(0,1fr) 31mm 10mm 14mm 23mm}
+.daon-one-page-master .d1-sheet.d1-sheet-no-price.d1-sheet-no-highlight{grid-template-rows:31mm 12mm minmax(0,1fr) 31mm 14mm 23mm}

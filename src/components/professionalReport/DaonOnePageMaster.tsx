@@ -110,7 +110,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const wideFact = presentFactLabels.length % 2 === 1 ? presentFactLabels[presentFactLabels.length - 1] : '';
 
   return <div className="daon-one-page-master" data-template-id={DAON_ONE_PAGE_MASTER_TEMPLATE_ID} data-template-version={DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION}>
-    <article className={`d1-sheet${presentHighlights.length ? '' : ' d1-sheet-no-highlight'}`}>
+    <article className={`d1-sheet${presentHighlights.length ? '' : ' d1-sheet-no-highlight'}${priceCells.length ? '' : ' d1-sheet-no-price'}`}>
       <header className="d1-header">
         <div className="d1-head-copy">
           <small>가치를 보는 안목, 새로운 가능성을 만듭니다.</small>
@@ -121,9 +121,9 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         <div className="d1-tagline">More Than Real Estate<br/>A Better Tomorrow</div>
       </header>
 
-      <section className="d1-price-band" style={{ gridTemplateColumns: ['1.16fr', ...priceCells.slice(1).map(() => '1fr')].join(' ') }}>
+      {priceCells.length > 0 && <section className="d1-price-band" style={{ gridTemplateColumns: ['1.16fr', ...priceCells.slice(1).map(() => '1fr')].join(' ') }}>
         {priceCells.map(([label, value]) => <div key={label}><small>{label}</small><PriceFigure value={value} /></div>)}
-      </section>
+      </section>}
 
       <section className="d1-status-strip" style={{ gridTemplateColumns: statusCells.length ? `${equalColumns(statusCells.length, 'minmax(0,1fr)')} 32mm` : '1fr' }}>
         {statusCells}
