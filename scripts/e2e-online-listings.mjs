@@ -201,6 +201,22 @@ try {
         assert(layers[3].text.includes('30.2억~57.3억') && layers[3].text.includes('감정평가 아님'), `거래가능가격 칸: ${layers[3].text}`);
       }
       assert(!layers.some((l) => l.clipped), `1P 가격 칸 잘림: ${layers.filter((l) => l.clipped).map((l) => l.key).join(',')}`);
+      // 루인 #43 review: every price figure must sit fully inside its cell, incl. a long exact amount (data-long).
+      const fit1 = await page.evaluate(() => {
+        const fits = (cell) => { const c = cell.getBoundingClientRect(); const f = cell.querySelector('strong').getBoundingClientRect(); return f.right <= c.right + 1 && f.left >= c.left - 1 && f.bottom <= c.bottom + 1; };
+        const cells = [...document.querySelectorAll('[data-testid="d1-price-layers"] > div')];
+        const now = cells.map((cell) => [cell.getAttribute('data-price-layer'), fits(cell)]);
+        const probe = cells[cells.length - 1];
+        let longFit = null;
+        if (probe) {
+          const strong = probe.querySelector('strong'); const html = strong.innerHTML; const attr = probe.getAttribute('data-long');
+          strong.textContent = '39억 5,012만 3,456원'; probe.setAttribute('data-long', 'true');
+          longFit = fits(probe);
+          strong.innerHTML = html; if (attr === null) probe.removeAttribute('data-long'); else probe.setAttribute('data-long', attr);
+        }
+        return { now, longFit };
+      });
+      assert(fit1.now.every(([, ok]) => ok) && fit1.longFit !== false, `1P 가격 숫자가 칸을 벗어남: ${JSON.stringify(fit1)}`);
       // Fix 2026-11-02: (A) app heading styles must not darken the white MASTER title; (B) the footer must fill the last
       // row (a removed highlight strip used to shift rows, clipping the footer and leaving a white band).
       const look = await page.evaluate(() => {
@@ -358,6 +374,18 @@ try {
         assert(p4 && p4.cards === 4 && p4.deals === 1, `7P 4쪽 가격 4단계/추정 근거 표: ${JSON.stringify(p4 && { cards: p4.cards, deals: p4.deals })}`);
         assert(p4.text.includes('감정평가가 아닙니다') || p4.text.includes('감정평가 아님'), '7P 감정평가 아님 표시 누락');
         assert(p4.tableFill > 0.85, `추정 근거 표가 좁게 표시됨(너비 ${Math.round(p4.tableFill * 100)}%)`);
+        const fit7 = await page.evaluate(() => {
+          const fits = (cell) => { const c = cell.getBoundingClientRect(); const f = cell.querySelector('strong').getBoundingClientRect(); return f.right <= c.right + 1 && f.bottom <= c.bottom + 1; };
+          const cells = [...document.querySelectorAll('.daon-detail-page-4 [data-testid="dd-price-layers"] > div')];
+          const now = cells.map((cell) => fits(cell));
+          const probe = cells[cells.length - 1]; const strong = probe.querySelector('strong'); const text = strong.textContent; const attr = probe.getAttribute('data-long');
+          strong.textContent = '39억 5,012만 3,456원'; probe.setAttribute('data-long', 'true');
+          const longFit = fits(probe);
+          strong.textContent = text; if (attr === null) probe.removeAttribute('data-long'); else probe.setAttribute('data-long', attr);
+          return { now, longFit, units: cells.map((cell) => cell.getAttribute('data-price-unit')) };
+        });
+        assert(fit7.now.every(Boolean) && fit7.longFit, `7P 가격 카드 숫자가 칸을 벗어남: ${JSON.stringify(fit7)}`);
+        assert(fit7.units.join(',') === 'total,total,per_pyeong,total', `7P 가격 단위 구분: ${fit7.units.join(',')}`);
       }
       const badges = await page.evaluate(() => [...document.querySelectorAll('.daon-detail-page .dd-head')].map((h) => h.getAttribute('data-page-number')));
       assert(badges.every((b, i) => b === String(i + 1).padStart(2, '0')), `7P 큰 페이지 번호 ${badges.join(',')}`);
