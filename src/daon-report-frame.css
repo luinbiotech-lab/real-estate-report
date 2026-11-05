@@ -278,3 +278,13 @@
 .daon-closing-page article p,.daon-closing-page article span{font-size:11px;line-height:1.5}
 .daon-closing-page,.daon-closing-page *,.daon-opening-page,.daon-opening-page *{word-break:keep-all}
 .daon-closing-page .df-frame-footer span,.daon-opening-page .df-frame-footer span{white-space:nowrap}
+/* Cover facts box (owner request 2026-11-05) */
+.daon-opening-page .df-cover-photo{height:112mm}
+.daon-opening-page .df-cover-title{margin-top:8mm}
+.daon-opening-page .df-cover-facts{margin:7mm 9mm 0;border-top:.5mm solid #0f2c50;border-bottom:.5mm solid #0f2c50;display:grid;grid-template-columns:1fr 1fr}
+.daon-opening-page .df-cover-facts>div{display:grid;grid-template-columns:20mm 1fr;align-items:center;min-height:10.5mm;border-bottom:.25mm solid #dfe4ea;padding:0 3mm}
+.daon-opening-page .df-cover-facts>div:nth-last-child(-n+2){border-bottom:0}
+.daon-opening-page .df-cover-facts b{font-size:11.5px;font-weight:800;color:#a86f20}
+.daon-opening-page .df-cover-facts span{font-size:12.5px;font-weight:600;color:#0f2c50;line-height:1.35}
+.daon-opening-page .df-cover-facts>div:nth-child(3){grid-column:1/-1}
+.daon-opening-page .df-cover-pillars{margin-top:7mm;padding:6mm 0}
