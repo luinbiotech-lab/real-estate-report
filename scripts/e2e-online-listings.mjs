@@ -420,6 +420,7 @@ try {
         await page.emulateMedia({ media: 'screen' });
         await writeFile(`${OUT}/e2e-${tag}-1p.pdf`, onePdf);
         const one = pdfPageCount(onePdf);
+        const onePrices = await page.evaluate(() => [...document.querySelectorAll('[data-testid="d1-price-layers"] > div')].map((cell) => ({ key: cell.getAttribute('data-price-layer'), value: (cell.querySelector('strong')?.textContent || '').replace(/\s+/g, '') })));
         assert(one.pages === 1, `1P PDF 페이지 수 ${one.pages} (트리 ${one.treeCount}) — 기대 1`);
 
         await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
@@ -433,11 +434,19 @@ try {
           return { pages: master ? master.querySelectorAll('.daon-frame-page, .daon-detail-page').length : 0, hash, length: text.length };
         });
         const before = await fingerprint();
+        // 루인 #43 follow-up: the price layers themselves (values, units, badges) must survive Snapshot reopen and match 1P.
+        const priceCells = () => page.evaluate(() => [...document.querySelectorAll('.daon-detail-page-4 [data-testid="dd-price-layers"] > div')].map((cell) => ({ key: cell.getAttribute('data-price-layer'), unit: cell.getAttribute('data-price-unit'), value: cell.querySelector('strong')?.textContent?.trim() || '', badge: cell.querySelector('em')?.textContent?.trim() || '' })));
+        const pricesBefore = await priceCells();
+        assert(pricesBefore.length === 4, `7P 가격 칸 ${pricesBefore.length}개 — 기대 4`);
         await page.emulateMedia({ media: 'print' });
         const reportPdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
         await page.emulateMedia({ media: 'screen' });
         await writeFile(`${OUT}/e2e-${tag}-report.pdf`, reportPdf);
         const report = pdfPageCount(reportPdf);
+        // Same input → same figures on 1P and 7P (whitespace-insensitive; 1P renders the unit in a smaller span).
+        const sevenByKey = Object.fromEntries(pricesBefore.map((cell) => [cell.key, cell.value.replace(/\s+/g, '')]));
+        const mismatch = onePrices.filter((cell) => sevenByKey[cell.key] !== cell.value);
+        assert(!mismatch.length, `1P·7P 가격 불일치: ${JSON.stringify(mismatch.map((cell) => [cell.key, cell.value, sevenByKey[cell.key]]))}`);
         assert(report.pages === before.pages && before.pages >= 5, `리포트 PDF 페이지 수 ${report.pages} (트리 ${report.treeCount}) — 화면 ${before.pages}쪽과 같아야 함`);
 
         // Reopen: leave, come back to the same Snapshot URL; stored content must render identically.
@@ -445,9 +454,11 @@ try {
         await page.goto(snapshotUrl, { waitUntil: 'domcontentloaded' });
         await page.waitForSelector('.daon-professional-report-master', { timeout: 45_000 });
         const after = await fingerprint();
+        const pricesAfter = await priceCells();
+        assert(JSON.stringify(pricesAfter) === JSON.stringify(pricesBefore), `Snapshot 재열람 가격 칸 불일치: ${JSON.stringify(pricesBefore)} → ${JSON.stringify(pricesAfter)}`);
         assert(after.pages === before.pages && after.hash === before.hash, `Snapshot 재열람 내용 불일치 (${before.pages}/${before.hash} → ${after.pages}/${after.hash})`);
         const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
-        return `1P ${one.pages}쪽 ${Math.round(onePdf.length / 1024)}KB · 리포트 ${report.pages}쪽 ${Math.round(reportPdf.length / 1024)}KB · 재열람 동일`;
+        return `1P ${one.pages}쪽 ${Math.round(onePdf.length / 1024)}KB · 리포트 ${report.pages}쪽 ${Math.round(reportPdf.length / 1024)}KB · 재열람 동일 · 가격 ${pricesBefore.map((cell) => `${cell.key}=${cell.value}`).join(' / ')} (1P=7P, 재열람 동일)`;
       });
     }
 
