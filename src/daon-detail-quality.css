@@ -412,7 +412,6 @@
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-comparables.has-bars{height:50mm}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-reason-three.with-photos{height:80mm}
 .daon-detail-master .daon-detail-page-4:has(.dd-price-layers) .dd-analysis-box{margin:2.6mm 0}
-.daon-detail-master .daon-detail-page-4:has(.dd-estimate-deals) .dd-reason-three.with-photos{height:72mm}
 /* Estimate comparables table (page 4, shown when no confirmed comparables exist). Class-based so the generic
    .dd-comparables span sizes cannot shrink it; nothing is cut — rows wrap instead of ellipsis. */
 .daon-detail-master .dd-estimate-deals{margin-bottom:3mm;border-top:1mm solid var(--dq-gold);background:#fff}
