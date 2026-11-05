@@ -276,3 +276,5 @@
 /* Closing page readability (multi-model review 2026-11-05) */
 .daon-closing-page p,.daon-closing-page span,.daon-closing-page small{font-size:max(1em,10.5px)}
 .daon-closing-page article p,.daon-closing-page article span{font-size:11px;line-height:1.5}
+.daon-closing-page,.daon-closing-page *,.daon-opening-page,.daon-opening-page *{word-break:keep-all}
+.daon-closing-page .df-frame-footer span,.daon-opening-page .df-frame-footer span{white-space:nowrap}

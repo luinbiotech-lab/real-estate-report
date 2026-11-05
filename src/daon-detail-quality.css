@@ -374,3 +374,15 @@
 .daon-detail-master .dd-roadmap .dd-number-card p{-webkit-line-clamp:10}
 .daon-detail-master .daon-detail-page-6 .dd-reason-three{height:auto;min-height:56mm}
 .daon-detail-master .daon-detail-page-6 .dd-gold-card p,.daon-detail-master .daon-detail-page-7 .dd-gold-card p{-webkit-line-clamp:10}
+/* Multi-model re-review 2026-11-05 */
+.daon-detail-master .dd-key-list:not(.has-labels)>div{grid-template-columns:10mm 1fr}
+.daon-detail-master .dd-key-list:not(.has-labels) .dd-label-empty{display:none}
+.daon-detail-master .dd-key-list.has-labels>div{grid-template-columns:10mm 34mm 1fr}
+.daon-detail-master .dd-key-list b{white-space:nowrap;overflow:hidden}
+.daon-detail-master .dd-foot{gap:5mm}
+.daon-detail-master .dd-foot span:last-child{text-align:right;max-width:58%;white-space:normal;line-height:1.3}
+.daon-detail-master .daon-detail-page-3 .dd-photo-three{height:30mm}
+.daon-detail-master .daon-detail-page-3 .dd-location-cards .dd-gold-card p{font-size:11px;line-height:1.45}
+.daon-detail-master .daon-detail-page-3 .dd-location-grid{min-height:86mm}
+.daon-detail-master .daon-detail-page-3 .dd-map-wrap,.daon-detail-master .daon-detail-page-3 .dd-map-wrap>.dd-image{min-height:86mm}
+.daon-detail-master .dd-p1-side>.dd-number-card{align-content:center}

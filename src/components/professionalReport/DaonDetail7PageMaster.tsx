@@ -124,7 +124,7 @@ const KEY_ICONS: DetailIconName[] = ['people', 'building', 'chart', 'leaf'];
  * itself as "라벨: 내용" (or "라벨 — 내용"); otherwise the row is numbered without a category.
  */
 export function splitLabel(line: string): { label: string; text: string } {
-  const match = line.match(/^\s*([^:：—]{2,14})\s*[:：]\s*(.+)$/) || line.match(/^\s*([^—]{2,14})\s+—\s+(.+)$/);
+  const match = line.match(/^\s*([^:：]{2,10})\s*[:：]\s*(.+)$/);
   return match ? { label: match[1].trim(), text: match[2].trim() } : { label: '', text: line };
 }
 
@@ -190,7 +190,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
         </div>
       </div>
       {points.length > 0 && <SectionBar right="KEY INVESTMENT POINTS">매입 검토 포인트</SectionBar>}
-      {points.length > 0 && <div className="dd-key-list">{points.slice(0, 4).map((point, i) => { const { label, text } = splitLabel(point); return <div key={i} className={label ? '' : 'no-label'}><span>{i + 1}</span>{label && <b><Icon name={KEY_ICONS[i] || 'pin'} />{label}</b>}<p>{text}</p></div>; })}</div>}
+      {points.length > 0 && <div className={`dd-key-list${points.slice(0, 4).some((point) => splitLabel(point).label) ? ' has-labels' : ''}`}>{points.slice(0, 4).map((point, i) => { const { label, text } = splitLabel(point); return <div key={i} className={label ? '' : 'no-label'}><span>{i + 1}</span>{label ? <b><Icon name={KEY_ICONS[i] || 'pin'} />{label}</b> : <b className="dd-label-empty" />}<p>{text}</p></div>; })}</div>}
       <Insight icon="building" title="매입의 핵심은 “건물” 하나가 아니라 선택지입니다." copy={display(model.investment.overallOpinion, '현재 활용, 리포지셔닝, 장기 보유가치를 함께 검토할 수 있도록 자료를 확정합니다.')} />
     </Page>
 
@@ -214,7 +214,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <div className="dd-location-grid"><div className="dd-map-wrap"><ImageSlot src={map} caption="입지 지도" className="map" /></div><div className="dd-location-cards" style={{ gridTemplateRows: equalColumns(p3CardCount) }}><GoldCard icon="pin" title={'도로 접근성'} copy={display(model.land.roadCondition)} /><GoldCard icon="people" title="생활권 안의 목적형 자산" copy={display(model.location.locationAnalysis)} /><GoldCard icon="chart" title="실사용 매수자에게 맞는 규모" copy={joinPresent(' ', display(model.land.landAreaPyeong), '토지 규모와 기존 건물 활용성을 함께 검토합니다.')} /></div></div>
       {hasPhotos && <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권과 다양한 상권" /><ImageSlot src={imageAt(2)} caption={'주변 도로·접근 환경'} /></div>}
       <SectionBar right="KEY POINTS">매수자 관점에서 읽는 입지</SectionBar>
-      {points.length > 0 && <div className="dd-key-list three">{points.slice(0, 3).map((point, i) => { const { label, text } = splitLabel(point); return <div key={i} className={label ? '' : 'no-label'}><span>{i + 1}</span>{label && <b>{label}</b>}<p>{text}</p></div>; })}</div>}
+      {points.length > 0 && <div className={`dd-key-list three${points.slice(0, 3).some((point) => splitLabel(point).label) ? ' has-labels' : ''}`}>{points.slice(0, 3).map((point, i) => { const { label, text } = splitLabel(point); return <div key={i} className={label ? '' : 'no-label'}><span>{i + 1}</span>{label ? <b>{label}</b> : <b className="dd-label-empty" />}<p>{text}</p></div>; })}</div>}
       <Insight compact icon="bulb" title="입지는 “유동인구 숫자”보다 어떤 매수자가 이 공간을 필요로 하는지를 보여줘야 합니다." copy={display(model.location.locationAnalysis)} />
     </Page>}
 
@@ -235,7 +235,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <div className="dd-roadmap" style={{ gridTemplateColumns: equalColumns(p5RoadmapCount) }}><NumberedPoint icon="building" index={1} title="즉시 사용" copy={display(model.pricing.occupancyStatus)} /><NumberedPoint icon="chart" index={2} title="리포지셔닝" copy={display(model.investment.features, '파사드·동선·공간 재구성 검토')} /><NumberedPoint icon="edit" index={3} title="중장기 검토" copy={display(model.investment.developmentPlan, '리노베이션 또는 신축 여부 검토')} /></div>
       <SectionBar right="USE CASE SCENARIOS">활용 시나리오</SectionBar>
       {scenarios.length > 0 && <div className="dd-scenarios" style={{ gridTemplateColumns: equalColumns(scenarios.length) }}>{scenarios.map((line, i) => { const { label, text } = splitLabel(line); const title = label || `활용안 ${i + 1}`; return <article key={i}>{hasPhotos && <ImageSlot src={imageAt(i)} caption={title} />}<h3>{title}</h3><p>{text}</p></article>; })}</div>}
-      <Insight icon="target" kicker="STRATEGIC INSIGHT" title="이 자산의 강점은 하나의 “정답 용도”가 아니라 매수자에 따라 달라지는 실행 옵션입니다." copy={display(model.investment.recommendedUse)} />
+      <Insight icon="target" kicker="STRATEGIC INSIGHT" title="이 자산의 강점은 하나의 “정답 용도”가 아니라 매수자에 따라 달라지는 실행 옵션입니다." copy={splitLines(model.investment.recommendedUse, 6).join(' · ')} />
     </Page>}
 
     {shows(6) && <Page page={6} number={pageNumber(6)} eyebrow="BUILDING & DEVELOPMENT REVIEW" title="건물 및 개발 검토" en="BUILDING & DEVELOPMENT REVIEW" source="자료기준: 일반건축물대장" subtitle="기존 건물의 활용성과 중장기 개발 검토 포인트" snapshot={snapshot} model={model}>
