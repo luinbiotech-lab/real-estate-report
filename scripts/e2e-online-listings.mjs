@@ -223,7 +223,11 @@ try {
         const chips = [...document.querySelectorAll('.d1-status-strip > div > b, .d1-highlight-strip b')].filter(cut).map((el) => (el.textContent || '').trim().slice(0, 40));
         return { facts, chips };
       });
-      const sheetLeft = await page.evaluate(() => Math.round(document.querySelector('.d1-sheet').getBoundingClientRect().left - (document.querySelector('.paper-stage')?.getBoundingClientRect().left ?? 0)));
+      // A printer lays the page out at A4 width (~794 CSS px), so measure the print position at that width.
+      const viewport1p = page.viewportSize();
+      await page.setViewportSize({ width: 794, height: 1123 });
+      const sheetLeft = await page.evaluate(() => Math.round(document.querySelector('.d1-sheet').getBoundingClientRect().left));
+      if (viewport1p) await page.setViewportSize(viewport1p);
       await page.emulateMedia({ media: null });
       assert(Math.abs(sheetLeft) <= 1, `1P 인쇄 시 용지 왼쪽에서 ${sheetLeft}px 밀림`);
       assert(!clip.facts.length, `1P 사실표 인쇄 잘림: ${clip.facts.join(' | ')}`);
@@ -286,9 +290,12 @@ try {
         }));
         return { templateId: master.getAttribute('data-template-id'), visual: master.getAttribute('data-visual-master'), pages, url: location.pathname };
       });
+      const viewport7p = page.viewportSize();
+      await page.setViewportSize({ width: 794, height: 1123 });
       await page.emulateMedia({ media: 'print' });
       const printOffset = await page.evaluate(() => [...document.querySelectorAll('.daon-detail-page, .daon-frame-page')].map((el) => Math.round(el.getBoundingClientRect().left)).filter((x) => Math.abs(x) > 1));
       await page.emulateMedia({ media: null });
+      if (viewport7p) await page.setViewportSize(viewport7p);
       assert(!printOffset.length, `7P 인쇄 시 페이지가 왼쪽 기준에서 밀림: ${printOffset.slice(0, 3).join(',')}px`);
       await shot(`${tag}-7p`);
       const names = report.pages.map((item) => item.name);
