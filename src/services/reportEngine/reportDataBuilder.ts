@@ -126,7 +126,7 @@ export function buildProfessionalReportViewModel(property: Property, inputBundle
   const identity = {
     id: property.id, propertyNumber: text('propertyNumber'), name: text('name'), buildingName: text('buildingName'),
     tradeType: text('tradeType'), address: text('address'), detailAddress: text('detailAddress'),
-    managerName: text('managerName'), managerPhone: text('managerPhone'), managerEmail: text('managerEmail'), companyName: text('companyName'), shortHeadline: text('shortHeadline'),
+    managerName: text('managerName'), managerPhone: text('managerPhone'), managerEmail: text('managerEmail'), companyName: text('companyName'), shortHeadline: text('shortHeadline'), reportPurpose: text('reportPurpose'),
   };
   const pricing = {
     salePrice: number('salePrice', formatNullableWon), deposit: number('deposit', formatNullableWon), monthlyRent: number('monthlyRent', formatNullableWon),

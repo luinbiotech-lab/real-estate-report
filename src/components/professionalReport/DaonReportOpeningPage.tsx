@@ -1,4 +1,5 @@
 import type { ProfessionalReportViewModel } from '../../domain/professionalReport/types';
+import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 
 const display = (value: { value: unknown; display: string }, fallback = '') =>
@@ -26,7 +27,7 @@ export function DaonReportOpeningPage({ model }: { model: ProfessionalReportView
       {hero ? <img src={hero} alt={`${name} 대표 이미지`} /> : <div className="df-opening-fallback" />}
     </section>
     <section className="df-cover-title">
-      <h1><small>전속매각</small><span>{location || name}</span></h1>
+      <h1><small>{reportWording(model.identity.reportPurpose?.value).coverTag}</small><span>{location || name}</span></h1>
       {use && <p>{use}</p>}
       <time>{month}</time>
     </section>

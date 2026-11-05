@@ -130,4 +130,13 @@ if (/isCorner|statesPlainly|includes\('코너'\)|'보이는 코너'|'가시성 �
 if (/key="owner"/.test(onePageSource)) fail('1P는 명도 원문에서 "소유자 직접 사용" 배지를 추론하면 안 됩니다.');
 if (/'코너 입지'/.test(onePageSource)) fail('1P 도로 칩은 원문 또는 짧은 표시 문구만 사용해야 합니다.');
 
+// Report purpose (owner decision 2026-11-05): analysis reports never print the exclusive-sale wording.
+const purpose = await importTs('src/domain/professionalReport/reportPurpose.ts');
+if (purpose.reportWording('analysis').titlePrefix.includes('전속') || purpose.reportWording('analysis').pageTag.includes('EXCLUSIVE')) fail('분석 보고서에 전속매각 문구가 남아 있습니다.');
+if (purpose.reportWording(undefined).titlePrefix !== '전속매각') fail('보고서 종류 기본값은 전속매각이어야 합니다.');
+for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', 'src/components/professionalReport/DaonDetail7PageMaster.tsx', 'src/components/professionalReport/DaonReportOpeningPage.tsx']) {
+  const code = readFileSync(file, 'utf8');
+  if (/>\s*전속매각|EXCLUSIVE SALE|전속매각 문의/.test(code.replace(/\/\*[\s\S]*?\*\//g, ''))) fail(`${file}: 전속매각 문구는 reportWording으로만 출력해야 합니다.`);
+}
+
 console.log(`Report blank-field policy validation passed (1P blank fields for empty property: ${fields.length}, 7P: ${detailAll.length}).`);

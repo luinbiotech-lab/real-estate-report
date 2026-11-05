@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { DaonMark } from '../brand/DaonMark';
+import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import {
   ApartmentOutlined,
   AssignmentTurnedInOutlined,
@@ -53,6 +54,7 @@ function PriceFigure({ value }: { value: string }) {
 }
 
 export function DaonOnePageMaster({ property: p }: { property: Property }) {
+  const wording = reportWording(p.reportPurpose);
   const landUnit = pricePerPyeong(p);
   const grossUnit = p.salePrice && p.totalFloorAreaPyeong ? Math.round(p.salePrice / p.totalFloorAreaPyeong) : 0;
   const points = [...lines(p.features), ...lines(p.investmentPoints)].filter(Boolean).slice(0, 7);
@@ -121,7 +123,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       <header className="d1-header">
         <div className="d1-head-copy">
           <small>가치를 보는 안목, 새로운 가능성을 만듭니다.</small>
-          <h1 className={`전속매각 | ${p.name}`.length > 22 ? 'd1-title-long' : undefined}>전속매각 | {p.name}</h1>
+          <h1 className={`${wording.titlePrefix} | ${p.name}`.length > 22 ? 'd1-title-long' : undefined}>{wording.titlePrefix} | {p.name}</h1>
           <p>{p.address}{p.detailAddress ? ` ${p.detailAddress}` : ''}</p>
         </div>
         <DaonLogo />
@@ -143,7 +145,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
             {p.mainImage ? <img src={p.mainImage} alt={`${p.name} 대표 외관`} /> : <div className="d1-empty">대표 외관사진<br/><small>데이터 미연결</small></div>}
             <div className="d1-hero-copy">
               <h2>{heroHeadline}</h2>
-              <p>DA:ON ASSET<br/>EXCLUSIVE SALE</p>
+              <p>DA:ON ASSET<br/>{wording.heroTag}</p>
             </div>
           </div>
           <div className="d1-facts-grid">
@@ -189,7 +191,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
       <footer className="d1-footer">
         <DaonLogo />
         <div className="d1-contact"><strong>{p.managerName || '김은미 대표 / 공인중개사'}</strong><span>M&nbsp; {p.managerPhone || '010 9953 1270'} &nbsp;&nbsp; E&nbsp; {p.managerEmail || 'daonasset.korea@gmail.com'}</span></div>
-        <div className="d1-footer-note">REAL ESTATE<br/>CREATES<br/>A BETTER TOMORROW<small>본 자료는 매각 검토용 요약자료이며 계약 전 권리관계 및 현장 재확인이 필요합니다.</small></div>
+        <div className="d1-footer-note">REAL ESTATE<br/>CREATES<br/>A BETTER TOMORROW<small>{wording.footerNote}</small></div>
       </footer>
     </article>
   </div>;

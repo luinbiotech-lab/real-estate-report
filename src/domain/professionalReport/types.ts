@@ -140,6 +140,8 @@ export interface ProfessionalReportViewModel {
     managerName: ReportValue<string>; managerPhone: ReportValue<string>; managerEmail: ReportValue<string>; companyName: ReportValue<string>;
     /** Optional broker-checked hero line (owner decision 2026-11-05). */
     shortHeadline?: ReportValue<string>;
+    /** 'exclusive_sale' (default) or 'analysis' — report wording only (owner decision 2026-11-05). */
+    reportPurpose?: ReportValue<string>;
   };
   pricing: {
     salePrice: ReportValue<number>; deposit: ReportValue<number>; monthlyRent: ReportValue<number>;
