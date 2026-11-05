@@ -118,6 +118,16 @@ function UnitPriceBars({ rows, subject }: { rows: Array<{ label: string; detail:
 
 const KEY_ICONS: DetailIconName[] = ['people', 'building', 'chart', 'leaf'];
 
+/*
+ * Category labels must describe the line they sit next to (multi-model review on PR #46, 2026-11-05: fixed labels such
+ * as '문화 / 콘텐츠' were printed beside an official land price). A label is used only when the stored line states it
+ * itself as "라벨: 내용" (or "라벨 — 내용"); otherwise the row is numbered without a category.
+ */
+export function splitLabel(line: string): { label: string; text: string } {
+  const match = line.match(/^\s*([^:：—]{2,14})\s*[:：]\s*(.+)$/) || line.match(/^\s*([^—]{2,14})\s+—\s+(.+)$/);
+  return match ? { label: match[1].trim(), text: match[2].trim() } : { label: '', text: line };
+}
+
 export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSnapshot; model: ProfessionalReportViewModel }) {
   const visibleMedia = model.media.items.filter((item) => item.url && reportMediaCategoryAllowed(item.category, model.media.internalPhotoAllowed));
   const hero = (model.media.internalPhotoAllowed ? model.media.mainImage.value : null)
@@ -170,17 +180,17 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const occupancyParking = joinPresent(' · ', display(model.pricing.occupancyStatus), parkingField && `현장 주차 ${parkingField}${parkingFieldNote}`);
 
   return <div className="daon-detail-master" data-template-id={DAON_DETAIL_MASTER_TEMPLATE_ID} data-template-version={DAON_DETAIL_MASTER_TEMPLATE_VERSION}>
-    <Page page={1} number={pageNumber(1)} eyebrow="WHY THIS ASSET" title={model.identity.name.display} subtitle="매입 관점에서 보는 핵심 제안" source="자료기준: 건축물대장·등기·토지이용계획" snapshot={snapshot} model={model}>
+    <Page page={1} number={pageNumber(1)} eyebrow="WHY THIS ASSET" title={model.identity.name.display} subtitle="매입 관점에서 보는 핵심 제안" source="자료기준: 건축물대장·토지이용계획" snapshot={snapshot} model={model}>
       <div className="dd-p1-top">
         <div className="dd-p1-hero"><ImageSlot src={hero} caption="대표 외관" /><div className="dd-hero-copy"><b>{heroStatement}</b><span>실사용 + 리포지셔닝 + 장기 가치</span></div></div>
-        <div className="dd-p1-side" style={{ gridTemplateRows: p1SideCount ? `34mm ${equalColumns(p1SideCount)}` : '34mm' }}>
+        <div className="dd-p1-side" style={{ gridTemplateRows: display(model.pricing.salePrice) ? (p1SideCount ? `34mm ${equalColumns(p1SideCount)}` : '34mm') : equalColumns(Math.max(p1SideCount, 1)) }}>
           {display(model.pricing.salePrice) && <section className="dd-price-card"><small>희망매매가</small><strong>{display(model.pricing.salePrice)}</strong><span>{model.identity.address.display}</span></section>}
           <NumberedPoint index={1} title="즉시 활용성" copy={display(model.pricing.occupancyStatus)} />
           <NumberedPoint index={2} title={'도로·접근 조건'} copy={display(model.land.roadCondition)} />
         </div>
       </div>
       {points.length > 0 && <SectionBar right="KEY INVESTMENT POINTS">매입 검토 포인트</SectionBar>}
-      {points.length > 0 && <div className="dd-key-list">{points.slice(0, 4).map((point, i) => <div key={i}><span>{i + 1}</span><b><Icon name={KEY_ICONS[i] || 'pin'} />{['생활권','사용성','확장성','장기성'][i] || '핵심'}</b><p>{point}</p></div>)}</div>}
+      {points.length > 0 && <div className="dd-key-list">{points.slice(0, 4).map((point, i) => { const { label, text } = splitLabel(point); return <div key={i} className={label ? '' : 'no-label'}><span>{i + 1}</span>{label && <b><Icon name={KEY_ICONS[i] || 'pin'} />{label}</b>}<p>{text}</p></div>; })}</div>}
       <Insight icon="building" title="매입의 핵심은 “건물” 하나가 아니라 선택지입니다." copy={display(model.investment.overallOpinion, '현재 활용, 리포지셔닝, 장기 보유가치를 함께 검토할 수 있도록 자료를 확정합니다.')} />
     </Page>
 
@@ -204,7 +214,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <div className="dd-location-grid"><div className="dd-map-wrap"><ImageSlot src={map} caption="입지 지도" className="map" /></div><div className="dd-location-cards" style={{ gridTemplateRows: equalColumns(p3CardCount) }}><GoldCard icon="pin" title={'도로 접근성'} copy={display(model.land.roadCondition)} /><GoldCard icon="people" title="생활권 안의 목적형 자산" copy={display(model.location.locationAnalysis)} /><GoldCard icon="chart" title="실사용 매수자에게 맞는 규모" copy={joinPresent(' ', display(model.land.landAreaPyeong), '토지 규모와 기존 건물 활용성을 함께 검토합니다.')} /></div></div>
       {hasPhotos && <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="인접 주거환경" /><ImageSlot src={imageAt(1)} caption="생활권과 다양한 상권" /><ImageSlot src={imageAt(2)} caption={'주변 도로·접근 환경'} /></div>}
       <SectionBar right="KEY POINTS">매수자 관점에서 읽는 입지</SectionBar>
-      <div className="dd-key-list three">{['사옥','F&B / 브랜드','문화 / 콘텐츠'].map((title, i) => <div key={title}><span>{i + 1}</span><b>{title}</b><p>{points[i] || '확인된 입지·수요 데이터 기반으로 활용성을 검토합니다.'}</p></div>)}</div>
+      {points.length > 0 && <div className="dd-key-list three">{points.slice(0, 3).map((point, i) => { const { label, text } = splitLabel(point); return <div key={i} className={label ? '' : 'no-label'}><span>{i + 1}</span>{label && <b>{label}</b>}<p>{text}</p></div>; })}</div>}
       <Insight compact icon="bulb" title="입지는 “유동인구 숫자”보다 어떤 매수자가 이 공간을 필요로 하는지를 보여줘야 합니다." copy={display(model.location.locationAnalysis)} />
     </Page>}
 
@@ -224,7 +234,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <SectionBar right="VALUE CREATION ROADMAP">가치 확장 로드맵</SectionBar>
       <div className="dd-roadmap" style={{ gridTemplateColumns: equalColumns(p5RoadmapCount) }}><NumberedPoint icon="building" index={1} title="즉시 사용" copy={display(model.pricing.occupancyStatus)} /><NumberedPoint icon="chart" index={2} title="리포지셔닝" copy={display(model.investment.features, '파사드·동선·공간 재구성 검토')} /><NumberedPoint icon="edit" index={3} title="중장기 검토" copy={display(model.investment.developmentPlan, '리노베이션 또는 신축 여부 검토')} /></div>
       <SectionBar right="USE CASE SCENARIOS">활용 시나리오</SectionBar>
-      <div className="dd-scenarios">{['OWNER-OCCUPIED HQ','F&B / FLAGSHIP','GALLERY / CULTURE'].map((title, i) => <article key={title}><ImageSlot src={imageAt(i)} caption={title} /><h3>{title}</h3>{scenarios[i] && <p>{scenarios[i]}</p>}</article>)}</div>
+      {scenarios.length > 0 && <div className="dd-scenarios" style={{ gridTemplateColumns: equalColumns(scenarios.length) }}>{scenarios.map((line, i) => { const { label, text } = splitLabel(line); const title = label || `활용안 ${i + 1}`; return <article key={i}>{hasPhotos && <ImageSlot src={imageAt(i)} caption={title} />}<h3>{title}</h3><p>{text}</p></article>; })}</div>}
       <Insight icon="target" kicker="STRATEGIC INSIGHT" title="이 자산의 강점은 하나의 “정답 용도”가 아니라 매수자에 따라 달라지는 실행 옵션입니다." copy={display(model.investment.recommendedUse)} />
     </Page>}
 
@@ -241,7 +251,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
 
     <Page page={7} number={pageNumber(7)} eyebrow="TRANSACTION READINESS" title="결론 및 제안" en="TRANSACTION READINESS" source="등기·공적자료는 계약 전 재확인" subtitle="권리·공적자료·인허가 체크와 매입 결론" snapshot={snapshot} model={model}>
       <SectionBar>거래 전 확인해야 할 핵심</SectionBar>
-      <div className="dd-dd-grid"><GoldCard icon="pin" title="토지이용" copy={joinPresent(' · ', display(model.land.zoning), display(model.land.roadCondition))} /><GoldCard icon="building" title="건축물대장" copy={joinPresent(' · ', display(model.building.totalFloorAreaSqm) && `연면적 ${display(model.building.totalFloorAreaSqm)}`, display(model.building.buildingAreaPyeong) && `건축면적 ${display(model.building.buildingAreaPyeong)}`, parkingOfficial && `공부상 주차 ${parkingOfficial}`)} /><GoldCard icon="document" title="권리관계" copy={risks[0] || '등기·권리관계는 최신 등기사항전부증명서로 재확인합니다.'} wide={!has(occupancyParking)} />{has(occupancyParking) && <GoldCard icon="people" title="명도·현장 주차" copy={occupancyParking} />}</div>
+      <div className="dd-dd-grid"><GoldCard icon="pin" title="토지이용" copy={joinPresent(' · ', display(model.land.zoning), display(model.land.roadCondition))} /><GoldCard icon="building" title="건축물대장" copy={joinPresent(' · ', display(model.building.totalFloorAreaSqm) && `연면적 ${display(model.building.totalFloorAreaSqm)}`, display(model.building.buildingAreaPyeong) && `건축면적 ${display(model.building.buildingAreaPyeong)}`, parkingOfficial && `공부상 주차 ${parkingOfficial}`)} /><GoldCard icon="document" title="권리·규제 확인" copy={risks[0] || '등기·권리관계는 최신 등기사항전부증명서로 재확인합니다.'} wide={!has(occupancyParking)} />{has(occupancyParking) && <GoldCard icon="people" title="명도·현장 주차" copy={occupancyParking} />}</div>
       <SectionBar>매수자 체크리스트</SectionBar>
       <ol className="dd-checklist"><li>최신 토지·건물 등기사항전부증명서 재발급</li><li>토지거래허가구역 적용 여부 및 매수인 요건 확인</li><li>대지 경계·접도 폭·현황도로·건축선 확인</li><li>주차·일조·높이·피난·내진 등 신축/대수선 사전검토</li><li>누수·균열·설비·전기용량·배수 등 현장실사</li><li>잔금일 기준 명도 및 인도 범위 계약서 명문화</li></ol>
       <div className="dd-acquisition with-icon"><span className="dd-icon-badge large solid"><Icon name="edit" /></span><div><b>ACQUISITION CASE</b><p>{display(model.investment.overallOpinion, '확인된 토지·건물·입지·명도·권리 정보를 종합해 매입 판단 근거를 확정합니다.')}</p></div></div>

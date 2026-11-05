@@ -273,3 +273,6 @@
 .daon-opening-page .df-cover-pillars svg{width:12mm;height:12mm}
 .daon-opening-page .df-cover-pillars b{font-size:16px}
 .daon-opening-page .df-cover-pillars span{font-size:11.5px}
+/* Closing page readability (multi-model review 2026-11-05) */
+.daon-closing-page p,.daon-closing-page span,.daon-closing-page small{font-size:max(1em,10.5px)}
+.daon-closing-page article p,.daon-closing-page article span{font-size:11px;line-height:1.5}

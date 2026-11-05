@@ -92,6 +92,13 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
     ['토지평당', moneyPerPyeong(landUnit)],
     ['연면적평당', moneyPerPyeong(grossUnit)],
   ] as Array<[string, string]>).filter(([, value]) => value);
+  // No asking price (e.g. an analysis-only building): the headline band shows stored area facts and the official-price
+  // land value instead of collapsing (multi-model review 2026-11-05). The land value is labelled as calculated.
+  if (!p.salePrice) {
+    const pyeong = (v?: number) => v && v > 0 ? `${v.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평` : '';
+    const eok = p.estimatedOfficialLandValue && p.estimatedOfficialLandValue > 0 ? `약 ${(Math.round(p.estimatedOfficialLandValue / 1e7) / 10).toLocaleString('ko-KR')}억 원` : '';
+    priceCells.splice(0, priceCells.length, ...([['대지면적', pyeong(p.landAreaPyeong)], ['연면적', pyeong(p.totalFloorAreaPyeong)], ['공시지가 기준 토지가액(산출)', eok]] as Array<[string, string]>).filter(([, value]) => value));
+  }
   const statusCells = [
     occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>,
     roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{roadSummary}</b></div>,
@@ -177,7 +184,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         {presentHighlights.map((item, index) => <div key={`${item.text}-${index}`}><span className="d1-highlight-icon">{item.icon}</span><b>{item.text}</b></div>)}
       </section>}
 
-      <section className="d1-use"><strong><LightbulbOutlined /><span>활용 제안</span></strong><p>{p.recommendedUse || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
+      <section className="d1-use"><strong><LightbulbOutlined /><span>활용 제안</span></strong><p>{lines(p.recommendedUse).join(' · ') || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
 
       <footer className="d1-footer">
         <DaonLogo />

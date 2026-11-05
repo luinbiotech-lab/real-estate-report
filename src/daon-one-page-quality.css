@@ -80,3 +80,12 @@
 .daon-one-page-master .d1-head-copy h1{white-space:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;line-height:1.12}
 .daon-one-page-master .d1-head-copy h1.d1-title-long{font-size:22px}
 .daon-one-page-master .d1-points li b{-webkit-line-clamp:3}
+/* Multi-model review 2026-11-05: points never cut at the box bottom; Korean words never split; readable diagram labels */
+.daon-one-page-master,.daon-one-page-master *{word-break:keep-all;overflow-wrap:break-word}
+.daon-one-page-master .d1-points ol{gap:0;padding-top:2mm;padding-bottom:2mm}
+.daon-one-page-master .d1-points li{min-height:0;padding:.9mm 0}
+.daon-one-page-master .d1-points li b{font-size:11.4px;line-height:1.3;-webkit-line-clamp:2}
+.daon-one-page-master .d1-road-diagram span,.daon-one-page-master .d1-network span{font-size:8px;background:#fff;padding:0 .8mm;border-radius:1mm}
+.daon-one-page-master .d1-mini-grid small{font-size:8px}
+.daon-one-page-master .d1-footer-note small{font-size:7.4px}
+.daon-one-page-master .d1-price-band small{white-space:nowrap}

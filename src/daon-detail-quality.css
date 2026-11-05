@@ -359,3 +359,12 @@
 .daon-detail-master .daon-detail-page-3 .dd-map-wrap,.daon-detail-master .daon-detail-page-3 .dd-map-wrap>.dd-image{min-height:92mm}
 .daon-detail-master .daon-detail-page-3 .dd-insight b{font-size:16.5px}
 .daon-detail-master .daon-detail-page-3 .dd-insight p{-webkit-line-clamp:2}
+/* Multi-model review 2026-11-05 */
+.daon-detail-master,.daon-detail-master *{word-break:keep-all;overflow-wrap:break-word}
+.daon-detail-master .dd-key-list>div.no-label{grid-template-columns:10mm 1fr}
+.daon-detail-master .dd-key-list.three>div.no-label{grid-template-columns:10mm 1fr}
+.daon-detail-master .dd-head h1:not([lang=en]){background:none;-webkit-background-clip:border-box;background-clip:border-box;color:#fff}
+.daon-detail-master .dd-head small{font-size:9px}
+.daon-detail-master .dd-section-bar span{font-size:8px}
+.daon-detail-master .dd-foot{font-size:9.6px}
+.daon-detail-master .dd-gold-card b{white-space:normal}

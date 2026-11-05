@@ -29,7 +29,7 @@ export function DaonReportClosingPage({ model }: { model: ProfessionalReportView
     <section className="df-contact-section">
       <div className="df-section-heading"><b>Contact</b><span>언제든지, 다온이 함께하겠습니다.</span></div>
       <div className="df-contact-card">
-        <div><small>다온에셋 부동산중개</small><strong>대표 {manager}</strong><b>{phone}</b></div>
+        <div><small>다온에셋 부동산중개</small><strong>{/대표/.test(manager) ? manager : `대표 ${manager}`}</strong><b>{phone}</b></div>
         <p><em>TRUST VALUE SOLUTION</em>신뢰를 바탕으로 고객의 더 큰 가치를 실현하는 든든한 파트너, 다온입니다.</p>
       </div>
     </section>
