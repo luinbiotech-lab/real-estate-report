@@ -137,6 +137,7 @@ export function buildProfessionalReportViewModel(property: Property, inputBundle
     priceEstimate: findPriceEstimate(bundle.dataSources, property.id),
     brokerAchievablePrice: number('brokerAchievablePrice', formatNullableWon),
     brokerAchievablePriceRationale: text('brokerAchievablePriceRationale'),
+    brokerAchievablePriceConfirmedAt: text('brokerAchievablePriceConfirmedAt'),
     listingStatus: reportValue(
       property.listingStatus && property.listingStatus !== 'unknown' ? property.listingStatus : null,
       context('listingStatus', {

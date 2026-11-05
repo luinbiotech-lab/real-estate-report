@@ -50,19 +50,25 @@ export function formatEok(value: number) {
   return `${man.toLocaleString('ko-KR')}만`;
 }
 
-/** Exact amount for entered figures (asking price, broker-confirmed price): "41억 5,000만원" — 만원 precision, no 억 rounding. */
+/**
+ * Exact amount for entered figures (asking price, broker price): "41억 5,000만원", "12억 3,456만 7,890원".
+ * No rounding at all — a sub-만원 remainder is printed in 원 (루인 review on #43: display must equal the stored amount).
+ */
 export function formatExactWon(value: number) {
   if (!positive(value)) return '';
-  const totalMan = Math.round(value / 10_000);
-  const eok = Math.floor(totalMan / 10_000);
-  const man = totalMan % 10_000;
-  return `${eok ? `${eok.toLocaleString('ko-KR')}억` : ''}${eok && man ? ' ' : ''}${man ? `${man.toLocaleString('ko-KR')}만` : ''}원`;
+  const whole = Math.round(value);
+  const eok = Math.floor(whole / 100_000_000);
+  const man = Math.floor((whole % 100_000_000) / 10_000);
+  const won = whole % 10_000;
+  const parts = [eok ? `${eok.toLocaleString('ko-KR')}억` : '', man ? `${man.toLocaleString('ko-KR')}만` : '', won ? won.toLocaleString('ko-KR') : ''].filter(Boolean);
+  return `${parts.join(' ')}원`;
 }
 
 export interface PriceLayerCell {
   key: 'asking' | 'official' | 'market' | 'achievable';
   label: string; value: string; sub: string; badge: string;
-  state: 'actual' | 'calculated' | 'candidate' | 'estimated' | 'confirmed';
+  /** entered = broker figure without a written basis (not confirmed); confirmed = broker figure with a basis. */
+  state: 'actual' | 'calculated' | 'candidate' | 'estimated' | 'entered' | 'confirmed';
   /** total = whole-property amount (원); per_pyeong = land unit price (원/평). Never compare the two directly. */
   unit: 'total' | 'per_pyeong';
   /** Raw KRW behind the display value (range → [low, high]); kept so tests can check display vs exact value. */
@@ -87,7 +93,7 @@ export function priceLayerCells(p: Partial<Property>, estimate: AchievablePriceE
     const confirmedAt = (p.brokerAchievablePriceConfirmedAt ?? '').slice(0, 10);
     // A broker figure without a written basis is shown as an entered value, not as "확정" (루인 review on #43).
     const badge = rationale ? `중개사 확정${confirmedAt ? ` ${confirmedAt}` : ''} · ${NOT_APPRAISAL}` : `중개사 입력 · 근거 미입력 · ${NOT_APPRAISAL}`;
-    cells.push({ key: 'achievable', label: '거래가능가격', value: formatExactWon(p.brokerAchievablePrice), sub: estimate?.state === 'estimated' ? `DA:ON 추정 ${formatEok(estimate.low!)}~${formatEok(estimate.high!)}원` : '중개사 입력값', badge, state: 'confirmed', unit: 'total', amount: p.brokerAchievablePrice });
+    cells.push({ key: 'achievable', label: '거래가능가격', value: formatExactWon(p.brokerAchievablePrice), sub: estimate?.state === 'estimated' ? `DA:ON 추정 ${formatEok(estimate.low!)}~${formatEok(estimate.high!)}원` : '중개사 입력값', badge, state: rationale ? 'confirmed' : 'entered', unit: 'total', amount: p.brokerAchievablePrice });
   } else if (estimate?.state === 'estimated' && positive(estimate.low) && positive(estimate.high)) {
     cells.push({ key: 'achievable', label: '거래가능가격 추정', value: `${formatEok(estimate.low)}~${formatEok(estimate.high)}원`, sub: `중앙 약 ${formatEok(estimate.mid!)}원`, badge: `DA:ON 추정 · ${NOT_APPRAISAL}`, state: 'estimated', unit: 'total', amount: [estimate.low, estimate.high] });
   }

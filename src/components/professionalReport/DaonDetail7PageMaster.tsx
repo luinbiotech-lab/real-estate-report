@@ -187,6 +187,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     estimatedOfficialLandValue: model.land.estimatedOfficialLandValue?.value ?? 0, officialLandPriceYear: model.land.officialLandPriceYear?.value ?? '',
     brokerAchievablePrice: model.pricing.brokerAchievablePrice?.value ?? 0,
     brokerAchievablePriceRationale: model.pricing.brokerAchievablePriceRationale?.value ?? '',
+    brokerAchievablePriceConfirmedAt: model.pricing.brokerAchievablePriceConfirmedAt?.value ?? '',
   }, priceEstimate);
   const askingLine = askingPosition(model.pricing.salePrice.value ?? undefined, priceEstimate);
   const brokerRationale = display(model.pricing.brokerAchievablePriceRationale ?? { value: null, display: '', state: 'missing', sourceIds: [] });

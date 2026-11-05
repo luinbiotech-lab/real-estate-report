@@ -125,14 +125,17 @@ if (JSON.stringify(four.map((c) => c.unit)) !== '["total","total","per_pyeong","
 if (four[0].amount !== 3_000_000_000 || four[2].amount !== 94367172 || JSON.stringify(four[3].amount) !== JSON.stringify([3021459221, 5729742663])) fail('가격 원값(amount) 보존 오류');
 if (!four[2].sub.includes('총액 아님')) fail('단가 칸은 총액이 아님을 표시해야 합니다.');
 // Exact entered amount vs rounded calculated amount.
-if (pv.formatExactWon(4_150_000_000) !== '41억 5,000만원' || pv.formatExactWon(4_100_000_000) !== '41억원' || pv.formatExactWon(98_000_000) !== '9,800만원' || pv.formatExactWon(1_234_567_890) !== '12억 3,457만원') fail('정확 금액 표기 오류');
+if (pv.formatExactWon(4_150_000_000) !== '41억 5,000만원' || pv.formatExactWon(4_100_000_000) !== '41억원' || pv.formatExactWon(98_000_000) !== '9,800만원' || pv.formatExactWon(1_234_567_890) !== '12억 3,456만 7,890원' || pv.formatExactWon(50_000) !== '5만원' || pv.formatExactWon(100_000_000) !== '1억원') fail('정확 금액 표기 오류');
 if (pv.priceLayerCells({ salePrice: 4_155_000_000 }, null)[0].value !== '41억 5,500만원') fail('매도 희망가는 반올림 없이 만원 단위 전체 금액');
 if (pv.formatEok(99_995_000) !== '1억' || pv.formatEok(99_994_999) !== '9,999만' || pv.formatEok(1_000_000_000) !== '10억' || pv.formatEok(12_345_678_901) !== '123억' || pv.formatEok(1_234_567_890) !== '12.3억' || pv.formatEok(123_456_789) !== '1.23억') fail(`추정·계산값 반올림 경계 오류: ${[99_995_000, 99_994_999, 1e9, 12_345_678_901, 1_234_567_890, 123_456_789].map(pv.formatEok).join(' | ')}`);
 // A broker figure without a written basis is not shown as "확정".
 const noBasis = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000 }, est)[3];
-if (noBasis.badge.includes('확정') || !noBasis.badge.includes('근거 미입력')) fail(`근거 없는 중개사 가격은 확정으로 표시하면 안 됩니다: ${noBasis.badge}`);
+if (noBasis.state !== 'entered' || noBasis.badge.includes('확정') || !noBasis.badge.includes('근거 미입력')) fail(`근거 없는 중개사 가격은 확정으로 표시하면 안 됩니다: ${noBasis.badge}`);
 const withBasis = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000, brokerAchievablePriceRationale: '인근 2건 매수 문의', brokerAchievablePriceConfirmedAt: '2026-11-06T01:00:00Z' }, est)[3];
-if (!withBasis.badge.startsWith('중개사 확정 2026-11-06')) fail(`근거·확정일이 있으면 확정 표시: ${withBasis.badge}`);
+if (withBasis.state !== 'confirmed' || !withBasis.badge.startsWith('중개사 확정 2026-11-06')) fail(`근거·확정일이 있으면 확정 표시: ${withBasis.badge}`);
+// 1P (whole Property) and 7P (report model) must carry the same confirmation date (루인 review on #43).
+const builderSrc = readFileSync('src/services/reportEngine/reportDataBuilder.ts', 'utf8');
+if (!builderSrc.includes("brokerAchievablePriceConfirmedAt: text('brokerAchievablePriceConfirmedAt')") || !readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes('brokerAchievablePriceConfirmedAt: model.pricing.brokerAchievablePriceConfirmedAt')) fail('7P 가격 칸에 중개사 확정일이 전달되지 않습니다(1P와 불일치).');
 if (!pv.PRICE_ESTIMATE_METHOD_NOTE.includes('5건 이상') || pv.PRICE_ESTIMATE_METHOD_NOTE.includes('공인중개사의 가격 의견')) fail('산출 방법 문구가 서버 산식과 다릅니다.');
 if (!four[1].badge.includes('감정평가 아님') || !four[3].badge.includes('감정평가 아님')) fail('공시지가·추정은 감정평가 아님 표시');
 const confirmed = pv.priceLayerCells({ ...base8, brokerAchievablePrice: 3_800_000_000, brokerAchievablePriceRationale: '근거' }, est);

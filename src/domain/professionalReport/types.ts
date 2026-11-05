@@ -150,7 +150,7 @@ export interface ProfessionalReportViewModel {
     listingStatus: ReportValue<string>;
     /** DA:ON achievable-price estimate frozen into the Snapshot (owner decision 2026-11-01; not an appraisal). Absent in older Snapshots. */
     priceEstimate?: AchievablePriceEstimate | null;
-    brokerAchievablePrice?: ReportValue<number>; brokerAchievablePriceRationale?: ReportValue<string>;
+    brokerAchievablePrice?: ReportValue<number>; brokerAchievablePriceRationale?: ReportValue<string>; brokerAchievablePriceConfirmedAt?: ReportValue<string>;
   };
   building: {
     totalFloorAreaSqm: ReportValue<number>; totalFloorAreaPyeong: ReportValue<number>; buildingAreaPyeong: ReportValue<number>;
