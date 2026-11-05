@@ -1,4 +1,7 @@
 import type { ReactNode } from 'react';
+import { DaonLogoImage } from '../brand/DaonLogoImage';
+import { shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
+import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import {
   ApartmentOutlined,
   AssignmentTurnedInOutlined,
@@ -30,9 +33,8 @@ const floorText = (p: Property) => {
 };
 
 function DaonLogo() {
-  return <div className="d1-logo" aria-label="DA:ON ASSET">
-    <div className="d1-logo-mark">D</div>
-    <div><strong>DA:ON</strong><span>ASSET</span></div>
+  return <div className="d1-logo d1-logo-image" aria-label="DA:ON ASSET">
+    <DaonLogoImage className="d1-logo-img" />
   </div>;
 }
 
@@ -44,7 +46,15 @@ function Fact({ label, value, icon, wide = false }: { label: string; value: stri
   </div>;
 }
 
+/** Large figure with a smaller unit, as in the reference price band ("41억 5,000만원"). */
+function PriceFigure({ value }: { value: string }) {
+  const match = value.match(/^(.*?)(\s*만?\s*원)$/);
+  if (!match) return <strong>{value}</strong>;
+  return <strong>{match[1]}<small className="d1-price-unit">{match[2].replace(/\s+/g, '')}</small></strong>;
+}
+
 export function DaonOnePageMaster({ property: p }: { property: Property }) {
+  const wording = reportWording(p.reportPurpose);
   const landUnit = pricePerPyeong(p);
   const grossUnit = p.salePrice && p.totalFloorAreaPyeong ? Math.round(p.salePrice / p.totalFloorAreaPyeong) : 0;
   const points = [...lines(p.features), ...lines(p.investmentPoints)].filter(Boolean).slice(0, 7);
@@ -64,16 +74,17 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         ? `${p.parkingSpaces}대`
         : '';
   const parkingNote = hasNumber(p.parkingField) ? `* ${p.parkingFieldNote || '현장 이용 기준'}` : '';
-  const heroHeadline = first(p.investmentPoints, first(p.features, '입지와 활용가치를 함께 검토하는 자산'));
+  const heroHeadline = shortOrFirstLine(p.shortHeadline, p.investmentPoints, first(p.features, '입지와 활용가치를 함께 검토하는 자산'));
   const locationCaption = [p.nearbyStation || '', p.roadCondition || ''].filter(Boolean).join(' · ');
-  const occupancySummary = first(p.occupancyStatus, '');
-  const roadSummary = first(p.roadCondition, '');
+  // Broker-checked short labels win; otherwise the stored first line is printed as written (owner decision 2026-11-04).
+  const occupancySummary = shortOrFirstLine(p.shortOccupancyLabel, p.occupancyStatus);
+  const roadSummary = shortOrFirstLine(p.shortRoadLabel, p.roadCondition);
   const roadAddress = p.address ? p.address.split(' ').slice(-2).join(' ') : '';
   const highlightItems = [
     { text: roadSummary, icon: <LocationOnOutlined /> },
     { text: occupancySummary, icon: <GroupsOutlined /> },
-    { text: first(p.recommendedUse, ''), icon: <ApartmentOutlined /> },
-    { text: first(p.developmentPlan, ''), icon: <DescriptionOutlined /> },
+    { text: shortOrFirstLine(p.shortUseLabel, p.recommendedUse), icon: <ApartmentOutlined /> },
+    { text: shortOrFirstLine(p.shortDevelopmentLabel, p.developmentPlan), icon: <DescriptionOutlined /> },
   ];
 
   // Mixed blank policy (owner decision 2026-10-31): present items move forward and each row is re-divided among them,
@@ -83,10 +94,16 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
     ['토지평당', moneyPerPyeong(landUnit)],
     ['연면적평당', moneyPerPyeong(grossUnit)],
   ] as Array<[string, string]>).filter(([, value]) => value);
+  // No asking price (e.g. an analysis-only building): the headline band shows stored area facts and the official-price
+  // land value instead of collapsing (multi-model review 2026-11-05). The land value is labelled as calculated.
+  if (!p.salePrice) {
+    const pyeong = (v?: number) => v && v > 0 ? `${v.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평` : '';
+    const eok = p.estimatedOfficialLandValue && p.estimatedOfficialLandValue > 0 ? `약 ${(Math.round(p.estimatedOfficialLandValue / 1e7) / 10).toLocaleString('ko-KR')}억 원` : '';
+    priceCells.splice(0, priceCells.length, ...([['대지면적', pyeong(p.landAreaPyeong)], ['연면적', pyeong(p.totalFloorAreaPyeong)], ['공시지가 기준 토지가액(산출)', eok]] as Array<[string, string]>).filter(([, value]) => value));
+  }
   const statusCells = [
     occupancySummary && <div key="occupancy"><AssignmentTurnedInOutlined className="d1-status-icon" /><b>{occupancySummary}</b></div>,
-    (p.occupancyStatus || '').includes('소유자') && <div key="owner"><BusinessOutlined className="d1-status-icon" /><b>소유자 직접 사용</b></div>,
-    roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{(p.roadCondition || '').includes('코너') ? '코너 입지' : roadSummary}</b></div>,
+    roadSummary && <div key="road"><LocationOnOutlined className="d1-status-icon" /><b>{roadSummary}</b></div>,
     parking && <div key="parking"><LocalParkingOutlined className="d1-status-icon" /><b>{parking}</b>{parkingNote && <small>{parkingNote}</small>}</div>,
   ].filter(Boolean);
   const presentHighlights = highlightItems.filter((item) => item.text);
@@ -102,20 +119,20 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
   const wideFact = presentFactLabels.length % 2 === 1 ? presentFactLabels[presentFactLabels.length - 1] : '';
 
   return <div className="daon-one-page-master" data-template-id={DAON_ONE_PAGE_MASTER_TEMPLATE_ID} data-template-version={DAON_ONE_PAGE_MASTER_TEMPLATE_VERSION}>
-    <article className={`d1-sheet${presentHighlights.length ? '' : ' d1-sheet-no-highlight'}`}>
+    <article className={`d1-sheet${presentHighlights.length ? '' : ' d1-sheet-no-highlight'}${priceCells.length ? '' : ' d1-sheet-no-price'}`}>
       <header className="d1-header">
         <div className="d1-head-copy">
           <small>가치를 보는 안목, 새로운 가능성을 만듭니다.</small>
-          <h1>전속매각 | {p.name}</h1>
+          <h1 className={`${wording.titlePrefix} | ${p.name}`.length > 22 ? 'd1-title-long' : undefined}>{wording.titlePrefix} | {p.name}</h1>
           <p>{p.address}{p.detailAddress ? ` ${p.detailAddress}` : ''}</p>
         </div>
         <DaonLogo />
         <div className="d1-tagline">More Than Real Estate<br/>A Better Tomorrow</div>
       </header>
 
-      <section className="d1-price-band" style={{ gridTemplateColumns: ['1.16fr', ...priceCells.slice(1).map(() => '1fr')].join(' ') }}>
-        {priceCells.map(([label, value]) => <div key={label}><small>{label}</small><strong>{value}</strong></div>)}
-      </section>
+      {priceCells.length > 0 && <section className="d1-price-band" style={{ gridTemplateColumns: ['1.16fr', ...priceCells.slice(1).map(() => '1fr')].join(' ') }}>
+        {priceCells.map(([label, value]) => <div key={label}><small>{label}</small><PriceFigure value={value} /></div>)}
+      </section>}
 
       <section className="d1-status-strip" style={{ gridTemplateColumns: statusCells.length ? `${equalColumns(statusCells.length, 'minmax(0,1fr)')} 32mm` : '1fr' }}>
         {statusCells}
@@ -128,7 +145,7 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
             {p.mainImage ? <img src={p.mainImage} alt={`${p.name} 대표 외관`} /> : <div className="d1-empty">대표 외관사진<br/><small>데이터 미연결</small></div>}
             <div className="d1-hero-copy">
               <h2>{heroHeadline}</h2>
-              <p>DA:ON ASSET<br/>EXCLUSIVE SALE</p>
+              <p>DA:ON ASSET<br/>{wording.heroTag}</p>
             </div>
           </div>
           <div className="d1-facts-grid">
@@ -169,12 +186,12 @@ export function DaonOnePageMaster({ property: p }: { property: Property }) {
         {presentHighlights.map((item, index) => <div key={`${item.text}-${index}`}><span className="d1-highlight-icon">{item.icon}</span><b>{item.text}</b></div>)}
       </section>}
 
-      <section className="d1-use"><strong><LightbulbOutlined /><span>활용 제안</span></strong><p>{p.recommendedUse || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
+      <section className="d1-use"><strong><LightbulbOutlined /><span>활용 제안</span></strong><p>{lines(p.recommendedUse).join(' · ') || '활용 방향은 현장 및 인허가 검토 후 확정합니다.'}</p></section>
 
       <footer className="d1-footer">
         <DaonLogo />
         <div className="d1-contact"><strong>{p.managerName || '김은미 대표 / 공인중개사'}</strong><span>M&nbsp; {p.managerPhone || '010 9953 1270'} &nbsp;&nbsp; E&nbsp; {p.managerEmail || 'daonasset.korea@gmail.com'}</span></div>
-        <div className="d1-footer-note">REAL ESTATE<br/>CREATES<br/>A BETTER TOMORROW<small>본 자료는 매각 검토용 요약자료이며 계약 전 권리관계 및 현장 재확인이 필요합니다.</small></div>
+        <div className="d1-footer-note">REAL ESTATE<br/>CREATES<br/>A BETTER TOMORROW<small>{wording.footerNote}</small></div>
       </footer>
     </article>
   </div>;

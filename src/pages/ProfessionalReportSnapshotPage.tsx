@@ -16,7 +16,10 @@ import { getFinalizedSnapshotDestination, getSnapshotFinalizationUiState } from 
 import '../professional-report.css';
 import '../daon-detail-master.css';
 import '../daon-report-frame.css';
+import '../assets/fonts/noto-sans-kr/index.css';
+import '../assets/fonts/montserrat/index.css';
 import '../daon-master-refinement.css';
+import '../daon-detail-quality.css';
 
 function isViewModel(value: unknown): value is ProfessionalReportViewModel {
   if (!value || typeof value !== 'object') return false;

@@ -54,6 +54,16 @@ const snapshotService = readFileSync('src/services/reportEngine/reportSnapshotSe
 const accessPolicy = readFileSync('src/domain/professionalReport/reportAccessPolicy.ts', 'utf8');
 const reportSmoke = readFileSync('scripts/visual-report-smoke.mjs', 'utf8');
 
+// Luin review 2026-11-04 (P0): the 1P must print stored facts as written. No keyword-based status rewriting
+// (e.g. '전체 명도 불가' printed as '전체 명도 가능') and no clause splitting on '.' or ',' (82.5% -> 82, 1,000만원 -> 1).
+if (/includes\('(전체 명도|코너|소유자)'\)/.test(onePage) || /includes\('코너'\)/.test(detail) || /chipLabel/.test(onePage) || /split\(\/[^/]*\[[^\]]*[.,][^\]]*\]/.test(onePage)) {
+  throw new Error('1P는 명도·수치 등 사실 문구를 키워드 치환이나 마침표·쉼표 분할로 바꾸면 안 됩니다.');
+}
+const onePageQualityCss = existsSync('src/daon-one-page-quality.css') ? readFileSync('src/daon-one-page-quality.css', 'utf8') : '';
+if (onePageQualityCss && !/d1-fact>span\.d1-fact-value\{white-space:normal;overflow:visible;text-overflow:clip/.test(onePageQualityCss)) {
+  throw new Error('1P 사실표 값은 인쇄물에서 잘리지 않도록 줄바꿈되어야 합니다.');
+}
+
 for (const phrase of forbiddenPhrases) {
   if (onePage.includes(phrase) || detail.includes(phrase)) {
     throw new Error(`특정 물건 전용 하드코딩 문구 재도입 금지: ${phrase}`);

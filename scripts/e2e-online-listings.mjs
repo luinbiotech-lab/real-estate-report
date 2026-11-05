@@ -213,6 +213,70 @@ try {
       return requiredMissing ? '필수 공란 → 주의 팝업 + 사용자 선택 · 빈 칸 0' : '선택 공란 확인 요청 · 빈 칸 0';
     });
 
+    // 4c. Luin review on PR #46 (2026-11-04): printed 1P facts are never cut. Under print media, fact values must show in
+    // full; any status/highlight chip that is cut must be announced by the pre-publish 1P length warning (short labels).
+    await check(tag, '1P 인쇄 사실값 잘림 0 · 길이 경고', async () => {
+      await page.emulateMedia({ media: 'print' });
+      const clip = await page.evaluate(() => {
+        const cut = (el) => el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1;
+        const facts = [...document.querySelectorAll('.d1-fact')].filter((el) => cut(el) || cut(el.querySelector('.d1-fact-value') || el)).map((el) => (el.textContent || '').trim().slice(0, 40));
+        const chips = [...document.querySelectorAll('.d1-status-strip > div > b, .d1-highlight-strip b')].filter(cut).map((el) => (el.textContent || '').trim().slice(0, 40));
+        return { facts, chips };
+      });
+      // A printer lays the page out at A4 width (~794 CSS px), so measure the print position at that width.
+      const viewport1p = page.viewportSize();
+      await page.setViewportSize({ width: 794, height: 1123 });
+      const sheetLeft = await page.evaluate(() => Math.round(document.querySelector('.d1-sheet').getBoundingClientRect().left));
+      if (viewport1p) await page.setViewportSize(viewport1p);
+      await page.emulateMedia({ media: null });
+      assert(Math.abs(sheetLeft) <= 1, `1P 인쇄 시 용지 왼쪽에서 ${sheetLeft}px 밀림`);
+      assert(!clip.facts.length, `1P 사실표 인쇄 잘림: ${clip.facts.join(' | ')}`);
+      // Exercise the warning path with a long stored sentence (QA browser IndexedDB only), then restore the record.
+      const longText = '현재 소유자 직접 사용 중이며 잔금일 기준 전체 명도 협의가 가능하고 인도 범위는 계약서에 명시합니다';
+      const original = await page.evaluate(async ({ id, text }) => {
+        const db = await new Promise((res, rej) => { const r = indexedDB.open('real-estate-report'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+        try {
+          const rec = await new Promise((res, rej) => { const g = db.transaction('properties').objectStore('properties').get(id); g.onsuccess = () => res(g.result); g.onerror = () => rej(g.error); });
+          if (!rec) return null;
+          await new Promise((res, rej) => { const tx = db.transaction('properties', 'readwrite'); tx.objectStore('properties').put({ ...rec, occupancyStatus: text, shortOccupancyLabel: '' }); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+          return { occupancyStatus: rec.occupancyStatus ?? '', shortOccupancyLabel: rec.shortOccupancyLabel ?? '' };
+        } finally { db.close(); }
+      }, { id: propertyId, text: longText });
+      let longChecked = 'QA 저장소 접근 불가 — 길이 경고 경로 미검증';
+      if (original) {
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+        const statusText = await page.locator('.d1-status-strip').innerText();
+        assert(statusText.replace(/\s+/g, ' ').includes('현재 소유자 직접 사용 중이며'), '긴 원문이 1P에 원문 그대로 시작하지 않습니다.');
+        await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+        const longDialog = page.getByRole('dialog');
+        await longDialog.waitFor({ state: 'visible', timeout: 10_000 });
+        assert(await longDialog.getByTestId('report-long-fields').count() > 0, '긴 명도 원문인데 발행 전 길이 경고가 없습니다.');
+        await longDialog.getByRole('button', { name: '취소' }).click();
+        await longDialog.waitFor({ state: 'hidden', timeout: 10_000 });
+        await page.evaluate(async ({ id, original }) => {
+          const db = await new Promise((res, rej) => { const r = indexedDB.open('real-estate-report'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+          try {
+            const rec = await new Promise((res, rej) => { const g = db.transaction('properties').objectStore('properties').get(id); g.onsuccess = () => res(g.result); g.onerror = () => rej(g.error); });
+            await new Promise((res, rej) => { const tx = db.transaction('properties', 'readwrite'); tx.objectStore('properties').put({ ...rec, ...original }); tx.oncomplete = res; tx.onerror = () => rej(tx.error); });
+          } finally { db.close(); }
+        }, { id: propertyId, original });
+        await page.reload({ waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
+        longChecked = '긴 원문 → 원문 인쇄 + 발행 전 길이 경고 클릭 확인 · 복원';
+      }
+      if (!clip.chips.length) return `사실표·칩 잘림 0 · ${longChecked}`;
+      const longNotice = page.getByTestId('report-long-fields-notice').or(page.getByTestId('report-blank-fields-notice'));
+      await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+      const dialog = page.getByRole('dialog');
+      await dialog.waitFor({ state: 'visible', timeout: 10_000 });
+      assert(await dialog.getByTestId('report-long-fields').count() > 0, `칩 ${clip.chips.length}개가 잘리는데 발행 전 길이 경고가 없습니다: ${clip.chips.join(' | ')}`);
+      await dialog.getByRole('button', { name: '취소' }).click();
+      await dialog.waitFor({ state: 'hidden', timeout: 10_000 });
+      assert(await longNotice.count() > 0, '길이 경고 안내 줄 누락');
+      return `사실표 잘림 0 · 잘리는 칩 ${clip.chips.length}개 → 발행 전 길이 경고 확인`;
+    });
+
     // 5. 7P professional MASTER (owner standard: Opening → detail-1..7 → Closing, no overflow).
     await check(tag, '7P 상세보고서 MASTER 구조(Opening→7P→Closing)', async () => {
       await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
@@ -226,6 +290,13 @@ try {
         }));
         return { templateId: master.getAttribute('data-template-id'), visual: master.getAttribute('data-visual-master'), pages, url: location.pathname };
       });
+      const viewport7p = page.viewportSize();
+      await page.setViewportSize({ width: 794, height: 1123 });
+      await page.emulateMedia({ media: 'print' });
+      const printOffset = await page.evaluate(() => [...document.querySelectorAll('.daon-detail-page, .daon-frame-page')].map((el) => Math.round(el.getBoundingClientRect().left)).filter((x) => Math.abs(x) > 1));
+      await page.emulateMedia({ media: null });
+      if (viewport7p) await page.setViewportSize(viewport7p);
+      assert(!printOffset.length, `7P 인쇄 시 페이지가 왼쪽 기준에서 밀림: ${printOffset.slice(0, 3).join(',')}px`);
       await shot(`${tag}-7p`);
       const names = report.pages.map((item) => item.name);
       assert(report.templateId === 'DAON_DETAIL_7P_MASTER', `템플릿 ${report.templateId}`);

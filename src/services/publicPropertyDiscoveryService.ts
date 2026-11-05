@@ -181,9 +181,11 @@ export const publicPropertyDiscoveryService = {
     if (landProfile?.landCategory) patch.landCategory = landProfile.landCategory;
     if (landProfile?.landUseSituation) patch.landUseSituation = landProfile.landUseSituation;
 
+    // landProfile.useZones mixes the zoning district with every overlay (구역·지구·권역), so it must not become the
+    // Property zoning; the primary district comes first (found by the 2026-11-05 owner test, 여의도동 14-26).
     const zoning = (result.landUseZones || []).map((zone) => zone.name).filter(Boolean).join(', ')
-      || landProfile?.useZones?.join(', ')
       || landProfile?.primaryUseZone
+      || (landProfile?.useZones || []).filter((zone) => /지역$/.test(zone) && !/^도시지역$/.test(zone)).join(', ')
       || '';
     if (zoning) patch.zoning = zoning;
 

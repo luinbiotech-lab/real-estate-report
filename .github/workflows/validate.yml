@@ -87,6 +87,9 @@ jobs:
       - name: Validate Report blank-field policy (hide blanks after pre-publish confirmation)
         run: node scripts/validate-report-blank-fields.mjs
 
+      - name: Validate Report display rules (short labels, calculated coverage)
+        run: node scripts/validate-report-display-rules.mjs
+
       - name: Validate Report Snapshot freshness
         run: node scripts/validate-report-snapshot-freshness.mjs
 

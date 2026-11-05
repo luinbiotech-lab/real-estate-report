@@ -1,42 +1,43 @@
 import type { ProfessionalReportViewModel } from '../../domain/professionalReport/types';
-import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
+import { reportPurposeOf } from '../../domain/professionalReport/reportPurpose';
+import { DaonLogoImage } from '../brand/DaonLogoImage';
 
 const display = (value: { value: unknown; display: string }, fallback = '') =>
   value.value === null || value.value === '' ? fallback : value.display;
 
+/*
+ * Detail-report cover (owner decision 2026-11-05: "the cover stays simple, no photos or content; emphasise the company").
+ * Revision 2026-11-05 22:30 (owner: "white property name on a full navy page stands out too much; check it matches the
+ * body design"): the cover now uses the body's own vocabulary instead of a full-bleed navy page — a navy brand panel
+ * with the gold rule (an enlarged version of the content-page title band) carrying the company logo, a white body with
+ * navy/gold type like the content pages, and the navy foot bar of the closing page. The property name is navy at a
+ * moderate size on white. Blank values are omitted. The content pages follow.
+ */
 export function DaonReportOpeningPage({ model }: { model: ProfessionalReportViewModel }) {
-  const hero = (model.media.internalPhotoAllowed ? model.media.mainImage.value : null)
-    || model.media.items.find((item) => item.url && reportMediaCategoryAllowed(item.category, model.media.internalPhotoAllowed)
-      && (item.category === 'main' || item.category === 'exterior'))?.url || null;
-  const name = display(model.identity.name, 'DA:ON PROFESSIONAL REPORT');
-  const location = display(model.identity.address, '');
-  return <article className="daon-frame-page daon-opening-page" data-master-page="opening">
-    <header className="df-brand-head">
-      <div className="df-side-copy">좋은 자산이<br/>좋은 내일을<br/>만듭니다.<i /></div>
-      <div className="df-brand-center"><strong>DAON</strong><span>REAL ESTATE PROFESSIONAL REPORT</span><p>도심의 가치를 잇는 전문적인 부동산 솔루션</p></div>
-      <div className="df-trust">TRUST<br/>VALUE<br/>SOLUTION<small>당신의 더 큰 가치와<br/>함께합니다.</small></div>
+  const name = display(model.identity.name, '');
+  const address = [display(model.identity.address, ''), display(model.identity.detailAddress, '')].filter(Boolean).join(' ');
+  const company = display(model.identity.companyName, '') || 'DA:ON ASSET';
+  const author = display(model.identity.managerName, '');
+  const generated = new Date(model.generated.generatedAt);
+  const issued = Number.isNaN(generated.getTime()) ? '' : `${generated.getFullYear()}. ${String(generated.getMonth() + 1).padStart(2, '0')}. ${String(generated.getDate()).padStart(2, '0')}`;
+  const title = reportPurposeOf(model.identity.reportPurpose?.value) === 'analysis' ? '부동산 분석 보고서' : '부동산 전속매각 보고서';
+  const facts = ([['소재지', address], ['작성', [author, company].filter(Boolean).join(' · ')], ['발행일', issued]] as Array<[string, string]>)
+    .filter(([, value]) => value && value.trim());
+  return <article className="daon-frame-page daon-opening-page daon-cover-simple" data-master-page="opening">
+    <header className="dcs-brand">
+      <DaonLogoImage className="dcs-logo" />
+      <em>REAL ESTATE PROFESSIONAL REPORT</em>
     </header>
-
-    <section className="df-opening-hero">
-      {hero ? <img src={hero} alt={`${name} 제안서 대표 이미지`} /> : <div className="df-opening-fallback" />}
-      <div className="df-opening-copy">
-        <small>전속매각 제안서</small>
-        <h1>도시의 가치를 읽고,<br/>더 나은 내일을 만듭니다.</h1>
-        <p>{location ? `${location}의 현재 가치와 미래 성장 가능성을 함께 검토합니다.` : '자산의 현재 가치와 미래 성장 가능성을 함께 검토합니다.'}</p>
+    <div className="dcs-body">
+      <div className="dcs-title">
+        <small>{title}</small>
+        {name && <h1>{name}</h1>}
+        <i />
       </div>
-    </section>
-
-    <section className="df-opening-intro">
-      <h2>{name}</h2>
-      <p>본 제안서는 핵심 자산의 현재 가치와 미래 성장 가능성을 함께 검토할 수 있도록 구성했습니다. 물건 개요, 투자 포인트, 개발 호재, 미래가치 해석을 통해 투자 판단에 필요한 핵심 내용을 정돈된 보고서로 전달합니다.</p>
-      <div className="df-opening-pillars">
-        <article><b>핵심 물건 요약</b><span>검증된 자산 정보를 한눈에 정리합니다.</span></article>
-        <article><b>투자 분석</b><span>입지·수익·활용성을 투자 관점으로 해석합니다.</span></article>
-        <article><b>개발 호재 심화 분석</b><span>지역 변화와 미래가치를 구조적으로 연결합니다.</span></article>
-      </div>
-    </section>
-
-    <div className="df-opening-quote">좋은 자산이 좋은 내일을 만듭니다.</div>
-    <footer className="df-frame-footer"><b>DAON</b><span>REAL ESTATE PROFESSIONAL REPORT</span><em>고객의 가치를 먼저 생각하는 든든한 파트너, 다온입니다.</em></footer>
+      {facts.length > 0 && <dl className="dcs-facts">
+        {facts.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+      </dl>}
+    </div>
+    <footer className="dcs-foot"><b>{company}</b><span>고객의 가치를 먼저 생각하는 든든한 부동산 파트너</span></footer>
   </article>;
 }

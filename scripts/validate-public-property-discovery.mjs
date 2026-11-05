@@ -345,6 +345,12 @@ if (!discoverySource.includes('residentialTypeFor(propertyType)')) throw new Err
   console.log('PASS R-ONE read-only proxy (key server-only, whitelisted params)');
 }
 
+// 2026-11-05 owner test (여의도동 14-26): without landUseZones the Property zoning must be the primary district, not the
+// joined overlay list (대공방어협조구역, 과밀억제권역, … 일반상업지역).
+if (!/\|\| landProfile\?\.primaryUseZone\n/.test(service) || /\|\| landProfile\?\.useZones\?\.join\(', '\)/.test(service)) {
+  throw new Error('용도지역은 landUseZones → primaryUseZone 순으로 정해야 하며, 중첩 구역 전체 목록을 그대로 쓰면 안 됩니다.');
+}
+
 console.log('PASS public property discovery contract');
 console.log('PASS MOLIT dealAmount 만원→KRW normalization regression');
 console.log('PASS residential sale/jeonse/monthly complex comparison (Issue #37 phase 2)');

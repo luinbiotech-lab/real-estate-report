@@ -18,7 +18,7 @@ import type { ProfessionalReportViewModel, ReportValue } from './types';
  * 5. 7P detail pages without enough real content are omitted as a whole (see detailPagePlan in reportLayoutFill.ts).
  */
 
-export type ReportBlankFieldGroup = '가격' | '공적자료' | '현장·이용' | '입지' | '투자 검토';
+export type ReportBlankFieldGroup = '가격' | '공적자료' | '현장·이용' | '입지' | '투자 검토' | '1P 표시 길이';
 
 export interface ReportBlankField {
   key: string;
@@ -26,6 +26,8 @@ export interface ReportBlankField {
   group: ReportBlankFieldGroup;
   /** Core field: highlighted as 필수 with a caution in the pre-publish popup; the user decides. */
   required?: boolean;
+  /** Not blank but too long for its 1P slot: printed as written and cut after two lines unless a short label is entered. */
+  tooLong?: boolean;
 }
 
 /** Core fields of both 1P and 7P (owner decision 2026-10-31). */
@@ -52,6 +54,24 @@ export function isBlankText(value: string | null | undefined) {
 const blankNumber = (value: number | null | undefined) => typeof value !== 'number' || !Number.isFinite(value) || value <= 0;
 const blankCount = (value: number | null | undefined) => typeof value !== 'number' || !Number.isFinite(value);
 const blankLines = (value: string | null | undefined) => isBlankText(value) || !String(value).split(/\r?\n|[•]/).some((line) => line.trim());
+
+/**
+ * 1P slots whose printed text would exceed two lines (owner decision 2026-11-04, Luin review on PR #46): the original is
+ * never shortened automatically, so the user is warned before publishing and can enter a short label instead.
+ */
+export const ONE_PAGE_CHIP_MAX_CHARS = 24;
+export function onePageLengthWarnings(p: Property): ReportBlankField[] {
+  const firstLine = (value?: string) => String(value || '').split(/\r?\n|[•]/).map((line) => line.trim()).find(Boolean) || '';
+  const shown = (short: string | undefined, original: string | undefined) => (short || '').trim() || firstLine(original);
+  const checks: Array<[string, string, string]> = [
+    ['shortOccupancyLabel', '현재 이용·명도', shown(p.shortOccupancyLabel, p.occupancyStatus)],
+    ['shortRoadLabel', '도로 조건', shown(p.shortRoadLabel, p.roadCondition)],
+    ['shortUseLabel', '활용 제안', shown(p.shortUseLabel, p.recommendedUse)],
+    ['shortDevelopmentLabel', '개발·인허가 계획', shown(p.shortDevelopmentLabel, p.developmentPlan)],
+  ];
+  return checks.filter(([, , text]) => text.length > ONE_PAGE_CHIP_MAX_CHARS)
+    .map(([key, label]) => ({ key, label: `${label} 문구가 길어 1P에서 잘림`, group: '1P 표시 길이' as const, tooLong: true }));
+}
 
 /** Fields the 1P MASTER would hide for this property. Order follows the sheet top → bottom. */
 export function onePageBlankFields(p: Property): ReportBlankField[] {

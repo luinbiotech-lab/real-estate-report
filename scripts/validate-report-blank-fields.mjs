@@ -79,7 +79,7 @@ for (const marker of ['detailBlankFields(model)', "onClick={() => requestPublish
 }
 if (/onClick=\{markReady\}|onClick=\{\(\) => print\(\)\}/.test(snapshotPage)) fail('7P 확정/인쇄 버튼이 공란 확인을 우회합니다.');
 const gate = readFileSync('src/components/professionalReport/ReportBlankFieldsGate.tsx', 'utf8');
-for (const marker of ['값 입력하러 가기', '숨김 처리하고 {actionLabel}', 'REPORT_BLANK_HIDE_NOTICE']) if (!gate.includes(marker)) fail(`공란 확인 대화상자 누락: ${marker}`);
+for (const marker of ['값 입력하러 가기', "'숨김 처리하고 ' : '그대로 '}{actionLabel}", 'REPORT_BLANK_HIDE_NOTICE']) if (!gate.includes(marker)) fail(`공란 확인 대화상자 누락: ${marker}`);
 
 // 6. Negative control: a gate that never asks must be detected.
 const source = readFileSync('src/domain/professionalReport/reportBlankFields.ts', 'utf8');
@@ -112,5 +112,31 @@ for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', '
 }
 const detailSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
 for (const marker of ['detailPagePlan(model', 'shows(3) &&', 'shows(6) &&', 'number={pageNumber(7)}']) if (!detailSource.includes(marker)) fail(`7P 페이지 생략 연결 누락: ${marker}`);
+
+// 1P short labels / length warning (owner decision 2026-11-04, Luin review on PR #46): originals are never shortened.
+const longText = '현재 소유자 직접 사용 중이며 잔금일 기준 전체 명도 협의가 가능합니다';
+const longWarn = blank.onePageLengthWarnings({ ...full, occupancyStatus: longText, shortOccupancyLabel: '' });
+if (!longWarn.some((f) => f.key === 'shortOccupancyLabel' && f.tooLong)) fail('긴 명도 문구는 발행 전 길이 경고를 내야 합니다.');
+if (blank.onePageLengthWarnings({ ...full, occupancyStatus: longText, shortOccupancyLabel: '전체 명도 협의 가능' }).some((f) => f.key === 'shortOccupancyLabel')) fail('짧은 표시 문구가 있으면 길이 경고가 없어야 합니다.');
+if (blank.onePageLengthWarnings({ ...full, occupancyStatus: '전체 명도 불가' }).length && blank.onePageLengthWarnings({ ...full, occupancyStatus: '전체 명도 불가' }).some((f) => f.key === 'shortOccupancyLabel')) fail('짧은 원문에는 길이 경고가 없어야 합니다.');
+const onePageSource = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
+for (const marker of ['p.shortOccupancyLabel', 'p.shortRoadLabel', 'p.shortUseLabel', 'p.shortDevelopmentLabel']) if (!onePageSource.includes(marker)) fail(`1P 짧은 표시 문구 연결 누락: ${marker}`);
+if (!readFileSync('src/pages/DocumentPreview.tsx', 'utf8').includes('onePageLengthWarnings(property)')) fail('1P 발행 전 길이 경고 연결 누락');
+
+// Luin review 2026-11-04 (re-review): negated / uncertain road or owner text must never become a positive label.
+const detailTitleSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+// 7P titles must not infer a corner from free text, incl. '코너 · 여부 미확인', '코너로 보기 어렵다', '코너; 앞 문구는 오기'.
+if (/isCorner|statesPlainly|includes\('코너'\)|'보이는 코너'|'가시성 높은 코너 입지'|'코너 대지의 존재감'/.test(detailTitleSource)) fail('7P 제목은 자유 문장에서 코너를 추론하면 안 됩니다(중립 제목 고정).');
+if (/key="owner"/.test(onePageSource)) fail('1P는 명도 원문에서 "소유자 직접 사용" 배지를 추론하면 안 됩니다.');
+if (/'코너 입지'/.test(onePageSource)) fail('1P 도로 칩은 원문 또는 짧은 표시 문구만 사용해야 합니다.');
+
+// Report purpose (owner decision 2026-11-05): analysis reports never print the exclusive-sale wording.
+const purpose = await importTs('src/domain/professionalReport/reportPurpose.ts');
+if (purpose.reportWording('analysis').titlePrefix.includes('전속') || purpose.reportWording('analysis').pageTag.includes('EXCLUSIVE')) fail('분석 보고서에 전속매각 문구가 남아 있습니다.');
+if (purpose.reportWording(undefined).titlePrefix !== '전속매각') fail('보고서 종류 기본값은 전속매각이어야 합니다.');
+for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', 'src/components/professionalReport/DaonDetail7PageMaster.tsx', 'src/components/professionalReport/DaonReportOpeningPage.tsx']) {
+  const code = readFileSync(file, 'utf8');
+  if (/>\s*전속매각|EXCLUSIVE SALE|전속매각 문의/.test(code.replace(/\/\*[\s\S]*?\*\//g, ''))) fail(`${file}: 전속매각 문구는 reportWording으로만 출력해야 합니다.`);
+}
 
 console.log(`Report blank-field policy validation passed (1P blank fields for empty property: ${fields.length}, 7P: ${detailAll.length}).`);

@@ -26,6 +26,11 @@ export interface Property {
   landAreaPyeong: number; landAreaSqm: number; totalFloorAreaPyeong: number; totalFloorAreaSqm: number; buildingAreaPyeong: number;
   officialLandPricePerSqm?: number; estimatedOfficialLandValue?: number; officialLandPriceYear?: string;
   landCategory?: string; landUseSituation?: string;
+  /**
+   * Optional broker-checked short labels for the 1P status/highlight chips (owner decision 2026-11-04, Luin review on
+   * PR #46). When blank the stored original sentence is printed as written; nothing is shortened automatically.
+   */
+  reportPurpose?: 'exclusive_sale' | 'analysis'; shortHeadline?: string; shortOccupancyLabel?: string; shortRoadLabel?: string; shortUseLabel?: string; shortDevelopmentLabel?: string;
   zoning: string; mainUse: string; structure: string; basementFloors: number; groundFloors: number; completionDate: string;
   buildingCoverageRate: number; floorAreaRatio: number; elevator: string;
   /** Legacy parking field retained for backward compatibility. */
