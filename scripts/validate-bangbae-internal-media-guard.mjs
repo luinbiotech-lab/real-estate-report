@@ -58,7 +58,10 @@ assert.match(builderSource, /if \(allowInternal && property\.mainImage\) items\.
 assert.match(builderSource, /mainImage: reportValue\(allowInternal \? property\.mainImage : null,/, 'new report hero must be gated');
 const openingSource = readFileSync('src/components/professionalReport/DaonReportOpeningPage.tsx', 'utf8');
 const detailSource = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
-assert.match(openingSource, /model\.media\.internalPhotoAllowed \? model\.media\.mainImage\.value : null/, 'Opening must not trust restricted hero');
+// The cover is photo-free since 2026-11-05 (owner decision). If it ever shows a photo again, it must use the gated hero.
+if (/<img\b|mainImage|media\.items/.test(openingSource)) {
+  assert.match(openingSource, /model\.media\.internalPhotoAllowed \? model\.media\.mainImage\.value : null/, 'Opening must not trust restricted hero');
+}
 assert.match(detailSource, /model\.media\.internalPhotoAllowed \? model\.media\.mainImage\.value : null/, '7P must not trust restricted hero');
 
 // Historical snapshots can contain a stale 'true' flag. Never trust it for Bangbae.
