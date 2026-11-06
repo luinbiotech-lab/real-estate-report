@@ -475,16 +475,20 @@ try {
         await page.goto(`${BASE_URL}/property/${encodeURIComponent(propertyId)}/edit`, { waitUntil: 'domcontentloaded' });
         await page.getByLabel('중개사 확정 거래가능가격 (원, 감정평가 아님)', { exact: true }).fill('3950123456');
         await page.getByLabel('거래가능가격 확정 근거', { exact: true }).fill('테스트: 인근 매수 문의 2건 기준');
-        const today = new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10); // KST calendar date
+        // KST calendar dates just before and just after the save (covers a save that crosses midnight); the badge
+        // must equal one of them exactly — no ±1 day tolerance (루인 #47: that would hide a UTC-date regression).
+        const kst = () => new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
+        const beforeSave = kst();
         await page.getByRole('button', { name: /저장/ }).first().click();
         await page.waitForURL(/\/property\/(?!new$)[^/]+$/, { timeout: 20_000 });
+        const allowedDates = new Set([beforeSave, kst()]);
         const readCell = (selector) => page.evaluate((sel) => { const cell = document.querySelector(sel); return cell ? { value: (cell.querySelector('strong')?.textContent || '').replace(/\s+/g, ''), badge: cell.querySelector('em')?.textContent?.trim() || '' } : null; }, selector);
         await page.goto(`${BASE_URL}/document/proposal/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
         await page.waitForSelector('[data-testid="d1-price-layers"]', { timeout: 30_000 });
         const one = await readCell('[data-testid="d1-price-layers"] > div[data-price-layer="achievable"]');
         assert(one?.value === '39억5,012만3,456원', `1P 중개사 가격: ${JSON.stringify(one)}`);
         const dateOf = (badge) => (badge.match(/중개사 확정 (\d{4}-\d{2}-\d{2})/) || [])[1] || '';
-        assert(dateOf(one.badge) && Math.abs(Date.parse(dateOf(one.badge)) - Date.parse(today)) <= 86_400_000, `1P 확정일 배지: ${one.badge}`);
+        assert(allowedDates.has(dateOf(one.badge)), `1P 확정일 배지 ${one.badge} — 기대 KST ${[...allowedDates].join(' 또는 ')}`);
         await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
         await page.waitForSelector('.daon-professional-report-master', { timeout: 45_000 });
         await page.waitForURL(/\/professional-report\/snapshot\//, { timeout: 30_000 });
