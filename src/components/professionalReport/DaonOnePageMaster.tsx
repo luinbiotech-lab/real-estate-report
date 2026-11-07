@@ -23,7 +23,10 @@ import { equalColumns } from '../../domain/professionalReport/reportLayoutFill';
 
 // Blank-value policy (owner decision 2026-10-30): a missing value is hidden, never printed as a '확인 필요' placeholder.
 // Fixed grid cells keep their slot (layout of the approved MASTER is unchanged) and list-like entries are omitted.
-const areaPair = (sqm: number, py: number) => sqm || py ? `${sqm ? `${sqm.toFixed(2).replace(/\.00$/, '')}㎡` : '-'} (${py ? `${py.toFixed(2).replace(/\.00$/, '')}평` : '-'})` : '';
+// Area as stored: both units when both exist; otherwise only the unit that exists (no "- (36평)" placeholder — owner
+// iPhone PDF 2026-11-07).
+const areaNum = (v: number) => v.toFixed(2).replace(/\.00$/, '');
+const areaPair = (sqm: number, py: number) => sqm && py ? `${areaNum(sqm)}㎡ (${areaNum(py)}평)` : sqm ? `${areaNum(sqm)}㎡` : py ? `${areaNum(py)}평` : '';
 const first = (value: string, fallback: string) => lines(value)[0] || fallback;
 const hasNumber = (value: number | undefined) => typeof value === 'number' && Number.isFinite(value);
 const floorText = (p: Property) => {
@@ -61,7 +64,7 @@ export function DaonOnePageMaster({ property: p, priceEstimate = null }: { prope
   const officialParking = hasNumber(p.parkingOfficial)
     ? `${p.parkingOfficial}대`
     : hasNumber(p.parkingSpaces)
-      ? `${p.parkingSpaces}대 · 기존값`
+      ? `${p.parkingSpaces}대 (입력값)`
       : '';
   const fieldParking = hasNumber(p.parkingField)
     ? `${p.parkingField}대 가능${p.parkingFieldNote ? ` · ${p.parkingFieldNote}` : ' · 현장 이용 기준'}`
@@ -167,10 +170,12 @@ export function DaonOnePageMaster({ property: p, priceEstimate = null }: { prope
         </div>
 
         <div className={`d1-right ${p.mapImage ? '' : 'd1-right-no-map'}`}>
-          <section className="d1-points">
+          {/* No points entered: the section is hidden like other blank fields (the pre-print blank-field popup already lists
+              '핵심 투자포인트'); an empty titled box is not printed. */}
+          {points.length > 0 && <section className="d1-points">
             <div className="d1-section-title"><b>핵심 포인트</b><small>KEY INVESTMENT HIGHLIGHTS</small></div>
             <ol>{points.map((point, index) => <li key={`${point}-${index}`}><span>✓</span><b title={point}>{point}</b></li>)}</ol>
-          </section>
+          </section>}
           {p.mapImage && <section className="d1-map">
             <img src={p.mapImage} alt={`${p.name} 위치 지도`} />
             {locationCaption && <div className="d1-map-caption">{locationCaption}</div>}
