@@ -17,6 +17,8 @@ import '../professional-report.css';
 import '../daon-detail-master.css';
 import '../daon-report-frame.css';
 import '../assets/fonts/noto-sans-kr/index.css';
+import '../report-device-fit.css';
+import { useReportDeviceFit } from '../hooks/useReportDeviceFit';
 import '../assets/fonts/montserrat/index.css';
 import '../daon-master-refinement.css';
 import '../daon-detail-quality.css';
@@ -59,6 +61,7 @@ function snapshotMatchesProperty(snapshot: ReportSnapshot): boolean {
 }
 
 export default function ProfessionalReportSnapshotPage() {
+  useReportDeviceFit();
   const { snapshotId = '' } = useParams();
   const navigate = useNavigate();
   const contentRef = useRef<HTMLDivElement>(null);

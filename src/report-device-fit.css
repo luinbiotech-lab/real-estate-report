@@ -1,0 +1,24 @@
+/* Report device fit (2026-11-07) — see src/hooks/useReportDeviceFit.ts. Page design (MASTER) is not changed; only how
+   the fixed A4 pages are scaled on a phone screen and inside the iOS printable area. */
+
+/* Phone screen: scale the whole A4 page to the viewport width instead of letting it overflow. */
+@media screen and (max-width:860px){
+  .professional-report-shell{overflow-x:hidden}
+  .professional-report-toolbar{min-width:0!important;flex-wrap:wrap;margin:0 8px 12px!important}
+  .professional-report-document{width:210mm!important;margin:0 8px!important;zoom:var(--report-screen-fit,1)}
+  .preview-shell .paper-stage{padding:8px!important;justify-content:flex-start}
+  .preview-shell .paper-stage>div{zoom:var(--report-screen-fit,1)}
+  .preview-toolbar{flex-wrap:wrap;height:auto!important;padding:10px 12px!important;gap:10px!important}
+}
+
+/* Print: undo the narrow-screen rules (a phone prints at its own narrow width, so they would otherwise apply). */
+@media print{
+  .professional-report-shell{overflow:visible!important}
+  .professional-report-document{width:auto!important;margin:0!important;zoom:1}
+  .preview-shell .paper-stage{padding:0!important;display:block!important}
+  .preview-shell .paper-stage>div{zoom:1}
+  /* iOS keeps ~6mm side / ~14mm top-bottom margins regardless of @page: shrink each A4 page to 90% (189×267mm) so it
+     fits one sheet, and center it. Desktop Chrome honours @page margin 0 and is unaffected (class only set on iOS). */
+  html.ios-print-fit .professional-report-document,html.ios-print-fit .preview-shell .paper-stage>div{zoom:.9}
+  html.ios-print-fit .daon-frame-page,html.ios-print-fit .daon-detail-page,html.ios-print-fit .d1-sheet{margin-left:auto!important;margin-right:auto!important}
+}

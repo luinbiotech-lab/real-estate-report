@@ -2,7 +2,7 @@
 .daon-professional-report-master{
   display:grid;
   gap:20px;
-  font-family:Pretendard,"Noto Sans KR","NanumBarunGothic","Malgun Gothic",sans-serif;
+  font-family:Pretendard,'Noto Sans KR Variable',"Noto Sans KR","NanumBarunGothic","Malgun Gothic",sans-serif;
   color:#102f54;
   -webkit-print-color-adjust:exact;
   print-color-adjust:exact;
