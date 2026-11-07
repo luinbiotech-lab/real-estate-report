@@ -52,4 +52,28 @@ const fitCss = readFileSync('src/report-device-fit.css', 'utf8');
 for (const needle of ['html.ios-print-fit .professional-report-document', 'html.ios-print-fit .professional-report-shell .daon-professional-report-master', 'zoom:.9', '.professional-report-shell{overflow:visible!important}', 'zoom:var(--report-screen-fit,1)']) if (!fitCss.includes(needle)) fail(`report-device-fit.css missing: ${needle}`);
 for (const page of ['src/pages/ProfessionalReportSnapshotPage.tsx', 'src/pages/DocumentPreview.tsx']) { const src = readFileSync(page, 'utf8'); if (!src.includes('useReportDeviceFit();') || !src.includes("import '../report-device-fit.css';")) fail(`${page} must use the device fit hook and CSS`); }
 
+// 5. 1P blank handling (owner iPhone PDF 2026-11-07): no "- (36평)" placeholder, no empty 핵심 포인트 box.
+const oneSrc = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
+if (oneSrc.includes("'-'} (${py")) fail('1P area must not print "- (n평)" when ㎡ is missing');
+if (!oneSrc.includes('{points.length > 0 && <section className="d1-points">')) fail('1P must hide the empty 핵심 포인트 section');
+if (oneSrc.includes('· 기존값')) fail('1P parking wording "기존값" replaced by "(입력값)"');
+
+// 6. iOS Korean glyphs (owner iPhone PDF 2026-11-07): every Georgia brand stack in the report CSS must be listed in the
+//    iOS-only rule that inserts the bundled 'Noto Sans KR Variable' (system Hangul fallback printed blank on iOS).
+{
+  const iosRule = /html\.ios-print-fit :is\(([^)]*)\)\{font-family:Georgia,'Noto Sans KR Variable',serif\}/.exec(fitCss);
+  if (!iosRule) fail('report-device-fit.css missing the iOS Korean font rule');
+  const listed = new Set(iosRule[1].split(',').map((s) => s.trim()));
+  for (const f of ['src/daon-report-frame.css', 'src/daon-detail-master.css', 'src/daon-detail-quality.css', 'src/daon-master-refinement.css', 'src/daon-one-page-master.css', 'src/daon-one-page-quality.css']) {
+    const css = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+    for (const m of css.matchAll(/([^{}@]+)\{([^{}]*)\}/g)) {
+      const ff = /font-family:\s*([^;}]*)/.exec(m[2]);
+      if (!ff || !/^Georgia/.test(ff[1].trim())) continue;
+      for (const sel of m[1].split(',').map((s) => s.trim().replace(/\s+/g, ' '))) if (!/:(:|before|after)/.test(sel) && !listed.has(sel)) fail(`iOS Korean font rule missing Georgia selector ${sel} (${f})`);
+    }
+  }
+  const frame = readFileSync('src/daon-report-frame.css', 'utf8');
+  if (!/\.daon-professional-report-master\{[^}]*font-family:Pretendard,'Noto Sans KR Variable'/.test(frame)) fail('frame base font stack must include the bundled Noto Sans KR Variable');
+}
+
 console.log('Report display rules (short labels, calculated coverage, device fit): PASS');
