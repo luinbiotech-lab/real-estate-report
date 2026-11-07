@@ -119,7 +119,9 @@ try {
       await fill('인근역', listing.nearbyStation);
       await fill('특징', `테스트 등록: 공개 매물 ${listing.source} 의 게시 정보(미검증)`);
       await page.getByRole('button', { name: /저장/ }).first().click();
-      await page.waitForURL(/\/property\/[^/]+$/, { timeout: 20_000 });
+      // DAON-038: the old pattern /\/property\/[^/]+$/ also matched the starting URL /property/new, so it could resolve
+      // before the save navigated (intermittent 'ID not found'). Wait for a real id.
+      await page.waitForURL(/\/property\/(?!new$)[^/]+$/, { timeout: 20_000 });
       propertyId = decodeURIComponent(new URL(page.url()).pathname.split('/').pop());
       assert(propertyId && propertyId !== 'new', `저장 후 URL에서 물건 ID를 찾지 못했습니다: ${page.url()}`);
       await visibleText(listing.name);
@@ -420,6 +422,9 @@ try {
         await page.emulateMedia({ media: 'screen' });
         await writeFile(`${OUT}/e2e-${tag}-1p.pdf`, onePdf);
         const one = pdfPageCount(onePdf);
+        const onePrices = await page.evaluate(() => [...document.querySelectorAll('[data-testid="d1-price-layers"] > div')].map((cell) => ({ key: cell.getAttribute('data-price-layer'), unit: cell.getAttribute('data-price-unit'), value: (cell.querySelector('strong')?.textContent || '').replace(/\s+/g, '') })));
+        const EXPECTED_PRICE = [['asking', 'total'], ['official', 'total'], ['market', 'per_pyeong'], ['achievable', 'total']];
+        assert(JSON.stringify(onePrices.map((cell) => [cell.key, cell.unit])) === JSON.stringify(EXPECTED_PRICE), `1P 가격 칸 key·단위·개수: ${JSON.stringify(onePrices.map((cell) => [cell.key, cell.unit]))}`);
         assert(one.pages === 1, `1P PDF 페이지 수 ${one.pages} (트리 ${one.treeCount}) — 기대 1`);
 
         await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
@@ -433,11 +438,23 @@ try {
           return { pages: master ? master.querySelectorAll('.daon-frame-page, .daon-detail-page').length : 0, hash, length: text.length };
         });
         const before = await fingerprint();
+        // 루인 #43 follow-up: the price layers themselves (values, units, badges) must survive Snapshot reopen and match 1P.
+        const priceCells = () => page.evaluate(() => [...document.querySelectorAll('.daon-detail-page-4 [data-testid="dd-price-layers"] > div')].map((cell) => ({ key: cell.getAttribute('data-price-layer'), unit: cell.getAttribute('data-price-unit'), value: cell.querySelector('strong')?.textContent?.trim() || '', badge: cell.querySelector('em')?.textContent?.trim() || '' })));
+        const pricesBefore = await priceCells();
+        assert(pricesBefore.length === 4, `7P 가격 칸 ${pricesBefore.length}개 — 기대 4`);
         await page.emulateMedia({ media: 'print' });
         const reportPdf = await page.pdf({ preferCSSPageSize: true, printBackground: true });
         await page.emulateMedia({ media: 'screen' });
         await writeFile(`${OUT}/e2e-${tag}-report.pdf`, reportPdf);
         const report = pdfPageCount(reportPdf);
+        // Same input → same figures on 1P and 7P (whitespace-insensitive; 1P renders the unit in a smaller span).
+        const sevenByKey = Object.fromEntries(pricesBefore.map((cell) => [cell.key, cell.value.replace(/\s+/g, '')]));
+        assert(JSON.stringify(pricesBefore.map((cell) => [cell.key, cell.unit])) === JSON.stringify(EXPECTED_PRICE), `7P 가격 칸 key·단위·개수: ${JSON.stringify(pricesBefore.map((cell) => [cell.key, cell.unit]))}`);
+        // Both directions: same key set and count, and every value equal (no empty side can pass).
+        const oneByKey = Object.fromEntries(onePrices.map((cell) => [cell.key, cell.value]));
+        const keys = [...new Set([...Object.keys(oneByKey), ...Object.keys(sevenByKey)])];
+        const mismatch = keys.filter((key) => !oneByKey[key] || !sevenByKey[key] || oneByKey[key] !== sevenByKey[key]);
+        assert(keys.length === 4 && !mismatch.length, `1P·7P 가격 불일치: ${JSON.stringify(mismatch.map((key) => [key, oneByKey[key], sevenByKey[key]]))}`);
         assert(report.pages === before.pages && before.pages >= 5, `리포트 PDF 페이지 수 ${report.pages} (트리 ${report.treeCount}) — 화면 ${before.pages}쪽과 같아야 함`);
 
         // Reopen: leave, come back to the same Snapshot URL; stored content must render identically.
@@ -445,9 +462,46 @@ try {
         await page.goto(snapshotUrl, { waitUntil: 'domcontentloaded' });
         await page.waitForSelector('.daon-professional-report-master', { timeout: 45_000 });
         const after = await fingerprint();
+        const pricesAfter = await priceCells();
+        assert(JSON.stringify(pricesAfter) === JSON.stringify(pricesBefore), `Snapshot 재열람 가격 칸 불일치: ${JSON.stringify(pricesBefore)} → ${JSON.stringify(pricesAfter)}`);
         assert(after.pages === before.pages && after.hash === before.hash, `Snapshot 재열람 내용 불일치 (${before.pages}/${before.hash} → ${after.pages}/${after.hash})`);
         const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
-        return `1P ${one.pages}쪽 ${Math.round(onePdf.length / 1024)}KB · 리포트 ${report.pages}쪽 ${Math.round(reportPdf.length / 1024)}KB · 재열람 동일`;
+        return `1P ${one.pages}쪽 ${Math.round(onePdf.length / 1024)}KB · 리포트 ${report.pages}쪽 ${Math.round(reportPdf.length / 1024)}KB · 재열람 동일 · 가격 ${pricesBefore.map((cell) => `${cell.key}=${cell.value}`).join(' / ')} (1P=7P, 재열람 동일)`;
+      });
+
+      // 5c. 루인 #43 follow-up: broker price + basis entered through the form → 1P and a fresh 7P Snapshot show the same
+      //     exact amount and the same confirmation date, and the Snapshot reopens with the same values.
+      await check(tag, '중개사 확정 거래가능가격 · 확정일 저장·재열람', async () => {
+        await page.goto(`${BASE_URL}/property/${encodeURIComponent(propertyId)}/edit`, { waitUntil: 'domcontentloaded' });
+        await page.getByLabel('중개사 확정 거래가능가격 (원, 감정평가 아님)', { exact: true }).fill('3950123456');
+        await page.getByLabel('거래가능가격 확정 근거', { exact: true }).fill('테스트: 인근 매수 문의 2건 기준');
+        // KST calendar dates just before and just after the save (covers a save that crosses midnight); the badge
+        // must equal one of them exactly — no ±1 day tolerance (루인 #47: that would hide a UTC-date regression).
+        const kst = () => new Date(Date.now() + 9 * 3_600_000).toISOString().slice(0, 10);
+        const beforeSave = kst();
+        await page.getByRole('button', { name: /저장/ }).first().click();
+        await page.waitForURL(/\/property\/(?!new$)[^/]+$/, { timeout: 20_000 });
+        const allowedDates = new Set([beforeSave, kst()]);
+        const readCell = (selector) => page.evaluate((sel) => { const cell = document.querySelector(sel); return cell ? { value: (cell.querySelector('strong')?.textContent || '').replace(/\s+/g, ''), badge: cell.querySelector('em')?.textContent?.trim() || '' } : null; }, selector);
+        await page.goto(`${BASE_URL}/document/proposal/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('[data-testid="d1-price-layers"]', { timeout: 30_000 });
+        const one = await readCell('[data-testid="d1-price-layers"] > div[data-price-layer="achievable"]');
+        assert(one?.value === '39억5,012만3,456원', `1P 중개사 가격: ${JSON.stringify(one)}`);
+        const dateOf = (badge) => (badge.match(/중개사 확정 (\d{4}-\d{2}-\d{2})/) || [])[1] || '';
+        assert(allowedDates.has(dateOf(one.badge)), `1P 확정일 배지 ${one.badge} — 기대 KST ${[...allowedDates].join(' 또는 ')}`);
+        await page.goto(`${BASE_URL}/document/report/${encodeURIComponent(propertyId)}`, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.daon-professional-report-master', { timeout: 45_000 });
+        await page.waitForURL(/\/professional-report\/snapshot\//, { timeout: 30_000 });
+        const snapshotUrl = page.url();
+        const seven = await readCell('.daon-detail-page-4 [data-testid="dd-price-layers"] > div[data-price-layer="achievable"]');
+        assert(seven?.value === one.value && dateOf(seven.badge) === dateOf(one.badge), `1P·7P 중개사 가격/확정일 불일치: ${JSON.stringify({ one, seven })}`);
+        await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
+        await page.goto(snapshotUrl, { waitUntil: 'domcontentloaded' });
+        await page.waitForSelector('.daon-professional-report-master', { timeout: 45_000 });
+        const reopened = await readCell('.daon-detail-page-4 [data-testid="dd-price-layers"] > div[data-price-layer="achievable"]');
+        assert(JSON.stringify(reopened) === JSON.stringify(seven), `Snapshot 재열람 중개사 가격 불일치: ${JSON.stringify({ seven, reopened })}`);
+        const errors = takeErrors(); assert(!errors.length, `페이지 오류: ${errors.join(' | ')}`);
+        return `1P=7P=재열람 ${seven.value} · ${seven.badge}`;
       });
     }
 
