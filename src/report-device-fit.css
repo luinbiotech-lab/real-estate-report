@@ -24,3 +24,11 @@
   html.ios-print-fit .professional-report-shell .daon-professional-report-master{margin:0 auto!important}
   html.ios-print-fit .daon-frame-page,html.ios-print-fit .daon-detail-page,html.ios-print-fit .d1-sheet{margin-left:auto!important;margin-right:auto!important}
 }
+
+/* iOS Korean glyphs (owner iPhone PDF 2026-11-07, 15 pages): in iOS "PDF 저장" every Korean text whose font stack had no
+   bundled webfont came out blank (cover facts, closing page, cover footer), while text set in the bundled
+   'Noto Sans KR Variable' printed. The Georgia brand stacks below fall back to a system font for Hangul, so on iOS only
+   (class set by useReportDeviceFit) the bundled Korean font is inserted after Georgia. Latin glyphs still use Georgia;
+   desktop rendering is unchanged. Keep this list in sync with every Georgia stack (checked by
+   scripts/validate-report-display-rules.mjs). */
+html.ios-print-fit :is(.df-side-copy,.df-brand-center strong,.df-brand-center p,.df-opening-copy h1,.df-opening-quote,.df-closing-lead h1,.df-contact-card b,.df-closing-quote,.df-frame-footer b,.dc-page-no,.dc-head-title h1,.dc-head-brand strong,.dc-foot b,.dc-side-copy,.dc-brand-center strong,.dc-brand-center p,.dc-summary-copy h2,.dc-summary-title>b,.dc-summary-title h1,.dc-property-line h2,.daon-opening-page .df-cover-title time,.daon-cover-simple .dcs-foot b,.dd-brand strong,.daon-detail-master .dd-brand strong,.daon-detail-master .dd-mark,.daon-detail-master .dd-contact-brand strong,.d1-logo-mark,.d1-logo strong,.d1-tagline,.daon-one-page-master .d1-logo strong,.daon-one-page-master .d1-tagline){font-family:Georgia,'Noto Sans KR Variable',serif}
