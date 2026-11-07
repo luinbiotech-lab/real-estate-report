@@ -1,0 +1,1 @@
+const e=[{key:"fashion",label:"FASHION & LIFESTYLE"},{key:"beauty",label:"BEAUTY & COSMETICS"},{key:"food",label:"F&B / CAFE"},{key:"officeCulture",label:"OFFICE / CULTURE"},{key:"transport",label:"TRANSPORT"},{key:"development",label:"DEVELOPMENT"},{key:"other",label:"OTHER"}];export{e as B};

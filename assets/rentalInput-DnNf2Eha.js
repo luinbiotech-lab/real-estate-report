@@ -1,0 +1,1 @@
+const r=["vacancyRatePct","operatingExpenseRatePct"];function a(n,i){const e=i.trim();if(e==="")return 0;const t=Number(e);if(!(!Number.isFinite(t)||t<0)&&!(r.includes(n)&&t>100))return t}function s(n,i){if(i){const e=n.find(t=>t.id===i);return{target:e,missingRequested:!e}}return{target:n[0],missingRequested:!1}}const u=s;export{s as a,u as p,a as s};
