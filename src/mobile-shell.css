@@ -11,7 +11,7 @@
   .mobile-nav-backdrop{position:fixed;display:block;inset:0;z-index:1201;background:#09172b99;border:0;padding:0}
   /* Solid top bar behind the menu button (2026-11-07, owner phone screenshots): page titles scrolled under the floating
      button and were partly hidden by it. Content now scrolls beneath a bar instead of colliding with the button. */
-  .app-shell::before{content:'';position:fixed;top:0;left:0;right:0;height:calc(66px + env(safe-area-inset-top));z-index:1100;background:#f3f5f8f2;-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);border-bottom:1px solid #dfe5ec;pointer-events:none}
+  .app-shell::before{content:'';position:fixed;top:0;left:0;right:0;height:calc(66px + env(safe-area-inset-top));z-index:1100;background:#f3f5f8;border-bottom:1px solid #dfe5ec;pointer-events:none}
   .app-shell .page-header{display:flex;flex-direction:column;align-items:stretch;gap:14px}
   .app-shell .page-header .actions{display:flex;flex-wrap:wrap}
   .app-shell .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
