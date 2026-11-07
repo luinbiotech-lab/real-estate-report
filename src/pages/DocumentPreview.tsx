@@ -16,6 +16,8 @@ import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/
 import { blankFieldsSignature, needsBlankFieldConfirmation, onePageBlankFields, onePageLengthWarnings } from '../domain/professionalReport/reportBlankFields';
 import '../daon-one-page-master.css';
 import '../assets/fonts/noto-sans-kr/index.css';
+import '../report-device-fit.css';
+import { useReportDeviceFit } from '../hooks/useReportDeviceFit';
 import '../assets/fonts/montserrat/index.css';
 import '../daon-master-refinement.css';
 import '../daon-one-page-quality.css';
@@ -26,6 +28,7 @@ type PreviewState =
   | { routeKey: string; phase: 'ready'; property: Property; priceEstimate: AchievablePriceEstimate | null };
 
 export default function DocumentPreview() {
+  useReportDeviceFit();
   const { id = '', kind = 'proposal' } = useParams();
   const navigate = useNavigate();
   const [view, setView] = useState<PreviewState>({ routeKey: '', phase: 'loading' });

@@ -40,4 +40,16 @@ if (!/shortOrFirstLine\(model\.identity\.shortHeadline/.test(seven)) fail('7P he
 if (!/coverageDisplay\(model\.building\.buildingCoverageRate\.value/.test(seven)) fail('7P coverage must use coverageDisplay');
 if (!seven.includes('공부상 수치가 아닙니다')) fail('7P calculated coverage note missing');
 
-console.log('Report display rules (short labels, calculated coverage): PASS');
+// 4. Device fit (owner iPhone test 2026-11-07): iOS detection, phone screen scale, CSS print overrides present.
+const fit = await importTs('src/utils/reportDeviceFit.ts');
+eq(fit.isIosLike({ userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 26_6 like Mac OS X)', platform: 'iPhone', maxTouchPoints: 5 }), true, 'iPhone detected');
+eq(fit.isIosLike({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', platform: 'MacIntel', maxTouchPoints: 5 }), true, 'iPadOS (desktop UA + touch) detected');
+eq(fit.isIosLike({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)', platform: 'MacIntel', maxTouchPoints: 0 }), false, 'Mac desktop not iOS');
+eq(fit.isIosLike({ userAgent: 'Mozilla/5.0 (Linux; Android 14)', platform: 'Linux armv8l', maxTouchPoints: 5 }), false, 'Android not iOS');
+eq(fit.screenFit(390), (390 - 16) / 794, 'iPhone width scale');
+eq(fit.screenFit(1440), 1, 'desktop not scaled');
+const fitCss = readFileSync('src/report-device-fit.css', 'utf8');
+for (const needle of ['html.ios-print-fit .professional-report-document', 'html.ios-print-fit .professional-report-shell .daon-professional-report-master', 'zoom:.9', '.professional-report-shell{overflow:visible!important}', 'zoom:var(--report-screen-fit,1)']) if (!fitCss.includes(needle)) fail(`report-device-fit.css missing: ${needle}`);
+for (const page of ['src/pages/ProfessionalReportSnapshotPage.tsx', 'src/pages/DocumentPreview.tsx']) { const src = readFileSync(page, 'utf8'); if (!src.includes('useReportDeviceFit();') || !src.includes("import '../report-device-fit.css';")) fail(`${page} must use the device fit hook and CSS`); }
+
+console.log('Report display rules (short labels, calculated coverage, device fit): PASS');
