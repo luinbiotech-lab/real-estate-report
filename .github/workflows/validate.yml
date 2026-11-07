@@ -337,6 +337,17 @@ jobs:
       - name: E2E — register public listings as test properties, 1P/7P MASTER, briefing, 3D/interior
         run: node scripts/e2e-online-listings.mjs
 
+      # Owner approval 2026-11-07 (루인 proposal on PR #47): printed PDF text layer vs fixture input, 9-page full-data
+      # fixture and sparse fixture (omitted pages renumbered). poppler-utils is free; installed explicitly because its
+      # presence on the runner image is not guaranteed.
+      - name: Install poppler-utils (pdftotext)
+        if: success() || failure()
+        run: sudo apt-get install -y --no-install-recommends poppler-utils
+
+      - name: Report PDF text and page-count check (full 9 pages / long text / sparse)
+        if: success() || failure()
+        run: node scripts/qa-report-pdf-text.mjs
+
       - name: Upload E2E screenshots and results
         if: always()
         uses: actions/upload-artifact@v4
