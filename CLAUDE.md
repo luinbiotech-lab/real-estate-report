@@ -1,6 +1,6 @@
 # CLAUDE.md — DA:ON Real Estate Professional Report
 
-> Read this file FIRST, then `docs/CLAUDE_PROJECT_HANDOFF_2026-10-14.md`, `docs/implementation-status.md`, and the relevant system contracts BEFORE changing code.
+> Read this file FIRST, then the latest handoff `docs/CLAUDE_PROJECT_HANDOFF_2026-11-08.md` (current state, pending owner actions, working rules), then `docs/CLAUDE_PROJECT_HANDOFF_2026-10-14.md`, `docs/implementation-status.md`, and the relevant system contracts BEFORE changing code.
 > The repository and code are ground truth for implementation; this guide preserves user intent and locked policy. If any apparent conflict exists, report it. Never silently supersede a locked decision.
 
 ## Identity and mission
