@@ -83,6 +83,7 @@ async function check(fixture, step, fn) {
 function assert(condition, message) { if (!condition) throw new Error(message); }
 function pdfText(path) { return execFileSync('pdftotext', ['-enc', 'UTF-8', path, '-'], { encoding: 'utf8', maxBuffer: 32 * 1024 * 1024 }); }
 function pdfPages(path) { const info = execFileSync('pdfinfo', [path], { encoding: 'utf8' }); return Number(/Pages:\s+(\d+)/.exec(info)?.[1] ?? NaN); }
+function pdfPageText(path, n) { return execFileSync('pdftotext', ['-enc', 'UTF-8', '-f', String(n), '-l', String(n), path, '-'], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024 }); }
 function missing(text, expected) { const hay = squash(text); return expected.filter((item) => !hay.includes(squash(item))); }
 
 await mkdir(OUT, { recursive: true });
@@ -236,6 +237,34 @@ try {
       const lost = missing(reportText, expected);
       assert(!lost.length, `보고서 PDF에 없음(${lost.length}/${expected.length}): ${lost.map((s) => s.slice(0, 40)).join(' / ')}`);
       return `${expected.length}개 문자열 일치`;
+    });
+    // 루인 review on #51: whole-document containment cannot catch a value printed on the wrong page or a whole card
+    // dropped while the same words survive elsewhere. Key values are also required on their own detail page
+    // (PDF page = Opening + position in the rendered plan).
+    await check(fx.key, '보고서 쪽별 위치(핵심 값이 해당 쪽에 있음)', async () => {
+      const byPage = {
+        1: ['41억 5,000만원', LONG.overallOpinion],
+        2: ['제2종일반주거지역(7층 이하)'],
+        3: [LONG.locationAnalysis],
+        4: ['감정평가 아님', '총액 아님', ...DEALS.map((d) => `${d.legalDong} ${d.jibun}`), ...(fx.broker ? [exactWon(BROKER.price), `중개사 확정 ${kstDate(BROKER.confirmedAt)}`] : [])],
+        5: LONG.recommendedUse.split('\n'),
+        6: [LONG.developmentPlan],
+        7: [LONG.risks],
+      };
+      if (fx.sparse) { byPage[1] = ['41억 5,000만원']; }
+      const plan = fx.plan || [];
+      const problems = [];
+      const opening = pdfPageText(reportPath, 1);
+      if (!squash(opening).includes(squash(name))) problems.push(`표지(1쪽)에 물건명 없음`);
+      plan.forEach((entry, index) => {
+        const pdfPage = index + 2;
+        const lost = missing(pdfPageText(reportPath, pdfPage), byPage[entry.id] || []);
+        if (lost.length) problems.push(`상세 ${entry.id}(PDF ${pdfPage}쪽)에 없음: ${lost.map((x) => x.slice(0, 30)).join(' / ')}`);
+      });
+      const last = pdfPageText(reportPath, plan.length + 2);
+      if (!/DA:?ON/i.test(last)) problems.push(`마지막 쪽(PDF ${plan.length + 2}쪽)에 DA:ON 없음`);
+      assert(!problems.length, problems.join(' ; '));
+      return plan.map((entry, index) => `상세${entry.id}→PDF${index + 2}쪽 ${(byPage[entry.id] || []).length}개`).join(' · ');
     });
     await check(fx.key, '보고서 말줄임(…) 없음', async () => {
       const n = (reportText.match(/…/g) || []).length;
