@@ -38,7 +38,8 @@ const PAGE_TITLES: Record<DetailPageId, string> = {
  * labels or numbers, and the rest of the page was fixed copy. Each optional page now also needs its own narrative input
  * (the text the page is about); without it the page is omitted and the report gets shorter.
  */
-export function detailPagePlan(model: ProfessionalReportViewModel, hasMap: boolean, comparableCount: number, hasPhotos = false): DetailPagePlan {
+/** `hasBuildingPhoto`: a main/exterior photo of the property itself; surrounding-area photos do not count. */
+export function detailPagePlan(model: ProfessionalReportViewModel, hasMap: boolean, comparableCount: number, hasBuildingPhoto = false): DetailPagePlan {
   const count = (...flags: boolean[]) => flags.filter(Boolean).length;
   const checks: Array<[DetailPageId, number, number, string]> = [
     [3, count(hasMap, present(model.location.locationAnalysis), present(model.land.roadCondition)), 2, '입지 지도·입지 분석·도로 조건 중 2개 이상 필요'],
@@ -51,7 +52,7 @@ export function detailPagePlan(model: ProfessionalReportViewModel, hasMap: boole
     3: [present(model.location.locationAnalysis) || hasMap, '입지 분석 문장 또는 입지 지도 필요'],
     4: [comparableCount > 0 || present(model.investment.nearbyTransactions) || model.pricing.priceEstimate?.state === 'estimated', '비교거래 또는 거래가능가격 추정 필요'],
     5: [present(model.investment.recommendedUse) || present(model.investment.developmentPlan), '활용 시나리오 또는 개발 계획 필요'],
-    6: [present(model.investment.developmentPlan) || hasPhotos, '개발 계획 또는 건물 사진 필요'],
+    6: [present(model.investment.developmentPlan) || hasBuildingPhoto, '개발 계획 또는 본건 외관 사진 필요'],
   };
   const omittedIds = new Map<DetailPageId, string>();
   for (const [id, have, need, reason] of checks) {

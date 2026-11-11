@@ -116,7 +116,12 @@ const samplePlan = fill.detailPagePlan(sampleLike, false, 6);
 if (JSON.stringify(samplePlan.pages.map((p) => p.id)) !== '[1,2,4,7]') fail(`서술 입력 없는 5·6쪽은 생략해야 합니다: ${samplePlan.pages.map((p) => p.id)}`);
 const withPlan = fill.detailPagePlan({ ...sampleLike, investment: { ...sampleLike.investment, developmentPlan: rv('리노베이션 또는 신축 검토') } }, false, 6);
 if (!withPlan.pages.some((p) => p.id === 5) || !withPlan.pages.some((p) => p.id === 6)) fail('개발 계획이 있으면 5·6쪽을 출력해야 합니다.');
-if (fill.detailPagePlan(sampleLike, false, 6, true).pages.some((p) => p.id === 6) !== true) fail('건물 사진이 있으면 6쪽을 출력해야 합니다.');
+if (fill.detailPagePlan(sampleLike, false, 6, true).pages.some((p) => p.id === 6) !== true) fail('본건 외관 사진이 있으면 6쪽을 출력해야 합니다.');
+// Boundary (Luin review on PR #56): neighbourhood photos only must not keep page 6. The component passes Boolean(hero)
+// (main/exterior photo of the property), never the general photo list.
+if (fill.detailPagePlan(sampleLike, false, 6, false).pages.some((p) => p.id === 6)) fail('본건 사진 없이 주변 사진·건물 지표만으로 6쪽을 출력하면 안 됩니다.');
+{ const src = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+  if (!src.includes('detailPagePlan(model, Boolean(map), comparables.length, Boolean(hero))') || /detailPagePlan\([^)]*hasPhotos/.test(src)) fail('6쪽 생략 판단에는 본건 외관 사진(hero)만 전달해야 합니다.'); }
 for (const marker of ["dd-p1-top${hero ? '' : ' no-photo'}", "dd-location-grid${map ? '' : ' no-map'}", '{scenarios.length > 0 && <SectionBar', '{points.length > 0 && <SectionBar right="KEY POINTS">']) if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes(marker)) fail(`빈 사진·지도·제목 숨김 누락: ${marker}`);
 for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', 'src/components/professionalReport/DaonDetail7PageMaster.tsx']) {
   const code = stripComments(readFileSync(file, 'utf8'));

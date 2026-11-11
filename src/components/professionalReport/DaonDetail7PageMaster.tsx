@@ -164,7 +164,9 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const visibleFacts = facts.filter(([, value]) => value && value.trim());
   // Mixed blank policy (owner decision 2026-10-31): optional pages without enough real content are omitted and the rest
   // renumbered; inside a page, present cards move forward and the row is re-divided so no empty slot remains.
-  const plan = detailPagePlan(model, Boolean(map), comparables.length, hasPhotos);
+  // Page 6 counts only a photo of the property itself (main/exterior), not surrounding-area photos (Luin review on
+  // PR #56, 2026-11-11): metrics + neighbourhood shots alone would otherwise keep a building page with no building.
+  const plan = detailPagePlan(model, Boolean(map), comparables.length, Boolean(hero));
   const pageNumber = (id: DetailPageId) => plan.pages.find((entry) => entry.id === id)?.number ?? 0;
   const shows = (id: DetailPageId) => pageNumber(id) > 0;
   const has = (value: string) => Boolean(value && value.trim());
