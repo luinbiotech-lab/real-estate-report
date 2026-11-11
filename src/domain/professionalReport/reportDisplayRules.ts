@@ -75,3 +75,14 @@ export function buildingAgeDisplay(completionDate: unknown, asOf: string): strin
   if (refMonth < Number(match[2]) || (refMonth === Number(match[2]) && refDay < Number(match[3]))) years -= 1;
   return years >= 0 ? `약 ${years}년 (${match[1]}년 사용승인)` : '';
 }
+
+/**
+ * Snapshot issue date as the Korean calendar date (KST), independent of the viewer's time zone (루인 review on #56,
+ * 2026-11-12). Returns "YYYY. MM. DD" (callers add a trailing dot where the layout uses one); '' for an invalid value.
+ */
+export function koreaDateLabel(iso: unknown): string {
+  const time = typeof iso === 'string' ? Date.parse(iso) : NaN;
+  if (!Number.isFinite(time)) return '';
+  const kst = new Date(time + 9 * 3_600_000);
+  return `${kst.getUTCFullYear()}. ${String(kst.getUTCMonth() + 1).padStart(2, '0')}. ${String(kst.getUTCDate()).padStart(2, '0')}`;
+}

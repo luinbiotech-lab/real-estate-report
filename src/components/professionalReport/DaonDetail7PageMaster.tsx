@@ -2,12 +2,16 @@ import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/pr
 import { askingPosition, formatEok, officialMultipleLine, priceLayerCells, PRICE_ESTIMATE_METHOD_NOTE } from '../../domain/professionalReport/priceLayerView';
 import type { ReactNode } from 'react';
 import { DaonLogoImage } from '../brand/DaonLogoImage';
-import { buildingAgeDisplay, coverageDisplay, floorAreaRatioDisplay, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
+import { buildingAgeDisplay, coverageDisplay, floorAreaRatioDisplay, koreaDateLabel, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
 import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
 import { reportMediaCategoryAllowed } from '../../domain/professionalReport/reportAccessPolicy';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, DAON_DETAIL_MASTER_TEMPLATE_VERSION } from '../../domain/professionalReport/templateIds';
+
+// Office contact fixed in the MASTER contact rule (M 010 9953 1270 / E daonasset.korea@gmail.com). No personal name fallback.
+const OFFICE_PHONE = '010 9953 1270';
+const OFFICE_EMAIL = 'daonasset.korea@gmail.com';
 
 const splitLines = (value: ReportValue<string>, limit = 6) => (value.value || '')
   .split(/\r?\n|[•]/)
@@ -53,9 +57,10 @@ function Page({ page, number, eyebrow, title, en, subtitle, snapshot, model, sou
     </header>
     <main className="dd-body">{children}</main>
     <footer className="dd-foot">
-      {/* Same office contact fallback as the 1P and the closing page: an omitted manager field must not drop the broker contact from every page (루인 cross-review on #56). */}
-      <span>{joinPresent(' · ', 'DA:ON ASSET', model.identity.managerName.value || '김은미 대표 / 공인중개사', model.identity.managerPhone.value || '010 9953 1270', model.identity.managerEmail.value || 'daonasset.korea@gmail.com')}</span>
-      <span>{joinPresent(' · ', source || '', `Snapshot v${snapshot.reportVersion}`, new Date(snapshot.generatedAt).toLocaleDateString('ko-KR'))}</span>
+      {/* An omitted manager field must not drop the contact from every page: the office mobile/e-mail fixed in the MASTER contact
+          rule are used, but a person's name is printed only when it was entered (루인 reviews on #56, 2026-11-12). */}
+      <span>{joinPresent(' · ', 'DA:ON ASSET', model.identity.managerName.value || '', model.identity.managerPhone.value || OFFICE_PHONE, model.identity.managerEmail.value || OFFICE_EMAIL)}</span>
+      <span>{joinPresent(' · ', source || '', `Snapshot v${snapshot.reportVersion}`, koreaDateLabel(snapshot.generatedAt) && `${koreaDateLabel(snapshot.generatedAt)}.`)}</span>
     </footer>
   </article>;
 }
@@ -314,7 +319,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <SectionBar>매수자 체크리스트</SectionBar>
       <ol className="dd-checklist"><li>최신 토지·건물 등기사항전부증명서 재발급</li><li>토지거래허가구역 적용 여부 및 매수인 요건 확인</li><li>대지 경계·접도 폭·현황도로·건축선 확인</li><li>주차·일조·높이·피난·내진 등 신축/대수선 사전검토</li><li>누수·균열·설비·전기용량·배수 등 현장실사</li><li>잔금일 기준 명도 및 인도 범위 계약서 명문화</li></ol>
       <div className="dd-acquisition with-icon"><span className="dd-icon-badge large solid"><Icon name="edit" /></span><div><b>ACQUISITION CASE</b><p>{display(model.investment.overallOpinion, '확인된 토지·건물·입지·명도·권리 정보를 종합해 매입 판단 근거를 확정합니다.')}</p></div></div>
-      {has(display(model.identity.managerName)) && <div className="dd-contact-band"><div className="dd-contact-brand dd-contact-brand-image"><DaonLogoImage className="dd-contact-logo-img" /></div><div><b>{display(model.identity.managerName)}</b><p>{joinPresent('   ', display(model.identity.managerPhone) && `M ${display(model.identity.managerPhone)}`, display(model.identity.managerEmail) && `E ${display(model.identity.managerEmail)}`)}</p></div><div className="dd-contact-cta"><b>{reportWording(model.identity.reportPurpose?.value).contactCta}</b><p>{display(model.identity.companyName, 'DA:ON ASSET')}</p></div></div>}
+      <div className="dd-contact-band"><div className="dd-contact-brand dd-contact-brand-image"><DaonLogoImage className="dd-contact-logo-img" /></div><div><b>{display(model.identity.managerName) || display(model.identity.companyName, 'DA:ON ASSET')}</b><p>{joinPresent('   ', `M ${display(model.identity.managerPhone) || OFFICE_PHONE}`, `E ${display(model.identity.managerEmail) || OFFICE_EMAIL}`)}</p></div><div className="dd-contact-cta"><b>{reportWording(model.identity.reportPurpose?.value).contactCta}</b><p>{display(model.identity.companyName, 'DA:ON ASSET')}</p></div></div>
     </Page>
   </div>;
 }

@@ -44,6 +44,17 @@ eq(rules.buildingAgeDisplay('1978-11-11', '2026-11-10T15:00:00Z'), '약 48년 (1
 eq(rules.buildingAgeDisplay('1978-11-11', '2026-11-10T14:59:59Z'), '약 47년 (1978년 사용승인)', 'one second before KST midnight');
 eq(rules.buildingAgeDisplay('1978-11-11', '2026-11-11'), '약 48년 (1978년 사용승인)', 'date-only asOf used as written');
 eq(rules.buildingAgeDisplay('1978-11-11', 'not a date'), '', 'invalid asOf → empty');
+eq(rules.koreaDateLabel('2026-11-10T15:00:00Z'), '2026. 11. 11', 'KST issue date at midnight');
+eq(rules.koreaDateLabel('2026-11-10T14:59:59Z'), '2026. 11. 10', 'KST issue date one second before midnight');
+eq(rules.koreaDateLabel(''), '', 'invalid issue date → empty');
+{
+  const { execFileSync } = await import('node:child_process');
+  const probe = "import('./scripts/lib/ts-module-loader.mjs').then(async ({ importTs }) => { const r = await importTs('src/domain/professionalReport/reportDisplayRules.ts'); console.log(r.koreaDateLabel('2026-11-10T15:00:00Z')); })";
+  const dates = ['Asia/Seoul', 'America/Los_Angeles', 'UTC'].map((tz) => execFileSync(process.execPath, ['-e', probe], { env: { ...process.env, TZ: tz }, encoding: 'utf8' }).trim());
+  if (new Set(dates).size !== 1 || dates[0] !== '2026. 11. 11') fail(`issue date depends on viewer time zone: ${dates.join(' / ')}`);
+  for (const [file, needle] of [['src/components/professionalReport/DaonDetail7PageMaster.tsx', 'koreaDateLabel(snapshot.generatedAt)'], ['src/components/professionalReport/DaonReportOpeningPage.tsx', 'koreaDateLabel(model.generated.generatedAt)']]) if (!readFileSync(file, 'utf8').includes(needle)) fail(`${file} must print the KST snapshot date`);
+  if (/managerName\.value \|\| '김은미/.test(readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8'))) fail('detail pages must not fill a missing manager with a personal name');
+}
 {
   const { execFileSync } = await import('node:child_process');
   const probe = "import('./scripts/lib/ts-module-loader.mjs').then(async ({ importTs }) => { const r = await importTs('src/domain/professionalReport/reportDisplayRules.ts'); console.log([r.buildingAgeDisplay('1978-11-11', '2026-11-11T00:00:00Z'), r.buildingAgeDisplay('1978-11-11', '2026-11-10T14:59:59Z')].join('|')); })";

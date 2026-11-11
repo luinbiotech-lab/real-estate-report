@@ -1,6 +1,7 @@
 import type { ProfessionalReportViewModel } from '../../domain/professionalReport/types';
 import { reportPurposeOf } from '../../domain/professionalReport/reportPurpose';
 import { DaonLogoImage } from '../brand/DaonLogoImage';
+import { koreaDateLabel } from '../../domain/professionalReport/reportDisplayRules';
 
 const display = (value: { value: unknown; display: string }, fallback = '') =>
   value.value === null || value.value === '' ? fallback : value.display;
@@ -18,8 +19,8 @@ export function DaonReportOpeningPage({ model }: { model: ProfessionalReportView
   const address = [display(model.identity.address, ''), display(model.identity.detailAddress, '')].filter(Boolean).join(' ');
   const company = display(model.identity.companyName, '') || 'DA:ON ASSET';
   const author = display(model.identity.managerName, '');
-  const generated = new Date(model.generated.generatedAt);
-  const issued = Number.isNaN(generated.getTime()) ? '' : `${generated.getFullYear()}. ${String(generated.getMonth() + 1).padStart(2, '0')}. ${String(generated.getDate()).padStart(2, '0')}`;
+  // Korean calendar date of the snapshot, same in every viewer time zone (루인 review on #56).
+  const issued = koreaDateLabel(model.generated.generatedAt);
   const title = reportPurposeOf(model.identity.reportPurpose?.value) === 'analysis' ? '부동산 분석 보고서' : '부동산 전속매각 보고서';
   const facts = ([['소재지', address], ['작성', [author, company].filter(Boolean).join(' · ')], ['발행일', issued]] as Array<[string, string]>)
     .filter(([, value]) => value && value.trim());
