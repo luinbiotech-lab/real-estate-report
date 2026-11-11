@@ -53,7 +53,8 @@ function Page({ page, number, eyebrow, title, en, subtitle, snapshot, model, sou
     </header>
     <main className="dd-body">{children}</main>
     <footer className="dd-foot">
-      <span>{joinPresent(' · ', 'DA:ON ASSET', model.identity.managerName.value || '', model.identity.managerPhone.value || '', model.identity.managerEmail.value || '')}</span>
+      {/* Same office contact fallback as the 1P and the closing page: an omitted manager field must not drop the broker contact from every page (루인 cross-review on #56). */}
+      <span>{joinPresent(' · ', 'DA:ON ASSET', model.identity.managerName.value || '김은미 대표 / 공인중개사', model.identity.managerPhone.value || '010 9953 1270', model.identity.managerEmail.value || 'daonasset.korea@gmail.com')}</span>
       <span>{joinPresent(' · ', source || '', `Snapshot v${snapshot.reportVersion}`, new Date(snapshot.generatedAt).toLocaleDateString('ko-KR'))}</span>
     </footer>
   </article>;

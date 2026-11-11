@@ -286,6 +286,33 @@ try {
       assert(!problems.length, problems.join(' ; '));
       return plan.map((entry, index) => `상세${entry.id}→PDF${index + 2}쪽 ${(byPage[entry.id] || []).length}개`).join(' · ');
     });
+    // 루인 cross-review on #56 (2026-11-12): when optional pages are omitted (e.g. 5-page output) the opening, the closing
+    // introduction/contact and the per-page footer (broker contact, snapshot/source line) must survive, and the 1P and the
+    // detail report must print the same price, land area and zoning.
+    await check(fx.key, '생략 후에도 표지·마지막 소개·연락처·쪽별 출처 유지, 1P와 값 일치', async () => {
+      const plan = fx.plan || [];
+      const digits = (value) => value.replace(/\D/g, '');
+      const phone = '01099531270';
+      const problems = [];
+      const opening = squash(pdfPageText(reportPath, 1));
+      if (!opening.includes(squash('부동산 전속매각 보고서'))) problems.push('표지에 보고서 제목 없음');
+      plan.forEach((entry, index) => {
+        const raw = pdfPageText(reportPath, index + 2);
+        if (!digits(raw).includes(phone)) problems.push(`PDF ${index + 2}쪽 바닥글에 중개사 연락처 없음`);
+        if (!/Snapshot/i.test(raw)) problems.push(`PDF ${index + 2}쪽 바닥글에 Snapshot·출처 줄 없음`);
+      });
+      const closing = pdfPageText(reportPath, plan.length + 2);
+      if (!squash(closing).includes(squash('DAON 소개'))) problems.push('마지막 쪽에 DAON 소개 없음');
+      if (!/Contact/i.test(closing) || !digits(closing).includes(phone)) problems.push('마지막 쪽에 Contact·연락처 없음');
+      if (oneText) {
+        for (const value of ['41억 5,000만', '168.1', '제2종일반주거지역']) {
+          if (!squash(oneText).includes(squash(value))) problems.push(`1P에 ${value} 없음`);
+          if (!squash(reportText).includes(squash(value))) problems.push(`상세 보고서에 ${value} 없음`);
+        }
+      } else problems.push('1P 텍스트 없음(비교 불가)');
+      assert(!problems.length, problems.join(' ; '));
+      return `표지·마지막·연락처 ${plan.length}쪽 바닥글·1P 값 3개 일치`;
+    });
     await check(fx.key, '보고서 말줄임(…) 없음', async () => {
       const n = (reportText.match(/…/g) || []).length;
       assert(n === 0, `보고서 PDF에 '…' ${n}개`);
