@@ -2,7 +2,7 @@ import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/pr
 import { askingPosition, formatEok, priceLayerCells, PRICE_ESTIMATE_METHOD_NOTE } from '../../domain/professionalReport/priceLayerView';
 import type { ReactNode } from 'react';
 import { DaonLogoImage } from '../brand/DaonLogoImage';
-import { coverageDisplay, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
+import { buildingAgeDisplay, coverageDisplay, floorAreaRatioDisplay, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
 import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
@@ -163,6 +163,8 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     ['용도지역', display(model.land.zoning)],
     ['사용승인', display(model.building.completionDate)],
     ['공부상 주차', parkingOfficial],
+    ['지목 · 이용상황', joinPresent(' · ', display(model.land.landCategory), display(model.land.landUseSituation))],
+    ['개별공시지가', joinPresent(' ', display(model.land.officialLandPricePerSqm) && `${display(model.land.officialLandPricePerSqm)}/㎡`, model.land.officialLandPriceYear.value ? `(${model.land.officialLandPriceYear.display}년)` : '')],
   ];
   const visibleFacts = facts.filter(([, value]) => value && value.trim());
   // Mixed blank policy (owner decision 2026-10-31): optional pages without enough real content are omitted and the rest
@@ -182,7 +184,20 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   // (owner reference page 6: "단순 건폐율 약 48.8%" with a note), never as the register value.
   const coverage = coverageDisplay(model.building.buildingCoverageRate.value, display(model.building.buildingCoverageRate), model.building.buildingAreaPyeong.value, model.land.landAreaPyeong.value);
   const calcCoverage = coverage?.calculated ? coverage.value : '';
-  const metrics = ([[coverage?.label ?? '건폐율', coverage?.value ?? ''], ['용적률', positive(model.building.floorAreaRatio)], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
+  // FAR: register value, else a labelled calculation from complete floor rows (owner sample review 2026-11-11).
+  const far = floorAreaRatioDisplay(model.building.floorAreaRatio.value, positive(model.building.floorAreaRatio), model.building.floors.map((row) => ({ floor: row.floor, areaSqm: row.areaSqm })), model.building.totalFloorAreaSqm.value, model.land.landAreaSqm.value);
+  const calcFar = far?.calculated ? far.value : '';
+  const metrics = ([[coverage?.label ?? '건폐율', coverage?.value ?? ''], [far?.label ?? '용적률', far?.value ?? ''], ['사용승인', display(model.building.completionDate)]] as Array<[string, string]>).filter(([, value]) => has(value));
+  // Page 6 building/land facts already held in the report (register, VWorld land profile, field note). Only present rows print.
+  const buildingFacts = ([
+    ['구조 / 규모', joinPresent(' · ', display(model.building.structure), joinPresent(' / ', display(model.building.basementFloors) && `지하 ${display(model.building.basementFloors)}`, display(model.building.groundFloors) && `지상 ${display(model.building.groundFloors)}`))],
+    ['연면적', joinPresent(' / ', display(model.building.totalFloorAreaSqm), display(model.building.totalFloorAreaPyeong))],
+    ['경과연수 (산출)', buildingAgeDisplay(model.building.completionDate.value, snapshot.generatedAt)],
+    ['지목 · 이용상황', joinPresent(' · ', display(model.land.landCategory), display(model.land.landUseSituation))],
+    ['개별공시지가', joinPresent(' ', display(model.land.officialLandPricePerSqm) && `${display(model.land.officialLandPricePerSqm)}/㎡`, model.land.officialLandPriceYear.value ? `(${model.land.officialLandPriceYear.display}년)` : '')],
+    ['공시지가 기준 토지가 (산출)', display(model.land.estimatedOfficialLandValue)],
+    ['주차', joinPresent(' · ', parkingOfficial && `공부상 ${parkingOfficial}`, parkingField && `현장 ${parkingField}${parkingFieldNote}`)],
+  ] as Array<[string, string]>).filter(([, value]) => has(value));
   const p3CardCount = [display(model.land.roadCondition), display(model.location.locationAnalysis)].filter(has).length + 1;
   // Price layers (owner decision 2026-11-02, 안 A): 4 cards on page 4 + the deals behind the estimate.
   const priceEstimate = model.pricing.priceEstimate ?? null;
@@ -269,7 +284,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <SectionBar right="VALUE CREATION ROADMAP">가치 확장 로드맵</SectionBar>
       <div className="dd-roadmap" style={{ gridTemplateColumns: equalColumns(p5RoadmapCount) }}><NumberedPoint icon="building" index={1} title="즉시 사용" copy={display(model.pricing.occupancyStatus)} /><NumberedPoint icon="chart" index={2} title="리포지셔닝" copy={display(model.investment.features, '파사드·동선·공간 재구성 검토')} /><NumberedPoint icon="edit" index={3} title="중장기 검토" copy={display(model.investment.developmentPlan, '리노베이션 또는 신축 여부 검토')} /></div>
       {scenarios.length > 0 && <SectionBar right="USE CASE SCENARIOS">활용 시나리오</SectionBar>}
-      {scenarios.length > 0 && <div className="dd-scenarios" style={{ gridTemplateColumns: equalColumns(scenarios.length) }}>{scenarios.map((line, i) => { const { label, text } = splitLabel(line); const title = label || `활용안 ${i + 1}`; return <article key={i}>{hasPhotos && <ImageSlot src={imageAt(i)} caption={title} />}<h3>{title}</h3><p>{text}</p></article>; })}</div>}
+      {scenarios.length > 0 && <div className={`dd-scenarios${hasPhotos ? '' : ' no-photo'}`} style={{ gridTemplateColumns: equalColumns(scenarios.length) }}>{scenarios.map((line, i) => { const { label, text } = splitLabel(line); const title = label || `활용안 ${i + 1}`; return <article key={i}>{hasPhotos && <ImageSlot src={imageAt(i)} caption={title} />}<h3>{title}</h3><p>{text}</p></article>; })}</div>}
       <Insight icon="target" kicker="STRATEGIC INSIGHT" title="이 자산의 강점은 하나의 “정답 용도”가 아니라 매수자에 따라 달라지는 실행 옵션입니다." copy={splitLines(model.investment.recommendedUse, 6).join(' · ')} />
     </Page>}
 
@@ -277,8 +292,10 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       {hasPhotos && <SectionBar>현황 건물에서 읽는 실사용 가치</SectionBar>}
       {hasPhotos && <div className="dd-photo-three"><ImageSlot src={imageAt(0)} caption="본건 및 주변 건물 전경" /><ImageSlot src={imageAt(1)} caption="주변 랜드마크·배후수요" /><ImageSlot src={imageAt(2)} caption="주변 도로·생활권 전경" /></div>}
       {metrics.length > 0 && <SectionBar>건물 지표</SectionBar>}
-      {metrics.length > 0 && <div className="dd-metrics" style={{ gridTemplateColumns: equalColumns(metrics.length) }}>{metrics.map(([label, value]) => <div key={label}><span>●</span><small>{label}{label === '단순 건폐율' && <em>(산출)</em>}</small><strong>{value}</strong></div>)}</div>}
-      {calcCoverage && <p className="dd-metric-note">※ 건축물대장 건폐율 미기재. 건축면적÷대지면적으로 단순 산출한 값이며 공부상 수치가 아닙니다.</p>}
+      {metrics.length > 0 && <div className="dd-metrics" style={{ gridTemplateColumns: equalColumns(metrics.length) }}>{metrics.map(([label, value]) => <div key={label}><span>●</span><small>{label}{(label === '단순 건폐율' || label === '단순 용적률') && <em>(산출)</em>}</small><strong>{value}</strong></div>)}</div>}
+      {(calcCoverage || calcFar) && <p className="dd-metric-note">※ 건축물대장 {[calcCoverage && '건폐율', calcFar && '용적률'].filter(Boolean).join('·')} 미기재. {[calcCoverage && '건폐율=건축면적÷대지면적', calcFar && '용적률=지상층 면적 합계÷대지면적'].filter(Boolean).join(', ')}으로 단순 산출한 값이며 공부상 수치가 아닙니다.</p>}
+      {buildingFacts.length > 0 && <SectionBar>건물·토지 개요</SectionBar>}
+      {buildingFacts.length > 0 && <div className="dd-info-table dd-building-facts">{buildingFacts.map(([label, value]) => <InfoRow key={label} label={label} value={value} />)}</div>}
       <SectionBar>매입 후 의사결정 포인트</SectionBar>
       <div className="dd-reason-three"><GoldCard icon="building" title="기존 건물 유지" copy="초기 투자비를 통제하면서 사옥·업무·콘텐츠 공간으로 활용하는 전략을 검토합니다." /><GoldCard icon="tools" title="리노베이션" copy="외관과 동선, 설비, 층별 기능 재배치를 검토합니다." /><GoldCard icon="search" title="신축 검토" copy={display(model.investment.developmentPlan, '용도지역·도로·주차·일조·높이·건축선 등을 사전 검토합니다.')} /></div>
       <Insight compact icon="building" title="기존 건물의 연식과 상태는 의사결정의 출발점입니다." copy="현재 사용 가능한 공간을 확보하면서 향후 리노베이션 또는 신축 여부를 선택할 수 있는 구조인지 확인합니다." />

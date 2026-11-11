@@ -16,7 +16,7 @@ export function shortOrFirstLine(shortLabel: string | undefined | null, original
 }
 
 export interface CoverageDisplay {
-  label: '건폐율' | '단순 건폐율';
+  label: '건폐율' | '단순 건폐율' | '용적률' | '단순 용적률';
   value: string;
   calculated: boolean;
 }
@@ -34,4 +34,32 @@ export function coverageDisplay(registerRate: unknown, registerDisplay: string, 
     return { label: '단순 건폐율', value: `약 ${pct.toLocaleString('ko-KR')}%`, calculated: true };
   }
   return null;
+}
+
+/**
+ * Floor-area ratio when the register does not record one (owner sample review 2026-11-11). Only when the floor rows add up
+ * to the register total floor area (within 1%), so a partial floor list never produces a number. Above-ground floors are
+ * the rows not marked B/지하/지층. Always labelled as calculated, never as the register value.
+ */
+export function floorAreaRatioDisplay(registerRate: unknown, registerDisplay: string, floors: Array<{ floor: string; areaSqm: number | null }>, totalFloorAreaSqm: unknown, landAreaSqm: unknown): CoverageDisplay | null {
+  if (positiveNumber(registerRate)) return { label: '용적률', value: registerDisplay, calculated: false };
+  if (!positiveNumber(totalFloorAreaSqm) || !positiveNumber(landAreaSqm) || !floors.length) return null;
+  const areas = floors.map((row) => row.areaSqm);
+  if (areas.some((area) => !positiveNumber(area))) return null;
+  const total = (areas as number[]).reduce((sum, area) => sum + area, 0);
+  if (Math.abs(total - totalFloorAreaSqm) > totalFloorAreaSqm * 0.01) return null;
+  const above = floors.filter((row) => !/^(B|b|지하|지층)/.test(row.floor.trim())).reduce((sum, row) => sum + (row.areaSqm as number), 0);
+  if (!(above > 0)) return null;
+  const pct = Math.round((above / landAreaSqm) * 1000) / 10;
+  return { label: '단순 용적률', value: `약 ${pct.toLocaleString('ko-KR')}%`, calculated: true };
+}
+
+/** Building age from the approval date, as of the snapshot date (calculated). */
+export function buildingAgeDisplay(completionDate: unknown, asOf: string): string {
+  const match = typeof completionDate === 'string' ? completionDate.match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
+  const ref = new Date(asOf);
+  if (!match || Number.isNaN(ref.getTime())) return '';
+  let years = ref.getFullYear() - Number(match[1]);
+  if (ref.getMonth() + 1 < Number(match[2]) || (ref.getMonth() + 1 === Number(match[2]) && ref.getDate() < Number(match[3]))) years -= 1;
+  return years >= 0 ? `약 ${years}년 (${match[1]}년 사용승인)` : '';
 }

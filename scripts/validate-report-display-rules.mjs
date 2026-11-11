@@ -27,6 +27,16 @@ eq(calc?.label, '단순 건폐율', 'register 0 + both areas → calculated labe
 eq(coverageDisplay(0, '0%', 0, 50.85), null, 'register 0 + no building area → omitted (never 0%)');
 eq(coverageDisplay(0, '0%', 24.8, 0), null, 'register 0 + no land area → omitted');
 eq(coverageDisplay(null, '', 24.8, undefined), null, 'missing values → omitted');
+// 2b. Calculated FAR (owner sample review 2026-11-11): Bangbae 815-11 floors B1 103.14 + 1F 40.99×2 + 2F 81.98 + 3F 81.98
+// = 349.08 (register total) → above ground 245.94 / 168.1 = 146.3%.
+const bbFloors = [{ floor: 'B1', areaSqm: 103.14 }, { floor: '1F', areaSqm: 40.99 }, { floor: '1F', areaSqm: 40.99 }, { floor: '2F', areaSqm: 81.98 }, { floor: '3F', areaSqm: 81.98 }];
+eq(JSON.stringify(rules.floorAreaRatioDisplay(0, '', bbFloors, 349.08, 168.1)), JSON.stringify({ label: '단순 용적률', value: '약 146.3%', calculated: true }), 'FAR calculated from complete floors');
+eq(rules.floorAreaRatioDisplay(0, '', bbFloors.slice(1), 349.08, 168.1), null, 'partial floor list → no FAR');
+eq(rules.floorAreaRatioDisplay(0, '', [...bbFloors.slice(0, 4), { floor: '3F', areaSqm: null }], 349.08, 168.1), null, 'floor without area → no FAR');
+eq(rules.floorAreaRatioDisplay(180, '180%', bbFloors, 349.08, 168.1).calculated, false, 'register FAR wins');
+eq(rules.buildingAgeDisplay('1978-07-31', '2026-11-11T00:00:00Z'), '약 48년 (1978년 사용승인)', 'building age');
+eq(rules.buildingAgeDisplay('1978-12-31', '2026-11-11T00:00:00Z'), '약 47년 (1978년 사용승인)', 'building age before anniversary');
+eq(rules.buildingAgeDisplay('', '2026-11-11T00:00:00Z'), '', 'no date → empty');
 eq(coverageDisplay(Number.NaN, '', 24.8, 50.85)?.calculated, true, 'NaN register treated as unrecorded');
 eq(coverageDisplay(-3, '-3%', 10, 20)?.value, '약 50%', 'negative register treated as unrecorded');
 
@@ -53,6 +63,10 @@ for (const needle of ['html.ios-print-fit .professional-report-document', 'html.
 for (const page of ['src/pages/ProfessionalReportSnapshotPage.tsx', 'src/pages/DocumentPreview.tsx']) { const src = readFileSync(page, 'utf8'); if (!src.includes('useReportDeviceFit();') || !src.includes("import '../report-device-fit.css';")) fail(`${page} must use the device fit hook and CSS`); }
 
 // 5. 1P blank handling (owner iPhone PDF 2026-11-07): no "- (36평)" placeholder, no empty 핵심 포인트 box.
+// 2026-11-11 sample review: comparable rows must not overlap, notes merge into one line, no-photo scenarios stay readable.
+const refineCss = readFileSync('src/daon-master-refinement.css', 'utf8');
+for (const needle of ['.dd-comparables.has-bars>.dd-bars{grid-auto-rows:minmax(9.2mm,auto)}', '.dd-scenarios.no-photo article>p{min-height:22mm', '.daon-detail-page-5:has(.dd-scenarios.no-photo) .dd-roadmap']) if (!refineCss.includes(needle)) fail(`daon-master-refinement.css missing: ${needle}`);
+if ((seven.match(/className="dd-metric-note"/g) || []).length !== 1) fail('page 6 must render the calculated coverage/FAR note as one dd-metric-note');
 const oneSrc = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
 if (oneSrc.includes("'-'} (${py")) fail('1P area must not print "- (n평)" when ㎡ is missing');
 if (!oneSrc.includes('{points.length > 0 && <section className="d1-points">')) fail('1P must hide the empty 핵심 포인트 section');

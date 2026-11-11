@@ -158,3 +158,11 @@
 .daon-detail-master .dd-location-grid.no-map{grid-template-columns:1fr;height:auto}
 .daon-detail-master .dd-location-grid.no-map .dd-map-wrap{display:none}
 .daon-detail-master .dd-location-grid.no-map .dd-location-cards{grid-template-rows:none!important;grid-auto-flow:column;grid-auto-columns:1fr}
+.daon-detail-master .dd-scenarios.no-photo{height:auto}
+/* No scenario photos: the use names become readable cards and the roadmap takes the freed height (2026-11-11 sample review). */
+.daon-detail-master .dd-scenarios.no-photo article>p{min-height:22mm;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;font-weight:700;color:var(--dq-ink,#12335a);-webkit-line-clamp:unset}
+.daon-detail-master .daon-detail-page-5:has(.dd-scenarios.no-photo) .dd-roadmap{min-height:72mm}
+/* Comparable rows need room for the name and its detail line; without reason photos the block grows instead of overlapping. */
+.daon-detail-master .daon-detail-page-4:not(:has(.dd-reason-three.with-photos)) .dd-comparables.has-bars{height:auto}
+.daon-detail-master .daon-detail-page-4:not(:has(.dd-reason-three.with-photos)) .dd-comparables.has-bars>.dd-bars{grid-auto-rows:minmax(9.2mm,auto)}
+.daon-detail-master .dd-building-facts{margin-bottom:3.5mm}
