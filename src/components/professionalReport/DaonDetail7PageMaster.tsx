@@ -140,7 +140,10 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const imageAt = (index: number) => supporting[index] || hero;
   const hasPhotos = Boolean(imageAt(0));
   const points = [...splitLines(model.investment.investmentPoints, 8), ...splitLines(model.investment.features, 8)].filter(Boolean).slice(0, 6);
-  const scenarios = splitLines(model.investment.recommendedUse, 3);
+  // A single stored line such as '사옥, 주거·업무 복합공간, F&B 플래그십' lists several uses; show each as its own scenario
+  // card instead of one card holding the whole list (owner sample review 2026-11-11). Multi-line input is unchanged.
+  const useLines = splitLines(model.investment.recommendedUse, 3);
+  const scenarios = useLines.length === 1 && !splitLabel(useLines[0]).label ? useLines[0].split(/\s*,\s*/).filter(Boolean).slice(0, 3) : useLines;
   const risks = splitLines(model.risks.risks, 6);
   const comparables = model.investment.comparables ?? [];
   // Titles never infer a corner from free text (Luin review on PR #46, 2026-11-04): neutral titles until a verified

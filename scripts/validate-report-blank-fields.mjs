@@ -121,6 +121,7 @@ if (fill.detailPagePlan(sampleLike, false, 6, true).pages.some((p) => p.id === 6
 // (main/exterior photo of the property), never the general photo list.
 if (fill.detailPagePlan(sampleLike, false, 6, false).pages.some((p) => p.id === 6)) fail('본건 사진 없이 주변 사진·건물 지표만으로 6쪽을 출력하면 안 됩니다.');
 { const src = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+  if (!src.includes("useLines[0].split(/\\s*,\\s*/)")) fail('한 줄에 쉼표로 적은 활용안은 시나리오 카드로 나눠야 합니다.');
   if (!src.includes('detailPagePlan(model, Boolean(map), comparables.length, Boolean(hero))') || /detailPagePlan\([^)]*hasPhotos/.test(src)) fail('6쪽 생략 판단에는 본건 외관 사진(hero)만 전달해야 합니다.'); }
 for (const marker of ["dd-p1-top${hero ? '' : ' no-photo'}", "dd-location-grid${map ? '' : ' no-map'}", '{scenarios.length > 0 && <SectionBar', '{points.length > 0 && <SectionBar right="KEY POINTS">']) if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes(marker)) fail(`빈 사진·지도·제목 숨김 누락: ${marker}`);
 for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', 'src/components/professionalReport/DaonDetail7PageMaster.tsx']) {
