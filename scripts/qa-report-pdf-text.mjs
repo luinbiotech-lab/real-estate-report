@@ -226,6 +226,26 @@ try {
       assert(numbers.every((n, i) => n === i + 1), `쪽 번호가 1부터 연속이 아님: ${numbers.join(',')}`);
       return omitted.length ? `생략 ${omitted.join(',')} · 번호 ${numbers.join(',')}` : `생략 없음 · 번호 ${numbers.join(',')}`;
     });
+    // 루인 review on #52 (2026-11-11): the DOM plan order must match the actual PDF page order, also when pages are omitted.
+    // Each detail page's own header (page title + printed "| 0N") must be extracted from the PDF page it should be on,
+    // so a reordered, duplicated or wrongly numbered page fails even when the total page count is right.
+    await check(fx.key, '보고서 쪽 머리말(제목·인쇄 번호)이 PDF 쪽 순서와 일치', async () => {
+      const HEADER = { 1: 'WHY THIS ASSET', 2: 'PROPERTY PROFILE', 3: 'LOCATION LEVERAGE', 4: 'MARKET POSITION', 5: 'VALUE CREATION SCENARIOS', 6: 'BUILDING & DEVELOPMENT REVIEW', 7: 'TRANSACTION READINESS' };
+      const plan = fx.plan || [];
+      const problems = [];
+      plan.forEach((entry, index) => {
+        const pdfPage = index + 2;
+        const text = squash(pdfPageText(reportPath, pdfPage));
+        if (!text.includes(squash(HEADER[entry.id] || '?'))) problems.push(`PDF ${pdfPage}쪽에 상세 ${entry.id} 제목(${HEADER[entry.id]}) 없음`);
+        const printed = `|${String(index + 1).padStart(2, '0')}`;
+        if (!text.includes(printed)) problems.push(`PDF ${pdfPage}쪽에 인쇄 번호 ${printed} 없음`);
+        for (const [otherId, title] of Object.entries(HEADER)) {
+          if (Number(otherId) !== entry.id && Number(otherId) !== 1 && text.includes(squash(title))) problems.push(`PDF ${pdfPage}쪽에 다른 상세 ${otherId} 제목 섞임`);
+        }
+      });
+      assert(!problems.length, problems.join(' ; '));
+      return plan.map((entry, index) => `PDF${index + 2}쪽=상세${entry.id}·${String(index + 1).padStart(2, '0')}`).join(' ');
+    });
     await check(fx.key, '보고서 원문·가격·조건 문구(추출 텍스트)', async () => {
       const expected = ['41억 5,000만원', LONG.occupancyStatus, LONG.risks, '제2종일반주거지역(7층 이하)'];
       if (!fx.sparse) {

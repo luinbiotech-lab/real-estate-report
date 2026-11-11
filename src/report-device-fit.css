@@ -18,10 +18,14 @@
   .professional-report-shell .daon-professional-report-master{zoom:1}
   .preview-shell .paper-stage{padding:0!important;display:block!important}
   .preview-shell .paper-stage>div{zoom:1}
-  /* iOS keeps ~6mm side / ~14mm top-bottom margins regardless of @page: shrink each A4 page to 90% (189×267mm) so it
-     fits one sheet, and center it. Desktop Chrome honours @page margin 0 and is unaffected (class only set on iOS). */
-  html.ios-print-fit .professional-report-document,html.ios-print-fit .professional-report-shell .daon-professional-report-master,html.ios-print-fit .preview-shell .paper-stage>div{zoom:.9}
-  html.ios-print-fit .professional-report-shell .daon-professional-report-master{margin:0 auto!important}
+  /* iOS keeps ~6.5mm side / ~14mm top-bottom margins regardless of @page and scales the content so its widest box fills
+     the printable width (196.9mm). An A4 page 210mm wide therefore printed 278.5mm tall (> 268.5mm printable) and every
+     page spilled ~10mm onto a second sheet (owner iPhone Chrome PDF 2026-11-11: 8 pages -> 15 sheets). The earlier
+     zoom:.9 did not change this on the device (DAON-040 reopened). Instead give the report 7mm of empty side room so the
+     widest box is 224mm: scale 196.9/224 = 0.879, page 185×261mm, which fits one sheet with or without zoom support.
+     Desktop Chrome honours @page margin 0 and is unaffected (class only set on iOS). Page design (MASTER) is unchanged. */
+  html.ios-print-fit .professional-report-document{zoom:1}
+  html.ios-print-fit .professional-report-shell .daon-professional-report-master,html.ios-print-fit .preview-shell .paper-stage>div{zoom:1;width:210mm!important;padding:0 7mm!important;box-sizing:content-box!important;margin:0!important}
   html.ios-print-fit .daon-frame-page,html.ios-print-fit .daon-detail-page,html.ios-print-fit .d1-sheet{margin-left:auto!important;margin-right:auto!important}
 }
 
