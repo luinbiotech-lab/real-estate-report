@@ -1,5 +1,5 @@
 import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/professionalReport/reportLayoutFill';
-import { askingPosition, formatEok, priceLayerCells, PRICE_ESTIMATE_METHOD_NOTE } from '../../domain/professionalReport/priceLayerView';
+import { askingPosition, formatEok, officialMultipleLine, priceLayerCells, PRICE_ESTIMATE_METHOD_NOTE } from '../../domain/professionalReport/priceLayerView';
 import type { ReactNode } from 'react';
 import { DaonLogoImage } from '../brand/DaonLogoImage';
 import { buildingAgeDisplay, coverageDisplay, floorAreaRatioDisplay, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
@@ -167,6 +167,10 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     ['개별공시지가', joinPresent(' ', display(model.land.officialLandPricePerSqm) && `${display(model.land.officialLandPricePerSqm)}/㎡`, model.land.officialLandPriceYear.value ? `(${model.land.officialLandPriceYear.display}년)` : '')],
   ];
   const visibleFacts = facts.filter(([, value]) => value && value.trim());
+  // No exterior photo yet (2026-11-11 sample review): real register facts take the freed space instead of an empty box.
+  const factValue = (label: string) => visibleFacts.find(([key]) => key === label)?.[1] ?? '';
+  const p1Facts = ([['토지면적', factValue('토지면적')], ['연면적', factValue('연면적')], ['규모', factValue('구조 / 규모')], ['용도지역', factValue('용도지역')]] as Array<[string, string]>).filter(([, value]) => value);
+  const useBasis = ([['용도지역', factValue('용도지역')], ['공부상 주용도', factValue('주용도')], ['층별 공부상 용도', model.building.floors.slice(0, 4).map((floor) => joinPresent(' ', floor.floor, floor.name)).filter(Boolean).join(' · ')], ['연면적', factValue('연면적')]] as Array<[string, string]>).filter(([, value]) => value);
   // Mixed blank policy (owner decision 2026-10-31): optional pages without enough real content are omitted and the rest
   // renumbered; inside a page, present cards move forward and the row is re-divided so no empty slot remains.
   // Page 6 counts only a photo of the property itself (main/exterior), not surrounding-area photos (Luin review on
@@ -210,6 +214,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
     brokerAchievablePriceConfirmedAt: model.pricing.brokerAchievablePriceConfirmedAt?.value ?? '',
   }, priceEstimate);
   const askingLine = askingPosition(model.pricing.salePrice.value ?? undefined, priceEstimate);
+  const multipleLine = officialMultipleLine(model.pricing.salePrice.value ?? undefined, model.land.estimatedOfficialLandValue?.value ?? undefined);
   const brokerRationale = display(model.pricing.brokerAchievablePriceRationale ?? { value: null, display: '', state: 'missing', sourceIds: [] });
   const estimateDeals = priceEstimate?.state === 'estimated' ? (priceEstimate.deals ?? []).slice(0, 6) : [];
   const occupancyParking = joinPresent(' · ', display(model.pricing.occupancyStatus), parkingField && `현장 주차 ${parkingField}${parkingFieldNote}`);
@@ -217,7 +222,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   return <div className="daon-detail-master" data-template-id={DAON_DETAIL_MASTER_TEMPLATE_ID} data-template-version={DAON_DETAIL_MASTER_TEMPLATE_VERSION}>
     <Page page={1} number={pageNumber(1)} eyebrow="WHY THIS ASSET" title={model.identity.name.display} subtitle="매입 관점에서 보는 핵심 제안" source="자료기준: 건축물대장·토지이용계획" snapshot={snapshot} model={model}>
       <div className={`dd-p1-top${hero ? '' : ' no-photo'}`}>
-        <div className="dd-p1-hero"><ImageSlot src={hero} caption="대표 외관" /><div className="dd-hero-copy"><b>{heroStatement}</b><span>실사용 + 리포지셔닝 + 장기 가치</span></div></div>
+        <div className="dd-p1-hero"><ImageSlot src={hero} caption="대표 외관" /><div className="dd-hero-copy"><b>{heroStatement}</b><span>실사용 + 리포지셔닝 + 장기 가치</span></div>{!hero && p1Facts.length > 1 && <div className="dd-p1-facts">{p1Facts.map(([label, value]) => <div key={label}><small>{label}</small><b>{value}</b></div>)}</div>}</div>
         <div className="dd-p1-side" style={{ gridTemplateRows: display(model.pricing.salePrice) ? (p1SideCount ? `34mm ${equalColumns(p1SideCount)}` : '34mm') : equalColumns(Math.max(p1SideCount, 1)) }}>
           {display(model.pricing.salePrice) && <section className="dd-price-card"><small>희망매매가</small><strong>{display(model.pricing.salePrice)}</strong><span>{model.identity.address.display}</span></section>}
           <NumberedPoint index={1} title="즉시 활용성" copy={display(model.pricing.occupancyStatus)} />
@@ -258,7 +263,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       {priceCells.length > 1 ? <>
         <SectionBar right="PRICE LAYERS">가격 4단계</SectionBar>
         <div className="dd-price-layers" data-testid="dd-price-layers" style={{ gridTemplateColumns: equalColumns(priceCells.length) }}>{priceCells.map((cell) => <div key={cell.key} data-price-layer={cell.key} data-price-unit={cell.unit} data-long={cell.value.length > 13 ? 'true' : undefined}><small>{cell.label}</small><strong>{cell.value}</strong><span>{cell.sub}</span><em>{cell.badge}</em></div>)}</div>
-        {(askingLine || brokerRationale) && <p className="dd-price-layers-note">{joinPresent(' ', askingLine, brokerRationale && `중개사 확정 근거: ${brokerRationale}`)}</p>}
+        {(askingLine || multipleLine || brokerRationale) && <p className="dd-price-layers-note">{joinPresent(' ', askingLine, multipleLine, brokerRationale && `중개사 확정 근거: ${brokerRationale}`)}</p>}
       </> : <>
         <SectionBar>가격 포지션</SectionBar>
         <div className="dd-price-position"><div><small>본건 토지 평당</small><strong>{display(model.pricing.landUnitPrice)}</strong></div><div><b>가격을 설득하는 핵심은 “평균보다 싸다”가 아닙니다.</b><p>도로조건, 명도·실사용 가능성, 기존 건물의 활용성과 같은 개별 조건을 확인된 비교사례와 함께 설명합니다.</p></div></div>
@@ -285,6 +290,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <div className="dd-roadmap" style={{ gridTemplateColumns: equalColumns(p5RoadmapCount) }}><NumberedPoint icon="building" index={1} title="즉시 사용" copy={display(model.pricing.occupancyStatus)} /><NumberedPoint icon="chart" index={2} title="리포지셔닝" copy={display(model.investment.features, '파사드·동선·공간 재구성 검토')} /><NumberedPoint icon="edit" index={3} title="중장기 검토" copy={display(model.investment.developmentPlan, '리노베이션 또는 신축 여부 검토')} /></div>
       {scenarios.length > 0 && <SectionBar right="USE CASE SCENARIOS">활용 시나리오</SectionBar>}
       {scenarios.length > 0 && <div className={`dd-scenarios${hasPhotos ? '' : ' no-photo'}`} style={{ gridTemplateColumns: equalColumns(scenarios.length) }}>{scenarios.map((line, i) => { const { label, text } = splitLabel(line); const title = label || `활용안 ${i + 1}`; return <article key={i}>{hasPhotos && <ImageSlot src={imageAt(i)} caption={title} />}<h3>{title}</h3><p>{text}</p></article>; })}</div>}
+      {!hasPhotos && useBasis.length > 1 && <><SectionBar right="USE BASIS">활용 판단 기준 (건축물대장)</SectionBar><div className="dd-info-table dd-use-basis">{useBasis.map(([label, value]) => <InfoRow key={label} label={label} value={value} />)}</div></>}
       <Insight icon="target" kicker="STRATEGIC INSIGHT" title="이 자산의 강점은 하나의 “정답 용도”가 아니라 매수자에 따라 달라지는 실행 옵션입니다." copy={splitLines(model.investment.recommendedUse, 6).join(' · ')} />
     </Page>}
 

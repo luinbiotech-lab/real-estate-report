@@ -117,4 +117,14 @@ export function askingPosition(askingPrice: number | undefined, estimate: Achiev
   return `매도 희망가 ${ask}은 DA:ON 추정 범위(${range}) 안에 있습니다.`;
 }
 
+/**
+ * Asking price as a multiple of the land value at the official land price (calculated, 2026-11-11 sample review).
+ * Both inputs must be present; the line always says it is a calculation and not an appraisal.
+ */
+export function officialMultipleLine(askingPrice: number | undefined, officialLandValue: number | undefined) {
+  if (!positive(askingPrice) || !positive(officialLandValue)) return '';
+  const multiple = Math.round((askingPrice / officialLandValue) * 100) / 100;
+  return `매도 희망가는 공시지가 기준 토지가액의 약 ${multiple.toLocaleString('ko-KR')}배입니다(계산값 · ${NOT_APPRAISAL}).`;
+}
+
 export const PRICE_ESTIMATE_METHOD_NOTE = '거래가능가격 추정은 같은 동·최근 6개월 공개 실거래(해제·지분·일괄 거래 정리) 중 대지 규모가 본건의 0.5~2배인 거래가 5건 이상일 때만, 토지 평당가 하위 25%·중앙값·상위 25%에 본건 토지면적을 곱해 계산한 DA:ON 자동 추정 범위입니다. 감정평가가 아니며, 중개사가 근거와 함께 입력한 가격이 있으면 그 값을 우선 표시합니다.';

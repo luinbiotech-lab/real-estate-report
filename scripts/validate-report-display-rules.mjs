@@ -65,8 +65,23 @@ for (const page of ['src/pages/ProfessionalReportSnapshotPage.tsx', 'src/pages/D
 // 5. 1P blank handling (owner iPhone PDF 2026-11-07): no "- (36평)" placeholder, no empty 핵심 포인트 box.
 // 2026-11-11 sample review: comparable rows must not overlap, notes merge into one line, no-photo scenarios stay readable.
 const refineCss = readFileSync('src/daon-master-refinement.css', 'utf8');
-for (const needle of ['.dd-comparables.has-bars>.dd-bars{grid-auto-rows:minmax(9.2mm,auto)}', '.dd-scenarios.no-photo article>p{min-height:22mm', '.daon-detail-page-5:has(.dd-scenarios.no-photo) .dd-roadmap']) if (!refineCss.includes(needle)) fail(`daon-master-refinement.css missing: ${needle}`);
+for (const needle of ['.dd-comparables.has-bars>.dd-bars{grid-auto-rows:minmax(9.2mm,auto)}', '.dd-scenarios.no-photo article>p{min-height:22mm', '.dd-p1-facts{display:grid', '.dd-use-basis{margin-bottom:3.5mm}']) if (!refineCss.includes(needle)) fail(`daon-master-refinement.css missing: ${needle}`);
 if ((seven.match(/className="dd-metric-note"/g) || []).length !== 1) fail('page 6 must render the calculated coverage/FAR note as one dd-metric-note');
+for (const needle of ["{!hero && p1Facts.length > 1 && <div className=\"dd-p1-facts\">", "{!hasPhotos && useBasis.length > 1 &&", 'officialMultipleLine(model.pricing.salePrice.value']) if (!seven.includes(needle)) fail(`DaonDetail7PageMaster missing: ${needle}`);
+// VWorld report map (2026-11-11): server-only key, centred on the property, image-only passthrough, 503 without a key.
+{
+  const proxy = await import('../api/_lib/providerProxy.mjs');
+  const url = new URL(proxy.vworldStaticMapUrl(37.4913849, 126.9897284, 'TEST_KEY', 'example.test'));
+  if (url.origin + url.pathname !== 'https://api.vworld.kr/req/image' || url.searchParams.get('center') !== '126.9897284,37.4913849' || url.searchParams.get('request') !== 'getmap' || url.searchParams.get('domain') !== 'example.test') fail(`VWorld static map URL shape: ${url}`);
+  const saved = process.env.VWORLD_API_KEY; delete process.env.VWORLD_API_KEY;
+  const res = { statusCode: 0, headers: {}, setHeader(k, v) { this.headers[k] = v; }, end(body) { this.body = body; } };
+  await proxy.staticMap(new URLSearchParams({ provider: 'vworld', latitude: '37.49', longitude: '126.98' }), res, undefined);
+  if (res.statusCode !== 503) fail(`VWorld static map without key must be 503, got ${res.statusCode}`);
+  if (saved !== undefined) process.env.VWORLD_API_KEY = saved;
+  const client = readFileSync('src/services/maps/vworldMapProvider.ts', 'utf8');
+  if (!client.includes("VWORLD_ATTRIBUTION = '© 국토교통부 브이월드(VWorld)'") || !client.includes('fillText(VWORLD_ATTRIBUTION')) fail('VWorld map must carry the attribution on the image');
+  if (!readFileSync('src/services/maps/mapService.ts', 'utf8').includes('[vworldMapProvider, naverMapProvider, kakaoMapProvider]')) fail('report static map must prefer VWorld');
+}
 const oneSrc = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
 if (oneSrc.includes("'-'} (${py")) fail('1P area must not print "- (n평)" when ㎡ is missing');
 if (!oneSrc.includes('{points.length > 0 && <section className="d1-points">')) fail('1P must hide the empty 핵심 포인트 section');

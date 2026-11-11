@@ -163,6 +163,9 @@ if (confirmed[3].state !== 'confirmed' || confirmed[3].value !== '38억원' || !
 if (pv.priceLayerCells({ salePrice: 3_000_000_000 }, null).length !== 1) fail('없는 단계는 숨김(빈 칸 없음)');
 if (pv.priceLayerCells(base8, { ...est, state: 'insufficient', low: undefined, mid: undefined, high: undefined, unitMid: undefined }).length !== 2) fail('비교거래 부족이면 시세·추정 칸 숨김');
 if (!pv.askingPosition(3_000_000_000, est).includes('낮습니다')) fail('희망가 위치 해석 오류');
+// Asking price ÷ land value at official price (calculated, 2026-11-11): 41.5억 ÷ 18.5억 → 약 2.24배; missing input → ''.
+if (!pv.officialMultipleLine(4_150_000_000, 1_850_781_000).includes('약 2.24배') || !pv.officialMultipleLine(4_150_000_000, 1_850_781_000).includes('계산값')) fail('공시지가 배율 산출 오류');
+if (pv.officialMultipleLine(4_150_000_000, 0) !== '' || pv.officialMultipleLine(undefined, 1_850_781_000) !== '') fail('공시지가 배율: 입력 누락 시 빈 값이어야 함');
 const srcs = [{ id: 'achievable-price:p1', propertyId: 'p1', metadata: { estimate: est } }, { id: 'achievable-price:p2', propertyId: 'p2', metadata: { estimate: { ...est, mid: 1 } } }];
 if (pv.findPriceEstimate(srcs, 'p1')?.mid !== est.mid || pv.findPriceEstimate(srcs, 'p3') !== null) fail('물건별 추정 출처 조회 오류');
 const one8 = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
