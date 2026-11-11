@@ -37,6 +37,19 @@ eq(rules.floorAreaRatioDisplay(180, '180%', bbFloors, 349.08, 168.1).calculated,
 eq(rules.buildingAgeDisplay('1978-07-31', '2026-11-11T00:00:00Z'), '약 48년 (1978년 사용승인)', 'building age');
 eq(rules.buildingAgeDisplay('1978-12-31', '2026-11-11T00:00:00Z'), '약 47년 (1978년 사용승인)', 'building age before anniversary');
 eq(rules.buildingAgeDisplay('', '2026-11-11T00:00:00Z'), '', 'no date → empty');
+// KST reference date, same result in every viewer time zone (루인 review on #56): 2026-11-11T00:00Z is 11-11 09:00 KST,
+// 2026-11-10T15:00Z is 11-11 00:00 KST (anniversary reached), 2026-11-10T14:59Z is 11-10 23:59 KST (not yet).
+eq(rules.buildingAgeDisplay('1978-11-11', '2026-11-11T00:00:00Z'), '약 48년 (1978년 사용승인)', 'anniversary day (KST)');
+eq(rules.buildingAgeDisplay('1978-11-11', '2026-11-10T15:00:00Z'), '약 48년 (1978년 사용승인)', 'KST midnight boundary reached');
+eq(rules.buildingAgeDisplay('1978-11-11', '2026-11-10T14:59:59Z'), '약 47년 (1978년 사용승인)', 'one second before KST midnight');
+eq(rules.buildingAgeDisplay('1978-11-11', '2026-11-11'), '약 48년 (1978년 사용승인)', 'date-only asOf used as written');
+eq(rules.buildingAgeDisplay('1978-11-11', 'not a date'), '', 'invalid asOf → empty');
+{
+  const { execFileSync } = await import('node:child_process');
+  const probe = "import('./scripts/lib/ts-module-loader.mjs').then(async ({ importTs }) => { const r = await importTs('src/domain/professionalReport/reportDisplayRules.ts'); console.log([r.buildingAgeDisplay('1978-11-11', '2026-11-11T00:00:00Z'), r.buildingAgeDisplay('1978-11-11', '2026-11-10T14:59:59Z')].join('|')); })";
+  const results = ['Asia/Seoul', 'America/Los_Angeles', 'UTC', 'Pacific/Kiritimati'].map((tz) => execFileSync(process.execPath, ['-e', probe], { env: { ...process.env, TZ: tz }, encoding: 'utf8' }).trim());
+  if (new Set(results).size !== 1 || results[0] !== '약 48년 (1978년 사용승인)|약 47년 (1978년 사용승인)') fail(`building age depends on viewer time zone: ${results.join(' / ')}`);
+}
 eq(coverageDisplay(Number.NaN, '', 24.8, 50.85)?.calculated, true, 'NaN register treated as unrecorded');
 eq(coverageDisplay(-3, '-3%', 10, 20)?.value, '약 50%', 'negative register treated as unrecorded');
 

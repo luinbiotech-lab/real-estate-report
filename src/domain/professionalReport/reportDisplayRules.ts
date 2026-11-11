@@ -54,12 +54,24 @@ export function floorAreaRatioDisplay(registerRate: unknown, registerDisplay: st
   return { label: '단순 용적률', value: `약 ${pct.toLocaleString('ko-KR')}%`, calculated: true };
 }
 
-/** Building age from the approval date, as of the snapshot date (calculated). */
+/**
+ * Building age from the approval date, as of the snapshot date (calculated). The reference date is the snapshot's
+ * Korean calendar date (KST, UTC+9) whatever the viewer's time zone, so one snapshot always prints the same age
+ * (루인 review on #56, 2026-11-11). A date-only asOf (YYYY-MM-DD) is used as written.
+ */
 export function buildingAgeDisplay(completionDate: unknown, asOf: string): string {
   const match = typeof completionDate === 'string' ? completionDate.match(/^(\d{4})-(\d{2})-(\d{2})/) : null;
-  const ref = new Date(asOf);
-  if (!match || Number.isNaN(ref.getTime())) return '';
-  let years = ref.getFullYear() - Number(match[1]);
-  if (ref.getMonth() + 1 < Number(match[2]) || (ref.getMonth() + 1 === Number(match[2]) && ref.getDate() < Number(match[3]))) years -= 1;
+  if (!match) return '';
+  let refYear: number; let refMonth: number; let refDay: number;
+  const dateOnly = typeof asOf === 'string' ? asOf.match(/^(\d{4})-(\d{2})-(\d{2})$/) : null;
+  if (dateOnly) { refYear = Number(dateOnly[1]); refMonth = Number(dateOnly[2]); refDay = Number(dateOnly[3]); }
+  else {
+    const time = Date.parse(asOf);
+    if (!Number.isFinite(time)) return '';
+    const kst = new Date(time + 9 * 3_600_000);
+    refYear = kst.getUTCFullYear(); refMonth = kst.getUTCMonth() + 1; refDay = kst.getUTCDate();
+  }
+  let years = refYear - Number(match[1]);
+  if (refMonth < Number(match[2]) || (refMonth === Number(match[2]) && refDay < Number(match[3]))) years -= 1;
   return years >= 0 ? `약 ${years}년 (${match[1]}년 사용승인)` : '';
 }
