@@ -18,11 +18,22 @@ assert.deepEqual(pins.map((pin) => pin.id), ['a', 'e'], 'only real in-Korea coor
 assert.equal(missing, 3, '0/NaN/missing coordinates are counted as 좌표 없음, not placed');
 assert.equal(m.escapeHtml('<b>"x" & \'y\''), '&lt;b&gt;&quot;x&quot; &amp; &#39;y&#39;');
 
+// 루인 #61 BLOCKING: two regions → select one → delete its last property → the list falls back to 전체, never sticks at 0.
+const before = [{ address: '서울 서초구 방배동 1' }, { address: '서울 성동구 성수동 2' }];
+assert.equal(m.effectiveRegion('서초구', m.regionCounts(before)), '서초구');
+const afterDelete = before.slice(1);
+const fallback = m.effectiveRegion('서초구', m.regionCounts(afterDelete));
+assert.equal(fallback, '전체', 'deleted region falls back to 전체');
+assert.equal(afterDelete.filter((p) => fallback === '전체' || m.regionOf(p) === fallback).length, 1, 'remaining property stays visible');
+assert.equal(m.effectiveRegion('전체', []), '전체');
+
 const page = readFileSync('src/pages/PropertyList.tsx', 'utf8');
-for (const marker of ['aria-label="지역"', "region === '전체' || regionOf(property) === region", 'portfolioMapAvailable()', '<PortfolioMapPanel', 'mapPins(filtered']) {
+for (const marker of ['aria-label="지역"', "activeRegion === '전체' || regionOf(property) === activeRegion", 'effectiveRegion(region, regions)', 'portfolioMapAvailable()', '<PortfolioMapPanel', 'mapPins(filtered']) {
   assert.ok(page.includes(marker), `PropertyList marker missing: ${marker}`);
 }
 const panel = readFileSync('src/components/PortfolioMapPanel.tsx', 'utf8');
 assert.ok(panel.includes('escapeHtml(pin.name)') && panel.includes('escapeHtml(pin.priceLabel)'), 'overlay text must be escaped');
 assert.ok(panel.includes('Boolean(getKakaoJavascriptKey())'), 'map is gated on a configured key (no empty map box)');
+assert.ok(panel.includes('if (!sdk) { if (active) setError(MAP_INIT_ERROR); return; }'), 'script loaded without kakao.maps shows an explicit error');
+assert.ok(panel.includes('hidden={!pins.length || Boolean(error)}'), 'empty map canvas hidden on error');
 console.log('PASS portfolio map: region parsing/counts, coordinate-gated pins, escaping, key gate, home wiring');

@@ -13,7 +13,7 @@ import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
 import { LISTING_STATUS_LABEL } from '../services/marketPresenceService';
 import PortfolioMapPanel, { portfolioMapAvailable } from '../components/PortfolioMapPanel';
-import { mapPins, regionCounts, regionOf } from '../domain/propertyDetail/portfolioMap';
+import { effectiveRegion, mapPins, regionCounts, regionOf } from '../domain/propertyDetail/portfolioMap';
 
 const PROPERTY_PAGE_SIZE = 50;
 
@@ -57,7 +57,9 @@ export default function PropertyList() {
   const managers = [...new Set(items.map((item) => item.managerName).filter(Boolean))];
   const [region, setRegion] = useState('전체'); const [hoverId, setHoverId] = useState<string>();
   const regions = useMemo(() => regionCounts(items), [items]);
-  const filtered = useMemo(() => items.filter((property) => (region === '전체' || regionOf(property) === region) && (type === '전체' || property.tradeType === type) && (manager === '전체' || property.managerName === manager) && [property.name, property.address, property.propertyNumber, property.buildingName].some((value) => String(value ?? '').toLowerCase().includes(query.toLowerCase()))), [items, query, type, manager, region]);
+  const activeRegion = effectiveRegion(region, regions);
+  useEffect(() => { if (activeRegion !== region) setRegion(activeRegion); }, [activeRegion, region]);
+  const filtered = useMemo(() => items.filter((property) => (activeRegion === '전체' || regionOf(property) === activeRegion) && (type === '전체' || property.tradeType === type) && (manager === '전체' || property.managerName === manager) && [property.name, property.address, property.propertyNumber, property.buildingName].some((value) => String(value ?? '').toLowerCase().includes(query.toLowerCase()))), [items, query, type, manager, activeRegion]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / PROPERTY_PAGE_SIZE));
   const visible = useMemo(() => filtered.slice((page - 1) * PROPERTY_PAGE_SIZE, page * PROPERTY_PAGE_SIZE), [filtered, page]);
   const visibleIds = useMemo(() => visible.map((item) => item.id), [visible]);

@@ -45,3 +45,8 @@ export function mapPins(properties: Property[], priceLabel: (property: Property)
 
 /** HTML-escape for map overlay content (names are user-entered). */
 export const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (ch) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]!));
+
+/** A selected region that no longer exists (e.g. its last property was deleted) falls back to 전체, so the list never sticks at 0 (루인 #61). */
+export function effectiveRegion(selected: string, regions: RegionCount[]): string {
+  return selected === '전체' || regions.some((item) => item.region === selected) ? selected : '전체';
+}
