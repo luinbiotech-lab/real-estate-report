@@ -49,8 +49,22 @@ try {
   if (await settingsToggle.getAttribute('aria-expanded') !== 'true') throw new Error('패널 안 화면에서는 설정 메뉴가 펼쳐져 있어야 합니다.');
   const crumbs = page.getByRole('navigation', { name: '현재 위치' });
   for (const text of ['물건 목록', '전문 분석', '공간 운영']) await crumbs.getByText(text).waitFor({ state: 'visible' });
+  // From a panel screen, the main entries close the panel again (루인 #58 review): 조회, 보고서, then 물건 via the breadcrumb.
+  for (const [label, path] of [['조회', '/discover'], ['보고서', '/report-history']]) {
+    await mainNav.getByRole('link', { name: '공간 운영' }).click().catch(async () => { await settingsToggle.click(); await mainNav.getByRole('link', { name: '공간 운영' }).click(); });
+    await page.waitForURL(/\/room-ops$/);
+    await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().click();
+    await page.waitForURL((url) => url.pathname === path);
+    const closed = await page.waitForFunction(() => document.querySelector('.side-settings-toggle')?.getAttribute('aria-expanded') === 'false' && !document.querySelector('#side-menu-panel'), null, { timeout: 5_000 }).then(() => true).catch(() => false);
+    if (!closed) throw new Error(`${label}로 이동했는데 설정 패널이 열려 있습니다.`);
+  }
+  await settingsToggle.click();
+  await mainNav.getByRole('link', { name: '공간 운영' }).click();
+  await page.waitForURL(/\/room-ops$/);
   await crumbs.getByRole('link', { name: '물건 목록' }).click();
   await page.waitForURL((url) => url.pathname === '/');
+  const closedHome = await page.waitForFunction(() => document.querySelector('.side-settings-toggle')?.getAttribute('aria-expanded') === 'false', null, { timeout: 5_000 }).then(() => true).catch(() => false);
+  if (!closedHome) throw new Error('물건 목록으로 돌아왔는데 설정 패널이 열려 있습니다.');
 
   // Phone width: the closed drawer is off-canvas and inert; the toggle opens it and Escape closes it.
   await page.setViewportSize({ width: 390, height: 844 });
