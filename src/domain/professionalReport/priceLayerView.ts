@@ -22,6 +22,9 @@ export interface AchievablePriceEstimate {
   method: string; note: string; computedAt: string; comparableCount: number;
   /** Deals used whose dong is not confirmed as the subject's (blank in the source, or no subject dong). Absent on estimates stored before 2026-11-12. */
   legalDongUnconfirmedCount?: number;
+  /** Lookup legal dong the count was measured against and the rule id; absent on older estimates. */
+  subjectLegalDong?: string;
+  dongScopeRule?: string;
   landAreaSqm?: number; low?: number; mid?: number; high?: number; unitLow?: number; unitMid?: number; unitHigh?: number;
   areaRange?: { minSqm: number; maxSqm: number };
   excluded?: { upstream?: number; bulk?: number; tooSmall?: number; tooLarge?: number };
@@ -131,18 +134,28 @@ export function officialMultipleLine(askingPrice: number | undefined, officialLa
 
 export const PRICE_ESTIMATE_METHOD_NOTE = '거래가능가격 추정은 최근 6개월 공개 실거래 중 법정동이 본건과 같거나 확인되지 않은 거래(해제·지분·일괄 거래 정리) 중 대지 규모가 본건의 0.5~2배인 거래가 5건 이상일 때만, 토지 평당가 하위 25%·중앙값·상위 25%에 본건 토지면적을 곱해 계산한 DA:ON 자동 추정 범위입니다. 감정평가가 아니며, 중개사가 근거와 함께 입력한 가격이 있으면 그 값을 우선 표시합니다.';
 
+/** Must equal api/_lib/priceLayers.mjs DONG_SCOPE_RULE; counts measured under any other rule are not trusted. */
+export const DONG_SCOPE_RULE = 'legal_dong_exact_v1';
+
 /**
- * Scope of the deals behind the estimate, worded to what was actually checked. Rows with a blank legal dong are kept by the
- * district query, so they are never called "same dong". Old stored estimates without the count: derive it only when every
- * used deal is stored; otherwise say both kinds may be included.
+ * Scope of the deals behind the estimate, worded to what was actually checked (Ruin reviews 2026-11-12).
+ * A "same dong" claim needs a count measured under the current exact-name rule against a known lookup dong. Older stored
+ * estimates have no such basis: deals with a blank dong are certainly unconfirmed, the rest are not claimed either way.
+ * Stored snapshots are never rewritten; this only changes how they are worded when read.
  */
-export function estimateScopeLabel(estimate: Pick<AchievablePriceEstimate, 'comparableCount' | 'legalDongUnconfirmedCount' | 'deals'> | null | undefined): string {
+export function estimateScopeLabel(estimate: Pick<AchievablePriceEstimate, 'comparableCount' | 'legalDongUnconfirmedCount' | 'deals' | 'subjectLegalDong' | 'dongScopeRule'> | null | undefined): string {
   if (!estimate) return '';
   const total = Math.max(estimate.comparableCount ?? 0, estimate.deals?.length ?? 0);
-  let unconfirmed = typeof estimate.legalDongUnconfirmedCount === 'number' && Number.isFinite(estimate.legalDongUnconfirmedCount) ? estimate.legalDongUnconfirmedCount : undefined;
-  if (unconfirmed === undefined && estimate.deals && estimate.deals.length >= total) unconfirmed = estimate.deals.filter((deal) => !String(deal.legalDong || '').trim()).length;
-  if (unconfirmed === undefined) return '같은 동 또는 동 미확인 거래';
-  if (unconfirmed <= 0) return '모두 같은 동 확인';
-  if (unconfirmed >= total) return `모두 동 미확인 ${unconfirmed}건`;
-  return `같은 동 ${total - unconfirmed}건·동 미확인 ${unconfirmed}건`;
+  const count = estimate.legalDongUnconfirmedCount;
+  const measured = estimate.dongScopeRule === DONG_SCOPE_RULE && typeof count === 'number' && Number.isFinite(count);
+  if (measured && total > 0) {
+    // Without a lookup dong nothing can be confirmed, whatever count was stored.
+    const unconfirmed = String(estimate.subjectLegalDong ?? '').trim() ? Math.min(Math.max(count as number, 0), total) : total;
+    if (unconfirmed === 0) return '모두 같은 동 확인';
+    if (unconfirmed >= total) return `모두 동 미확인 ${unconfirmed}건`;
+    return `같은 동 ${total - unconfirmed}건·동 미확인 ${unconfirmed}건`;
+  }
+  // No verified basis: only "all blank" can be stated; otherwise stay conservative.
+  if (estimate.deals && total > 0 && estimate.deals.length >= total && estimate.deals.every((deal) => !String(deal.legalDong || '').trim())) return `모두 동 미확인 ${total}건`;
+  return '같은 동 또는 동 미확인 거래';
 }

@@ -162,24 +162,34 @@ console.log('Report display rules (short labels, calculated coverage, device fit
   const { estimateAchievablePrice } = await import('../api/_lib/priceLayers.mjs');
   const deal = (i, legalDong) => ({ dealDate: `2026-0${(i % 9) + 1}-10`, legalDong, jibun: `${800 + i}`, type: 'commercial', dealAmount: 3_000_000_000 + i * 10_000_000, landAreaSqm: 170, landPricePerPyeong: Math.round((3_000_000_000 + i * 10_000_000) / (170 / 3.305785)) });
   const rows = [...Array.from({ length: 8 }, (_, i) => deal(i, '방배동')), deal(8, ''), deal(9, '  ')];
-  const est = estimateAchievablePrice({ landAreaSqm: 168.1, rows, computedAt: '2026-11-12T00:00:00Z' });
+  // Ruin review 2026-11-12 (78796b3): the count is trusted only when measured with the exact-name rule against a known lookup dong.
+  const est = estimateAchievablePrice({ landAreaSqm: 168.1, rows, computedAt: '2026-11-12T00:00:00Z', subjectDong: '방배동' });
   eq(est.comparableCount, 10, 'blank-dong rows are still used (selection unchanged)');
-  eq(est.legalDongUnconfirmedCount, 2, 'API counts used deals whose legal dong is blank');
+  eq(est.legalDongUnconfirmedCount, 2, 'subject dong: blank-dong deals unconfirmed');
+  eq(est.subjectLegalDong, '방배동', 'estimate stores the lookup dong it was measured against');
+  eq(est.dongScopeRule, pv.DONG_SCOPE_RULE, 'estimate stores the rule id (API and view agree)');
   eq(pv.estimateScopeLabel(est), '같은 동 8건·동 미확인 2건', 'mixed scope is spelled out');
-  eq(pv.estimateScopeLabel({ comparableCount: 8, legalDongUnconfirmedCount: 0 }), '모두 같은 동 확인', 'all confirmed');
-  eq(pv.estimateScopeLabel({ comparableCount: 5, legalDongUnconfirmedCount: 5 }), '모두 동 미확인 5건', 'all blank');
-  // Stored before the count existed: derive only when every used deal is stored, otherwise do not claim "same dong".
-  eq(pv.estimateScopeLabel({ comparableCount: 2, deals: [{ legalDong: '방배동' }, { legalDong: '' }] }), '같은 동 1건·동 미확인 1건', 'legacy full list derives the count');
+  const allSame = estimateAchievablePrice({ landAreaSqm: 168.1, rows: Array.from({ length: 6 }, (_, i) => deal(i, '방배동')), subjectDong: '방배동' });
+  eq(pv.estimateScopeLabel(allSame), '모두 같은 동 확인', 'all confirmed under the current rule');
+  // Legacy call (no subject dong) over five different dongs: nothing is confirmed, never "모두 같은 동 확인".
+  const fiveDongs = ['방배동', '서초동', '반포동', '잠원동', '양재동'].map((name, i) => deal(i, name));
+  const legacyCall = estimateAchievablePrice({ landAreaSqm: 168.1, rows: fiveDongs });
+  eq(legacyCall.legalDongUnconfirmedCount, 5, 'no subject dong confirms no deal');
+  eq(pv.estimateScopeLabel(legacyCall), '모두 동 미확인 5건', 'no subject dong → all unconfirmed');
+  // Stored estimates from before the rule id: a count of 0 or a full deal list is not proof of "same dong".
+  eq(pv.estimateScopeLabel({ comparableCount: 5, legalDongUnconfirmedCount: 0 }), '같은 동 또는 동 미확인 거래', 'old stored count 0 is not trusted');
+  eq(pv.estimateScopeLabel({ comparableCount: 5, legalDongUnconfirmedCount: 0, deals: fiveDongs }), '같은 동 또는 동 미확인 거래', 'old full list of named dongs is not trusted');
+  eq(pv.estimateScopeLabel({ comparableCount: 5, legalDongUnconfirmedCount: 0, dongScopeRule: pv.DONG_SCOPE_RULE, subjectLegalDong: '' }), '모두 동 미확인 5건', 'rule id without a lookup dong confirms nothing');
+  eq(pv.estimateScopeLabel({ comparableCount: 2, deals: [{ legalDong: '' }, { legalDong: ' ' }] }), '모두 동 미확인 2건', 'old full list of blank dongs is stated as unconfirmed');
   eq(pv.estimateScopeLabel({ comparableCount: 10, deals: Array.from({ length: 8 }, () => ({ legalDong: '방배동' })) }), '같은 동 또는 동 미확인 거래', 'legacy truncated list does not claim same dong');
   const sevenSrc = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
   if (!sevenSrc.includes('{estimateScopeLabel(priceEstimate)}·최근 6개월') || /건\(같은 동·최근 6개월\)/.test(sevenSrc)) fail('page 4 basis note must print the verified dong scope');
   if (/같은 동·최근 6개월/.test(pv.PRICE_ESTIMATE_METHOD_NOTE)) fail('method note must not call every deal same-dong');
-  // Subject dong given: a deal naming another dong or none is unconfirmed; an empty subject dong confirms nothing.
-  eq(estimateAchievablePrice({ landAreaSqm: 168.1, rows, subjectDong: '방배동' }).legalDongUnconfirmedCount, 2, 'subject dong: blank-dong deals unconfirmed');
   eq(estimateAchievablePrice({ landAreaSqm: 168.1, rows, subjectDong: '' }).legalDongUnconfirmedCount, 10, 'blank subject dong confirms no deal');
+  eq(estimateAchievablePrice({ landAreaSqm: 168.1, rows: [...Array.from({ length: 5 }, (_, i) => deal(i, '신정동'))], subjectDong: '정동' }).legalDongUnconfirmedCount, 5, 'substring dong is not confirmed');
   const disc = readFileSync('api/property-discovery.mjs', 'utf8');
-  if (!disc.includes("const matchLevel=!masked && jibun===targetJibun && sameDong") || !disc.includes("Boolean(legalDong && subjectDong && legalDong.includes(subjectDong))")) fail('exact_lot/same_dong need a confirmed, non-empty dong');
-  if (!disc.includes('const inDongOrUnknown=r=>!subjectDong || !r.legalDong || r.legalDong.includes(subjectDong);') || !disc.includes('rows:marketRows,subjectDong')) fail('discovery must pass the subject dong to the estimate');
+  if (!disc.includes("const matchLevel=!masked && jibun===targetJibun && sameDong") || !disc.includes('const sameDong=sameLegalDong(legalDong,subjectDong);')) fail('exact_lot/same_dong need an exact, non-empty dong');
+  if (!disc.includes('const inDongOrUnknown=r=>!subjectDong || !r.legalDong || sameLegalDong(r.legalDong,subjectDong);') || !disc.includes('rows:marketRows,subjectDong') || /\.includes\(subjectDong\)/.test(disc)) fail('discovery must use the exact dong rule everywhere');
   console.log('PASS estimate dong scope: blank legal dong counted and never printed as same dong');
 }
 
