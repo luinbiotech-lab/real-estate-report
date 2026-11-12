@@ -30,7 +30,7 @@ function makeHarness(loaderSource) {
   const bundleRequests = new Map([['A', deferred()], ['B', deferred()]]);
   const requestRef = { current: 0 };
   const loadedRef = { current: '' };
-  const state = { property: undefined, bundle: undefined, loading: false, error: '' };
+  const state = { property: undefined, bundle: undefined, loading: false, error: '', freshness: 'current' };
   const repository = { getById: (id) => propertyRequests.get(id).promise };
   const service = { getBundle: (id) => bundleRequests.get(id).promise };
   const compiled = ts.transpileModule(`${loaderSource}\nmodule.exports = load;`, {
@@ -45,6 +45,8 @@ function makeHarness(loaderSource) {
       setError: (value) => { state.error = value; },
       setProperty: (value) => { state.property = value; },
       setBundle: (value) => { state.bundle = value; },
+      setFreshness: (value) => { state.freshness = value; },
+      nextDataRoomFreshness: (event) => (event === 'loaded' ? 'current' : 'stale'),
       propertyRepository: repository, propertyDataRoomService: service, scopeDataRoomBundle,
       emptyBundle: { documents: [], media: [] },
     });
@@ -106,6 +108,21 @@ assert.equal(missing.state.loading, false);
   h.bundleRequests.get('B').resolve({ documents: [{ id: 'B-doc-2', propertyId: 'B' }] });
   await again;
   assert.deepEqual(h.state.bundle.documents.map((row) => row.id), ['B-doc-2'], 'refresh must apply the new bundle');
+  assert.equal(h.state.freshness, 'current', 'successful refresh keeps the Data Room summary current');
+  // 루인 #59: a failed same-Property refresh must mark the summary stale (근거 panel shows 확인 불가), then recover.
+  h.propertyRequests.set('B', deferred()); h.bundleRequests.set('B', deferred());
+  const failing = h.loadFor('B')();
+  h.propertyRequests.get('B').resolve({ id: 'B' });
+  h.bundleRequests.get('B').reject(new Error('network'));
+  await failing;
+  assert.equal(h.state.freshness, 'stale', 'failed same-Property refresh must mark the Data Room summary stale');
+  h.propertyRequests.set('B', deferred()); h.bundleRequests.set('B', deferred());
+  const recover = h.loadFor('B')();
+  h.propertyRequests.get('B').resolve({ id: 'B' });
+  h.bundleRequests.get('B').resolve({ documents: [{ id: 'B-doc-3', propertyId: 'B' }] });
+  await recover;
+  assert.equal(h.state.freshness, 'current', 'next successful refresh must restore the summary');
+  assert.deepEqual(h.state.bundle.documents.map((row) => row.id), ['B-doc-3']);
   const other = h.loadFor('A')();
   assert.equal(h.state.property, undefined, 'switching Property must clear the old Property immediately');
   h.propertyRequests.get('A').resolve({ id: 'A' });
