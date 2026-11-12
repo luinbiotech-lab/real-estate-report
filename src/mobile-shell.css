@@ -214,3 +214,14 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 @media(max-width:480px){.data-room-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .data-room-overview{display:block}
 .data-room-overview>section.data-room-counts{border:0;padding:0;min-height:0}
+/* 2026-11-12 PC follow-up: main menu = 물건/조회/보고서 + 설정 toggle; 설정 opens one panel with every other screen. */
+.app-shell nav .side-settings-toggle{width:100%;border:0;background:transparent;font:inherit;text-align:left;cursor:pointer;display:grid;grid-template-columns:20px 1fr 18px}
+.app-shell nav .side-settings-toggle:hover{background:#ffffff0d;color:#fff}
+.app-shell nav .side-settings-toggle[aria-expanded="true"] .side-category-chevron{transform:rotate(180deg)}
+.app-shell nav .side-settings-toggle.has-active strong::after{content:'';display:inline-block;width:6px;height:6px;border-radius:50%;background:#d7b46a;margin-left:6px;vertical-align:middle}
+.side-menu-panel{display:grid;gap:4px;margin-top:10px;padding:6px 0 10px;max-height:calc(100vh - 360px);overflow-y:auto}
+.side-menu-section+.side-menu-section{border-top:1px solid #ffffff12;padding-top:6px}
+.app-shell aside nav .side-menu-heading{margin:6px 10px 2px;font-size:11px;font-weight:700;letter-spacing:.4px;color:#9fb0c3}
+.app-shell aside nav .side-menu-section.has-active .side-menu-heading{color:#d7b46a}
+.side-menu-panel .side-category-items{padding:0 4px 4px 8px}
+@media(max-width:900px){.side-menu-panel{max-height:none;overflow:visible;margin-top:18px}}

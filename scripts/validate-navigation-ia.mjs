@@ -56,12 +56,17 @@ if (nav.navGroups.length > 6) throw new Error(`메뉴 그룹은 6개 이하로 �
 if (nav.bottomTabs.map((tab) => tab.label).join('/') !== '물건/조회/보고서/설정') throw new Error(`하단 탭은 물건/조회/보고서/설정 4개여야 합니다: ${nav.bottomTabs.map((tab) => tab.label).join('/')}`);
 const expectTab = { '/': 'property', '/property/abc': 'property', '/property/new': 'property', '/risk': 'property', '/digital-twin': 'property', '/discover': 'discover', '/import': 'discover', '/bulk-intake': 'discover', '/report-history': 'report', '/external-shares': 'report', '/settings': 'settings', '/access': 'settings', '/backup': 'settings', '/control-center': 'settings', '/agents/a1': 'settings' };
 for (const [path, tab] of Object.entries(expectTab)) if (nav.bottomTabOf(path) !== tab) throw new Error(`하단 탭 매핑 불일치: ${path} → ${nav.bottomTabOf(path)} (기대 ${tab})`);
+// PC main menu = the same 물건/조회/보고서 entries + a 설정 toggle; the 설정 panel lists every group, admin first.
+if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '물건:/|조회:/discover|보고서:/report-history') throw new Error(`PC 주 메뉴는 물건/조회/보고서여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
+if (nav.menuPanelGroups()[0].id !== 'settings' || nav.menuPanelGroups().length !== nav.navGroups.length) throw new Error('설정 패널은 설정 그룹을 먼저, 모든 그룹을 빠짐없이 보여야 합니다.');
+for (const [path, expected] of Object.entries({ '/': false, '/discover': false, '/report-history': false, '/property/abc': false, '/risk': true, '/settings': true, '/agents/a1': true, '/import': true })) if (nav.isMenuPanelPath(path) !== expected) throw new Error(`설정 패널 펼침 판정 오류: ${path}`);
+for (const marker of ['side-settings-toggle', 'aria-controls="side-menu-panel"']) if (!layout.includes(marker)) throw new Error(`PC 설정 토글 계약 누락: ${marker}`);
 const settingsGroup = nav.navGroups.find((group) => group.id === 'settings');
 for (const path of ['/settings', '/access', '/backup', '/control-center', '/agents', '/migration-readiness']) if (!settingsGroup?.items.some((item) => item.to === path)) throw new Error(`관리 화면은 설정 그룹에 있어야 합니다: ${path}`);
 for (const marker of ['bottomTabs.map', 'className="bottom-tabs"', 'aria-label="하단 메뉴"', "setOpenGroup('settings')"]) if (!layout.includes(marker)) throw new Error(`하단 탭 계약 누락: ${marker}`);
 
 // The shell must render from the config, keep the drawer out of the tab order when closed, and show breadcrumbs.
-for (const marker of ['navGroups.map', 'primaryNav.map', 'resolveRouteContext(location.pathname)', 'inert={drawerHidden}', 'aria-label="현재 위치"', "event.key === 'Escape'"]) {
+for (const marker of ['menuPanelGroups().map', 'primaryNav.map', 'resolveRouteContext(location.pathname)', 'inert={drawerHidden}', 'aria-label="현재 위치"', "event.key === 'Escape'"]) {
   if (!layout.includes(marker)) throw new Error(`Layout IA 계약 누락: ${marker}`);
 }
 
