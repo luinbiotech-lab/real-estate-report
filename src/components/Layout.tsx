@@ -3,7 +3,7 @@ import { activeBrand } from '../brand/activeBrand';
 import { AddRounded, ArrowBackRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, MenuRounded, CloseRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { navGroups, primaryNav, resolveRouteContext, type NavIconKey } from '../navigation/navConfig';
+import { bottomTabOf, bottomTabs, navGroups, primaryNav, resolveRouteContext, type NavIconKey } from '../navigation/navConfig';
 
 /* Stable navigation contract markers retained for CI validators (the rendered menu comes from src/navigation/navConfig.ts;
    scripts/validate-navigation-ia.mjs checks that every App route is actually reachable from it):
@@ -74,6 +74,8 @@ export default function Layout() {
   }, [mobileNavOpen]);
   // On phones the closed drawer is off-canvas; keep it out of the tab order and the accessibility tree.
   const drawerHidden = isMobile && !mobileNavOpen;
+  const activeTab = bottomTabOf(location.pathname);
+  const openSettings = () => { setOpenGroup('settings'); setMobileNavOpen(true); };
 
   return <div className="app-shell"><button ref={toggleRef} type="button" className="mobile-menu-toggle" aria-label={mobileNavOpen ? '메뉴 닫기' : '메뉴 열기'} aria-expanded={mobileNavOpen} aria-controls="daon-main-drawer" onClick={() => setMobileNavOpen(v => !v)}>{mobileNavOpen ? <CloseRounded /> : <MenuRounded />}</button>{mobileNavOpen && <button type="button" className="mobile-nav-backdrop" aria-label="메뉴 닫기" tabIndex={-1} onClick={() => setMobileNavOpen(false)} />}<aside id="daon-main-drawer" className={mobileNavOpen ? 'mobile-nav-open' : ''} inert={drawerHidden} aria-hidden={drawerHidden || undefined}>
     <div className="brand"><span aria-hidden="true">{activeBrand.mark}</span><div>{activeBrand.name}<small>{activeBrand.tagline}</small></div></div>
@@ -105,5 +107,11 @@ export default function Layout() {
     </div>}
     {propertyId && <div className="detail-document-actions"><span>MASTER 문서</span><Button size="small" startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${propertyId}`)}>7P 상세보고서</Button><Button size="small" startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${propertyId}`)}>1P 요약제안서</Button><Button size="small" startIcon={<MapOutlined />} onClick={() => navigate(`/properties/${propertyId}/briefing`)}>입지 브리핑</Button></div>}
     <Outlet />
-  </main></div>;
+  </main>{isMobile && <div role="navigation" className="bottom-tabs" aria-label="하단 메뉴">{bottomTabs.map((tab) => {
+    const active = activeTab === tab.key;
+    const body = <>{navIcons[tab.icon]}<span>{tab.label}</span></>;
+    return tab.to
+      ? <Link key={tab.key} to={tab.to} className={`bottom-tab ${active ? 'active' : ''}`} aria-current={active ? 'page' : undefined}>{body}</Link>
+      : <button key={tab.key} type="button" className={`bottom-tab ${active ? 'active' : ''}`} aria-expanded={mobileNavOpen} aria-controls="daon-main-drawer" onClick={openSettings}>{body}</button>;
+  })}</div>}</div>;
 }

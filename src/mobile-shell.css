@@ -139,3 +139,16 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 @media(max-width:760px){.property-screen-header{flex-direction:row;align-items:flex-end;gap:8px;padding-top:0}.property-screen-header h1{font-size:22px;margin:0 0 2px}.property-screen-header>div:first-child>.MuiButton-root,.property-screen-header .eyebrow{display:none}.property-screen-header p{font-size:13px;margin:0}.property-screen-tabs .MuiTab-root{font-size:13px}}
 .property-market-editor{margin-top:16px;border:1px solid #d9e0e8;border-radius:12px;background:#fff;padding:0 14px}
 .property-market-editor>summary{cursor:pointer;padding:14px 0;font-weight:700;color:#073a69}
+
+/* Bottom tabs (2026-11-12 IA redesign): 물건 / 조회 / 보고서 / 설정 on phones */
+.bottom-tabs{display:none}
+@media(max-width:900px){
+  .bottom-tabs{position:fixed;left:0;right:0;bottom:0;z-index:1100;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #d9e0e8;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 14px #10243c10}
+  .bottom-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;border:0;background:none;color:#667085;font:inherit;font-size:11.5px;font-weight:600;text-decoration:none;cursor:pointer}
+  .bottom-tab svg{font-size:22px}
+  .bottom-tab.active{color:#10243d}
+  .bottom-tab.active svg{color:#b8923f}
+  .app-shell main{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  .property-report-bar{bottom:calc(56px + env(safe-area-inset-bottom));padding-bottom:10px}
+  .data-room-page{padding-bottom:140px}
+}
