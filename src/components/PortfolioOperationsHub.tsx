@@ -1,6 +1,6 @@
 import { AdminPanelSettingsRounded, FactCheckRounded, HistoryRounded, PaidRounded, PlaylistAddCheckRounded, RateReviewRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
-import { SearchRounded, AddRounded, ArrowForwardRounded, ExpandMoreRounded } from '@mui/icons-material';
+import { ArrowForwardRounded, ExpandMoreRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { AUTH_BACKEND_CONNECTED } from '../services/accessControlService';
 import { externalShareProviderService } from '../services/externalShareProviderService';
