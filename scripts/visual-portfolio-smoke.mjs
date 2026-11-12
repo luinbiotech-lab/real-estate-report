@@ -45,12 +45,12 @@ try {
 
   // IA (Issue #9): Korean domain groups expand to their pages and nested pages show a breadcrumb trail.
   const mainNav = page.getByRole('navigation', { name: 'DA:ON 주 메뉴' });
-  for (const group of ['물건 관리', '자료 · 검증', '보고서 · 공유', '분석 · 3D', '운영 · 설정']) await mainNav.getByRole('button', { name: new RegExp(group) }).waitFor({ state: 'visible' });
-  await mainNav.getByRole('button', { name: /분석 · 3D/ }).click();
+  for (const group of ['물건', '조회 · 대량 등록', '보고서 · 공유', '전문 분석', '설정']) await mainNav.getByRole('button', { name: new RegExp(group) }).waitFor({ state: 'visible' });
+  await mainNav.getByRole('button', { name: /전문 분석/ }).click();
   await mainNav.getByRole('link', { name: '공간 운영' }).click();
   await page.waitForURL(/\/room-ops$/);
   const crumbs = page.getByRole('navigation', { name: '현재 위치' });
-  for (const text of ['부동산 홈', '분석 · 3D', '공간 운영']) await crumbs.getByText(text).waitFor({ state: 'visible' });
+  for (const text of ['부동산 홈', '전문 분석', '공간 운영']) await crumbs.getByText(text).waitFor({ state: 'visible' });
   await crumbs.getByRole('link', { name: '부동산 홈' }).click();
   await page.waitForURL((url) => url.pathname === '/');
 
@@ -62,6 +62,13 @@ try {
   if (!becameInert) throw new Error(`닫힌 모바일 메뉴가 키보드 포커스 대상에 남아 있습니다. (inert=${await drawer.getAttribute('inert')}, aria-hidden=${await drawer.getAttribute('aria-hidden')}, width=${await page.evaluate(() => innerWidth)}, mq=${await page.evaluate(() => matchMedia('(max-width: 900px)').matches)})`);
   await page.getByRole('button', { name: '메뉴 열기' }).click();
   await page.getByRole('navigation', { name: 'DA:ON 주 메뉴' }).getByRole('link', { name: '주소로 물건 조회' }).waitFor({ state: 'visible' });
+  await page.keyboard.press('Escape');
+  await page.waitForFunction(() => document.querySelector('#daon-main-drawer')?.hasAttribute('inert'));
+  // Bottom tabs (2026-11-12): 물건/조회/보고서/설정; 설정 opens the menu on the admin group.
+  const tabs = page.getByRole('navigation', { name: '하단 메뉴' });
+  for (const label of ['물건', '조회', '보고서', '설정']) await tabs.getByText(label, { exact: true }).waitFor({ state: 'visible' });
+  await tabs.getByRole('button', { name: '설정' }).click();
+  for (const label of ['회사 설정', '사용자 · 권한 관리', '데이터 백업 · 복원']) await page.getByRole('navigation', { name: 'DA:ON 주 메뉴' }).getByRole('link', { name: label }).waitFor({ state: 'visible' });
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => document.querySelector('#daon-main-drawer')?.hasAttribute('inert'));
   const overflow = await page.evaluate(() => document.scrollingElement.scrollWidth - window.innerWidth);
