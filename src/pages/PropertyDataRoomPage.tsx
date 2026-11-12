@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, EditOutlined, MapOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, MenuItem, Tab, Tabs, TextField } from '@mui/material';
+import PropertyHubPage from './PropertyHubPage';
 import ComparableTransactionOverviewPanel from '../components/propertyDataRoom/ComparableTransactionOverviewPanel';
 import ComparableTransactionPanel from '../components/propertyDataRoom/ComparableTransactionPanel';
 import DocumentExtractionPanel from '../components/propertyDataRoom/DocumentExtractionPanel';
@@ -19,8 +20,24 @@ import { reportSnapshotService } from '../services/reportEngine';
 import type { Property } from '../types';
 import { formatArea, formatWon } from '../utils/format';
 
-type TabKey = 'overview' | 'media' | 'spatial' | 'documents' | 'official' | 'market' | 'verification' | 'reports' | 'digitalTwin';
-const TAB_KEYS: TabKey[] = ['overview', 'media', 'spatial', 'documents', 'official', 'market', 'verification', 'reports', 'digitalTwin'];
+type TabKey = 'summary' | 'overview' | 'media' | 'spatial' | 'documents' | 'official' | 'market' | 'verification' | 'reports' | 'digitalTwin' | 'more';
+const TAB_KEYS: TabKey[] = ['summary', 'overview', 'media', 'spatial', 'documents', 'official', 'market', 'verification', 'reports', 'digitalTwin', 'more'];
+// 2026-11-12 site redesign (owner approved): one property screen = 4 tabs the user knows + 더 보기. Every former Data Room
+// tab still exists under one group, so old ?tab= links open the same panel.
+type GroupKey = 'summary' | 'land' | 'market' | 'files' | 'more';
+const TAB_GROUPS: Array<{ key: GroupKey; label: string; tabs: TabKey[] }> = [
+  { key: 'summary', label: '요약', tabs: ['summary'] },
+  { key: 'land', label: '토지·건물', tabs: ['official', 'spatial'] },
+  { key: 'market', label: '실거래·가격', tabs: ['market'] },
+  { key: 'files', label: '자료', tabs: ['overview', 'media', 'documents', 'verification', 'reports'] },
+  { key: 'more', label: '더 보기', tabs: ['more', 'digitalTwin'] },
+];
+const SUB_TAB_LABELS: Partial<Record<TabKey, string>> = {
+  official: '공적자료·출처', spatial: '도면·층별', overview: '자료 현황', media: '사진·영상', documents: '문서', verification: '자료 검증', reports: '보고서 버전', more: '전문 기능', digitalTwin: '3D·Walkthrough',
+};
+export function groupOfTab(tab: TabKey): GroupKey {
+  return TAB_GROUPS.find((group) => group.tabs.includes(tab))?.key ?? 'summary';
+}
 const emptyBundle: DataRoomBundle = { documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
 const officialTypes: DocumentType[] = ['building_register', 'land_register', 'land_use_plan', 'registry', 'cadastral_map'];
 
@@ -54,10 +71,11 @@ export default function PropertyDataRoomPage() {
   const { id = '' } = useParams(); const navigate = useNavigate(); const [searchParams] = useSearchParams();
   const requestedTab = searchParams.get('tab');
   const [property, setProperty] = useState<Property>(); const [bundle, setBundle] = useState<DataRoomBundle>(emptyBundle);
-  const [tab, setTab] = useState<TabKey>(() => isTabKey(requestedTab) ? requestedTab : 'overview'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
+  const [tab, setTab] = useState<TabKey>(() => isTabKey(requestedTab) ? requestedTab : 'summary'); const [loading, setLoading] = useState(true); const [error, setError] = useState('');
   const [uploading, setUploading] = useState(false); const [documentType, setDocumentType] = useState<DocumentType>('other');
   const [creatingReport, setCreatingReport] = useState(false); const [reviewingCandidateId, setReviewingCandidateId] = useState('');
   const [documentActionId, setDocumentActionId] = useState('');
+  const [marketEditorOpen, setMarketEditorOpen] = useState(false);
   const loadRequestRef = useRef(0);
   // Property whose data is on screen. Reloading the same Property after a save refreshes in place; it used to blank the
   // page, which unmounted the panels and erased their success messages (E2E real-photo path, 2026-10-30).
@@ -275,24 +293,26 @@ export default function PropertyDataRoomPage() {
     ...bundle.media.filter((item) => item.mediaType === 'image' && item.url).map((item) => ({ id: item.id, url: item.url!, label: item.caption || item.fileName, primary: item.isPrimary })),
   ].filter(Boolean) as { id: string; url: string; label: string; primary: boolean }[];
   const officialDocuments = bundle.documents.filter((item) => officialTypes.includes(item.documentType));
+  const activeGroup = TAB_GROUPS.find((group) => group.key === groupOfTab(tab))!;
+  const latestReport = bundle.reportSnapshots.filter((snapshot) => snapshot.reportType === 'professional_report').sort((a, b) => b.reportVersion - a.reportVersion)[0];
 
   return <main className="data-room-page">
-    <header className="data-room-header"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button><p className="eyebrow">PROPERTY DATA ROOM</p><h1>{property.name}</h1><p>{property.address} · {property.propertyNumber || '물건번호 미입력'}</p></div><div className="actions"><Button startIcon={<EditOutlined />} onClick={() => navigate(`/property/${property.id}/edit`)}>물건 수정</Button><Button variant="contained" startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${property.id}`)}>투자분석보고서</Button></div></header>
+    <header className="data-room-header property-screen-header"><div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button><p className="eyebrow">물건</p><h1>{property.name}</h1><p>{property.address} · {property.propertyNumber || '물건번호 미입력'}</p></div><div className="actions"><Button startIcon={<EditOutlined />} onClick={() => navigate(`/property/${property.id}/edit`)}>물건 수정</Button></div></header>
     {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}
-    <section className="data-room-summary">
-      {[['문서', summary?.documents ?? 0, '건'], ['사진', summary?.media ?? 0, '개'], ['공식확인', summary?.officiallyVerified ?? 0, '건'], ['확인 필요', summary?.unverified ?? 0, '건'], ['검증대기', summary?.verificationPending ?? 0, '건'], ['보고서', summary?.reports ?? 0, '건'], ['3D', summary?.digitalTwin ? `${summary.digitalTwin}건` : '미연결', '']].map(([label, value, unit]) => <div key={label}><small>{label}</small><strong>{value}</strong><span>{unit}</span></div>)}
-      <div className={summary?.reportReady ? 'ready' : 'attention'}><small>보고서 준비도</small><strong>{summary?.reportReady ? '핵심자료 충족' : `${summary?.missingDocumentTypes.length ?? 0}개 자료 필요`}</strong></div>
-    </section>
-    <section className="data-room-workspace"><Tabs value={tab} onChange={(_, value) => setTab(value)} variant="scrollable" aria-label="Property Data Room 메뉴">
-      <Tab value="overview" label="개요" /><Tab value="media" label="사진/영상" /><Tab value="spatial" label="도면/공간" /><Tab value="documents" label="문서" /><Tab value="official" label="공적자료" /><Tab value="market" label="비교거래" /><Tab value="verification" label={`자료 검증${summary?.verificationPending ? ` ${summary.verificationPending}` : ''}`} /><Tab value="reports" label="보고서" /><Tab value="digitalTwin" label="3D/Walkthrough" />
+    <section className="data-room-workspace"><Tabs value={activeGroup.key} onChange={(_, value: GroupKey) => setTab(TAB_GROUPS.find((group) => group.key === value)!.tabs[0])} variant="fullWidth" aria-label="물건 화면 메뉴" className="property-screen-tabs">
+      {TAB_GROUPS.map((group) => <Tab key={group.key} value={group.key} label={group.label} />)}
     </Tabs>
+    {activeGroup.tabs.length > 1 && <div className="property-screen-subtabs" role="tablist" aria-label={`${activeGroup.label} 세부 메뉴`}>{activeGroup.tabs.map((key) => <Chip key={key} role="tab" aria-selected={tab === key} clickable color={tab === key ? 'primary' : 'default'} variant={tab === key ? 'filled' : 'outlined'} label={key === 'verification' && summary?.verificationPending ? `${SUB_TAB_LABELS[key]} ${summary.verificationPending}` : SUB_TAB_LABELS[key]} onClick={() => setTab(key)} />)}</div>}
     <div className="data-room-content">
-      {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} onTab={setTab} />}
+      {tab === 'summary' && <PropertyHubPage section="summary" />}
+      {tab === 'more' && <><PropertyHubPage section="more" /><nav className="property-more-docs" aria-label="문서 바로가기"><Button startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${property.id}`)}>투자분석보고서</Button><Button startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${property.id}`)}>고객 제안서(1P)</Button><Button startIcon={<MapOutlined />} onClick={() => navigate(`/properties/${property.id}/briefing`)}>입지 브리핑</Button></nav></>}
+      {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} counts={{ media: summary?.media ?? 0, documents: summary?.documents ?? 0, digitalTwin: summary?.digitalTwin ?? 0 }} onTab={setTab} />}
       {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진/영상이 없습니다." detail="실제 촬영 자료와 출처가 확인된 미디어를 등록하세요. AI 시각화는 실제 현장사진과 분리해서 관리합니다." />}</div><MediaClassificationPanel propertyId={property.id} latitude={property.latitude} longitude={property.longitude} media={bundle.media} spaces={bundle.spaces ?? []} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
       {tab === 'spatial' && <SpatialDataRoomPanel propertyId={property.id} propertyAddress={property.address} mode="spatial" legacyBundle={bundle} />}
       {tab === 'documents' && <DocumentPanel documents={bundle.documents} documentType={documentType} setDocumentType={setDocumentType} upload={upload} uploading={uploading} remove={removeDocument} changeVerification={changeVerification} busyDocumentId={documentActionId} onQueued={async () => { await load(); setTab('verification'); }} />}
       {tab === 'official' && <OfficialPanel documents={officialDocuments} sources={bundle.dataSources} uploading={uploading} onUploadSource={uploadSourceDocument} onUploadSources={uploadSourceDocuments} />}
-      {tab === 'market' && <ComparableTransactionPanel key={property.id} propertyId={property.id} sources={bundle.dataSources} onSaved={load} />}
+      {/* 실거래·가격: summary first; the paste/edit form opens on demand (redesign 2026-11-12). */}
+      {tab === 'market' && <><ComparableTransactionOverviewPanel sources={bundle.dataSources} onOpenMarket={() => setMarketEditorOpen(true)} /><details className="property-market-editor" open={marketEditorOpen} onToggle={(event) => setMarketEditorOpen((event.currentTarget as HTMLDetailsElement).open)}><summary>비교거래 입력·수정</summary><ComparableTransactionPanel key={property.id} propertyId={property.id} sources={bundle.dataSources} onSaved={load} /></details></>}
       {tab === 'verification' && <VerificationPanel candidates={bundle.verificationCandidates ?? []} reviewingId={reviewingCandidateId} onDecision={decideCandidate} />}
       {tab === 'reports' && <ReportPanel property={property} snapshots={bundle.reportSnapshots} navigate={navigate} creating={creatingReport} onCreate={createProfessionalReport} />}
       {tab === 'digitalTwin' && <div>
@@ -311,12 +331,25 @@ export default function PropertyDataRoomPage() {
         </nav>
       </div>}
     </div></section>
+    {/* Report button stays at the bottom of the property screen (redesign 2026-11-12): newest report in one tap, or create one. */}
+    <div className="property-report-bar" role="region" aria-label="보고서">
+      <span>{latestReport ? `전문 보고서 v${latestReport.reportVersion}` : '보고서 없음'}{summary && !summary.reportReady ? ` · 확인할 자료 ${summary.missingDocumentTypes.length}건` : ''}</span>
+      <Button variant="contained" startIcon={latestReport ? <VisibilityOutlined /> : <PostAddRounded />} disabled={creatingReport} onClick={() => latestReport ? navigate(`/professional-report/snapshot/${latestReport.id}`) : void createProfessionalReport()}>{creatingReport ? '생성 중…' : latestReport ? '보고서 보기' : '보고서 만들기'}</Button>
+    </div>
   </main>;
 }
 
-function Overview({ property, bundle, missing, onTab }: { property: Property; bundle: DataRoomBundle; missing: DocumentType[]; onTab: (tab: TabKey) => void }) {
+function Overview({ property, bundle, missing, counts, onTab }: { property: Property; bundle: DataRoomBundle; missing: DocumentType[]; counts: { media: number; documents: number; digitalTwin: number }; onTab: (tab: TabKey) => void }) {
   const overview = [['거래유형', property.tradeType], ['매매가', formatWon(property.salePrice)], ['대지면적', formatArea(property.landAreaPyeong)], ['용도지역', property.zoning || '-'], ['담당자', property.managerName || '-'], ['최종 수정', new Date(property.updatedAt).toLocaleDateString('ko-KR')]];
-  return <div className="data-room-overview"><section><div className="section-heading-row"><div><p className="eyebrow">PROPERTY PROFILE</p><h2>물건 개요</h2></div><VerificationBadge status="confirmed" /></div><dl>{overview.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></section><section><p className="eyebrow">READINESS CHECK</p><h2>자료 준비 현황</h2>{missing.length ? <><p className="readiness-copy">보고서의 근거자료 완성도를 높이려면 아래 자료를 확인해 주세요.</p><div className="missing-list">{missing.map((type) => <span key={type}>{DOCUMENT_TYPE_LABELS[type]} <VerificationBadge status="missing" /></span>)}</div><Button onClick={() => onTab('documents')}>문서 등록하기</Button></> : <Alert severity="success">필수 공적자료가 모두 등록되어 있습니다.</Alert>}</section><section><p className="eyebrow">DATA QUALITY</p><h2>출처와 검증</h2>{bundle.dataSources.length || bundle.verifications.length ? <p>{bundle.dataSources.length}개 출처 · {bundle.verifications.length}개 필드 검증 기록</p> : <EmptyState title="검증 이력이 없습니다." detail="공식자료와 데이터 출처가 연결되면 이곳에서 신뢰도를 확인할 수 있습니다." />}</section><PropertySpaceOverviewPanel spaces={bundle.spaces ?? []} sources={bundle.dataSources} /><ComparableTransactionOverviewPanel sources={bundle.dataSources} onOpenMarket={() => onTab('market')} /></div>;
+  // 2026-11-12 redesign: counts first, each group folds so the tab stays short on a phone. Nothing removed.
+  return <div className="data-room-overview">
+    <section className="data-room-counts" aria-label="자료 수">{([['사진·영상', counts.media, 'media'], ['문서', counts.documents, 'documents'], ['데이터 출처', bundle.dataSources.length, 'official'], ['3D', counts.digitalTwin, 'digitalTwin']] as Array<[string, number, TabKey]>).map(([label, value, target]) => <button type="button" key={label} onClick={() => onTab(target)}><small>{label}</small><strong>{value}</strong></button>)}</section>
+    <details className="data-room-fold" open={missing.length > 0}><summary>자료 준비 현황 {missing.length ? <VerificationBadge status="missing" /> : null}</summary>{missing.length ? <><p className="readiness-copy">보고서의 근거자료 완성도를 높이려면 아래 자료를 확인해 주세요.</p><div className="missing-list">{missing.map((type) => <span key={type}>{DOCUMENT_TYPE_LABELS[type]} <VerificationBadge status="missing" /></span>)}</div><Button onClick={() => onTab('documents')}>문서 등록하기</Button></> : <Alert severity="success">필수 공적자료가 모두 등록되어 있습니다.</Alert>}</details>
+    <details className="data-room-fold"><summary>출처와 검증 <small>{bundle.dataSources.length}개 출처 · {bundle.verifications.length}개 검증 기록</small></summary>{bundle.dataSources.length || bundle.verifications.length ? <p>{bundle.dataSources.length}개 출처 · {bundle.verifications.length}개 필드 검증 기록</p> : <EmptyState title="검증 이력이 없습니다." detail="공식자료와 데이터 출처가 연결되면 이곳에서 신뢰도를 확인할 수 있습니다." />}</details>
+    <details className="data-room-fold"><summary>물건 기본정보</summary><div className="section-heading-row"><div /><VerificationBadge status="confirmed" /></div><dl>{overview.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}</dl></details>
+    <details className="data-room-fold"><summary>층별 공간</summary><PropertySpaceOverviewPanel spaces={bundle.spaces ?? []} sources={bundle.dataSources} /></details>
+    <details className="data-room-fold"><summary>비교거래 요약</summary><ComparableTransactionOverviewPanel sources={bundle.dataSources} onOpenMarket={() => onTab('market')} /></details>
+  </div>;
 }
 
 function DocumentPanel({ documents, documentType, setDocumentType, upload, uploading, remove, changeVerification, busyDocumentId, onQueued }: { busyDocumentId: string; documents: PropertyDocument[]; documentType: DocumentType; setDocumentType: (value: DocumentType) => void; upload: (event: ChangeEvent<HTMLInputElement>) => void; uploading: boolean; remove: (item: PropertyDocument) => void | Promise<void>; changeVerification: (item: PropertyDocument, status: VerificationStatus) => void | Promise<void>; onQueued: () => Promise<void> | void }) {

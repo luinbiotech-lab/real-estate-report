@@ -123,3 +123,94 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 /* Rental/income workspace: inline minmax(360px,…) two-column grid overflowed phones. */
 .rental-workspace-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr);gap:18px;align-items:start}
 @media(max-width:1100px){.rental-workspace-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* One property screen (2026-11-12 redesign): 4 tabs + 더 보기, sub-menu chips, report button fixed at the bottom. */
+.data-room-page{padding-bottom:84px}
+.property-screen-header{padding-bottom:12px}
+.property-screen-tabs{border-bottom:1px solid #d9e0e8}
+.property-screen-tabs .MuiTab-root{min-width:0;padding:10px 2px;font-weight:700;font-size:14px;white-space:nowrap;letter-spacing:-.3px}
+.property-screen-subtabs{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;-webkit-overflow-scrolling:touch}
+.property-screen-subtabs .MuiChip-root{flex:0 0 auto;font-weight:600}
+.property-more-docs{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 16px}
+.property-report-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #d9e0e8;box-shadow:0 -6px 18px #10243c14}
+.property-report-bar span{font-size:13px;color:#475467;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.property-report-bar .MuiButton-root{flex:0 0 auto;white-space:nowrap;padding:10px 18px;font-weight:700}
+@media(min-width:901px){.property-report-bar{left:248px}}
+@media(max-width:760px){.property-screen-header{flex-direction:row;align-items:flex-end;gap:8px;padding-top:0}.property-screen-header h1{font-size:22px;margin:0 0 2px}.property-screen-header>div:first-child>.MuiButton-root,.property-screen-header .eyebrow{display:none}.property-screen-header p{font-size:13px;margin:0}.property-screen-tabs .MuiTab-root{font-size:13px}}
+.property-market-editor{margin-top:16px;border:1px solid #d9e0e8;border-radius:12px;background:#fff;padding:0 14px}
+.property-market-editor>summary{cursor:pointer;padding:14px 0;font-weight:700;color:#073a69}
+
+/* Bottom tabs (2026-11-12 IA redesign): 물건 / 조회 / 보고서 / 설정 on phones */
+.bottom-tabs{display:none}
+@media(max-width:900px){
+  .bottom-tabs{position:fixed;left:0;right:0;bottom:0;z-index:1100;display:grid;grid-template-columns:repeat(4,1fr);background:#fff;border-top:1px solid #d9e0e8;padding-bottom:env(safe-area-inset-bottom);box-shadow:0 -4px 14px #10243c10}
+  .bottom-tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:56px;border:0;background:none;color:#667085;font:inherit;font-size:11.5px;font-weight:600;text-decoration:none;cursor:pointer}
+  .bottom-tab svg{font-size:22px}
+  .bottom-tab.active{color:#10243d}
+  .bottom-tab.active svg{color:#b8923f}
+  .app-shell main{padding-bottom:calc(72px + env(safe-area-inset-bottom))}
+  .property-report-bar{bottom:calc(56px + env(safe-area-inset-bottom));padding-bottom:10px}
+  .data-room-page{padding-bottom:140px}
+}
+
+/* Home list first (2026-11-12): phones show property cards with the next step; the table stays on desktop */
+.property-cards{display:none;list-style:none;margin:0;padding:0}
+.property-home-header .actions{flex-wrap:wrap}
+@media(max-width:900px){
+  .property-cards{display:grid;gap:10px;padding:12px}
+  .property-cards+.table-wrap{display:none}
+  .property-cards li button{width:100%;display:grid;grid-template-columns:1fr auto 20px;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid #e1e5ea;border-radius:12px;padding:14px;font:inherit;color:inherit;cursor:pointer}
+  .property-card-main{display:grid;gap:3px;min-width:0}
+  .property-card-main strong{font-size:15px;color:#10243d}
+  .property-card-main small{color:#667085;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .property-card-main .sample-badge{justify-self:start}
+  .property-card-facts{font-size:12.5px;color:#344054}
+  .property-card-next{display:grid;gap:2px;text-align:right}
+  .property-card-next small{font-size:11px;color:#98a2b3}
+  .property-card-next b{font-size:12.5px;color:#9a6b12;white-space:nowrap}
+  .property-home-header{flex-direction:column;align-items:stretch!important;gap:10px}
+  .property-home-header h1{font-size:24px}
+  .property-home-header .actions .MuiButton-root{flex:1}
+}
+
+/* No floating menu button on phones (2026-11-12): bottom tabs navigate, 설정 opens the drawer */
+.mobile-drawer-close{display:none}
+@media(max-width:900px){
+  .app-shell::before{display:none}
+  .app-shell>main{padding-top:calc(16px + env(safe-area-inset-top))}
+  .mobile-drawer-close{display:grid;place-items:center;position:absolute;top:14px;right:12px;width:40px;height:40px;border:0;border-radius:10px;background:#ffffff14;color:#fff;cursor:pointer}
+}
+.discover-more-links{display:flex;flex-wrap:wrap;gap:6px;margin:-6px 0 14px}
+
+/* Property summary tab (2026-11-12): photo when there is one, four key facts, then only what needs a person */
+.property-hub-overview.no-media{grid-template-columns:minmax(0,1fr)}
+.property-hub-media-missing{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px dashed #c8d1dd;border-radius:12px;background:#f8fafc;padding:12px 14px;color:#475467;font:inherit;cursor:pointer}
+.property-hub-media-missing svg{color:#98a2b3}
+.property-hub-media-missing span{display:grid;gap:2px}
+.property-hub-media-missing strong{font-size:14px;color:#344054}
+.property-hub-media-missing small{font-size:12px}
+.property-hub-summary-card{border:1px solid #d9e0e8;border-radius:14px;background:#fff;padding:18px}
+.hub-fact{display:grid;grid-template-columns:110px 1fr;border-top:1px solid #edf0f4;padding:10px 0}
+.hub-fact dt{color:#667085;font-size:13px}
+.hub-fact dd{margin:0;font-weight:700}
+.hub-fact.is-missing dd{font-weight:500;color:#98a2b3}
+.property-hub-summary-card:not(.show-all) .hub-fact.is-extra{display:none}
+.hub-facts-toggle{margin-top:8px;border:0;background:none;padding:0;color:#073a69;font-weight:700;font-size:13px;cursor:pointer}
+.property-hub-checks{margin-top:14px;border:1px solid #f0d9a8;background:#fffaf0;border-radius:14px;padding:14px 16px}
+.property-hub-checks h3{margin:0 0 6px;font-size:15px;color:#7a4b00}
+.property-hub-checks ul{list-style:none;margin:0;padding:0;display:grid}
+.property-hub-checks li+li{border-top:1px solid #f3e4c4}
+.property-hub-checks button{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;border:0;background:none;padding:10px 0;font:inherit;text-align:left;cursor:pointer}
+.property-hub-checks button span{font-weight:700;color:#344054;font-size:14px}
+.property-hub-checks button small{color:#667085;font-size:12.5px;text-align:right}
+.data-room-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.data-room-counts button{border:1px solid #d9e0e8;border-radius:12px;background:#fff;padding:12px;text-align:left;font:inherit;cursor:pointer}
+.data-room-counts small{display:block;color:#667085;font-size:12px}
+.data-room-counts strong{display:block;font-size:22px;margin-top:2px;color:#10243d}
+.data-room-fold{border:1px solid #d9e0e8;border-radius:12px;background:#fff;padding:0 14px;margin-bottom:10px}
+.data-room-fold>summary{cursor:pointer;padding:13px 0;font-weight:700;color:#10243d;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.data-room-fold>summary small{font-weight:500;color:#667085}
+.data-room-fold[open]{padding-bottom:14px}
+@media(max-width:480px){.data-room-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.data-room-overview{display:block}
+.data-room-overview>section.data-room-counts{border:0;padding:0;min-height:0}

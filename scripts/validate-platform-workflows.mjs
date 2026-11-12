@@ -13,14 +13,16 @@ const files = {
 for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(`플랫폼 workflow 필수 파일 누락: ${file}`);
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-if (!text.app.includes('PropertyHubPage') || !text.app.includes('path="property/:id"') || !text.app.includes('path="property/:id/data-room"') || !text.app.includes('PropertyDataRoomPage')) throw new Error('물건 상세 메인 허브와 Data Room 세부 route를 분리해야 합니다.');
-if (!text.propertyHub.includes('물건 상세') || !text.propertyHub.includes('업무 바로가기') || !text.propertyHub.includes('자료실 전체보기')) throw new Error('물건 상세 허브는 핵심정보와 세부 Workspace 진입판을 제공해야 합니다.');
+// 2026-11-12 redesign (owner approved): one property screen; the old Data Room URL redirects with its ?tab= intact.
+if (!text.app.includes('<Route path="property/:id" element={<PropertyDataRoomPage />} />') || !text.app.includes('<Route path="property/:id/data-room" element={<LegacyDataRoomRedirect />} />') || !text.app.includes('to={`/property/${encodeURIComponent(id)}${search}`} replace')) throw new Error('물건은 한 화면(/property/:id)이고 기존 Data Room 주소는 같은 물건·탭으로 리다이렉트해야 합니다.');
+for (const marker of ["{ key: 'summary', label: '요약'", "{ key: 'land', label: '토지·건물'", "{ key: 'market', label: '실거래·가격'", "{ key: 'files', label: '자료'", "{ key: 'more', label: '더 보기'", 'className="property-report-bar"', "'보고서 보기' : '보고서 만들기'", '<PropertyHubPage section="summary" />', '<PropertyHubPage section="more" />']) if (!text.dataRoom.includes(marker)) throw new Error(`물건 화면 탭·보고서 버튼 계약 누락: ${marker}`);
+if (!text.propertyHub.includes('업무 바로가기') || !text.propertyHub.includes('<MoreCards cards=')) throw new Error('물건 화면의 더 보기는 전문 기능 진입판을 제공해야 합니다.');
 for (const label of ['사진 · 미디어', '문서 · 공적자료', '비교거래', '임대 · 수익 분석', '검토 이력', '보고서', '3D · 도면', '입지 브리핑']) if (!text.propertyHub.includes(label)) throw new Error(`물건 상세 허브 필수 항목 누락: ${label}`);
 if (!text.propertyHub.includes('/income?propertyId=') || !text.propertyHub.includes('/review-history?propertyId=')) throw new Error('상세 허브는 선택 물건 context를 임대·수익/검토 이력으로 전달해야 합니다.');
 if (!text.propertyHub.includes("label: '공간 인텔리전스'") || !text.propertyHub.includes('/room-ops?propertyId=') || !text.propertyHub.includes('approvedRoomLinks')) throw new Error('상세 허브는 PropertySpace/승인 Room link 상태와 함께 Room Intelligence로 물건 context를 전달해야 합니다.');
 if (!text.propertyHub.includes('대표 외관 미디어 미연결') || !text.propertyHub.includes('provenance')) throw new Error('대표미디어가 없을 때 가짜 사진 대신 미연결 상태와 provenance 원칙을 표시해야 합니다.');
 // Report shortcut: the hub opens the newest professional snapshot in one tap; creating a report opens its preview directly.
-if (!text.propertyHub.includes("latestReport ? `/professional-report/snapshot/${latestReport.id}`") || !text.propertyHub.includes("'보고서 보기' : '보고서 만들기'")) throw new Error('상세 허브는 최신 전문 보고서로 바로 가는 버튼을 제공해야 합니다.');
+if (!text.dataRoom.includes("latestReport ? navigate(`/professional-report/snapshot/${latestReport.id}`) : void createProfessionalReport()")) throw new Error('물건 화면의 보고서 버튼은 최신 전문 보고서를 바로 열거나 새로 만들어야 합니다.');
 for (const marker of ["공간 인텔리전스", "/room-ops?propertyId=", "실내 인텔리전스", "/interior?propertyId="]) {
   if (!text.propertyHub.includes(marker)) throw new Error(`Property Hub는 물건 context를 Room/Interior Intelligence로 전달해야 합니다: ${marker}`);
 }

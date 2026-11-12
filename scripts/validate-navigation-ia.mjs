@@ -37,7 +37,7 @@ for (const path of [...menuPaths.filter((p) => p !== '/'), ...Object.values(samp
   const last = context.crumbs.at(-1);
   if (!last.label || last.to) throw new Error(`breadcrumb 마지막 항목은 현재 화면이어야 합니다: ${path}`);
 }
-const expectParent = { '/property/abc/data-room': '/property/abc', '/property/abc/edit': '/property/abc', '/property/abc': '/', '/agents/a1': '/agents', '/property/new': '/' };
+const expectParent = { '/property/abc/data-room': '/', '/property/abc/edit': '/property/abc', '/property/abc': '/', '/agents/a1': '/agents', '/property/new': '/' };
 for (const [path, parent] of Object.entries(expectParent)) {
   const actual = nav.resolveRouteContext(path).parent?.to;
   if (actual !== parent) throw new Error(`뒤로가기 대상 불일치: ${path} → ${actual} (기대 ${parent})`);
@@ -51,6 +51,14 @@ for (const item of [...nav.primaryNav, ...nav.navGroups.flatMap((group) => group
 }
 for (const group of nav.navGroups) if (!/[가-힣]/.test(group.label)) throw new Error(`메뉴 그룹명은 한국어여야 합니다: ${group.label}`);
 if (nav.navGroups.length > 6) throw new Error(`메뉴 그룹은 6개 이하로 유지합니다: ${nav.navGroups.length}`);
+
+// Bottom tabs (2026-11-12 redesign): exactly 물건/조회/보고서/설정, and every screen lights one of them.
+if (nav.bottomTabs.map((tab) => tab.label).join('/') !== '물건/조회/보고서/설정') throw new Error(`하단 탭은 물건/조회/보고서/설정 4개여야 합니다: ${nav.bottomTabs.map((tab) => tab.label).join('/')}`);
+const expectTab = { '/': 'property', '/property/abc': 'property', '/property/new': 'property', '/risk': 'property', '/digital-twin': 'property', '/discover': 'discover', '/import': 'discover', '/bulk-intake': 'discover', '/report-history': 'report', '/external-shares': 'report', '/settings': 'settings', '/access': 'settings', '/backup': 'settings', '/control-center': 'settings', '/agents/a1': 'settings' };
+for (const [path, tab] of Object.entries(expectTab)) if (nav.bottomTabOf(path) !== tab) throw new Error(`하단 탭 매핑 불일치: ${path} → ${nav.bottomTabOf(path)} (기대 ${tab})`);
+const settingsGroup = nav.navGroups.find((group) => group.id === 'settings');
+for (const path of ['/settings', '/access', '/backup', '/control-center', '/agents', '/migration-readiness']) if (!settingsGroup?.items.some((item) => item.to === path)) throw new Error(`관리 화면은 설정 그룹에 있어야 합니다: ${path}`);
+for (const marker of ['bottomTabs.map', 'className="bottom-tabs"', 'aria-label="하단 메뉴"', "setOpenGroup('settings')"]) if (!layout.includes(marker)) throw new Error(`하단 탭 계약 누락: ${marker}`);
 
 // The shell must render from the config, keep the drawer out of the tab order when closed, and show breadcrumbs.
 for (const marker of ['navGroups.map', 'primaryNav.map', 'resolveRouteContext(location.pathname)', 'inert={drawerHidden}', 'aria-label="현재 위치"', "event.key === 'Escape'"]) {
