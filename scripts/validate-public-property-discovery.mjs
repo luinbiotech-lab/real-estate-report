@@ -113,9 +113,26 @@ if (!service.includes('async refreshExisting') || !service.includes('saveVerific
 if (!service.includes("fieldKey === 'name'") || !service.includes('equivalentAddresses.includes(currentAddress)')) throw new Error('공공자료 refresh 검증후보 노이즈 억제 규칙 누락');
 if (!service.includes('const patch: Partial<Property>') || service.includes("buildingName: building?.buildingName || ''")) throw new Error('부분 공공조회가 기존 Property를 빈값/0으로 덮어쓰지 않도록 sparse patch를 유지해야 합니다.');
 if (!service.includes("const calculatedField = fieldKey === 'estimatedOfficialLandValue'") || !service.includes("sourceType: addressField ? 'map_provider' as const : calculatedField ? 'calculated' as const")) throw new Error('공시지가 계산값 provenance는 public_api가 아니라 calculated여야 합니다.');
-if (!discoveryPage.includes('공공자료 Data Room 저장') || !discoveryPage.includes('refreshExisting(existing, result)')) throw new Error('기존 물건 공공자료 refresh UI 연결 누락');
+if (!discoveryPage.includes('공공자료 저장') || !discoveryPage.includes('refreshExisting(existing, result)')) throw new Error('기존 물건 공공자료 refresh UI 연결 누락');
 if (!form.includes('location.state')) throw new Error('Discovery → PropertyForm state 전달 연결 누락');
-if (!discoveryPage.includes('주소 · 지번으로 물건 조회') || !discoveryPage.includes('이 물건 등록')) throw new Error('Address-first discovery workspace contract 누락');
+if (!discoveryPage.includes('주소 · 지번으로 물건 조회') || !discoveryPage.includes('이 주소로 물건 등록') || !discoveryPage.includes('자세히 입력해서 등록')) throw new Error('Address-first discovery workspace contract 누락');
+// Phase 3 (2026-11-12): one-step creation from a confirmed address, refused while duplicates are possible.
+{
+  const quick = await (await import('./lib/ts-module-loader.mjs')).importTs('src/domain/propertyDetail/quickCreateRules.ts');
+  const ok = { address: { roadAddress: '서울 서초구 동광로18길 7' } };
+  const cases = [
+    [{ result: undefined, matchCount: 0, matchError: '', matchChecked: true }, true],
+    [{ result: ok, matchCount: 0, matchError: '', matchChecked: false }, true],
+    [{ result: ok, matchCount: 0, matchError: 'x', matchChecked: true }, true],
+    [{ result: ok, matchCount: 1, matchError: '', matchChecked: true }, true],
+    [{ result: ok, matchCount: 2, matchError: '', matchChecked: true }, true],
+    [{ result: ok, matchCount: 0, matchError: '', matchChecked: true }, false],
+  ];
+  for (const [input, blocked] of cases) if (Boolean(quick.quickCreateBlockReason(input)) !== blocked) throw new Error(`바로 등록 차단 규칙 오류: ${JSON.stringify(input)}`);
+  if (!discoveryPage.includes('createPropertyFromDiscovery(result)') || !discoveryPage.includes('disabled={Boolean(blockReason) || creating}')) throw new Error('조회 화면 바로 등록 연결 누락');
+  const quickSrc = readFileSync('src/services/propertyQuickCreateService.ts', 'utf8');
+  for (const marker of ["buildPropertyToSave(draft, undefined, 'new'", 'publicPropertyDiscoveryService.persist(data.id, result)', 'marketPresenceService.persist(data)', 'streetViewProvenanceService.ensure(data)']) if (!quickSrc.includes(marker)) throw new Error(`바로 등록은 등록 양식과 같은 저장 경로를 써야 합니다: ${marker}`);
+}
 if (!discoveryPage.includes('Kakao 동일주소 POI')) throw new Error('Discovery summary Kakao evidence 연결 누락');
 if (!app.includes('path="discover"')) throw new Error('Discovery route 누락');
 if (!layout.includes('to="/discover"')) throw new Error('Discovery primary navigation 누락');

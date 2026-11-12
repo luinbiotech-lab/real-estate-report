@@ -14,22 +14,11 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
 
 try {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  // Korean-first operations hub (0afc7e4): headline, KPI labels, live connection chips, three primary actions.
-  for (const text of [
-    'DA:ON PROPERTY OPERATIONS',
-    '물건을 확인하고, 검증하고, 보고합니다.',
-    '등록 물건',
-    '기본정보 입력',
-    '7일 내 변경',
-    '매매 물건',
-    '인증 연결',
-    '외부 공유 연결',
-    '주소로 물건 조회',
-    '새 물건 등록',
-    '자료 검증',
-    '물건 관리',
-  ]) await waitForText(page, text);
-  // Specialist workspaces are behind a collapsed <details>; open it, then every entry point must be visible.
+  // 2026-11-12 redesign: list first. Header actions, then either KPIs (real inventory) or the empty-state explanation.
+  for (const text of ['물건 관리', '주소 조회', '새 물건']) await waitForText(page, text);
+  if (await page.getByText('DA:ON PROPERTY OPERATIONS').count()) throw new Error('홈 상단 영어 배너가 남아 있습니다.');
+  await page.getByText(/등록 물건|등록된 실제 운영 물건이 없습니다/).first().waitFor({ state: 'visible' });
+  // Specialist workspaces and connection chips are behind a collapsed <details> below the list.
   await page.getByText('전문 업무 전체 보기').click();
   for (const text of [
     '대량 자료 검증',
@@ -40,6 +29,8 @@ try {
     '3D · 도면',
     '사용자 · 권한',
     '엑셀 대량 등록',
+    '인증 연결',
+    '외부 공유 연결',
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-operations-hub.png`, fullPage: true });
 
@@ -60,10 +51,9 @@ try {
   // The shell switches to the drawer on a matchMedia change event; give React a moment to re-render after the resize.
   const becameInert = await page.waitForFunction(() => document.querySelector('#daon-main-drawer')?.hasAttribute('inert'), null, { timeout: 5_000 }).then(() => true).catch(() => false);
   if (!becameInert) throw new Error(`닫힌 모바일 메뉴가 키보드 포커스 대상에 남아 있습니다. (inert=${await drawer.getAttribute('inert')}, aria-hidden=${await drawer.getAttribute('aria-hidden')}, width=${await page.evaluate(() => innerWidth)}, mq=${await page.evaluate(() => matchMedia('(max-width: 900px)').matches)})`);
-  await page.getByRole('button', { name: '메뉴 열기' }).click();
-  await page.getByRole('navigation', { name: 'DA:ON 주 메뉴' }).getByRole('link', { name: '주소로 물건 조회' }).waitFor({ state: 'visible' });
-  await page.keyboard.press('Escape');
-  await page.waitForFunction(() => document.querySelector('#daon-main-drawer')?.hasAttribute('inert'));
+  // Phone home shows cards with a next step instead of the wide table.
+  await page.locator('.property-cards li').first().waitFor({ state: 'visible' });
+  await page.getByText('다음 할 일').first().waitFor({ state: 'visible' });
   // Bottom tabs (2026-11-12): 물건/조회/보고서/설정; 설정 opens the menu on the admin group.
   const tabs = page.getByRole('navigation', { name: '하단 메뉴' });
   for (const label of ['물건', '조회', '보고서', '설정']) await tabs.getByText(label, { exact: true }).waitFor({ state: 'visible' });

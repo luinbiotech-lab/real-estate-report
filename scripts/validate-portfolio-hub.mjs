@@ -15,7 +15,7 @@ const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key,
 
 if (!text.list.includes('PortfolioOperationsHub') || !/<PortfolioOperationsHub items=\{items\}[ />]/.test(text.list)) throw new Error('첫 화면에 Portfolio Operations Hub를 연결해야 합니다.');
 // Labels follow the Korean-first operations hub (0afc7e4). Each KPI label must stay bound to its metric below.
-for (const label of ['DA:ON PROPERTY OPERATIONS', '등록 물건', '기본정보 입력', '7일 내 변경', '매매 물건']) {
+for (const label of ['등록 물건', '기본정보 입력', '7일 내 변경', '매매 물건']) {
   if (!text.hub.includes(label)) throw new Error(`Portfolio Hub KPI/표시 누락: ${label}`);
 }
 for (const label of ['대량 자료 검증', '임대 · 수익', '검토 이력', '외부 공유', '보고서 이력', '3D · 도면', '사용자 · 권한', '엑셀 대량 등록']) {
@@ -33,4 +33,8 @@ if (!text.hub.includes('property.address?.trim()') || !text.hub.includes('proper
 if (!text.access.includes('AUTH_BACKEND_CONNECTED = true')) throw new Error('Auth 상태 기준이 production connected 상태여야 합니다.');
 if (!text.shareProvider.includes("availability: 'ready'")) throw new Error('Remote Share 상태 기준이 production ready 상태여야 합니다.');
 
+// 2026-11-12 redesign: the list comes first; shortcuts move below it and phones get cards with a next step.
+if (text.hub.includes('DA:ON PROPERTY OPERATIONS') || text.list.includes('PROPERTY DATABASE')) throw new Error('홈 상단 영어 배너는 제거되었습니다.');
+if (!text.list.includes('<PortfolioShortcuts />') || text.list.indexOf('<PortfolioShortcuts />') < text.list.indexOf('className="table-wrap"')) throw new Error('전문 업무 바로가기는 물건 목록 아래에 있어야 합니다.');
+if (!text.list.includes('className="property-cards"') || !text.list.includes('다음 할 일') || !text.list.includes('isCoreProfileReady(property)')) throw new Error('휴대폰 물건 카드에 다음 할 일이 있어야 합니다.');
 console.log('Portfolio operations hub integrity: PASS');

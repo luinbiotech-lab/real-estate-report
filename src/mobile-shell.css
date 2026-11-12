@@ -152,3 +152,65 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
   .property-report-bar{bottom:calc(56px + env(safe-area-inset-bottom));padding-bottom:10px}
   .data-room-page{padding-bottom:140px}
 }
+
+/* Home list first (2026-11-12): phones show property cards with the next step; the table stays on desktop */
+.property-cards{display:none;list-style:none;margin:0;padding:0}
+.property-home-header .actions{flex-wrap:wrap}
+@media(max-width:900px){
+  .property-cards{display:grid;gap:10px;padding:12px}
+  .property-cards+.table-wrap{display:none}
+  .property-cards li button{width:100%;display:grid;grid-template-columns:1fr auto 20px;gap:10px;align-items:center;text-align:left;background:#fff;border:1px solid #e1e5ea;border-radius:12px;padding:14px;font:inherit;color:inherit;cursor:pointer}
+  .property-card-main{display:grid;gap:3px;min-width:0}
+  .property-card-main strong{font-size:15px;color:#10243d}
+  .property-card-main small{color:#667085;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .property-card-main .sample-badge{justify-self:start}
+  .property-card-facts{font-size:12.5px;color:#344054}
+  .property-card-next{display:grid;gap:2px;text-align:right}
+  .property-card-next small{font-size:11px;color:#98a2b3}
+  .property-card-next b{font-size:12.5px;color:#9a6b12;white-space:nowrap}
+  .property-home-header{flex-direction:column;align-items:stretch!important;gap:10px}
+  .property-home-header h1{font-size:24px}
+  .property-home-header .actions .MuiButton-root{flex:1}
+}
+
+/* No floating menu button on phones (2026-11-12): bottom tabs navigate, 설정 opens the drawer */
+.mobile-drawer-close{display:none}
+@media(max-width:900px){
+  .app-shell::before{display:none}
+  .app-shell>main{padding-top:calc(16px + env(safe-area-inset-top))}
+  .mobile-drawer-close{display:grid;place-items:center;position:absolute;top:14px;right:12px;width:40px;height:40px;border:0;border-radius:10px;background:#ffffff14;color:#fff;cursor:pointer}
+}
+.discover-more-links{display:flex;flex-wrap:wrap;gap:6px;margin:-6px 0 14px}
+
+/* Property summary tab (2026-11-12): photo when there is one, four key facts, then only what needs a person */
+.property-hub-overview.no-media{grid-template-columns:minmax(0,1fr)}
+.property-hub-media-missing{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:1px dashed #c8d1dd;border-radius:12px;background:#f8fafc;padding:12px 14px;color:#475467;font:inherit;cursor:pointer}
+.property-hub-media-missing svg{color:#98a2b3}
+.property-hub-media-missing span{display:grid;gap:2px}
+.property-hub-media-missing strong{font-size:14px;color:#344054}
+.property-hub-media-missing small{font-size:12px}
+.property-hub-summary-card{border:1px solid #d9e0e8;border-radius:14px;background:#fff;padding:18px}
+.hub-fact{display:grid;grid-template-columns:110px 1fr;border-top:1px solid #edf0f4;padding:10px 0}
+.hub-fact dt{color:#667085;font-size:13px}
+.hub-fact dd{margin:0;font-weight:700}
+.hub-fact.is-missing dd{font-weight:500;color:#98a2b3}
+.property-hub-summary-card:not(.show-all) .hub-fact.is-extra{display:none}
+.hub-facts-toggle{margin-top:8px;border:0;background:none;padding:0;color:#073a69;font-weight:700;font-size:13px;cursor:pointer}
+.property-hub-checks{margin-top:14px;border:1px solid #f0d9a8;background:#fffaf0;border-radius:14px;padding:14px 16px}
+.property-hub-checks h3{margin:0 0 6px;font-size:15px;color:#7a4b00}
+.property-hub-checks ul{list-style:none;margin:0;padding:0;display:grid}
+.property-hub-checks li+li{border-top:1px solid #f3e4c4}
+.property-hub-checks button{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;border:0;background:none;padding:10px 0;font:inherit;text-align:left;cursor:pointer}
+.property-hub-checks button span{font-weight:700;color:#344054;font-size:14px}
+.property-hub-checks button small{color:#667085;font-size:12.5px;text-align:right}
+.data-room-counts{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.data-room-counts button{border:1px solid #d9e0e8;border-radius:12px;background:#fff;padding:12px;text-align:left;font:inherit;cursor:pointer}
+.data-room-counts small{display:block;color:#667085;font-size:12px}
+.data-room-counts strong{display:block;font-size:22px;margin-top:2px;color:#10243d}
+.data-room-fold{border:1px solid #d9e0e8;border-radius:12px;background:#fff;padding:0 14px;margin-bottom:10px}
+.data-room-fold>summary{cursor:pointer;padding:13px 0;font-weight:700;color:#10243d;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.data-room-fold>summary small{font-weight:500;color:#667085}
+.data-room-fold[open]{padding-bottom:14px}
+@media(max-width:480px){.data-room-counts{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.data-room-overview{display:block}
+.data-room-overview>section.data-room-counts{border:0;padding:0;min-height:0}

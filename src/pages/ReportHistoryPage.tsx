@@ -75,16 +75,15 @@ export default function ReportHistoryPage() {
   return <Box sx={{ p: 3 }}>
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2} sx={{ mb: 3 }}>
       <Box>
-        <Typography variant="overline" color="text.secondary">REPORT SNAPSHOT HISTORY</Typography>
-        <Typography variant="h4" component="h1">보고서 버전 이력</Typography>
-        <Typography color="text.secondary">생성 시점 데이터를 고정한 Professional Report Snapshot을 물건별로 관리합니다.</Typography>
+                <Typography variant="h4" component="h1">보고서</Typography>
+        <Typography color="text.secondary">만든 시점의 자료로 고정된 보고서 버전을 물건별로 봅니다.</Typography>
       </Box>
-      <Button variant="outlined" onClick={() => void load()}>새로고침</Button>
+      <Stack direction="row" spacing={1}><Button variant="outlined" onClick={() => navigate('/external-shares')}>외부 공유 센터</Button><Button variant="outlined" onClick={() => void load()}>새로고침</Button></Stack>
     </Stack>
 
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-    {!items.length ? <Alert severity="info">생성된 Professional Report Snapshot이 없습니다.</Alert> : <Stack spacing={3}>
+    {!items.length ? <Alert severity="info">아직 만든 보고서가 없습니다. 물건 화면 아래 '보고서 만들기'로 만듭니다.</Alert> : <Stack spacing={3}>
       {items.map(({ property, history }) => <Card key={property.id} variant="outlined">
         <CardContent>
           <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>

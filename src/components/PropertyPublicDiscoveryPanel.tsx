@@ -79,7 +79,7 @@ export default function PropertyPublicDiscoveryPanel({
   return <section className="form-section">
     <div className="section-heading-row">
       <div>
-        <p className="eyebrow">PROPERTY DISCOVERY</p>
+        <p className="eyebrow">주소 조회</p>
         <h2>주소 · 지번으로 건물 자동조회</h2>
         <p>주소를 입력하면 필지/건물을 먼저 식별하고 공적 장부와 최근 실거래를 조회합니다. 조회값은 확인 후 적용됩니다.</p>
       </div>

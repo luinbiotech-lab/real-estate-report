@@ -9,6 +9,7 @@ import { propertyRepository } from '../repositories/propertyRepository';
 import { LISTING_STATUS_LABEL } from '../services/marketPresenceService';
 import { findRegisteredMatches } from '../domain/propertyDetail/discoveryMatch';
 import { classifyPropertyRecord, RECORD_CLASS_LABEL } from '../domain/sampleProperty';
+import { createPropertyFromDiscovery, quickCreateBlockReason } from '../services/propertyQuickCreateService';
 
 export default function PropertyDiscoveryPage() {
   const navigate = useNavigate();
@@ -20,10 +21,27 @@ export default function PropertyDiscoveryPage() {
   const [refreshFailed, setRefreshFailed] = useState(false);
   const [matches, setMatches] = useState<Property[]>([]);
   const [matchError, setMatchError] = useState('');
+  const [matchChecked, setMatchChecked] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState('');
   const matchRequestRef = useRef(0);
 
   const patch = useMemo(() => result ? publicPropertyDiscoveryService.patchFrom(result) : undefined, [result]);
   const canRegister = Boolean(result?.address);
+
+  const blockReason = quickCreateBlockReason({ result, matchCount: matches.length, matchError, matchChecked });
+
+  // Phase 3: one tap from a confirmed address to the property screen. The full form stays available for detailed entry.
+  const createNow = async () => {
+    if (!result || blockReason || creating) return;
+    setCreating(true); setCreateError('');
+    try {
+      const created = await createPropertyFromDiscovery(result);
+      navigate(`/property/${encodeURIComponent(created.id)}`);
+    } catch (reason) {
+      setCreateError(reason instanceof Error ? reason.message : '물건을 만들지 못했습니다.');
+    } finally { setCreating(false); }
+  };
 
   const goRegister = () => {
     if (existing) {
@@ -42,7 +60,7 @@ export default function PropertyDiscoveryPage() {
   const resolveExisting = async (value: PropertyDiscoveryResult) => {
     // A late lookup for an earlier search must not attach the wrong registered property to the current result.
     const requestId = ++matchRequestRef.current;
-    setExisting(undefined); setMatches([]); setMatchError(''); setRefreshMessage('');
+    setExisting(undefined); setMatches([]); setMatchError(''); setRefreshMessage(''); setMatchChecked(false); setCreateError('');
     if (!value.address) return;
     try {
       const found = findRegisteredMatches(value.address, await propertyRepository.getAll());
@@ -50,6 +68,7 @@ export default function PropertyDiscoveryPage() {
       setMatches(found);
       // Only a single unambiguous match may be opened directly; several matches must be chosen by a person.
       setExisting(found.length === 1 ? found[0] : undefined);
+      setMatchChecked(true);
     } catch (reason) {
       if (requestId === matchRequestRef.current) setMatchError(reason instanceof Error ? reason.message : '등록 물건과 대조하지 못했습니다.');
     }
@@ -75,15 +94,22 @@ export default function PropertyDiscoveryPage() {
   return <>
     <header className="page-header">
       <div>
-        <p className="eyebrow">PROPERTY DISCOVERY</p>
         <h1>주소 · 지번으로 물건 조회</h1>
-        <p>건물을 먼저 확인한 뒤 등록합니다. 공적정보·시장정보·사용증거의 출처와 확인 수준을 분리해 표시합니다.</p>
+        <p>주소를 확인하면 바로 물건으로 등록하고 자료 수집을 시작합니다.</p>
       </div>
       <div className="actions">
-        <Chip icon={<SearchRounded />} label="주소 우선 탐색" />
-        <Button variant="contained" endIcon={<ArrowForwardRounded />} disabled={!canRegister} onClick={goRegister}>{existing ? '기존 Data Room 열기' : '이 물건 등록'}</Button>
+        {existing
+          ? <Button variant="contained" endIcon={<ArrowForwardRounded />} onClick={goRegister}>등록된 물건 열기</Button>
+          : <Button variant="contained" endIcon={<ArrowForwardRounded />} disabled={Boolean(blockReason) || creating} onClick={() => void createNow()}>{creating ? '등록 중…' : '이 주소로 물건 등록'}</Button>}
+        {!existing && <Button variant="outlined" disabled={!canRegister} onClick={goRegister}>자세히 입력해서 등록</Button>}
       </div>
     </header>
+    {createError && <Alert severity="error" sx={{ mb: 2 }}>{createError}</Alert>}
+    {result?.address && !existing && blockReason && matchChecked && <Alert severity="info" sx={{ mb: 2 }}>{blockReason} 아래에서 기존 물건을 고르거나 '자세히 입력해서 등록'을 사용하세요.</Alert>}
+    <div role="group" className="discover-more-links" aria-label="대량 등록">
+      <Button size="small" startIcon={<SearchRounded />} onClick={() => navigate('/import')}>엑셀 대량 등록</Button>
+      <Button size="small" onClick={() => navigate('/bulk-intake')}>대량 자료 등록 · 검증</Button>
+    </div>
 
     <PropertyPublicDiscoveryPanel
       property={preview}
@@ -97,7 +123,7 @@ export default function PropertyDiscoveryPage() {
 
     {result?.address && <section className="panel">
       <div className="section-heading-row">
-        <div><p className="eyebrow">INFORMATION LAYERS</p><h2>통합 정보 판정</h2><p>공적 사실·시장 관측·사용 evidence·매물 상태를 서로 다른 신뢰수준으로 분리합니다.</p></div>
+        <div><p className="eyebrow">정보 구분</p><h2>통합 정보 판정</h2><p>공적 사실·시장 관측·사용 evidence·매물 상태를 서로 다른 신뢰수준으로 분리합니다.</p></div>
         <Chip size="small" label="과장 판정 방지" />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,minmax(0,1fr))', gap: 10 }}>
@@ -135,11 +161,11 @@ export default function PropertyDiscoveryPage() {
     {existing && classifyPropertyRecord(existing).recordClass !== 'operational' && <Alert severity="info" sx={{ mb: 2 }}>일치한 등록 물건은 {RECORD_CLASS_LABEL[classifyPropertyRecord(existing).recordClass]}로 분류된 기록입니다.</Alert>}
     {existing && <section className="panel">
       <div className="section-heading-row">
-        <div><p className="eyebrow">EXISTING PROPERTY</p><h2>이미 등록된 물건입니다</h2><p>중복 생성하지 않고 기존 Data Room과 최신 검증자료를 사용합니다.</p></div>
+        <div><p className="eyebrow">등록된 물건</p><h2>이미 등록된 물건입니다</h2><p>중복으로 만들지 않고 기존 물건의 자료를 사용합니다.</p></div>
         <div className="actions">
           <Chip size="small" color="primary" label={LISTING_STATUS_LABEL[existing.listingStatus || 'unknown'] || '미확인'} />
           <Button size="small" variant="outlined" startIcon={<RefreshRounded />} disabled={refreshing || !result} onClick={() => void refreshExisting()}>
-            {refreshing ? '저장 중' : '공공자료 Data Room 저장'}
+            {refreshing ? '저장 중' : '공공자료 저장'}
           </Button>
         </div>
       </div>
@@ -163,7 +189,7 @@ export default function PropertyDiscoveryPage() {
     {result?.address && <section className="panel">
       <div className="section-heading-row">
         <div>
-          <p className="eyebrow">REGISTRATION PREVIEW</p>
+          <p className="eyebrow">등록 전 확인</p>
           <h2>등록 전 식별 결과</h2>
         </div>
         <Chip size="small" color="success" label="주소 확인됨" />
