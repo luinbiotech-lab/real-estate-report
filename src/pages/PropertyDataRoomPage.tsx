@@ -5,6 +5,7 @@ import { Alert, Button, Chip, CircularProgress, MenuItem, Tab, Tabs, TextField }
 import PropertyHubPage from './PropertyHubPage';
 import PropertyMasthead from '../components/propertyScreen/PropertyMasthead';
 import PropertyTrustPanel from '../components/propertyScreen/PropertyTrustPanel';
+import { nextDataRoomFreshness, summaryForDisplay, type DataRoomFreshness } from '../domain/propertyDetail/propertyScreenModel';
 import ComparableTransactionOverviewPanel from '../components/propertyDataRoom/ComparableTransactionOverviewPanel';
 import ComparableTransactionPanel from '../components/propertyDataRoom/ComparableTransactionPanel';
 import DocumentExtractionPanel from '../components/propertyDataRoom/DocumentExtractionPanel';
@@ -82,6 +83,7 @@ export default function PropertyDataRoomPage() {
   // Property whose data is on screen. Reloading the same Property after a save refreshes in place; it used to blank the
   // page, which unmounted the panels and erased their success messages (E2E real-photo path, 2026-10-30).
   const loadedIdRef = useRef('');
+  const [freshness, setFreshness] = useState<DataRoomFreshness>('current');
 
   const load = useCallback(async () => {
     const requestId = ++loadRequestRef.current;
@@ -100,10 +102,13 @@ export default function PropertyDataRoomPage() {
       if (requestId !== loadRequestRef.current) return;
       // Repository filtering is not a boundary; never render another Property's rows here.
       setProperty(item); setBundle(scopeDataRoomBundle(nextBundle, id));
+      setFreshness(nextDataRoomFreshness('loaded'));
       loadedIdRef.current = id;
     } catch (reason) {
       if (requestId === loadRequestRef.current) {
         setError(reason instanceof Error ? reason.message : 'Data Room 자료를 불러오지 못했습니다.');
+        // The previous numbers may be out of date now; the 근거 panel and report bar show '확인 불가' until a reload succeeds.
+        setFreshness(nextDataRoomFreshness('failed'));
       }
     } finally {
       if (requestId === loadRequestRef.current) setLoading(false);
@@ -119,6 +124,7 @@ export default function PropertyDataRoomPage() {
   }, [searchParams]);
 
   const summary = useMemo(() => property ? propertyDataRoomService.summarize(property, bundle) : undefined, [property, bundle]);
+  const shownSummary = summaryForDisplay(summary, freshness);
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; if (!file) return;
     const classified = propertyDataRoomService.classifyDocument(file.name);
@@ -335,14 +341,14 @@ export default function PropertyDataRoomPage() {
         </nav>
       </div>}
     </div></section>
-    <PropertyTrustPanel property={property} summary={summary} latestReportVersion={latestReport?.reportVersion} creating={creatingReport}
+    <PropertyTrustPanel property={property} summary={shownSummary} latestReportVersion={latestReport?.reportVersion} creating={creatingReport}
       onOpenVerification={() => setTab('verification')} onOpenDocuments={() => setTab('documents')}
       onReport={() => latestReport ? navigate(`/professional-report/snapshot/${latestReport.id}`) : void createProfessionalReport()}
       onProposal={() => navigate(`/document/proposal/${property.id}`)} onDetailReport={() => navigate(`/document/report/${property.id}`)} />
     </div>
     {/* Report button stays at the bottom of the property screen (redesign 2026-11-12): newest report in one tap, or create one. */}
     <div className="property-report-bar" role="region" aria-label="보고서">
-      <span>{latestReport ? `전문 보고서 v${latestReport.reportVersion}` : '보고서 없음'}{summary && !summary.reportReady ? ` · 확인할 자료 ${summary.missingDocumentTypes.length}건` : ''}</span>
+      <span>{latestReport ? `전문 보고서 v${latestReport.reportVersion}` : '보고서 없음'}{freshness === 'stale' ? ' · 자료 상태 확인 불가' : summary && !summary.reportReady ? ` · 확인할 자료 ${summary.missingDocumentTypes.length}건` : ''}</span>
       <Button variant="contained" startIcon={latestReport ? <VisibilityOutlined /> : <PostAddRounded />} disabled={creatingReport} onClick={() => latestReport ? navigate(`/professional-report/snapshot/${latestReport.id}`) : void createProfessionalReport()}>{creatingReport ? '생성 중…' : latestReport ? '보고서 보기' : '보고서 만들기'}</Button>
     </div>
   </main>;

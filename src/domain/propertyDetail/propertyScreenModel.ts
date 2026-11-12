@@ -53,3 +53,16 @@ export function trustRows(property: Partial<Property>, summary?: TrustSummaryInp
   rows.push({ key: 'status', label: '자료 상태', value: `공식확인 ${summary.officiallyVerified} · 미확인·추정 ${summary.unverified}`, tone: summary.unverified > 0 ? 'warn' : summary.officiallyVerified > 0 ? 'ok' : 'todo' });
   return rows;
 }
+
+/**
+ * Whether the Data Room numbers on screen still match the store. A failed reload of the same property keeps the page
+ * (so panels don't unmount) but its numbers are then out of date, so the 근거 panel and report bar must not show them
+ * (루인 #59 review). The next successful load makes them current again.
+ */
+export type DataRoomFreshness = 'current' | 'stale';
+export function nextDataRoomFreshness(event: 'loaded' | 'failed'): DataRoomFreshness {
+  return event === 'loaded' ? 'current' : 'stale';
+}
+export function summaryForDisplay<T>(summary: T | undefined, freshness: DataRoomFreshness): T | undefined {
+  return freshness === 'current' ? summary : undefined;
+}

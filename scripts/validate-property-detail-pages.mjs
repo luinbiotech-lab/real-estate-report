@@ -295,7 +295,16 @@ console.log('Interior/Spatial workspace validation passed.');
   const rows = screen.trustRows(full, { officiallyVerified: 2, unverified: 1, verificationPending: 3, requiredSourcePresent: 4, requiredOfficiallyVerified: 0, requiredDocumentTotal: 4, reports: 0, reportReady: false });
   const by = Object.fromEntries(rows.map((row) => [row.key, row]));
   if (by['required-source'].tone !== 'ok' || by['required-verified'].tone !== 'todo' || by.pending.value !== '3건' || by.pending.tone !== 'warn') fail('신뢰도 패널 상태 판정 오류');
+  // 루인 #59 review: success → same-property reload failure → success. The failed reload must not keep showing old numbers.
+  let freshness = screen.nextDataRoomFreshness('loaded');
+  const current = { requiredOfficiallyVerified: 3 };
+  if (screen.summaryForDisplay(current, freshness) !== current) fail('정상 조회 후 근거 수치가 보여야 합니다.');
+  freshness = screen.nextDataRoomFreshness('failed');
+  if (screen.summaryForDisplay(current, freshness) !== undefined) fail('재조회 실패 후 이전 근거 수치가 남아 있습니다.');
+  if (screen.trustRows(full, screen.summaryForDisplay(current, freshness)).at(-1).value !== '확인 불가') fail('재조회 실패 후 근거 패널은 확인 불가여야 합니다.');
+  freshness = screen.nextDataRoomFreshness('loaded');
+  if (screen.summaryForDisplay(current, freshness) !== current) fail('재조회 성공 후 근거 수치가 복구돼야 합니다.');
   const page = readFileSync('src/pages/PropertyDataRoomPage.tsx', 'utf8');
-  for (const marker of ['<PropertyMasthead', '<PropertyTrustPanel', 'className="property-report-bar"']) if (!page.includes(marker)) fail(`물건 화면 구성 누락: ${marker}`);
+  for (const marker of ['<PropertyMasthead', '<PropertyTrustPanel property={property} summary={shownSummary}', 'className="property-report-bar"', "setFreshness(nextDataRoomFreshness('failed'))", "setFreshness(nextDataRoomFreshness('loaded'))", "freshness === 'stale' ? ' · 자료 상태 확인 불가'"]) if (!page.includes(marker)) fail(`물건 화면 구성 누락: ${marker}`);
   console.log('Property screen masthead / trust panel validation passed.');
 }
