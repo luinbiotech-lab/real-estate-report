@@ -146,3 +146,25 @@ if (oneSrc.includes('· 기존값')) fail('1P parking wording "기존값" replac
 }
 
 console.log('Report display rules (short labels, calculated coverage, device fit): PASS');
+
+// 루인 BLOCKING on #56 (2026-11-12): the district query keeps rows whose legal dong is blank, and the estimate does not drop them.
+// The API must count them and the page-4 wording must never call them "same dong".
+{
+  const pv = await importTs('src/domain/professionalReport/priceLayerView.ts');
+  const { estimateAchievablePrice } = await import('../api/_lib/priceLayers.mjs');
+  const deal = (i, legalDong) => ({ dealDate: `2026-0${(i % 9) + 1}-10`, legalDong, jibun: `${800 + i}`, type: 'commercial', dealAmount: 3_000_000_000 + i * 10_000_000, landAreaSqm: 170, landPricePerPyeong: Math.round((3_000_000_000 + i * 10_000_000) / (170 / 3.305785)) });
+  const rows = [...Array.from({ length: 8 }, (_, i) => deal(i, '방배동')), deal(8, ''), deal(9, '  ')];
+  const est = estimateAchievablePrice({ landAreaSqm: 168.1, rows, computedAt: '2026-11-12T00:00:00Z' });
+  eq(est.comparableCount, 10, 'blank-dong rows are still used (selection unchanged)');
+  eq(est.legalDongUnconfirmedCount, 2, 'API counts used deals whose legal dong is blank');
+  eq(pv.estimateScopeLabel(est), '같은 동 8건·법정동 미표기 2건', 'mixed scope is spelled out');
+  eq(pv.estimateScopeLabel({ comparableCount: 8, legalDongUnconfirmedCount: 0 }), '모두 같은 동 확인', 'all confirmed');
+  eq(pv.estimateScopeLabel({ comparableCount: 5, legalDongUnconfirmedCount: 5 }), '모두 법정동 미표기 5건', 'all blank');
+  // Stored before the count existed: derive only when every used deal is stored, otherwise do not claim "same dong".
+  eq(pv.estimateScopeLabel({ comparableCount: 2, deals: [{ legalDong: '방배동' }, { legalDong: '' }] }), '같은 동 1건·법정동 미표기 1건', 'legacy full list derives the count');
+  eq(pv.estimateScopeLabel({ comparableCount: 10, deals: Array.from({ length: 8 }, () => ({ legalDong: '방배동' })) }), '같은 동 또는 법정동 미표기 거래', 'legacy truncated list does not claim same dong');
+  const sevenSrc = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+  if (!sevenSrc.includes('{estimateScopeLabel(priceEstimate)}·최근 6개월') || /건\(같은 동·최근 6개월\)/.test(sevenSrc)) fail('page 4 basis note must print the verified dong scope');
+  if (/같은 동·최근 6개월/.test(pv.PRICE_ESTIMATE_METHOD_NOTE)) fail('method note must not call every deal same-dong');
+  console.log('PASS estimate dong scope: blank legal dong counted and never printed as same dong');
+}

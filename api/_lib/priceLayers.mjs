@@ -81,7 +81,8 @@ export function buildPriceLayers({ askingPrice, landAreaSqm, officialLandPricePe
       state: used.length ? 'candidate' : 'missing', label: '주변 실거래 시세',
       count: used.length, medianUnitPerPyeong: p(0.5), dropped: dropped.map(({ deal, reason }) => ({ dealDate: deal.dealDate, reason })), excludedUpstream,
       deals: used.map((deal) => ({ dealDate: deal.dealDate, legalDong: deal.legalDong, jibun: deal.jibun, type: deal.type, dealAmount: deal.dealAmount, landAreaSqm: deal.landAreaSqm, landPricePerPyeong: deal.landPricePerPyeong, buildingUse: deal.buildingUse || '' })),
-      note: '같은 동·최근 6개월 공개 실거래 후보(동일 건물 거래로 확정하지 않음)',
+      note: '같은 동 또는 법정동 미표기·최근 6개월 공개 실거래 후보(동일 건물 거래로 확정하지 않음)',
+      legalDongUnconfirmedCount: used.filter((deal) => !String(deal.legalDong || '').trim()).length,
     },
     estimate: estimate ? { ...estimate, state: 'estimated', label: 'DA:ON 거래가능가격 추정', note: `비교거래 ${used.length}건 토지 평당가 하위25%·중앙값·상위25% × 본건 토지 ${Math.round(landPyeong * 100) / 100}평 · 감정평가 아님` }
       : { state: 'missing', label: 'DA:ON 거래가능가격 추정', note: `비교거래 부족(${used.length}건 < ${MIN_COMPARABLES}건) — 산출하지 않음` },
@@ -103,6 +104,8 @@ export function estimateAchievablePrice({ landAreaSqm, rows = [], computedAt = n
   for (const { reason } of dropped) { const key = reason.startsWith('여러 필지') ? 'bulk' : reason.includes('절반') ? 'tooSmall' : 'tooLarge'; droppedByReason[key] = (droppedByReason[key] || 0) + 1; }
   const base = {
     method: 'land_unit_price_iqr_v1', landAreaSqm: finite(landAreaSqm) ? landAreaSqm : undefined, comparableCount: used.length,
+    // The district query keeps rows whose legal dong is blank (dong not confirmed). Count them so outputs never call all of them "same dong".
+    legalDongUnconfirmedCount: used.filter((deal) => !String(deal.legalDong || '').trim()).length,
     excluded: { upstream: excludedUpstream, ...droppedByReason }, computedAt,
     areaRange: finite(landAreaSqm) ? { minSqm: Math.round(landAreaSqm * AREA_RATIO_MIN * 10) / 10, maxSqm: Math.round(landAreaSqm * AREA_RATIO_MAX * 10) / 10 } : undefined,
     deals: used.sort((a, b) => String(b.dealDate).localeCompare(String(a.dealDate))).slice(0, 8).map((deal) => ({
