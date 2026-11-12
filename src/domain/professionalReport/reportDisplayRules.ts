@@ -98,3 +98,50 @@ export function comparableUnitDisplay(row: { salePrice: number; landAreaPyeong: 
   const variancePct = Math.abs((row.landUnitPrice - derived) / derived) * 100;
   return variancePct > 0.5 ? { value: Math.round(derived), mismatch: true, sourceValue: row.landUnitPrice } : { value: row.landUnitPrice, mismatch: false, sourceValue: row.landUnitPrice };
 }
+
+export interface ScenarioFacts {
+  floors: Array<{ floor: string; name: string; areaSqm: number | null }>;
+  totalFloorAreaSqm?: number | null; zoning?: string; road?: string; occupancy?: string;
+}
+
+const sqm = (value: number) => `${value.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}㎡`;
+const floorGroup = (floors: ScenarioFacts['floors'], pattern: RegExp) => {
+  const rows = floors.filter((row) => pattern.test(row.name || ''));
+  const area = rows.reduce((sum, row) => sum + (positiveNumber(row.areaSqm) ? Number(row.areaSqm) : 0), 0);
+  const labels = [...new Set(rows.map((row) => String(row.floor || '').trim()).filter(Boolean))].join('·');
+  return { rows, area, labels };
+};
+const RESIDENTIAL = /주택|주거|다가구|다세대/;
+const COMMERCIAL = /점포|근린|사무|업무|상가|판매|음식/;
+
+/**
+ * Evidence lines for a use scenario card, built only from register/Data Room facts already in the report (owner review
+ * 2026-11-12: the cards showed only a name). Nothing is inferred beyond the stored values; sums are labelled as floor
+ * totals and every use that differs from the register ends with a check line. Lines without data are omitted.
+ */
+export function scenarioEvidence(title: string, facts: ScenarioFacts): string[] {
+  const lines: string[] = [];
+  const push = (line: string | false | undefined) => { if (line && !lines.includes(line)) lines.push(line); };
+  const residential = floorGroup(facts.floors, RESIDENTIAL);
+  const commercial = floorGroup(facts.floors, COMMERCIAL);
+  const firstFloor = facts.floors.filter((row) => /^(1F|1층|지상\s*1층?)$/i.test(String(row.floor || '').trim()) && COMMERCIAL.test(row.name || ''));
+  const zoning = (facts.zoning || '').trim(); const road = (facts.road || '').trim(); const occupancy = (facts.occupancy || '').trim();
+  // Mixed-use names ('주거·업무 복합공간') are matched as residential/mixed first.
+  if (/주거|주택|복합|거주/.test(title)) {
+    push(residential.area > 0 && `공부상 주택 ${residential.labels} ${sqm(residential.area)}(층별 합계)`);
+    push(commercial.area > 0 && `근생·점포 ${commercial.labels} ${sqm(commercial.area)}(층별 합계)`);
+    push(zoning && `용도지역 ${zoning}`);
+  } else if (/사옥|업무|사무|오피스|본사/.test(title)) {
+    push(positiveNumber(facts.totalFloorAreaSqm) && `연면적 ${sqm(Number(facts.totalFloorAreaSqm))}${facts.floors.length ? ` · ${[...new Set(facts.floors.map((row) => row.floor).filter(Boolean))].join('·')} 일괄 사용` : ''}`);
+    push(occupancy && `명도: ${occupancy}`);
+    push(residential.area > 0 && `공부상 주택 ${sqm(residential.area)}(${residential.labels}) 업무 사용 시 용도변경 확인 필요`);
+  } else if (/F&B|카페|식음|음식|레스토랑|리테일|상가|매장|플래그십|쇼룸/i.test(title)) {
+    push(road && `도로: ${road}`);
+    push(firstFloor.length > 0 && `1층 공부상 ${firstFloor.map((row) => `${row.name}${positiveNumber(row.areaSqm) ? ` ${sqm(Number(row.areaSqm))}` : ''}`).join(' · ')}`);
+    push(zoning && `용도지역 ${zoning} · 업종별 허용 여부 확인 필요`);
+  } else {
+    push(zoning && `용도지역 ${zoning}`);
+    push(positiveNumber(facts.totalFloorAreaSqm) && `연면적 ${sqm(Number(facts.totalFloorAreaSqm))}`);
+  }
+  return lines.slice(0, 3);
+}

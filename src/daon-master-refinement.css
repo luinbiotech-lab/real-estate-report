@@ -176,3 +176,9 @@
 .daon-detail-master .dd-use-basis{margin-bottom:3.5mm}
 .daon-detail-master .dd-use-basis .dd-info-row span{white-space:normal;line-height:1.4}
 .daon-detail-master .dd-estimate-basis{margin:1.6mm 0 0;font-size:9.6px;line-height:1.5;color:#58677a;word-break:keep-all}
+
+/* Page 05 scenario cards: name + evidence lines from register/Data Room values (owner review 2026-11-12). */
+.daon-detail-master .dd-scenarios.no-photo article.has-evidence>p{min-height:0;padding:3mm 3mm 1.2mm;font-size:14px}
+.daon-detail-master .dd-scenario-evidence{list-style:none;margin:0;padding:0 3mm 3mm;display:grid;gap:1.2mm}
+.daon-detail-master .dd-scenario-evidence li{font-size:10.2px;line-height:1.45;color:#4f5e71;padding-left:2.6mm;position:relative;word-break:keep-all}
+.daon-detail-master .dd-scenario-evidence li::before{content:'';position:absolute;left:0;top:1.6mm;width:1.1mm;height:1.1mm;border-radius:50%;background:#c6943b}

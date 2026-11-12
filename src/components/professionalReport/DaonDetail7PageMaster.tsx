@@ -2,7 +2,7 @@ import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/pr
 import { askingPosition, estimateScopeLabel, formatEok, officialMultipleLine, priceLayerCells, PRICE_ESTIMATE_METHOD_NOTE } from '../../domain/professionalReport/priceLayerView';
 import type { ReactNode } from 'react';
 import { DaonLogoImage } from '../brand/DaonLogoImage';
-import { buildingAgeDisplay, comparableUnitDisplay, coverageDisplay, floorAreaRatioDisplay, koreaDateLabel, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
+import { buildingAgeDisplay, comparableUnitDisplay, coverageDisplay, floorAreaRatioDisplay, koreaDateLabel, scenarioEvidence, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
 import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
@@ -150,6 +150,8 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   // card instead of one card holding the whole list (owner sample review 2026-11-11). Multi-line input is unchanged.
   const useLines = splitLines(model.investment.recommendedUse, 3);
   const scenarios = useLines.length === 1 && !splitLabel(useLines[0]).label ? useLines[0].split(/\s*,\s*/).filter(Boolean).slice(0, 3) : useLines;
+  // Evidence under each scenario name comes only from register/Data Room values already printed in this report.
+  const scenarioFacts = { floors: model.building.floors.map((row) => ({ floor: row.floor, name: row.name, areaSqm: row.areaSqm })), totalFloorAreaSqm: model.building.totalFloorAreaSqm.value, zoning: display(model.land.zoning), road: display(model.land.roadCondition), occupancy: display(model.pricing.occupancyStatus) };
   const risks = splitLines(model.risks.risks, 6);
   const comparables = model.investment.comparables ?? [];
   // Titles never infer a corner from free text (Luin review on PR #46, 2026-11-04): neutral titles until a verified
@@ -303,7 +305,7 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
       <SectionBar right="VALUE CREATION ROADMAP">가치 확장 로드맵</SectionBar>
       <div className="dd-roadmap" style={{ gridTemplateColumns: equalColumns(p5RoadmapCount) }}><NumberedPoint icon="building" index={1} title="즉시 사용" copy={display(model.pricing.occupancyStatus)} /><NumberedPoint icon="chart" index={2} title="리포지셔닝" copy={display(model.investment.features, '파사드·동선·공간 재구성 검토')} /><NumberedPoint icon="edit" index={3} title="중장기 검토" copy={display(model.investment.developmentPlan, '리노베이션 또는 신축 여부 검토')} /></div>
       {scenarios.length > 0 && <SectionBar right="USE CASE SCENARIOS">활용 시나리오</SectionBar>}
-      {scenarios.length > 0 && <div className={`dd-scenarios${hasPhotos ? '' : ' no-photo'}`} style={{ gridTemplateColumns: equalColumns(scenarios.length) }}>{scenarios.map((line, i) => { const { label, text } = splitLabel(line); const title = label || `활용안 ${i + 1}`; return <article key={i}>{hasPhotos && <ImageSlot src={imageAt(i)} caption={title} />}<h3>{title}</h3><p>{text}</p></article>; })}</div>}
+      {scenarios.length > 0 && <div className={`dd-scenarios${hasPhotos ? '' : ' no-photo'}`} style={{ gridTemplateColumns: equalColumns(scenarios.length) }}>{scenarios.map((line, i) => { const { label, text } = splitLabel(line); const title = label || `활용안 ${i + 1}`; const evidence = label ? [] : scenarioEvidence(text, scenarioFacts); return <article key={i} className={evidence.length ? 'has-evidence' : undefined}>{hasPhotos && <ImageSlot src={imageAt(i)} caption={title} />}<h3>{title}</h3><p>{text}</p>{evidence.length > 0 && <ul className="dd-scenario-evidence">{evidence.map((item) => <li key={item}>{item}</li>)}</ul>}</article>; })}</div>}
       {!hasPhotos && useBasis.length > 1 && <><SectionBar right="USE BASIS">활용 판단 기준 (건축물대장)</SectionBar><div className="dd-info-table dd-use-basis">{useBasis.map(([label, value]) => <InfoRow key={label} label={label} value={value} />)}</div></>}
       <Insight icon="target" kicker="STRATEGIC INSIGHT" title="이 자산의 강점은 하나의 “정답 용도”가 아니라 매수자에 따라 달라지는 실행 옵션입니다." copy={splitLines(model.investment.recommendedUse, 6).join(' · ')} />
     </Page>}

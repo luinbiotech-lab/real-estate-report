@@ -168,3 +168,24 @@ console.log('Report display rules (short labels, calculated coverage, device fit
   if (/같은 동·최근 6개월/.test(pv.PRICE_ESTIMATE_METHOD_NOTE)) fail('method note must not call every deal same-dong');
   console.log('PASS estimate dong scope: blank legal dong counted and never printed as same dong');
 }
+
+// Page 05 scenario evidence (owner review 2026-11-12: cards showed only a name). Only stored facts, missing data omitted.
+{
+  const { scenarioEvidence } = rules;
+  const facts = { floors: [{ floor: '3F', name: '주택', areaSqm: 81.98 }, { floor: '2F', name: '주택', areaSqm: 81.98 }, { floor: '1F', name: '점포', areaSqm: 40.99 }, { floor: '1F', name: '제2종근린생활시설', areaSqm: 40.99 }], totalFloorAreaSqm: 349.08, zoning: '제2종일반주거지역(7층 이하)', road: '양면 도로 코너', occupancy: '잔금일 기준 전체 명도 협의 가능' };
+  const office = scenarioEvidence('사옥', facts);
+  eq(office[0], '연면적 349.08㎡ · 3F·2F·1F 일괄 사용', 'office: total floor area and floors');
+  eq(office[1], '명도: 잔금일 기준 전체 명도 협의 가능', 'office: occupancy as stored');
+  if (!/공부상 주택 163.96㎡\(3F·2F\) 업무 사용 시 용도변경 확인 필요/.test(office[2] || '')) fail('office: residential floors need a use-change check line');
+  const mixed = scenarioEvidence('주거·업무 복합공간', facts);
+  eq(mixed[0], '공부상 주택 3F·2F 163.96㎡(층별 합계)', 'mixed: residential sum is labelled');
+  eq(mixed[1], '근생·점포 1F 81.98㎡(층별 합계)', 'mixed: commercial sum is labelled');
+  const fb = scenarioEvidence('F&B 플래그십', facts);
+  eq(fb[0], '도로: 양면 도로 코너', 'F&B: stored road text');
+  eq(fb[1], '1층 공부상 점포 40.99㎡ · 제2종근린생활시설 40.99㎡', 'F&B: first-floor register uses');
+  if (!/업종별 허용 여부 확인 필요$/.test(fb[2] || '')) fail('F&B: zoning check line');
+  eq(scenarioEvidence('F&B 플래그십', { floors: [] }).length, 0, 'no data → no invented lines');
+  eq(scenarioEvidence('사옥', { floors: [], totalFloorAreaSqm: null, occupancy: '' }).length, 0, 'office without data → nothing');
+  if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes('scenarioEvidence(text, scenarioFacts)')) fail('page 05 cards must print scenario evidence');
+  console.log('PASS page 05 scenario evidence: stored facts only, sums labelled, use-change checks, nothing invented');
+}
