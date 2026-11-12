@@ -165,15 +165,21 @@ console.log('Report display rules (short labels, calculated coverage, device fit
   const est = estimateAchievablePrice({ landAreaSqm: 168.1, rows, computedAt: '2026-11-12T00:00:00Z' });
   eq(est.comparableCount, 10, 'blank-dong rows are still used (selection unchanged)');
   eq(est.legalDongUnconfirmedCount, 2, 'API counts used deals whose legal dong is blank');
-  eq(pv.estimateScopeLabel(est), '같은 동 8건·법정동 미표기 2건', 'mixed scope is spelled out');
+  eq(pv.estimateScopeLabel(est), '같은 동 8건·동 미확인 2건', 'mixed scope is spelled out');
   eq(pv.estimateScopeLabel({ comparableCount: 8, legalDongUnconfirmedCount: 0 }), '모두 같은 동 확인', 'all confirmed');
-  eq(pv.estimateScopeLabel({ comparableCount: 5, legalDongUnconfirmedCount: 5 }), '모두 법정동 미표기 5건', 'all blank');
+  eq(pv.estimateScopeLabel({ comparableCount: 5, legalDongUnconfirmedCount: 5 }), '모두 동 미확인 5건', 'all blank');
   // Stored before the count existed: derive only when every used deal is stored, otherwise do not claim "same dong".
-  eq(pv.estimateScopeLabel({ comparableCount: 2, deals: [{ legalDong: '방배동' }, { legalDong: '' }] }), '같은 동 1건·법정동 미표기 1건', 'legacy full list derives the count');
-  eq(pv.estimateScopeLabel({ comparableCount: 10, deals: Array.from({ length: 8 }, () => ({ legalDong: '방배동' })) }), '같은 동 또는 법정동 미표기 거래', 'legacy truncated list does not claim same dong');
+  eq(pv.estimateScopeLabel({ comparableCount: 2, deals: [{ legalDong: '방배동' }, { legalDong: '' }] }), '같은 동 1건·동 미확인 1건', 'legacy full list derives the count');
+  eq(pv.estimateScopeLabel({ comparableCount: 10, deals: Array.from({ length: 8 }, () => ({ legalDong: '방배동' })) }), '같은 동 또는 동 미확인 거래', 'legacy truncated list does not claim same dong');
   const sevenSrc = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
   if (!sevenSrc.includes('{estimateScopeLabel(priceEstimate)}·최근 6개월') || /건\(같은 동·최근 6개월\)/.test(sevenSrc)) fail('page 4 basis note must print the verified dong scope');
   if (/같은 동·최근 6개월/.test(pv.PRICE_ESTIMATE_METHOD_NOTE)) fail('method note must not call every deal same-dong');
+  // Subject dong given: a deal naming another dong or none is unconfirmed; an empty subject dong confirms nothing.
+  eq(estimateAchievablePrice({ landAreaSqm: 168.1, rows, subjectDong: '방배동' }).legalDongUnconfirmedCount, 2, 'subject dong: blank-dong deals unconfirmed');
+  eq(estimateAchievablePrice({ landAreaSqm: 168.1, rows, subjectDong: '' }).legalDongUnconfirmedCount, 10, 'blank subject dong confirms no deal');
+  const disc = readFileSync('api/property-discovery.mjs', 'utf8');
+  if (!disc.includes("const matchLevel=!masked && jibun===targetJibun && sameDong") || !disc.includes("Boolean(legalDong && subjectDong && legalDong.includes(subjectDong))")) fail('exact_lot/same_dong need a confirmed, non-empty dong');
+  if (!disc.includes('const inDongOrUnknown=r=>!subjectDong || !r.legalDong || r.legalDong.includes(subjectDong);') || !disc.includes('rows:marketRows,subjectDong')) fail('discovery must pass the subject dong to the estimate');
   console.log('PASS estimate dong scope: blank legal dong counted and never printed as same dong');
 }
 
@@ -182,7 +188,7 @@ console.log('Report display rules (short labels, calculated coverage, device fit
   const { scenarioEvidence } = rules;
   const facts = { floors: [{ floor: '3F', name: '주택', areaSqm: 81.98 }, { floor: '2F', name: '주택', areaSqm: 81.98 }, { floor: '1F', name: '점포', areaSqm: 40.99 }, { floor: '1F', name: '제2종근린생활시설', areaSqm: 40.99 }], totalFloorAreaSqm: 349.08, zoning: '제2종일반주거지역(7층 이하)', road: '양면 도로 코너', occupancy: '잔금일 기준 전체 명도 협의 가능' };
   const office = scenarioEvidence('사옥', facts);
-  eq(office[0], '연면적 349.08㎡ · 3F·2F·1F 일괄 사용', 'office: total floor area and floors');
+  eq(office[0], '연면적 349.08㎡ · 공부상 3F·2F·1F', 'office: total floor area and floors');
   eq(office[1], '명도: 잔금일 기준 전체 명도 협의 가능', 'office: occupancy as stored');
   if (!/공부상 주택 163.96㎡\(3F·2F\) 업무 사용 시 용도변경 확인 필요/.test(office[2] || '')) fail('office: residential floors need a use-change check line');
   const mixed = scenarioEvidence('주거·업무 복합공간', facts);
@@ -192,7 +198,8 @@ console.log('Report display rules (short labels, calculated coverage, device fit
   eq(fb[0], '도로: 양면 도로 코너', 'F&B: stored road text');
   eq(fb[1], '1층 공부상 점포 40.99㎡ · 제2종근린생활시설 40.99㎡', 'F&B: first-floor register uses');
   if (!/업종별 허용 여부 확인 필요$/.test(fb[2] || '')) fail('F&B: zoning check line');
-  eq(scenarioEvidence('F&B 플래그십', { floors: [] }).length, 0, 'no data → no invented lines');
+  eq(scenarioEvidence('F&B 플래그십', { floors: [] }).join('|'), '용도지역 미확인 · 업종별 허용 여부 확인 필요', 'no zoning still keeps the permitted-use check');
+  if (scenarioEvidence('사옥', { ...facts, occupancy: '일부 임대 중' }).some((line) => /일괄 사용/.test(line))) fail('office scenario must not assert whole-building use (part may be leased)');
   eq(scenarioEvidence('사옥', { floors: [], totalFloorAreaSqm: null, occupancy: '' }).length, 0, 'office without data → nothing');
   if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes('scenarioEvidence(text, scenarioFacts)')) fail('page 05 cards must print scenario evidence');
   console.log('PASS page 05 scenario evidence: stored facts only, sums labelled, use-change checks, nothing invented');

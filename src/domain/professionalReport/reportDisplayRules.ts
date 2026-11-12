@@ -132,13 +132,15 @@ export function scenarioEvidence(title: string, facts: ScenarioFacts): string[] 
     push(commercial.area > 0 && `근생·점포 ${commercial.labels} ${sqm(commercial.area)}(층별 합계)`);
     push(zoning && `용도지역 ${zoning}`);
   } else if (/사옥|업무|사무|오피스|본사/.test(title)) {
-    push(positiveNumber(facts.totalFloorAreaSqm) && `연면적 ${sqm(Number(facts.totalFloorAreaSqm))}${facts.floors.length ? ` · ${[...new Set(facts.floors.map((row) => row.floor).filter(Boolean))].join('·')} 일괄 사용` : ''}`);
+    // Floors are listed as registered; "whole-building use" is never asserted (occupancy may say part is leased).
+    push(positiveNumber(facts.totalFloorAreaSqm) && `연면적 ${sqm(Number(facts.totalFloorAreaSqm))}${facts.floors.length ? ` · 공부상 ${[...new Set(facts.floors.map((row) => row.floor).filter(Boolean))].join('·')}` : ''}`);
     push(occupancy && `명도: ${occupancy}`);
     push(residential.area > 0 && `공부상 주택 ${sqm(residential.area)}(${residential.labels}) 업무 사용 시 용도변경 확인 필요`);
   } else if (/F&B|카페|식음|음식|레스토랑|리테일|상가|매장|플래그십|쇼룸/i.test(title)) {
     push(road && `도로: ${road}`);
     push(firstFloor.length > 0 && `1층 공부상 ${firstFloor.map((row) => `${row.name}${positiveNumber(row.areaSqm) ? ` ${sqm(Number(row.areaSqm))}` : ''}`).join(' · ')}`);
-    push(zoning && `용도지역 ${zoning} · 업종별 허용 여부 확인 필요`);
+    // The permitted-use check line stays even when the zoning is not on file.
+    push(zoning ? `용도지역 ${zoning} · 업종별 허용 여부 확인 필요` : '용도지역 미확인 · 업종별 허용 여부 확인 필요');
   } else {
     push(zoning && `용도지역 ${zoning}`);
     push(positiveNumber(facts.totalFloorAreaSqm) && `연면적 ${sqm(Number(facts.totalFloorAreaSqm))}`);

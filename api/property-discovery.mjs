@@ -428,11 +428,15 @@ export function normalizeTrade(row,type,resolved){
   const comparableExclusion=cancelled ? 'cancelled' : shareDeal ? 'share_deal' : type==='commercial' && buildingType==='집합' ? 'collective_unit' : undefined;
   const targetJibun=`${Number(resolved.bun)}${Number(resolved.ji)>0?'-'+Number(resolved.ji):''}`;
   const masked=/\*|X|x/.test(jibun);
-  const matchLevel=!masked && jibun===targetJibun
+  // 루인 review 2026-11-12: a lot number alone is not the same lot unless the legal dong is also confirmed; a blank
+  // region3 must never match every row (''.includes('') is true).
+  const subjectDong=String(resolved.region3||'').trim();
+  const sameDong=Boolean(legalDong && subjectDong && legalDong.includes(subjectDong));
+  const matchLevel=!masked && jibun===targetJibun && sameDong
     ? 'exact_lot'
     : masked
       ? 'masked_address_candidate'
-      : legalDong && legalDong.includes(resolved.region3)
+      : sameDong
         ? 'same_dong_candidate'
         : 'regional_candidate';
   const basisArea=type==='land' ? landAreaSqm : buildingAreaSqm || landAreaSqm;
@@ -538,14 +542,17 @@ export default async function handler(request,response){
       titleResult,floorResult,zoneResult,commercialResult,landResult,electricityResult,gasResult,businessResult,vworldResult
     ].map(result=>[result.label,{ok:result.ok,error:result.error}]));
     const buildingTitle=titles[0] ? normalizeTitle(titles[0]) : null;
-    const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial',address)).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
-    const land=landRaw.map(r=>normalizeTrade(r,'land',address)).filter(r=>!r.legalDong || r.legalDong.includes(address.region3));
+    // Rows of another dong are dropped; rows with a blank dong (or a lookup without a dong) are kept but never counted as same dong.
+    const subjectDong=String(address.region3||'').trim();
+    const inDongOrUnknown=r=>!subjectDong || !r.legalDong || r.legalDong.includes(subjectDong);
+    const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial',address)).filter(inDongOrUnknown);
+    const land=landRaw.map(r=>normalizeTrade(r,'land',address)).filter(inDongOrUnknown);
     const marketRows=[...commercial,...land].sort((a,b)=>b.dealDate.localeCompare(a.dealDate));
     const landUseZones=zones.map(normalizeZone).filter(zone=>zone.name);
     const usageEvidence=normalizeEnergy(electricityRaw,gasRaw,months);
     // Owner request 2026-11-01: achievable-price estimate from ALL comparable rows (the lists below are truncated to 40).
     const subjectLandAreaSqm=(landProfile?.landAreaSqm>0 ? landProfile.landAreaSqm : buildingTitle?.landAreaSqm>0 ? buildingTitle.landAreaSqm : undefined);
-    const priceEstimate=estimateAchievablePrice({landAreaSqm:subjectLandAreaSqm,rows:marketRows});
+    const priceEstimate=estimateAchievablePrice({landAreaSqm:subjectLandAreaSqm,rows:marketRows,subjectDong});
     const propertyType=titleResult.ok ? classifyPropertyType({titles:titles.map(normalizeTitle),landProfile}) : {type:'unconfirmed',label:PROPERTY_TYPE_LABELS.unconfirmed,confidence:'none',basis:['건축물대장 조회 실패 — 유형 미확인'],multipleBuildings:false};
     // Issue #37 phase 2: residential sale/jeonse/monthly APIs are called only for a residential type (each needs its own approval).
     const residentialType=residentialTypeFor(propertyType);
