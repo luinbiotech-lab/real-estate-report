@@ -140,7 +140,9 @@ export function splitLabel(line: string): { label: string; text: string } {
 export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSnapshot; model: ProfessionalReportViewModel }) {
   const visibleMedia = model.media.items.filter((item) => item.url && reportMediaCategoryAllowed(item.category, model.media.internalPhotoAllowed));
   const hero = (model.media.internalPhotoAllowed ? model.media.mainImage.value : null)
-    || visibleMedia.find((item) => item.category === 'main' || item.category === 'exterior')?.url || null;
+    || visibleMedia.find((item) => item.category === 'main' || item.category === 'exterior')?.url
+    // No field photo: the VWorld aerial image (its kind and source are printed on the image) fills the hero.
+    || visibleMedia.find((item) => item.category === 'aerial')?.url || null;
   const map = model.media.mapImage.value || null;
   const supporting = visibleMedia.filter((item) => item.url !== hero && item.category !== 'map').map((item) => item.url as string);
   const imageAt = (index: number) => supporting[index] || hero;

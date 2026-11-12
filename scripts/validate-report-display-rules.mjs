@@ -121,6 +121,14 @@ for (const needle of ["{!hero && p1Facts.length > 1 && <div className=\"dd-p1-fa
   const client = readFileSync('src/services/maps/vworldMapProvider.ts', 'utf8');
   if (!client.includes("VWORLD_ATTRIBUTION = '© 국토교통부 브이월드(VWorld)'") || !client.includes('fillText(VWORLD_ATTRIBUTION')) fail('VWorld map must carry the attribution on the image');
   if (!readFileSync('src/services/maps/mapService.ts', 'utf8').includes('[vworldMapProvider, naverMapProvider, kakaoMapProvider]')) fail('report static map must prefer VWorld');
+  // Aerial (2026-11-12, no field photo; roadview capture/redistribution not permitted by Kakao/NAVER): only GRAPHIC or PHOTO.
+  const aerial = new URL(proxy.vworldStaticMapUrl(37.49, 126.98, 'K', 'example.test', 'aerial'));
+  eq(aerial.searchParams.get('basemap'), 'PHOTO', 'aerial layer requests the PHOTO base map');
+  eq(new URL(proxy.vworldStaticMapUrl(37.49, 126.98, 'K', 'example.test', 'satellite<script>')).searchParams.get('basemap'), 'GRAPHIC', 'unknown layer falls back to the street map');
+  if (!client.includes("VWORLD_AERIAL_LABEL = '항공사진 · 현장사진 아님'") || !client.includes("stampVworldMap(await response.blob(), VWORLD_AERIAL_LABEL)")) fail('aerial image must carry the 항공사진 · 현장사진 아님 label on the image');
+  const preview = readFileSync('src/pages/DocumentPreview.tsx', 'utf8');
+  if (!preview.includes("item.category !== 'aerial' && reportMediaCategoryAllowed(item.category, allowInternal))?.url || bundle.media.find(") || !preview.includes("item.category === 'aerial' && reportMediaCategoryAllowed")) fail('1P hero must prefer field photos over the aerial image');
+  if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes("visibleMedia.find((item) => item.category === 'aerial')?.url || null")) fail('7P hero falls back to the aerial image only after field photos');
 }
 const oneSrc = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
 if (oneSrc.includes("'-'} (${py")) fail('1P area must not print "- (n평)" when ㎡ is missing');
@@ -188,4 +196,16 @@ console.log('Report display rules (short labels, calculated coverage, device fit
   eq(scenarioEvidence('사옥', { floors: [], totalFloorAreaSqm: null, occupancy: '' }).length, 0, 'office without data → nothing');
   if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes('scenarioEvidence(text, scenarioFacts)')) fail('page 05 cards must print scenario evidence');
   console.log('PASS page 05 scenario evidence: stored facts only, sums labelled, use-change checks, nothing invented');
+}
+
+// 1P hero preference executed on the real expression: exterior beats aerial, aerial only when nothing else, never foreign.
+{
+  const line = readFileSync('src/pages/DocumentPreview.tsx', 'utf8').split('\n').find((row) => row.includes('const dataRoomHero = bundle.media.find('));
+  const select = new Function('bundle', 'id', 'allowInternal', 'reportMediaCategoryAllowed', `return ${line.trim().slice('const dataRoomHero = '.length).replace(/;$/, '')};`);
+  const allowed = (category) => ['exterior', 'aerial', 'road'].includes(category);
+  const m = (id, propertyId, category) => ({ id, propertyId, mediaType: 'image', category, url: `${id}.jpg` });
+  eq(select({ media: [m('air', 'p', 'aerial'), m('ext', 'p', 'exterior')] }, 'p', false, allowed), 'ext.jpg', 'exterior photo wins over aerial');
+  eq(select({ media: [m('air', 'p', 'aerial')] }, 'p', false, allowed), 'air.jpg', 'aerial fills the hero when no field photo');
+  eq(select({ media: [m('foreign', 'q', 'aerial')] }, 'p', false, allowed), '', 'foreign aerial never used');
+  console.log('PASS 1P hero: field photo > VWorld aerial > none, Property-scoped');
 }

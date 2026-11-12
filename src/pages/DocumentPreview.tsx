@@ -79,7 +79,8 @@ export default function DocumentPreview() {
           return;
         }
         const allowInternal = internalPhotoAllowed(value);
-        const dataRoomHero = bundle.media.find((item) => item.propertyId === id && !item.deletedAt && item.mediaType === 'image' && item.url && reportMediaCategoryAllowed(item.category, allowInternal))?.url || '';
+        // Field photos win; a VWorld aerial image (labelled on the image) fills the hero only when none exists.
+        const dataRoomHero = bundle.media.find((item) => item.propertyId === id && !item.deletedAt && item.mediaType === 'image' && item.url && item.category !== 'aerial' && reportMediaCategoryAllowed(item.category, allowInternal))?.url || bundle.media.find((item) => item.propertyId === id && !item.deletedAt && item.mediaType === 'image' && item.url && item.category === 'aerial' && reportMediaCategoryAllowed(item.category, allowInternal))?.url || '';
         const mainImage = allowInternal ? (value.mainImage || dataRoomHero) : dataRoomHero;
         setView({ routeKey, phase: 'ready', property: { ...value, mainImage }, priceEstimate: findPriceEstimate(bundle.dataSources, id) });
       })

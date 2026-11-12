@@ -105,17 +105,19 @@ function vworldDomain() {
  * reports (2026-11-11 review: NAVER static map redistribution terms not confirmed). The key stays server-side; the
  * client adds the centre marker and the "© 국토교통부 브이월드" attribution onto the image.
  */
-export function vworldStaticMapUrl(latitude, longitude, key = String(process.env.VWORLD_API_KEY || '').trim(), domain = vworldDomain()) {
+// Only these two VWorld base maps are requested; any other value falls back to the street map.
+export const VWORLD_BASEMAPS = { map: 'GRAPHIC', aerial: 'PHOTO' };
+export function vworldStaticMapUrl(latitude, longitude, key = String(process.env.VWORLD_API_KEY || '').trim(), domain = vworldDomain(), layer = 'map') {
   const params = new URLSearchParams({
-    service: 'image', request: 'getmap', key, domain, format: 'png', basemap: 'GRAPHIC',
+    service: 'image', request: 'getmap', key, domain, format: layer === 'aerial' ? 'jpeg' : 'png', basemap: VWORLD_BASEMAPS[layer] || 'GRAPHIC',
     center: `${longitude},${latitude}`, crs: 'EPSG:4326', zoom: '17', size: '800,450',
   });
   return `${VWORLD_IMAGE}?${params}`;
 }
 
-async function vworldStaticMap(latitude, longitude, response, origin) {
+async function vworldStaticMap(latitude, longitude, response, origin, layer = 'map') {
   if (!vworldConfigured()) return fail(response, 503, 'API_NOT_CONFIGURED', 'VWorld API 설정이 없습니다.', origin);
-  const upstream = await fetch(vworldStaticMapUrl(latitude, longitude));
+  const upstream = await fetch(vworldStaticMapUrl(latitude, longitude, undefined, undefined, layer === 'aerial' ? 'aerial' : 'map'));
   const type = upstream.headers.get('content-type') || '';
   // VWorld reports key/domain errors as 200 with an XML/JSON body: only an image is passed through.
   if (!upstream.ok || !type.startsWith('image/')) return fail(response, 502, 'UPSTREAM_ERROR', 'VWorld 지도 이미지를 받지 못했습니다.', origin);
@@ -131,7 +133,7 @@ export async function staticMap(searchParams, response, origin) {
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return fail(response, 400, 'INVALID_REQUEST', '유효한 위도와 경도가 필요합니다.', origin);
   }
-  if (searchParams.get('provider') === 'vworld') return vworldStaticMap(latitude, longitude, response, origin);
+  if (searchParams.get('provider') === 'vworld') return vworldStaticMap(latitude, longitude, response, origin, searchParams.get('layer') === 'aerial' ? 'aerial' : 'map');
   if (!naverConfigured()) return fail(response, 503, 'API_NOT_CONFIGURED', 'NAVER Maps API 설정이 없습니다.', origin);
   const position = `${longitude} ${latitude}`;
   const params = new URLSearchParams({

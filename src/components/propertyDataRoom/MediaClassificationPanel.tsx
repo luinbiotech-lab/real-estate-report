@@ -4,14 +4,17 @@ import type { MediaCategory, PropertyMedia, PropertySpace } from '../../domain/p
 import { isInternalMediaCategory } from '../../domain/professionalReport/reportAccessPolicy';
 import { propertyDataRoomRepository } from '../../repositories/propertyDataRoomRepository';
 import { propertyDataRoomService } from '../../services/propertyDataRoomService';
+import { createVworldAerialImage } from '../../services/maps/vworldMapProvider';
 
 const reportCategories: MediaCategory[] = ['exterior', 'road', 'surroundings', 'entrance', 'facade_detail', 'aerial', 'parking', 'other'];
 const labels: Record<MediaCategory, string> = {
   exterior: '외관', interior: '내부', lobby: '로비', office: '오피스', corridor: '복도', restroom: '화장실', basement: '지하', rooftop: '옥상', roof: '지붕', parking: '주차', mechanical_room: '기계실', mechanical: '설비', road: '도로', entrance: '출입구', surroundings: '주변환경', floor_plan: '평면도', facade_detail: '파사드', aerial: '항공/드론', '360': '360', other: '기타',
 };
 
-export default function MediaClassificationPanel({ propertyId, media, spaces, internalPhotoAllowed, onSaved }: {
+export default function MediaClassificationPanel({ propertyId, media, spaces, internalPhotoAllowed, onSaved, latitude, longitude }: {
   propertyId: string;
+  latitude?: number;
+  longitude?: number;
   media: PropertyMedia[];
   spaces: PropertySpace[];
   internalPhotoAllowed: boolean;
@@ -59,6 +62,23 @@ export default function MediaClassificationPanel({ propertyId, media, spaces, in
     } finally { setSavingId(''); }
   };
 
+  // No field photo yet: a VWorld aerial image (public map imagery, labelled on the image as 항공사진 · 현장사진 아님) can
+  // fill the report hero. It is stored as category 'aerial' and stays unverified like any other uploaded media.
+  const addAerial = async () => {
+    if (typeof latitude !== 'number' || typeof longitude !== 'number') { setError('좌표가 없어 항공사진을 가져올 수 없습니다. 주소 조회로 좌표를 먼저 연결해 주세요.'); return; }
+    setUploading(true); setError(''); setMessage('');
+    try {
+      const dataUrl = await createVworldAerialImage({ latitude, longitude });
+      const blob = await (await fetch(dataUrl)).blob();
+      const file = new File([blob], `vworld-aerial-${propertyId}.jpg`, { type: 'image/jpeg' });
+      await propertyDataRoomService.uploadMedia(propertyId, file, { category: 'aerial', caption: '항공사진 · 국토교통부 브이월드(VWorld) · 현장사진 아님' });
+      setMessage('VWorld 항공사진을 항공 미디어로 연결했습니다. 현장 외관사진이 연결되면 보고서는 외관사진을 우선 사용합니다.');
+      await onSaved();
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'VWorld 항공사진을 가져오지 못했습니다.');
+    } finally { setUploading(false); }
+  };
+
   const upload = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]; if (!file) return;
     setUploading(true); setError(''); setMessage('');
@@ -91,6 +111,7 @@ export default function MediaClassificationPanel({ propertyId, media, spaces, in
       </TextField>
       <TextField size="small" label="캡션" value={caption} onChange={(event) => setCaption(event.target.value)} placeholder="예: 동광로18길 코너 외관" />
       <Button component="label" variant="contained" disabled={uploading}>{uploading ? '등록 중…' : '사진/영상 등록'}<input hidden type="file" accept="image/jpeg,image/png,image/webp,video/mp4,video/webm" onChange={upload} /></Button>
+      {!media.some((item) => item.category === 'aerial' && !item.deletedAt) && <Button variant="outlined" disabled={uploading} onClick={addAerial}>VWorld 항공사진 가져오기</Button>}
     </div>
     {media.length ? <div className="document-list">{media.map((item) => {
       const lockedInternal = !internalPhotoAllowed && isInternalMediaCategory(item.category);

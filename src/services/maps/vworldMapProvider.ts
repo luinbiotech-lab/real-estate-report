@@ -21,7 +21,9 @@ function loadImage(blob: Blob) {
   });
 }
 
-export async function stampVworldMap(blob: Blob): Promise<string> {
+export const VWORLD_AERIAL_LABEL = '항공사진 · 현장사진 아님';
+
+export async function stampVworldMap(blob: Blob, label = ''): Promise<string> {
   const image = await loadImage(blob);
   const canvas = document.createElement('canvas');
   canvas.width = image.naturalWidth; canvas.height = image.naturalHeight;
@@ -38,7 +40,14 @@ export async function stampVworldMap(blob: Blob): Promise<string> {
   const width = ctx.measureText(VWORLD_ATTRIBUTION).width + 14;
   ctx.fillStyle = 'rgba(255,255,255,0.88)'; ctx.fillRect(canvas.width - width - 6, canvas.height - 26, width, 20);
   ctx.fillStyle = '#26384d'; ctx.textBaseline = 'middle'; ctx.fillText(VWORLD_ATTRIBUTION, canvas.width - width + 1, canvas.height - 16);
-  return canvas.toDataURL('image/png');
+  // Aerial images carry their kind on the image itself so a report can never present them as a field photograph.
+  if (label) {
+    ctx.font = '700 15px "Noto Sans KR", "Malgun Gothic", sans-serif';
+    const labelWidth = ctx.measureText(label).width + 18;
+    ctx.fillStyle = 'rgba(3,47,86,0.9)'; ctx.fillRect(8, 8, labelWidth, 26);
+    ctx.fillStyle = '#ffffff'; ctx.textBaseline = 'middle'; ctx.fillText(label, 17, 21);
+  }
+  return canvas.toDataURL(label ? 'image/jpeg' : 'image/png', 0.9);
 }
 
 export const vworldMapProvider: MapProvider = {
@@ -52,3 +61,10 @@ export const vworldMapProvider: MapProvider = {
     return stampVworldMap(await response.blob());
   },
 };
+
+/** VWorld aerial image (basemap PHOTO) centred on the property, stamped with the kind label, marker and attribution. */
+export async function createVworldAerialImage({ latitude, longitude }: Coordinates): Promise<string> {
+  if (!configured()) throw new MapServiceError('missing-key', 'VWorld API 설정이 없습니다.');
+  const response = await proxyFetch('/api/maps/static', { provider: 'vworld', layer: 'aerial', latitude: String(latitude), longitude: String(longitude) });
+  return stampVworldMap(await response.blob(), VWORLD_AERIAL_LABEL);
+}
