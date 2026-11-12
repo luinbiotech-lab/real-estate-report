@@ -278,3 +278,24 @@ console.log('Interior/Spatial workspace validation passed.');
   if (!hub.includes('hubFactRows(property)') || !hub.includes('data-testid="hub-core-facts"')) fail('허브 핵심 정보가 hubFactRows를 사용하지 않습니다.');
   console.log('Hub core facts blank labels validation passed.');
 }
+
+// Property screen masthead + 근거 · 신뢰도 panel (benchmark redesign 2026-11-12): source tags never upgrade a value.
+{
+  const screen = await importTs('src/domain/propertyDetail/propertyScreenModel.ts');
+  const full = { salePrice: 4_150_000_000, landAreaPyeong: 50.85, totalFloorAreaSqm: 349.08, zoning: '제2종일반주거지역' };
+  const stats = screen.mastheadStats(full);
+  if (stats.map((s) => s.label).join('|') !== '매매가|대지 평당가|대지면적|연면적|용도지역') fail('머리 띠 핵심 숫자 순서 오류');
+  const unit = stats.find((s) => s.label === '대지 평당가');
+  if (unit.tag !== '계산값' || unit.value !== `${Math.round(4_150_000_000 / 50.85 / 10_000).toLocaleString('ko-KR')}만/평`) fail(`평당가 계산값 오류: ${unit.value}`);
+  if (stats.filter((s) => s.tag === '입력값').length !== 4) fail('입력값 표시 오류');
+  const empty = screen.mastheadStats({ salePrice: 0, landAreaPyeong: 0 });
+  if (empty.some((s) => s.tag !== '미입력') || empty.find((s) => s.label === '대지 평당가').value !== '계산 불가') fail('빈 값은 미입력/계산 불가로 표시해야 합니다(0원 금지).');
+  const noRoom = screen.trustRows(full, undefined);
+  if (noRoom.at(-1).value !== '확인 불가') fail('Data Room 실패 시 0이 아니라 확인 불가로 표시해야 합니다.');
+  const rows = screen.trustRows(full, { officiallyVerified: 2, unverified: 1, verificationPending: 3, requiredSourcePresent: 4, requiredOfficiallyVerified: 0, requiredDocumentTotal: 4, reports: 0, reportReady: false });
+  const by = Object.fromEntries(rows.map((row) => [row.key, row]));
+  if (by['required-source'].tone !== 'ok' || by['required-verified'].tone !== 'todo' || by.pending.value !== '3건' || by.pending.tone !== 'warn') fail('신뢰도 패널 상태 판정 오류');
+  const page = readFileSync('src/pages/PropertyDataRoomPage.tsx', 'utf8');
+  for (const marker of ['<PropertyMasthead', '<PropertyTrustPanel', 'className="property-report-bar"']) if (!page.includes(marker)) fail(`물건 화면 구성 누락: ${marker}`);
+  console.log('Property screen masthead / trust panel validation passed.');
+}

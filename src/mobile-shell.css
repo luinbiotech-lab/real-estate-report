@@ -225,3 +225,93 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 .app-shell aside nav .side-menu-section.has-active .side-menu-heading{color:#d7b46a}
 .side-menu-panel .side-category-items{padding:0 4px 4px 8px}
 @media(max-width:900px){.side-menu-panel{max-height:none;overflow:visible;margin-top:18px}}
+
+/* 2026-11-12 benchmark redesign: grey canvas + white cards, navy title band with key numbers, DA:ON '근거 · 신뢰도' column */
+.app-shell>main{background:#eef2f6}
+.app-shell .property-masthead{display:block;background:linear-gradient(135deg,#0b2545 0%,#123a66 100%);color:#fff;border-radius:16px;padding:22px 24px 18px;margin:0 0 16px;box-shadow:0 10px 24px #0b254526}
+.property-masthead-title{display:flex;justify-content:space-between;gap:16px;align-items:flex-start}
+.app-shell .property-masthead .eyebrow{color:#d7b46a!important;margin:0 0 4px}
+.masthead-sample{color:#f5c26b}
+.app-shell .property-masthead h1{color:#fff!important;font-size:28px;margin:0 0 4px;letter-spacing:-.4px}
+.app-shell .property-masthead p{color:#c5d3e3;margin:0}
+.property-masthead .actions .MuiButton-root{color:#fff;border:1px solid #ffffff40;border-radius:10px}
+.property-masthead-stats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:1px;margin:18px 0 0;background:#ffffff1f;border-radius:12px;overflow:hidden}
+.masthead-stat{background:#0d2c50;padding:12px 14px;display:grid;gap:2px;min-width:0}
+.masthead-stat dt{font-size:11.5px;color:#9fb3c8}
+.masthead-stat dd{margin:0;font-size:18px;font-weight:800;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.masthead-stat small{font-size:10.5px;color:#7f97b2}
+.masthead-stat.tag-calc small{color:#d7b46a}
+.masthead-stat.tag-missing dd{color:#7f97b2;font-weight:600;font-size:15px}
+.property-screen-body{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start}
+.property-screen-body>.data-room-workspace{min-width:0;margin:0}
+.property-trust-panel{position:sticky;top:16px;background:#fff;border:1px solid #dbe3ec;border-radius:16px;padding:18px;box-shadow:0 6px 18px #10243d0f;display:grid;gap:12px}
+.app-shell .property-trust-panel h2{margin:0;font-size:16px;color:#0b2545;display:flex;align-items:center;gap:8px}
+.app-shell .property-trust-panel h2::before{content:'';width:4px;height:16px;border-radius:2px;background:#b8923f}
+.trust-note{margin:0;font-size:12px;color:#667085;line-height:1.5}
+.trust-rows{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.trust-row{display:grid;grid-template-columns:1fr auto;gap:4px 8px;font-size:13px}
+.trust-row .trust-label{color:#475467}
+.trust-row b{color:#0b2545}
+.trust-row.tone-warn b{color:#9a6b12}
+.trust-row.tone-todo b{color:#98a2b3}
+.trust-bar{grid-column:1/-1;height:6px;border-radius:3px;background:#edf1f5;overflow:hidden}
+.trust-bar i{display:block;height:100%;background:#1f6f43;border-radius:3px}
+.trust-row.tone-warn .trust-bar i{background:#c9952b}
+.trust-row.tone-todo .trust-bar i{background:#c2cbd6}
+.trust-links{display:flex;flex-wrap:wrap;gap:6px}
+.trust-links button{border:1px solid #d0d9e4;background:#f7f9fb;border-radius:999px;padding:6px 12px;font:inherit;font-size:12.5px;color:#073a69;cursor:pointer}
+.trust-report{border-top:1px solid #edf1f5;padding-top:12px;display:grid;gap:8px}
+.app-shell .trust-report h3{margin:0;font-size:14px;color:#0b2545}
+.trust-report p{margin:0;font-size:12.5px;color:#667085}
+.trust-report-docs{display:flex;gap:6px;flex-wrap:wrap}
+@media(min-width:1201px){.property-screen-body~.property-report-bar{display:none}}
+@media(max-width:1200px){
+  .property-screen-body{grid-template-columns:minmax(0,1fr)}
+  .property-trust-panel{position:static}
+  .property-screen-body:not(.is-summary) .property-trust-panel{display:none}
+  .property-trust-panel .trust-report{display:none}
+}
+@media(max-width:760px){
+  .app-shell .property-masthead{padding:16px 16px 14px;border-radius:14px}
+  .app-shell .property-masthead h1{font-size:21px}
+  .property-masthead .actions{display:none}
+  .property-masthead-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .masthead-stat:first-child{grid-column:1/-1}
+  .masthead-stat dd{font-size:16px}
+}
+/* Home masthead + PC card grid (benchmark redesign 2026-11-12) */
+.app-shell .home-masthead{background:linear-gradient(135deg,#0b2545 0%,#123a66 100%);color:#fff;border-radius:16px;padding:22px 24px;box-shadow:0 10px 24px #0b254526;align-items:flex-start!important}
+.app-shell .home-masthead h1{color:#fff!important;margin:2px 0 4px}
+.app-shell .home-masthead.page-header p{color:#c5d3e3}
+.app-shell .home-masthead .eyebrow{color:#d7b46a!important;margin:0}
+.home-masthead .actions .MuiButton-outlined{color:#fff;border-color:#ffffff59}
+.home-masthead .actions .MuiButton-contained{background:#b8923f;color:#fff}
+.home-masthead-kpis{display:flex;gap:10px;margin:14px 0 0;flex-wrap:wrap}
+.home-masthead-kpis>div{background:#ffffff14;border:1px solid #ffffff1f;border-radius:12px;padding:8px 14px;min-width:120px}
+.home-masthead-kpis dt{font-size:11.5px;color:#9fb3c8}
+.home-masthead-kpis dd{margin:2px 0 0;font-size:22px;font-weight:800;color:#fff}
+.list-view-toggle{display:inline-flex;gap:4px}
+.property-card-visual{display:none}
+@media(min-width:901px){
+  .property-cards.view-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:14px;padding:16px}
+  .property-cards.view-cards+.table-wrap{display:none}
+  .property-cards.view-cards li button{width:100%;height:100%;display:grid;grid-template-rows:120px 1fr auto;text-align:left;background:#fff;border:1px solid #dbe3ec;border-radius:14px;padding:0;overflow:hidden;font:inherit;color:inherit;cursor:pointer;box-shadow:0 4px 14px #10243d0d;transition:box-shadow .15s,transform .15s}
+  .property-cards.view-cards li button:hover{box-shadow:0 10px 24px #10243d1f;transform:translateY(-2px)}
+  .property-cards.view-cards li button>svg{display:none}
+  .property-cards.view-cards .property-card-visual{display:grid;place-content:center;justify-items:center;gap:4px;background:linear-gradient(135deg,#123a66,#0b2545);color:#fff}
+  .property-cards.view-cards .property-card-visual b{font-size:20px;letter-spacing:-.3px}
+  .property-cards.view-cards .property-card-visual small{font-size:11px;color:#9fb3c8}
+  .property-cards.view-cards .property-card-visual.has-photo{display:block;padding:0}
+  .property-cards.view-cards .property-card-visual img{width:100%;height:120px;object-fit:cover;display:block}
+  .property-cards.view-cards .property-card-main{display:grid;gap:4px;padding:14px 16px 6px;min-width:0}
+  .property-cards.view-cards .property-card-main strong{font-size:16px;color:#0b2545}
+  .property-cards.view-cards .property-card-main .sample-badge{justify-self:start}
+  .property-cards.view-cards .property-card-main small{color:#667085;font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .property-cards.view-cards .property-card-facts{font-size:13px;color:#344054;font-weight:600}
+  .property-cards.view-cards .property-card-next{display:flex;justify-content:space-between;align-items:center;border-top:1px solid #edf1f5;padding:10px 16px;font-size:12.5px}
+  .property-cards.view-cards .property-card-next small{color:#98a2b3}
+  .property-cards.view-cards .property-card-next b{color:#9a6b12}
+}
+@media(max-width:900px){.app-shell .home-masthead{padding:18px 16px}.home-masthead-kpis>div{min-width:0;flex:1;padding:8px 10px}.home-masthead-kpis dd{font-size:18px}}
+@media(min-width:1201px){.property-hub-summary-card .property-hub-facts{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}}
+@media(max-width:900px){.list-view-toggle{display:none}.home-masthead .actions .MuiButton-root{white-space:nowrap}}
