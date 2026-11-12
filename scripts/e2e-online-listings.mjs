@@ -82,7 +82,8 @@ page.on('pageerror', (error) => pageErrors.push(error.message.slice(0, 200)));
 page.on('dialog', (dialog) => { void dialog.accept(); });
 const takeErrors = () => { const list = pageErrors; pageErrors = []; return list; };
 const shot = (name) => page.screenshot({ path: `${OUT}/e2e-${name}.png`, fullPage: true }).catch(() => undefined);
-async function visibleText(text, timeout = 20_000) { await page.getByText(text, { exact: false }).first().waitFor({ state: 'visible', timeout }); }
+// The home renders phone cards and a desktop table; only one is visible at a time, so wait for a visible match.
+async function visibleText(text, timeout = 20_000) { await page.getByText(text, { exact: false }).filter({ visible: true }).first().waitFor({ state: 'visible', timeout }); }
 async function fill(label, value) {
   if (value === '' || value === undefined) return;
   const field = page.getByLabel(label, { exact: true });
@@ -137,8 +138,9 @@ try {
       const text = await page.locator('body').innerText();
       assert(text.includes(listing.address), '주소가 허브에 표시되지 않습니다.');
       assert(/억|원/.test(text), '매매가 표시가 없습니다.');
-      assert(text.includes(`지상 ${listing.groundFloors}층`), `층수 표시 불일치(지상 ${listing.groundFloors}층 기대)`);
-      const facts = await page.getByTestId('hub-core-facts').locator('dd').allTextContents(); // extra rows are collapsed on the summary tab
+      // The summary tab shows four key facts; floors sit in the collapsed rows, so read every fact row's text.
+      const facts = await page.getByTestId('hub-core-facts').locator('dd').allTextContents();
+      assert(facts.some((value) => value.includes(`지상 ${listing.groundFloors}층`)), `층수 표시 불일치(지상 ${listing.groundFloors}층 기대)`);
       assert(facts.length >= 10 && !facts.some((value) => value.trim() === '-' || value.trim() === ''), `핵심 정보 공란이 '-'로 표시됨: ${facts.join(' | ')}`);
       const missing = facts.filter((value) => value.trim() === '미입력').length;
       return `주소·매매가·층수 표시 · 미입력 ${missing}개`;
