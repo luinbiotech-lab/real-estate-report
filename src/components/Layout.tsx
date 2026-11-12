@@ -67,7 +67,8 @@ export default function Layout() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isMobile = useIsMobileShell();
   const toggleRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { if (panelActive) setOpenGroup('settings'); setMobileNavOpen(false); }, [panelActive, location.pathname]);
+  // Entering a panel screen opens the 설정 panel; going back to 물건/조회/보고서 closes it (루인 #58 review).
+  useEffect(() => { setOpenGroup(panelActive ? 'settings' : ''); setMobileNavOpen(false); }, [panelActive, location.pathname]);
   useEffect(() => {
     if (!mobileNavOpen) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMobileNavOpen(false); toggleRef.current?.focus(); } };
