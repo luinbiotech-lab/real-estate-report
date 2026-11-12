@@ -29,6 +29,14 @@ export interface MarketPosition {
   verificationStatus?: string;
 }
 
+/** True only for a real calendar date in YYYY-MM-DD (rejects 2026-13-01, 2026-02-30); shape alone is not enough (루인 #60). */
+export function isCalendarDate(value: unknown): value is string {
+  if (typeof value !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const [y, m, d] = value.split('-').map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
 const positive = (value: unknown) => {
   const n = Number(value);
   return Number.isFinite(n) && n > 0 ? n : 0;
@@ -43,7 +51,7 @@ export function readMarketPoints(sources: PropertyDataSource[], propertyId: stri
     if (!row || typeof row !== 'object') return [];
     const value = row as Record<string, unknown>;
     const label = typeof value.label === 'string' ? value.label.trim() : '';
-    const tradeDate = typeof value.tradeDate === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value.tradeDate) ? value.tradeDate : '';
+    const tradeDate = isCalendarDate(value.tradeDate) ? value.tradeDate : '';
     const landUnitPrice = positive(value.landUnitPrice);
     if (!label || !tradeDate || !landUnitPrice) return [];
     return [{ label, tradeDate, landUnitPrice, salePrice: positive(value.salePrice), landAreaPyeong: positive(value.landAreaPyeong) }];
