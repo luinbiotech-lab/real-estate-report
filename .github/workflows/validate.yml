@@ -59,6 +59,9 @@ jobs:
 
       - name: Validate property market position
         run: node scripts/validate-market-position.mjs
+
+      - name: Validate home region filter and map pins
+        run: node scripts/validate-portfolio-map.mjs
       # Added 2026-11-02: validate:discovery was not run in CI, so a broken assertion went unnoticed after PR #41.
       - name: Validate public property discovery and price layers
         run: npm run validate:discovery
