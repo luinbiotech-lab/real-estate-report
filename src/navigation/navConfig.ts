@@ -95,7 +95,7 @@ export function resolveRouteContext(pathname: string): RouteContext {
   if (property) {
     const id = decodeURIComponent(property[1]);
     const hub: Crumb = { label: '물건 상세', to: `/property/${encodeURIComponent(id)}` };
-    if (property[2] === 'data-room') return { crumbs: [HOME, hub, { label: 'Data Room' }], parent: { label: '물건 상세', to: hub.to! }, groupId: 'property' };
+    if (property[2] === 'data-room') return { crumbs: [HOME, { label: '물건 상세' }], parent: { label: '부동산 홈', to: '/' }, groupId: 'property' };
     if (property[2] === 'edit') return { crumbs: [HOME, hub, { label: '정보 수정' }], parent: { label: '물건 상세', to: hub.to! }, groupId: 'property' };
     return { crumbs: [HOME, { label: '물건 상세' }], parent: { label: '부동산 홈', to: '/' }, groupId: 'property' };
   }

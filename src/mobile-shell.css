@@ -123,3 +123,19 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 /* Rental/income workspace: inline minmax(360px,…) two-column grid overflowed phones. */
 .rental-workspace-grid{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(360px,.9fr);gap:18px;align-items:start}
 @media(max-width:1100px){.rental-workspace-grid{grid-template-columns:minmax(0,1fr)}}
+
+/* One property screen (2026-11-12 redesign): 4 tabs + 더 보기, sub-menu chips, report button fixed at the bottom. */
+.data-room-page{padding-bottom:84px}
+.property-screen-header{padding-bottom:12px}
+.property-screen-tabs{border-bottom:1px solid #d9e0e8}
+.property-screen-tabs .MuiTab-root{min-width:0;padding:10px 2px;font-weight:700;font-size:14px;white-space:nowrap;letter-spacing:-.3px}
+.property-screen-subtabs{display:flex;gap:8px;overflow-x:auto;padding:12px 0 4px;-webkit-overflow-scrolling:touch}
+.property-screen-subtabs .MuiChip-root{flex:0 0 auto;font-weight:600}
+.property-more-docs{display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 16px}
+.property-report-bar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #d9e0e8;box-shadow:0 -6px 18px #10243c14}
+.property-report-bar span{font-size:13px;color:#475467;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.property-report-bar .MuiButton-root{flex:0 0 auto;white-space:nowrap;padding:10px 18px;font-weight:700}
+@media(min-width:901px){.property-report-bar{left:248px}}
+@media(max-width:760px){.property-screen-header{flex-direction:row;align-items:flex-end;gap:8px;padding-top:0}.property-screen-header h1{font-size:22px;margin:0 0 2px}.property-screen-header>div:first-child>.MuiButton-root,.property-screen-header .eyebrow{display:none}.property-screen-header p{font-size:13px;margin:0}.property-screen-tabs .MuiTab-root{font-size:13px}}
+.property-market-editor{margin-top:16px;border:1px solid #d9e0e8;border-radius:12px;background:#fff;padding:0 14px}
+.property-market-editor>summary{cursor:pointer;padding:14px 0;font-weight:700;color:#073a69}

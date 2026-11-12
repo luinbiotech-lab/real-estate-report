@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import { Alert, CircularProgress, ThemeProvider } from '@mui/material';
 import { applyBrandToDocument, createBrandTheme } from './brand/activeBrand';
 import { settingsRepository } from './repositories/propertyRepository';
@@ -9,7 +9,6 @@ import ProductionAuthGate from './components/ProductionAuthGate';
 import PropertyList from './pages/PropertyList';
 const PropertyForm = lazy(() => import('./pages/PropertyForm'));
 const PropertyDiscoveryPage = lazy(() => import('./pages/PropertyDiscoveryPage'));
-const PropertyHubPage = lazy(() => import('./pages/PropertyHubPage'));
 const ExcelImport = lazy(() => import('./pages/ExcelImport'));
 const BulkIntakePage = lazy(() => import('./pages/BulkIntakePage'));
 const AgentOpsPage = lazy(() => import('./pages/AgentOpsPage'));
@@ -103,8 +102,9 @@ function AppContent() {
       <Route path="discover" element={<PropertyDiscoveryPage />} />
       <Route path="agents/:agentId" element={<AgentWorkspacePage />} />
       <Route path="property/new" element={<PropertyForm settings={settings} />} />
-      <Route path="property/:id" element={<PropertyHubPage />} />
-      <Route path="property/:id/data-room" element={<PropertyDataRoomPage />} />
+      {/* One property screen (2026-11-12 redesign). The former Data Room URL redirects with its ?tab= intact. */}
+      <Route path="property/:id" element={<PropertyDataRoomPage />} />
+      <Route path="property/:id/data-room" element={<LegacyDataRoomRedirect />} />
       <Route path="property/:id/edit" element={<PropertyForm settings={settings} />} />
       <Route path="import" element={<ExcelImport />} />
       <Route path="bulk-intake" element={<BulkIntakePage />} />
@@ -138,4 +138,11 @@ export default function App() {
       <AppContent />
     </ProductionAuthGate>
   </ThemeProvider>;
+}
+
+/** Old links (/property/:id/data-room?tab=…) open the same property and tab on the unified property screen. */
+export function LegacyDataRoomRedirect() {
+  const { id = '' } = useParams();
+  const { search } = useLocation();
+  return <Navigate to={`/property/${encodeURIComponent(id)}${search}`} replace />;
 }

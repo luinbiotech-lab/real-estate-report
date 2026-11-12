@@ -25,7 +25,7 @@ const STAGE_ORDER: Record<ReadinessStage['id'], number> = {
 
 function actionPath(propertyId: string, stage: ReadinessStage) {
   if (stage.id === 'core') return `/property/${propertyId}/edit`;
-  return `/property/${propertyId}/data-room${stage.pathSuffix || ''}`;
+  return `/property/${propertyId}${stage.pathSuffix || ''}`;
 }
 
 export function derivePropertyNextActions(rows: Array<{ property: Property; readiness: PropertyReadinessAssessment }>): PropertyNextAction[] {

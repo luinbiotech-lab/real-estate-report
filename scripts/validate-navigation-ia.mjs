@@ -37,7 +37,7 @@ for (const path of [...menuPaths.filter((p) => p !== '/'), ...Object.values(samp
   const last = context.crumbs.at(-1);
   if (!last.label || last.to) throw new Error(`breadcrumb 마지막 항목은 현재 화면이어야 합니다: ${path}`);
 }
-const expectParent = { '/property/abc/data-room': '/property/abc', '/property/abc/edit': '/property/abc', '/property/abc': '/', '/agents/a1': '/agents', '/property/new': '/' };
+const expectParent = { '/property/abc/data-room': '/', '/property/abc/edit': '/property/abc', '/property/abc': '/', '/agents/a1': '/agents', '/property/new': '/' };
 for (const [path, parent] of Object.entries(expectParent)) {
   const actual = nav.resolveRouteContext(path).parent?.to;
   if (actual !== parent) throw new Error(`뒤로가기 대상 불일치: ${path} → ${actual} (기대 ${parent})`);

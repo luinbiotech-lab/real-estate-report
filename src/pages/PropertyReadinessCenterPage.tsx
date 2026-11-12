@@ -67,7 +67,7 @@ export default function PropertyReadinessCenterPage() {
 
   const openStage = (propertyId: string, stage: ReadinessStage) => {
     if (stage.id === 'core') return navigate(`/property/${propertyId}/edit`);
-    navigate(`/property/${propertyId}/data-room${stage.pathSuffix || ''}`);
+    navigate(`/property/${propertyId}${stage.pathSuffix || ''}`);
   };
   const openAction = (action: PropertyNextAction) => {
     propertyReadinessWorklogService.recordOpened(action);

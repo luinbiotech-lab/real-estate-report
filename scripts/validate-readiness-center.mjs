@@ -29,7 +29,7 @@ if (!text.service.includes('weighted = readyCount + partialCount * 0.5')) throw 
 if (!text.nextAction.includes(".filter((stage): stage is ReadinessStage & { state: 'missing' | 'partial' } => stage.state !== 'ready')")) throw new Error('Next Action Queue는 READY 항목을 제외해야 합니다.');
 if (!text.nextAction.includes("left.state === 'missing' ? 0 : 1") || !text.nextAction.includes('left.workflowOrder - right.workflowOrder')) throw new Error('Next Action Queue는 MISSING 우선 + workflow 순으로 정렬해야 합니다.');
 for (const pair of ["core: 1", "documents: 2", "provenance: 3", "verification: 4", "media: 5", "report: 6", "digital_twin: 7"]) if (!text.nextAction.includes(pair)) throw new Error(`Next Action workflow 순서 누락: ${pair}`);
-if (!text.nextAction.includes("return `/property/${propertyId}/data-room${stage.pathSuffix || ''}`")) throw new Error('Next Action은 해당 보완 화면으로 직접 연결되어야 합니다.');
+if (!text.nextAction.includes("return `/property/${propertyId}${stage.pathSuffix || ''}`")) throw new Error('Next Action은 해당 보완 화면으로 직접 연결되어야 합니다.');
 
 if (!text.worklog.includes("STORAGE_KEY = 'daon:property-readiness-worklog:v1'")) throw new Error('Readiness 작업 이력은 버전된 local-first 저장소를 사용해야 합니다.');
 if (!text.worklog.includes("export type ReadinessWorklogStatus = 'open' | 'improved' | 'completed'")) throw new Error('Readiness 작업 이력은 OPEN/IMPROVED/COMPLETED 상태를 가져야 합니다.');

@@ -83,7 +83,7 @@ for (const marker of [
 ]) {
   if (!text.comparableService.includes(marker)) throw new Error(`비교거래 provenance completeness 계약 누락: ${marker}`);
 }
-if (!text.comparablePanel.includes('비교거래 저장 및 보고서 연결') || !text.dataRoom.includes('value="market"')) throw new Error('Data Room은 사용자가 구조화 비교거래를 입력·갱신할 수 있는 경로를 제공해야 합니다.');
+if (!text.comparablePanel.includes('비교거래 저장 및 보고서 연결') || !text.dataRoom.includes("{ key: 'market', label: '실거래·가격', tabs: ['market'] }")) throw new Error('Data Room은 사용자가 구조화 비교거래를 입력·갱신할 수 있는 경로를 제공해야 합니다.');
 if (!text.dataBuilder.includes('comparables: comparableRows(bundle)') || !text.detailMaster.includes('model.investment.comparables')) throw new Error('7P 4페이지는 구조화 비교거래 DataSource를 ReportViewModel을 통해 렌더링해야 합니다.');
 if (!text.mediaPanel.includes("'exterior', 'road', 'surroundings'") || !text.dataRoom.includes('MediaClassificationPanel')) throw new Error('Data Room은 외관·도로·주변 미디어를 보고서용 category로 분류할 수 있어야 합니다.');
 if (!text.accessPolicy.includes('INTERNAL_MEDIA_CATEGORIES') || !text.accessPolicy.includes("'interior'") || !text.accessPolicy.includes("'lobby'") || !text.accessPolicy.includes("'office'") || !text.accessPolicy.includes("'corridor'") || !text.accessPolicy.includes("'restroom'") || !text.accessPolicy.includes("'basement'") || !text.accessPolicy.includes("'mechanical_room'")) throw new Error('내부사진 제외 정책은 대표적인 실내 카테고리 전체를 중앙 정책으로 관리해야 합니다.');

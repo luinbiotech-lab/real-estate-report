@@ -27,29 +27,34 @@ async function verifyExternalShareCenter(page) {
 }
 
 async function verifyPropertyHub(page) {
+  // 2026-11-12 redesign: one property screen. 요약 tab = fact-first summary; 더 보기 = specialist workspaces; report bar fixed.
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11`, { waitUntil: 'domcontentloaded' });
-  for (const text of ['물건 상세', '방배동 815-11 코너빌딩', '물건 개요', '업무 바로가기', '사진 · 미디어', '문서 · 공적자료', '비교거래', '임대 · 수익 분석', '검토 이력', '보고서', '3D · 도면', '공간 인텔리전스', '5개 공간 · 승인된 3D 연결 0건', '실내 인텔리전스', '문서 준비도', '원본 3/4 · 파일 0/4', '입지 브리핑', '자료실 전체보기', '대표 외관 미디어 미연결']) await waitForText(page, text);
+  for (const text of ['방배동 815-11 코너빌딩', '물건 개요', '핵심 정보', '문서 준비도', '원본 3/4 · 파일 0/4', '대표 외관 미디어 미연결']) await waitForText(page, text);
+  for (const name of ['요약', '토지·건물', '실거래·가격', '자료', '더 보기']) await page.getByRole('tab', { name, exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
+  await page.getByRole('region', { name: '보고서' }).getByRole('button', { name: /보고서 (보기|만들기)/ }).waitFor({ state: 'visible', timeout: 30_000 });
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-property-hub.png`, fullPage: true });
-  console.log('[PASS] Bangbae property hub: fact-first summary + shared document readiness + Room/Interior Intelligence context + no fabricated hero media');
+  await page.getByRole('tab', { name: '더 보기', exact: true }).click();
+  for (const text of ['업무 바로가기', '임대 · 수익 분석', '검토 이력', '3D · 도면', '공간 인텔리전스', '5개 공간 · 승인된 3D 연결 0건', '실내 인텔리전스', '리스크 · 규제', '입지 브리핑', '고객 제안서(1P)']) await waitForText(page, text);
+  console.log('[PASS] Bangbae property screen: 4 tabs + 더 보기, fact-first summary, report bar, Room/Interior context, no fabricated hero media');
 }
 
 async function verifyDataRoomDeepLinks(page) {
+  // Old Data Room links must open the same property and panel on the unified screen (redirect keeps ?tab=).
   const cases = [
-    // Tab labels follow the spatial-media Data Room grouping (f6f38a4, docs/spatial-media-walkthrough-contract-2026-10-06.md).
-    ['media', '사진/영상'],
-    ['spatial', '도면/공간'],
+    ['media', '사진·영상'],
+    ['spatial', '도면·층별'],
     ['documents', '문서'],
-    ['official', '공적자료'],
-    ['market', '비교거래'],
-    ['reports', '보고서'],
-    ['digitalTwin', '3D/Walkthrough'],
+    ['official', '공적자료·출처'],
+    ['market', '실거래·가격'],
+    ['reports', '보고서 버전'],
+    ['digitalTwin', '3D·Walkthrough'],
   ];
   for (const [tab, label] of cases) {
     await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room?tab=${tab}`, { waitUntil: 'domcontentloaded' });
-    await waitForText(page, 'PROPERTY DATA ROOM');
+    await page.waitForURL((url) => url.pathname === '/property/daon-bangbae-815-11' && url.searchParams.get('tab') === tab, { timeout: 30_000 });
     const tabNode = page.getByRole('tab', { name: label, exact: true });
     await tabNode.waitFor({ state: 'visible', timeout: 30_000 });
-    if ((await tabNode.getAttribute('aria-selected')) !== 'true') throw new Error(`Data Room deep link failed: ${tab} → ${label}`);
+    if ((await tabNode.getAttribute('aria-selected')) !== 'true') throw new Error(`Legacy Data Room link failed: ${tab} → ${label}`);
     if (tab === 'market') await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-data-room-deep-link-market.png`, fullPage: true });
     if (tab === 'official') {
       for (const text of ['공적자료 및 데이터 출처', '방배동 815-11 토지이용계획확인서', '원본 확인', '이관 파일 미등록', 'Storage 미연결']) await waitForText(page, text);
@@ -59,11 +64,11 @@ async function verifyDataRoomDeepLinks(page) {
       for (const text of ['도면 · 3D 자료 등록/추가', 'Room Intelligence 열기', 'Interior Intelligence 열기']) await waitForText(page, text);
     }
   }
-  console.log('[PASS] Property hub deep links: media/documents/market/reports/digitalTwin open the requested Data Room tab');
+  console.log('[PASS] Legacy Data Room links redirect to the property screen and open the requested panel');
 }
 
 async function verifyBangbaeDataRoom(page) {
-  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11/data-room`, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE_URL}/property/daon-bangbae-815-11?tab=overview`, { waitUntil: 'domcontentloaded' });
   for (const text of ['방배동 815-11 코너빌딩', '층별 구성 · Data Room', '4개 층 · 5개 공간', '합계 349.08㎡', '3F', '2F', '1F', 'B1', '제2종근린생활시설(부동산중개업소)', '점포', '다가구용단독주택(1가구)', '출처와 검증', '방배동 815-11 건축물대장.pdf', '비교거래 요약', '6건', '5,862만/평 ~ 8,788만/평', '2026-06-02', '방배동 실거래사례1년간.pdf', 'row provenance 6/6', '비교거래 전체 보기']) await waitForText(page, text);
   const comparableSection = page.locator('section').filter({ hasText: 'MARKET COMPARABLES' }).last();
   const comparableText = (await comparableSection.textContent()) || '';
