@@ -47,6 +47,18 @@ eq(rules.buildingAgeDisplay('1978-11-11', 'not a date'), '', 'invalid asOf → e
 eq(rules.koreaDateLabel('2026-11-10T15:00:00Z'), '2026. 11. 11', 'KST issue date at midnight');
 eq(rules.koreaDateLabel('2026-11-10T14:59:59Z'), '2026. 11. 10', 'KST issue date one second before midnight');
 eq(rules.koreaDateLabel(''), '', 'invalid issue date → empty');
+// Comparable unit price (2026-11-12 multi-review): seed 811-20 stores 7,905만 but 45억 ÷ 56.29평 = 7,994만 → bar uses the
+// calculated value and flags the row; a consistent row (2112: 51억 ÷ 59.89평 = 8,516만) keeps the source value.
+{
+  const a = rules.comparableUnitDisplay({ salePrice: 4_500_000_000, landAreaPyeong: 56.29, landUnitPrice: 79_050_000 });
+  if (!a.mismatch || a.value !== Math.round(4_500_000_000 / 56.29) || a.sourceValue !== 79_050_000) fail(`comparable mismatch not flagged: ${JSON.stringify(a)}`);
+  const b = rules.comparableUnitDisplay({ salePrice: 5_100_000_000, landAreaPyeong: 59.89, landUnitPrice: 85_160_000 });
+  if (b.mismatch || b.value !== 85_160_000) fail(`consistent comparable changed: ${JSON.stringify(b)}`);
+  const seed = readFileSync('src/services/bangbae81511DataSeedService.ts', 'utf8');
+  const flagged = [...seed.matchAll(/label: '([^']+)'.*?salePrice: ([\d_]+), landAreaPyeong: ([\d.]+), landUnitPrice: ([\d_]+)/g)].filter((m) => rules.comparableUnitDisplay({ salePrice: Number(m[2].replace(/_/g, '')), landAreaPyeong: Number(m[3]), landUnitPrice: Number(m[4].replace(/_/g, '')) }).mismatch).map((m) => m[1]);
+  eq(flagged.join(','), '방배동 811-20,방배동 811-19,유한빌딩 882-25', 'seed rows needing source check');
+  if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes('comparableUnitDisplay(row)')) fail('page 4 bars must use comparableUnitDisplay');
+}
 {
   const { execFileSync } = await import('node:child_process');
   const probe = "import('./scripts/lib/ts-module-loader.mjs').then(async ({ importTs }) => { const r = await importTs('src/domain/professionalReport/reportDisplayRules.ts'); console.log(r.koreaDateLabel('2026-11-10T15:00:00Z')); })";
@@ -67,6 +79,10 @@ eq(coverageDisplay(-3, '-3%', 10, 20)?.value, '약 50%', 'negative register trea
 // 3. Masters use the shared rules (no inline re-implementation).
 const one = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
 const seven = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+// Page 4 basis note: the estimate uses comparableCount deals while the API stores only the 8 most recent; the printed count must be the estimate count.
+if (!seven.includes("후보 {estimateBasisCount}건") || /후보 \{estimateBasis\.length\}건/.test(seven)) fail("page 4 basis note must print the estimate comparableCount, not the stored deal list length");
+// iPhone width: report toolbar buttons stay on one line.
+if (!readFileSync("src/report-device-fit.css", "utf8").includes(".professional-report-toolbar .MuiButton-root,.preview-toolbar .MuiButton-root{white-space:nowrap")) fail("report toolbar buttons must not wrap at phone width");
 for (const key of ['shortHeadline', 'shortOccupancyLabel', 'shortRoadLabel', 'shortUseLabel', 'shortDevelopmentLabel']) {
   if (!new RegExp(`shortOrFirstLine\\(p\\.${key}\\b`).test(one)) fail(`1P must print ${key} through shortOrFirstLine`);
 }

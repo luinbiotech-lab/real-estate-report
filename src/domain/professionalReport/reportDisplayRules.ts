@@ -86,3 +86,15 @@ export function koreaDateLabel(iso: unknown): string {
   const kst = new Date(time + 9 * 3_600_000);
   return `${kst.getUTCFullYear()}. ${String(kst.getUTCMonth() + 1).padStart(2, '0')}. ${String(kst.getUTCDate()).padStart(2, '0')}`;
 }
+
+/**
+ * Comparable land unit price for the report bars (2026-11-12 multi-review): when the stored source unit price differs from
+ * sale price ÷ land area by more than 0.5% (the same tolerance as comparableTransactionService / report readiness), the
+ * bar uses the reproducible calculated value and keeps the source value for a "원문 확인 필요" note. Nothing is rewritten.
+ */
+export function comparableUnitDisplay(row: { salePrice: number; landAreaPyeong: number; landUnitPrice: number }) {
+  const derived = positiveNumber(row.salePrice) && positiveNumber(row.landAreaPyeong) ? row.salePrice / row.landAreaPyeong : NaN;
+  if (!Number.isFinite(derived)) return { value: row.landUnitPrice, mismatch: false, sourceValue: row.landUnitPrice };
+  const variancePct = Math.abs((row.landUnitPrice - derived) / derived) * 100;
+  return variancePct > 0.5 ? { value: Math.round(derived), mismatch: true, sourceValue: row.landUnitPrice } : { value: row.landUnitPrice, mismatch: false, sourceValue: row.landUnitPrice };
+}

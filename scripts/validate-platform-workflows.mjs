@@ -14,12 +14,14 @@ for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
 if (!text.app.includes('PropertyHubPage') || !text.app.includes('path="property/:id"') || !text.app.includes('path="property/:id/data-room"') || !text.app.includes('PropertyDataRoomPage')) throw new Error('물건 상세 메인 허브와 Data Room 세부 route를 분리해야 합니다.');
-if (!text.propertyHub.includes('PROPERTY DETAIL HUB') || !text.propertyHub.includes('WORKSPACE NAVIGATION') || !text.propertyHub.includes('Data Room 전체보기')) throw new Error('물건 상세 허브는 핵심정보와 세부 Workspace 진입판을 제공해야 합니다.');
+if (!text.propertyHub.includes('물건 상세') || !text.propertyHub.includes('업무 바로가기') || !text.propertyHub.includes('자료실 전체보기')) throw new Error('물건 상세 허브는 핵심정보와 세부 Workspace 진입판을 제공해야 합니다.');
 for (const label of ['사진 · 미디어', '문서 · 공적자료', '비교거래', '임대 · 수익 분석', '검토 이력', '보고서', '3D · 도면', '입지 브리핑']) if (!text.propertyHub.includes(label)) throw new Error(`물건 상세 허브 필수 항목 누락: ${label}`);
 if (!text.propertyHub.includes('/income?propertyId=') || !text.propertyHub.includes('/review-history?propertyId=')) throw new Error('상세 허브는 선택 물건 context를 임대·수익/검토 이력으로 전달해야 합니다.');
-if (!text.propertyHub.includes("label: 'Room Intelligence'") || !text.propertyHub.includes('/room-ops?propertyId=') || !text.propertyHub.includes('approvedRoomLinks')) throw new Error('상세 허브는 PropertySpace/승인 Room link 상태와 함께 Room Intelligence로 물건 context를 전달해야 합니다.');
+if (!text.propertyHub.includes("label: '공간 인텔리전스'") || !text.propertyHub.includes('/room-ops?propertyId=') || !text.propertyHub.includes('approvedRoomLinks')) throw new Error('상세 허브는 PropertySpace/승인 Room link 상태와 함께 Room Intelligence로 물건 context를 전달해야 합니다.');
 if (!text.propertyHub.includes('대표 외관 미디어 미연결') || !text.propertyHub.includes('provenance')) throw new Error('대표미디어가 없을 때 가짜 사진 대신 미연결 상태와 provenance 원칙을 표시해야 합니다.');
-for (const marker of ["Room Intelligence", "/room-ops?propertyId=", "Interior Intelligence", "/interior?propertyId="]) {
+// Report shortcut: the hub opens the newest professional snapshot in one tap; creating a report opens its preview directly.
+if (!text.propertyHub.includes("latestReport ? `/professional-report/snapshot/${latestReport.id}`") || !text.propertyHub.includes("'보고서 보기' : '보고서 만들기'")) throw new Error('상세 허브는 최신 전문 보고서로 바로 가는 버튼을 제공해야 합니다.');
+for (const marker of ["공간 인텔리전스", "/room-ops?propertyId=", "실내 인텔리전스", "/interior?propertyId="]) {
   if (!text.propertyHub.includes(marker)) throw new Error(`Property Hub는 물건 context를 Room/Interior Intelligence로 전달해야 합니다: ${marker}`);
 }
 const roomOpsPage = readFileSync('src/pages/RoomTwinOperationsPage.tsx', 'utf8');

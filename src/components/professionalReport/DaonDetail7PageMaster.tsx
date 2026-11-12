@@ -2,7 +2,7 @@ import { detailPagePlan, equalColumns, type DetailPageId } from '../../domain/pr
 import { askingPosition, formatEok, officialMultipleLine, priceLayerCells, PRICE_ESTIMATE_METHOD_NOTE } from '../../domain/professionalReport/priceLayerView';
 import type { ReactNode } from 'react';
 import { DaonLogoImage } from '../brand/DaonLogoImage';
-import { buildingAgeDisplay, coverageDisplay, floorAreaRatioDisplay, koreaDateLabel, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
+import { buildingAgeDisplay, comparableUnitDisplay, coverageDisplay, floorAreaRatioDisplay, koreaDateLabel, shortOrFirstLine } from '../../domain/professionalReport/reportDisplayRules';
 import { reportWording } from '../../domain/professionalReport/reportPurpose';
 import type { ReportSnapshot } from '../../domain/propertyDataRoom/types';
 import type { ProfessionalReportViewModel, ReportValue } from '../../domain/professionalReport/types';
@@ -223,6 +223,12 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
   const multipleLine = officialMultipleLine(model.pricing.salePrice.value ?? undefined, model.land.estimatedOfficialLandValue?.value ?? undefined);
   const brokerRationale = display(model.pricing.brokerAchievablePriceRationale ?? { value: null, display: '', state: 'missing', sourceIds: [] });
   const estimateDeals = priceEstimate?.state === 'estimated' ? (priceEstimate.deals ?? []).slice(0, 6) : [];
+  // 2026-11-12 review: the estimate's comparable set (public transaction candidates) differs from the broker-selected bars.
+  // When both print, every per-pyeong value behind the median is listed so a reader can reproduce it.
+  const comparableMismatch = (model.investment.comparables ?? []).slice(0, 6).filter((row) => comparableUnitDisplay(row).mismatch);
+  const estimateBasis = priceEstimate?.state === 'estimated' ? (priceEstimate.deals ?? []).map((deal) => deal.landPricePerPyeong).filter((value) => Number.isFinite(value) && value > 0).sort((a, b) => a - b) : [];
+  // The API keeps only the 8 most recent deals; the estimate itself uses comparableCount deals. Never print 8 as the basis count.
+  const estimateBasisCount = priceEstimate?.state === 'estimated' ? Math.max(priceEstimate.comparableCount ?? 0, estimateBasis.length) : 0;
   const occupancyParking = joinPresent(' · ', display(model.pricing.occupancyStatus), parkingField && `현장 주차 ${parkingField}${parkingFieldNote}`);
 
   return <div className="daon-detail-master" data-template-id={DAON_DETAIL_MASTER_TEMPLATE_ID} data-template-version={DAON_DETAIL_MASTER_TEMPLATE_VERSION}>
@@ -283,8 +289,10 @@ export function DaonDetail7PageMaster({ snapshot, model }: { snapshot: ReportSna
         </div>
       </>}
       {(comparables.length > 0 || (model.investment.nearbyTransactions.value && estimateDeals.length === 0)) && <>
-        <SectionBar right={comparables.length ? '단위: 토지 평당가' : '단위: 입력자료 기준'}>비교 사례</SectionBar>
-        <div className={`dd-comparables${comparables.length ? ' has-bars' : ''}`}>{comparables.length ? <UnitPriceBars rows={comparables.slice(0, 6).map((row) => ({ label: row.label, detail: joinPresent(' / ', formatCompactWon(row.salePrice), `${row.landAreaPyeong.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}평`, row.tradeDate), value: row.landUnitPrice }))} subject={typeof model.pricing.landUnitPrice.value === 'number' ? { label: '본건', value: model.pricing.landUnitPrice.value } : null} /> : <p>{model.investment.nearbyTransactions.display}</p>}</div>
+        <SectionBar right={comparables.length ? '단위: 토지 평당가' : '단위: 입력자료 기준'}>{comparables.length && estimateBasis.length ? '중개사 선정 비교사례' : '비교 사례'}</SectionBar>
+        <div className={`dd-comparables${comparables.length ? ' has-bars' : ''}`}>{comparables.length ? <UnitPriceBars rows={comparables.slice(0, 6).map((row) => { const unit = comparableUnitDisplay(row); return { label: unit.mismatch ? `${row.label}*` : row.label, detail: joinPresent(' / ', formatCompactWon(row.salePrice), `${row.landAreaPyeong.toLocaleString('ko-KR', { maximumFractionDigits: 2 })}평`, row.tradeDate), value: unit.value }; })} subject={typeof model.pricing.landUnitPrice.value === 'number' ? { label: '본건', value: model.pricing.landUnitPrice.value } : null} /> : <p>{model.investment.nearbyTransactions.display}</p>}</div>
+        {comparableMismatch.length > 0 && <p className="dd-estimate-basis">* 원문 평당가가 거래금액÷대지면적과 0.5% 넘게 달라 계산값으로 표시했습니다(원문 표기: {comparableMismatch.map((row) => `${row.label} 원문 ${formatCompactWon(row.landUnitPrice)}`).join(', ')}).</p>}
+        {comparables.length > 0 && estimateBasis.length > 0 && <p className="dd-estimate-basis">※ 위 막대는 중개사가 선정한 사례입니다. 「주변 실거래 토지 단가」·「거래가능가격 추정」은 별도의 공개 실거래 후보 {estimateBasisCount}건(같은 동·최근 6개월)으로 산출했습니다. {estimateBasis.length < estimateBasisCount ? `그중 최근 ${estimateBasis.length}건 평당가` : '산출 근거 평당가'}(낮은 순): {estimateBasis.map((value) => formatEok(value)).join(' · ')}</p>}
       </>}
       <div className="dd-analysis-box"><b>해석</b><p>{display(model.investment.overallOpinion, '단순 평균으로 적정가격을 확정하지 않고, 입지·규모·도로조건·건물상태를 함께 검토합니다.')}</p></div>
       <SectionBar>가격을 매입 논리로 바꾸는 세 가지 포인트</SectionBar>
