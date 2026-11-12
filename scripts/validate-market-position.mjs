@@ -25,6 +25,15 @@ assert.ok(pos.basis.some((line) => /호가.*계산값.*실거래가가 아닙니
 assert.ok(pos.basis.some((line) => /동일 건물 거래로 확정하지 않습니다/.test(line)), 'comparables stay candidates');
 assert.equal(mp.medianOf([1, 3, 2, 4]), 2.5);
 
+// 1b. Impossible calendar dates are dropped before stats/table/chart (루인 #60 BLOCKING).
+for (const bad of ['2026-13-01', '2026-02-30', '2025-02-29', '2026-00-10', '2026-04-31']) assert.equal(mp.isCalendarDate(bad), false, bad);
+for (const good of ['2024-02-29', '2026-12-31', '2026-01-01']) assert.equal(mp.isCalendarDate(good), true, good);
+const mixedDates = mp.marketPosition(subject, [ds('p-1', [row('A', '2025-06-01', 50_000_000), row('BAD-MONTH', '2026-13-01', 99_000_000), row('BAD-DAY', '2026-02-30', 10_000_000), row('C', '2026-03-01', 70_000_000)])]);
+assert.deepEqual(mixedDates.points.map((p) => p.label), ['A', 'C'], 'invalid calendar dates never enter the sample');
+assert.equal(mixedDates.latestTradeDate, '2026-03-01');
+assert.equal(mixedDates.max, 70_000_000); assert.equal(mixedDates.min, 50_000_000);
+assert.ok(mixedDates.points.every((p) => Number.isFinite(Date.parse(p.tradeDate))), 'every chart point has a finite x position');
+
 // 2. Missing inputs never become 0 or a fake position.
 const noPrice = mp.marketPosition({ id: 'p-1', landAreaPyeong: 100 }, sources);
 assert.equal(noPrice.subjectUnitPrice, null); assert.equal(noPrice.deltaPct, null); assert.equal(noPrice.band, 'unknown');
