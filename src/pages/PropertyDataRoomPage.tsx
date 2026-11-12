@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, EditOutlined, MapOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
+import { ArrowBackRounded, CloudUploadOutlined, DeleteOutlineRounded, DescriptionOutlined, DownloadRounded, MapOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress, MenuItem, Tab, Tabs, TextField } from '@mui/material';
 import PropertyHubPage from './PropertyHubPage';
 import PropertyMasthead from '../components/propertyScreen/PropertyMasthead';
