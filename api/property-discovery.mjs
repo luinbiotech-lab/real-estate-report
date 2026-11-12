@@ -1,5 +1,5 @@
 import { allowedOrigin, fail, securityHeaders, sendJson } from './_lib/providerProxy.mjs';
-import { estimateAchievablePrice } from './_lib/priceLayers.mjs';
+import { estimateAchievablePrice, sameLegalDong } from './_lib/priceLayers.mjs';
 import { RESIDENTIAL_APIS, residentialMarket } from './_lib/residentialTrades.mjs';
 
 const KAKAO_ADDRESS = 'https://dapi.kakao.com/v2/local/search/address.json';
@@ -431,7 +431,7 @@ export function normalizeTrade(row,type,resolved){
   // 루인 review 2026-11-12: a lot number alone is not the same lot unless the legal dong is also confirmed; a blank
   // region3 must never match every row (''.includes('') is true).
   const subjectDong=String(resolved.region3||'').trim();
-  const sameDong=Boolean(legalDong && subjectDong && legalDong.includes(subjectDong));
+  const sameDong=sameLegalDong(legalDong,subjectDong);
   const matchLevel=!masked && jibun===targetJibun && sameDong
     ? 'exact_lot'
     : masked
@@ -544,7 +544,7 @@ export default async function handler(request,response){
     const buildingTitle=titles[0] ? normalizeTitle(titles[0]) : null;
     // Rows of another dong are dropped; rows with a blank dong (or a lookup without a dong) are kept but never counted as same dong.
     const subjectDong=String(address.region3||'').trim();
-    const inDongOrUnknown=r=>!subjectDong || !r.legalDong || r.legalDong.includes(subjectDong);
+    const inDongOrUnknown=r=>!subjectDong || !r.legalDong || sameLegalDong(r.legalDong,subjectDong);
     const commercial=commercialRaw.map(r=>normalizeTrade(r,'commercial',address)).filter(inDongOrUnknown);
     const land=landRaw.map(r=>normalizeTrade(r,'land',address)).filter(inDongOrUnknown);
     const marketRows=[...commercial,...land].sort((a,b)=>b.dealDate.localeCompare(a.dealDate));

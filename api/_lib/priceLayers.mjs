@@ -96,11 +96,17 @@ export function buildPriceLayers({ askingPrice, landAreaSqm, officialLandPricePe
  * Server-side achievable-price estimate over ALL comparable rows of a lookup (the response lists are truncated, so the
  * browser cannot compute this). Returns a compact, storable result; the broker confirms the final figure separately.
  */
-const dongUnconfirmed = (deal, subjectDong) => {
-  const dong = String(deal.legalDong || '').trim(); const subject = String(subjectDong ?? '').trim();
-  // Without the subject dong (legacy callers) only a blank dong is unconfirmed; with it, the deal must name that dong.
-  return subjectDong === undefined ? !dong : !(dong && subject && dong.includes(subject));
-};
+/** Rule id stored with each estimate so readers know how "same dong" was decided (Ruin review 2026-11-12). */
+export const DONG_SCOPE_RULE = 'legal_dong_exact_v1';
+
+/** Legal dong names are compared whole (spaces removed); '정동' must not match '신정동'. Blank on either side is never a match. */
+export function sameLegalDong(a, b) {
+  const left = String(a ?? '').replace(/\s+/g, ''); const right = String(b ?? '').replace(/\s+/g, '');
+  return Boolean(left && right && left === right);
+}
+
+// A deal is confirmed only when the lookup dong is known and the deal names exactly that dong.
+const dongUnconfirmed = (deal, subjectDong) => !sameLegalDong(deal.legalDong, subjectDong);
 
 export function estimateAchievablePrice({ landAreaSqm, rows = [], computedAt = new Date().toISOString(), subjectDong = undefined }) {
   const landPyeong = finite(landAreaSqm) ? landAreaSqm / SQM_PER_PYEONG : 0;
@@ -112,6 +118,7 @@ export function estimateAchievablePrice({ landAreaSqm, rows = [], computedAt = n
     method: 'land_unit_price_iqr_v1', landAreaSqm: finite(landAreaSqm) ? landAreaSqm : undefined, comparableCount: used.length,
     // Deals whose dong is not confirmed as the subject's (blank dong, or no subject dong). Outputs never call them "same dong".
     legalDongUnconfirmedCount: used.filter((deal) => dongUnconfirmed(deal, subjectDong)).length,
+    subjectLegalDong: String(subjectDong ?? '').trim(), dongScopeRule: DONG_SCOPE_RULE,
     excluded: { upstream: excludedUpstream, ...droppedByReason }, computedAt,
     areaRange: finite(landAreaSqm) ? { minSqm: Math.round(landAreaSqm * AREA_RATIO_MIN * 10) / 10, maxSqm: Math.round(landAreaSqm * AREA_RATIO_MAX * 10) / 10 } : undefined,
     deals: used.sort((a, b) => String(b.dealDate).localeCompare(String(a.dealDate))).slice(0, 8).map((deal) => ({
