@@ -149,3 +149,36 @@
 .daon-one-page-master .d1-sheet.d1-sheet-no-highlight{grid-template-rows:31mm 19mm 12mm minmax(0,1fr) 31mm 14mm 23mm}
 /* DA:ON monogram (2026-11-04): the boxed "D" is replaced by the vector DaonMark; no frame, keep the same footprint. */
 .daon-one-page-master .d1-logo-mark.d1-logo-svg{border:0;width:12mm;height:13.5mm;display:block}
+/* Blank media (owner test 2026-11-11, production sample without exterior photo or map): the photo/map column was kept
+   empty, leaving half of pages 01-03 blank. When the image is missing only, the remaining blocks take the full width and
+   the fixed height is released. With a photo or map the approved layout is unchanged. */
+.daon-detail-master .dd-p1-top.no-photo{height:auto;min-height:76mm}
+.daon-detail-master .dd-p1-top.no-photo .dd-hero-copy{position:static;width:auto;height:100%;box-sizing:border-box;display:flex;flex-direction:column;justify-content:center}
+.daon-detail-master .dd-profile-grid.no-photo{grid-template-columns:1fr;height:auto}
+.daon-detail-master .dd-location-grid.no-map{grid-template-columns:1fr;height:auto}
+.daon-detail-master .dd-location-grid.no-map .dd-map-wrap{display:none}
+.daon-detail-master .dd-location-grid.no-map .dd-location-cards{grid-template-rows:none!important;grid-auto-flow:column;grid-auto-columns:1fr}
+.daon-detail-master .dd-scenarios.no-photo{height:auto}
+/* No scenario photos: the use names become readable cards and the roadmap takes the freed height (2026-11-11 sample review). */
+.daon-detail-master .dd-scenarios.no-photo article>p{min-height:22mm;display:flex;align-items:center;justify-content:center;text-align:center;font-size:15px;font-weight:700;color:var(--dq-ink,#12335a);-webkit-line-clamp:unset}
+/* Comparable rows need room for the name and its detail line; without reason photos the block grows instead of overlapping. */
+.daon-detail-master .daon-detail-page-4:not(:has(.dd-reason-three.with-photos)) .dd-comparables.has-bars{height:auto}
+.daon-detail-master .daon-detail-page-4:not(:has(.dd-reason-three.with-photos)) .dd-comparables.has-bars>.dd-bars{grid-auto-rows:minmax(9.2mm,auto)}
+.daon-detail-master .dd-building-facts{margin-bottom:3.5mm}
+/* No exterior photo: page 1 register fact strip; page 5 use basis rows (2026-11-11 review: no empty boxes). */
+.daon-detail-master .dd-p1-top.no-photo .dd-p1-hero{display:flex;flex-direction:column;gap:2.8mm;border-bottom:0}
+.daon-detail-master .dd-p1-top.no-photo .dd-p1-hero>.dd-image{display:none}
+.daon-detail-master .dd-p1-top.no-photo .dd-hero-copy{flex:1 1 auto;height:auto}
+.daon-detail-master .dd-p1-facts{display:grid;grid-template-columns:1fr 1fr;gap:2.8mm;flex:0 0 auto}
+.daon-detail-master .dd-p1-facts>div{border:.3mm solid #d8dee5;border-top:1mm solid #c6943b;background:#fff;padding:3mm 3.5mm;min-width:0}
+.daon-detail-master .dd-p1-facts small{display:block;font-size:9px;font-weight:700;color:#6d7a88}
+.daon-detail-master .dd-p1-facts b{display:block;margin-top:1.2mm;font-size:12px;font-weight:800;color:#12335a;word-break:keep-all;line-height:1.35}
+.daon-detail-master .dd-use-basis{margin-bottom:3.5mm}
+.daon-detail-master .dd-use-basis .dd-info-row span{white-space:normal;line-height:1.4}
+.daon-detail-master .dd-estimate-basis{margin:1.6mm 0 0;font-size:9.6px;line-height:1.5;color:#58677a;word-break:keep-all}
+
+/* Page 05 scenario cards: name + evidence lines from register/Data Room values (owner review 2026-11-12). */
+.daon-detail-master .dd-scenarios.no-photo article.has-evidence>p{min-height:0;padding:3mm 3mm 1.2mm;font-size:14px}
+.daon-detail-master .dd-scenario-evidence{list-style:none;margin:0;padding:0 3mm 3mm;display:grid;gap:1.2mm}
+.daon-detail-master .dd-scenario-evidence li{font-size:10.2px;line-height:1.45;color:#4f5e71;padding-left:2.6mm;position:relative;word-break:keep-all}
+.daon-detail-master .dd-scenario-evidence li::before{content:'';position:absolute;left:0;top:1.6mm;width:1.1mm;height:1.1mm;border-radius:50%;background:#c6943b}

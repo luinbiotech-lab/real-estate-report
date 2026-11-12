@@ -163,6 +163,13 @@ assert.strictEqual(large.currency, 'KRW');
 assert.strictEqual(large.dealDate, '2026-03-07', 'dealDate YYYY-MM-DD');
 assert.match(large.dealDate, /^\d{4}-\d{2}-\d{2}$/);
 assert.strictEqual(large.matchLevel, 'exact_lot');
+// 루인 review 2026-11-12: same lot number without a confirmed dong is not the same lot; a blank lookup dong confirms nothing.
+assert.strictEqual(normalizeTrade(tradeRow({ dealAmount: '1', umdNm: '' }), 'commercial', tradeResolved).matchLevel, 'regional_candidate', 'blank dong + same jibun is not exact_lot');
+assert.strictEqual(normalizeTrade(tradeRow({ dealAmount: '1' }), 'commercial', { ...tradeResolved, region3: '' }).matchLevel, 'regional_candidate', 'blank lookup dong never confirms a lot or dong');
+assert.strictEqual(normalizeTrade(tradeRow({ dealAmount: '1', jibun: '900' }), 'commercial', tradeResolved).matchLevel, 'same_dong_candidate');
+// 루인 review 2026-11-12 (78796b3): dong names compare whole, '정동' is not '신정동'.
+assert.strictEqual(normalizeTrade(tradeRow({ dealAmount: '1', umdNm: '신정동' }), 'commercial', { ...tradeResolved, region3: '정동' }).matchLevel, 'regional_candidate', 'substring dong is not the same dong');
+assert.strictEqual(normalizeTrade(tradeRow({ dealAmount: '1', umdNm: ' 방배동 ' }), 'commercial', tradeResolved).matchLevel, 'exact_lot', 'whitespace around the dong name is ignored');
 
 const korean = normalizeTrade({ 거래금액: ' 123,456 ', 년: '2025', 월: '12', 일: '31', 법정동: '방배동', 지번: '8**' }, 'land', tradeResolved);
 assert.strictEqual(korean.dealAmount, 1_234_560_000, 'Korean-key 거래금액 만원 → KRW');
@@ -269,7 +276,7 @@ if (!discoverySource.includes('unrecordedFields')) throw new Error('건축물대
   assert.strictEqual(few.state, 'insufficient', '비교거래 5건 미만은 추정하지 않음');
   assert.strictEqual(few.low, undefined);
   assert.strictEqual(price.estimateAchievablePrice({ landAreaSqm: 0, rows }).state, 'no_land_area');
-  if (!discoverySource.includes('estimateAchievablePrice({landAreaSqm:subjectLandAreaSqm,rows:marketRows})')) throw new Error('추정은 잘리기 전 전체 거래(marketRows)로 계산해야 합니다');
+  if (!discoverySource.includes('estimateAchievablePrice({landAreaSqm:subjectLandAreaSqm,rows:marketRows,subjectDong})')) throw new Error('추정은 잘리기 전 전체 거래(marketRows)로 계산해야 합니다');
   const svc = readFileSync('src/services/publicPropertyDiscoveryService.ts', 'utf8');
   const block = svc.slice(svc.indexOf('ACHIEVABLE_PRICE_SOURCE_PREFIX}${propertyId}'), svc.indexOf('ACHIEVABLE_PRICE_SOURCE_PREFIX}${propertyId}') + 700);
   if (!block.includes("verificationStatus: 'estimated'") || !block.includes('daon_estimate_not_appraisal')) throw new Error('추정값은 estimated 상태의 Data Room 출처로만 저장');

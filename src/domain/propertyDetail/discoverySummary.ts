@@ -60,7 +60,7 @@ export function buildDiscoverySummary(result: PropertyDiscoveryResult): Discover
   if (market && market.totalCandidates > 0) {
     cautions.push(market.exactLotCount > 0
       ? `동일 지번 거래 ${market.exactLotCount}건이 있으나 동일 건물 거래로 확정하지 않습니다.`
-      : '주변 실거래는 같은 동·최근 6개월의 후보이며, 동일 지번 거래는 없습니다.');
+      : '주변 실거래는 같은 동 또는 동 미확인·최근 6개월의 후보이며, 동일 지번 거래는 없습니다.');
   }
   if (!result.publicDataConfigured) cautions.push('공공데이터 서비스키 미연결 — 건축물대장·실거래는 조회되지 않았습니다.');
 

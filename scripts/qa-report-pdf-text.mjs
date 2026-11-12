@@ -60,9 +60,9 @@ const ESTIMATE = {
   note: '비교거래 5건 토지 평당가 하위25%·중앙값·상위25% × 본건 토지 50.85평 · DA:ON 추정, 감정평가 아님',
 };
 const FIXTURES = [
-  { key: 'full', title: '자료 충분(9쪽) + 1P 짧은 문구 + 중개사 가격', short: true, broker: true, sparse: false, expectReportPages: 9, expectOmitted: [] },
-  { key: 'long', title: '자료 충분 + 짧은 문구 없음(1P 길이 경고)', short: false, broker: false, sparse: false, expectReportPages: 9, expectOmitted: [] },
-  { key: 'sparse', title: '자료 부족(선택 쪽 생략·번호 재부여)', short: false, broker: false, sparse: true, expectReportPages: 5, expectOmitted: [3, 4, 5, 6] },
+  { key: 'full', title: '자료 충분(9쪽) + 1P 짧은 문구 + 중개사 가격', short: true, broker: true, sparse: false, managerName: '', expectReportPages: 9, expectOmitted: [] },
+  { key: 'long', title: '자료 충분 + 짧은 문구 없음(1P 길이 경고)', short: false, broker: false, sparse: false, managerName: 'QA 담당자', expectReportPages: 9, expectOmitted: [] },
+  { key: 'sparse', title: '자료 부족(선택 쪽 생략·번호 재부여)', short: false, broker: false, sparse: true, managerName: '', expectReportPages: 5, expectOmitted: [3, 4, 5, 6] },
 ];
 
 // ---- formatting expectations derived from the inputs (independent re-implementation, not imported from src) ----
@@ -136,6 +136,8 @@ try {
           investmentPoints: '서래마을·함지박사거리 수요권 코너 입지\n기존 건물을 사옥·주거업무 복합공간으로 즉시 검토\n중장기 신축 가능성까지 검토 가능한 토지',
           shortHeadline: '', shortOccupancyLabel: '', shortRoadLabel: '', shortUseLabel: '', shortDevelopmentLabel: '',
           ...(fx.short ? short : {}),
+          // 루인 review (2026-11-12): name entered vs not entered; phone/e-mail left blank so the office contact fallback is exercised.
+          managerName: fx.managerName, managerPhone: '', managerEmail: '',
           brokerAchievablePrice: fx.broker ? broker.price : 0, brokerAchievablePriceRationale: fx.broker ? 'QA: 인근 매수 문의 2건 기준' : '', brokerAchievablePriceConfirmedAt: fx.broker ? broker.confirmedAt : '',
           ...blank,
           createdAt: now, updatedAt: now,
@@ -285,6 +287,37 @@ try {
       if (!/DA:?ON/i.test(last)) problems.push(`마지막 쪽(PDF ${plan.length + 2}쪽)에 DA:ON 없음`);
       assert(!problems.length, problems.join(' ; '));
       return plan.map((entry, index) => `상세${entry.id}→PDF${index + 2}쪽 ${(byPage[entry.id] || []).length}개`).join(' · ');
+    });
+    // 루인 cross-review on #56 (2026-11-12): when optional pages are omitted (e.g. 5-page output) the opening, the closing
+    // introduction/contact and the per-page footer (broker contact, snapshot/source line) must survive, and the 1P and the
+    // detail report must print the same price, land area and zoning.
+    await check(fx.key, '생략 후에도 표지·마지막 소개·연락처·쪽별 출처 유지, 1P와 값 일치', async () => {
+      const plan = fx.plan || [];
+      const digits = (value) => value.replace(/\D/g, '');
+      const phone = '01099531270';
+      const problems = [];
+      const opening = squash(pdfPageText(reportPath, 1));
+      if (!opening.includes(squash('부동산 전속매각 보고서'))) problems.push('표지에 보고서 제목 없음');
+      plan.forEach((entry, index) => {
+        const raw = pdfPageText(reportPath, index + 2);
+        if (!digits(raw).includes(phone)) problems.push(`PDF ${index + 2}쪽 바닥글에 중개사 연락처 없음`);
+        if (!/Snapshot/i.test(raw)) problems.push(`PDF ${index + 2}쪽 바닥글에 Snapshot·출처 줄 없음`);
+        // 루인 review (2026-11-12): no personal-name fallback; a name appears only when the fixture entered one.
+        if (!fx.managerName && /김은미/.test(raw)) problems.push(`PDF ${index + 2}쪽에 입력되지 않은 담당자 이름 출력`);
+        if (fx.managerName && !squash(raw).includes(squash(fx.managerName))) problems.push(`PDF ${index + 2}쪽 바닥글에 입력한 담당자 이름 없음`);
+        if (entry.id === 7 && !squash(raw).includes(squash('M 010 9953 1270'))) problems.push(`상세 7(PDF ${index + 2}쪽)에 연락처 띠 없음`);
+      });
+      const closing = pdfPageText(reportPath, plan.length + 2);
+      if (!squash(closing).includes(squash('DAON 소개'))) problems.push('마지막 쪽에 DAON 소개 없음');
+      if (!/Contact/i.test(closing) || !digits(closing).includes(phone)) problems.push('마지막 쪽에 Contact·연락처 없음');
+      if (oneText) {
+        for (const value of ['41억 5,000만', '168.1', '제2종일반주거지역']) {
+          if (!squash(oneText).includes(squash(value))) problems.push(`1P에 ${value} 없음`);
+          if (!squash(reportText).includes(squash(value))) problems.push(`상세 보고서에 ${value} 없음`);
+        }
+      } else problems.push('1P 텍스트 없음(비교 불가)');
+      assert(!problems.length, problems.join(' ; '));
+      return `표지·마지막·연락처 ${plan.length}쪽 바닥글·1P 값 3개 일치`;
     });
     await check(fx.key, '보고서 말줄임(…) 없음', async () => {
       const n = (reportText.match(/…/g) || []).length;

@@ -1,14 +1,18 @@
 import { kakaoMapProvider } from './kakaoMapService';
 import { kakaoPoiProvider } from './kakaoPoiProvider';
 import { naverMapProvider } from './naverMapProvider';
+import { vworldMapProvider } from './vworldMapProvider';
 import type { AddressCandidate, Coordinates, MapProvider, PoiCandidate, ProviderStatus } from './types';
 import { MapServiceError } from './types';
 import { getProxyStatus, refreshProxyStatus } from './proxyClient';
 
 const mapProviders: MapProvider[] = [naverMapProvider, kakaoMapProvider];
 const activeMapProviders = () => mapProviders.filter((provider) => provider.isConfigured());
-async function withMapFallback<T>(operation: (provider: MapProvider) => Promise<T>): Promise<T> {
-  const providers = activeMapProviders();
+// Report maps are distributed as PDF: VWorld (public, attribution) first, NAVER/Kakao as fallback (2026-11-11).
+const staticMapProviders: MapProvider[] = [vworldMapProvider, naverMapProvider, kakaoMapProvider];
+const activeStaticMapProviders = () => staticMapProviders.filter((provider) => provider.isConfigured());
+async function withMapFallback<T>(operation: (provider: MapProvider) => Promise<T>, list: () => MapProvider[] = activeMapProviders): Promise<T> {
+  const providers = list();
   if (!providers.length) throw new MapServiceError('missing-key', 'NAVER Maps와 Kakao Maps 키가 모두 설정되지 않았습니다');
   let lastError: unknown;
   for (const provider of providers) { try { return await operation(provider); } catch (error) { lastError = error; } }
@@ -32,11 +36,12 @@ export const mapService = {
   isMapConfigured: () => activeMapProviders().length > 0,
   isPoiConfigured: () => kakaoPoiProvider.isConfigured(),
   geocode: geocodeWithFallback,
-  createStaticMap: (coordinates: Coordinates): Promise<string> => withMapFallback((provider) => provider.createStaticMap(coordinates)),
+  createStaticMap: (coordinates: Coordinates): Promise<string> => withMapFallback((provider) => provider.createStaticMap(coordinates), activeStaticMapProviders),
   searchNearby: (coordinates: Coordinates, radiusMeters: number): Promise<PoiCandidate[]> => kakaoPoiProvider.searchNearby(coordinates, radiusMeters),
   keywordSearch: (keyword: string, coordinates: Coordinates, radiusMeters: number): Promise<PoiCandidate[]> => kakaoPoiProvider.keywordSearch(keyword, coordinates, radiusMeters),
   getProviderStatus: (): ProviderStatus[] => [
-    { id: 'naver-map', label: naverMapProvider.label, configured: naverMapProvider.isConfigured(), role: '주소 · 정적 지도' },
+    { id: 'vworld-map', label: vworldMapProvider.label, configured: vworldMapProvider.isConfigured(), role: '보고서 정적 지도(출처 표기)' },
+    { id: 'naver-map', label: naverMapProvider.label, configured: naverMapProvider.isConfigured(), role: '주소 · 정적 지도 fallback' },
     { id: 'kakao-poi', label: kakaoPoiProvider.label, configured: kakaoPoiProvider.isConfigured(), role: '주변 POI' },
     { id: 'kakao-fallback', label: kakaoMapProvider.label, configured: kakaoMapProvider.isConfigured(), role: '지도 fallback' },
     { id: 'google-future', label: 'Google Maps', configured: false, role: '향후 해외용 Provider' },

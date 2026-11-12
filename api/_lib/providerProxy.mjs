@@ -1,6 +1,7 @@
 const NAVER_GEOCODE = 'https://maps.apigw.ntruss.com/map-geocode/v2/geocode';
 const NAVER_STATIC = 'https://maps.apigw.ntruss.com/map-static/v2/raster';
 const KAKAO_BASE = 'https://dapi.kakao.com';
+const VWORLD_IMAGE = 'https://api.vworld.kr/req/image';
 
 function configuredAllowedOrigins() {
   return String(process.env.MAP_PROXY_ALLOWED_ORIGINS || '')
@@ -93,12 +94,46 @@ export async function geocode(searchParams, response, origin) {
   return relayJson(upstream, response, 'NAVER Geocoding', origin);
 }
 
+export const vworldConfigured = () => Boolean(String(process.env.VWORLD_API_KEY || '').trim());
+function vworldDomain() {
+  const raw = String(process.env.VWORLD_API_DOMAIN || process.env.VERCEL_PROJECT_PRODUCTION_URL || 'localhost').trim();
+  return raw.replace(/^https?:\/\//, '').split('/')[0] || 'localhost';
+}
+
+/**
+ * VWorld (국토교통부 공간정보 오픈플랫폼) 2D image API. Public map with source attribution, chosen for distributed PDF
+ * reports (2026-11-11 review: NAVER static map redistribution terms not confirmed). The key stays server-side; the
+ * client adds the centre marker and the "© 국토교통부 브이월드" attribution onto the image.
+ */
+// Only these two VWorld base maps are requested; any other value falls back to the street map.
+export const VWORLD_BASEMAPS = { map: 'GRAPHIC', aerial: 'PHOTO' };
+export function vworldStaticMapUrl(latitude, longitude, key = String(process.env.VWORLD_API_KEY || '').trim(), domain = vworldDomain(), layer = 'map') {
+  const params = new URLSearchParams({
+    service: 'image', request: 'getmap', key, domain, format: layer === 'aerial' ? 'jpeg' : 'png', basemap: VWORLD_BASEMAPS[layer] || 'GRAPHIC',
+    center: `${longitude},${latitude}`, crs: 'EPSG:4326', zoom: '17', size: '800,450',
+  });
+  return `${VWORLD_IMAGE}?${params}`;
+}
+
+async function vworldStaticMap(latitude, longitude, response, origin, layer = 'map') {
+  if (!vworldConfigured()) return fail(response, 503, 'API_NOT_CONFIGURED', 'VWorld API 설정이 없습니다.', origin);
+  const upstream = await fetch(vworldStaticMapUrl(latitude, longitude, undefined, undefined, layer === 'aerial' ? 'aerial' : 'map'));
+  const type = upstream.headers.get('content-type') || '';
+  // VWorld reports key/domain errors as 200 with an XML/JSON body: only an image is passed through.
+  if (!upstream.ok || !type.startsWith('image/')) return fail(response, 502, 'UPSTREAM_ERROR', 'VWorld 지도 이미지를 받지 못했습니다.', origin);
+  response.statusCode = 200;
+  response.setHeader('content-type', type);
+  for (const [key, value] of Object.entries(securityHeaders(origin))) response.setHeader(key, value);
+  response.end(Buffer.from(await upstream.arrayBuffer()));
+}
+
 export async function staticMap(searchParams, response, origin) {
   const latitude = Number(searchParams.get('latitude'));
   const longitude = Number(searchParams.get('longitude'));
   if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return fail(response, 400, 'INVALID_REQUEST', '유효한 위도와 경도가 필요합니다.', origin);
   }
+  if (searchParams.get('provider') === 'vworld') return vworldStaticMap(latitude, longitude, response, origin, searchParams.get('layer') === 'aerial' ? 'aerial' : 'map');
   if (!naverConfigured()) return fail(response, 503, 'API_NOT_CONFIGURED', 'NAVER Maps API 설정이 없습니다.', origin);
   const position = `${longitude} ${latitude}`;
   const params = new URLSearchParams({

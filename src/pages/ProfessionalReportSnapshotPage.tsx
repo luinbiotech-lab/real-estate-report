@@ -165,7 +165,7 @@ export default function ProfessionalReportSnapshotPage() {
       <Alert severity="warning">이 Snapshot은 구형 보고서 형식입니다. 현재 5174 보고서 화면에서는 확정된 DAON_DETAIL_7P_MASTER만 사용합니다. 기존 Snapshot 데이터는 삭제하지 않습니다.</Alert>
       {error && <Alert severity="error">{error}</Alert>}
       <div className="actions">
-        <Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button>
+        <Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>자료실</Button>
         <Button variant="contained" startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? 'MASTER 생성 중…' : '현재 DA:ON MASTER로 다시 생성'}</Button>
       </div>
     </main>;
@@ -197,8 +197,8 @@ export default function ProfessionalReportSnapshotPage() {
   };
 
   return <main className="professional-report-shell">
-    <nav className="professional-report-toolbar" aria-label="Professional Report 작업">
-      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>Data Room</Button><span><LockOutlined /> DAON PROFESSIONAL MASTER · OPENING + DETAIL + CLOSING</span><Chip size="small" label={finalizationUi.label} color={finalizationUi.color} /></div>
+    <nav className="professional-report-toolbar" aria-label="보고서 작업">
+      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate(-1)}>자료실</Button><span><LockOutlined /> DA:ON 전문 보고서 · 표지 + 상세 + 회사 소개</span><Chip size="small" label={finalizationUi.label} color={finalizationUi.color} /></div>
       <div>
         {(snapshot.status === 'draft' || freshness?.isStale) && <Button startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? '재생성 중…' : snapshot.status === 'ready' ? '최신 데이터로 새 버전 생성' : '최신 데이터로 다시 생성'}</Button>}
         {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !finalizationUi.canRequestReady} onClick={() => requestPublishAction('finalize')}>보고서 확정</Button>}
@@ -221,7 +221,7 @@ export default function ProfessionalReportSnapshotPage() {
     />
     {freshness?.isStale && <Alert severity="warning" className="professional-report-alert">이 Snapshot 생성 이후 원본·검증·공간 데이터가 변경되었습니다. 기존 Snapshot은 그대로 보존되지만 최신 보고서로 확정하면 안 됩니다.{freshness.latestDataAt ? ` 최근 변경: ${new Date(freshness.latestDataAt).toLocaleString('ko-KR')}` : ''}{freshness.latestDataLabel ? ` · ${freshness.latestDataLabel}` : ''} ‘최신 데이터로 새 버전 생성’을 사용하세요.</Alert>}
     {freshnessError && snapshot.status === 'draft' && <Alert severity="error" className="professional-report-alert">{freshnessError}</Alert>}
-    {!reportReady && snapshot.status === 'draft' && <Alert severity="warning" className="professional-report-alert">필수 공적자료 검증 또는 검증 대기 후보 처리가 남아 있습니다. 초안 미리보기·인쇄는 가능하지만, 모든 검증이 끝나기 전에는 보고서를 확정할 수 없습니다. Data Room 검증 후 ‘최신 데이터로 다시 생성’을 사용하세요.</Alert>}
+    {!reportReady && snapshot.status === 'draft' && <Alert severity="warning" className="professional-report-alert">필수 공적자료 검증 또는 검증 대기 후보 처리가 남아 있습니다. 초안 미리보기·인쇄는 가능하지만, 모든 검증이 끝나기 전에는 보고서를 확정할 수 없습니다. 자료실 검증 후 ‘최신 데이터로 다시 생성’을 사용하세요.</Alert>}
     {error && <Alert severity="error" className="professional-report-alert">{error}</Alert>}
     <div ref={contentRef}>{report}</div>
   </main>;

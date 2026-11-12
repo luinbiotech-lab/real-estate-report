@@ -7,7 +7,7 @@ export type MapServiceErrorCode = 'missing-key' | 'no-results' | 'request-failed
 export class MapServiceError extends Error { constructor(public code: MapServiceErrorCode, message: string) { super(message); } }
 
 export interface MapProvider {
-  readonly id: 'naver' | 'kakao' | 'google'; readonly label: string;
+  readonly id: 'naver' | 'kakao' | 'google' | 'vworld'; readonly label: string;
   isConfigured(): boolean;
   geocode(address: string): Promise<AddressCandidate[]>;
   createStaticMap(coordinates: Coordinates): Promise<string>;

@@ -81,7 +81,8 @@ export function buildPriceLayers({ askingPrice, landAreaSqm, officialLandPricePe
       state: used.length ? 'candidate' : 'missing', label: '주변 실거래 시세',
       count: used.length, medianUnitPerPyeong: p(0.5), dropped: dropped.map(({ deal, reason }) => ({ dealDate: deal.dealDate, reason })), excludedUpstream,
       deals: used.map((deal) => ({ dealDate: deal.dealDate, legalDong: deal.legalDong, jibun: deal.jibun, type: deal.type, dealAmount: deal.dealAmount, landAreaSqm: deal.landAreaSqm, landPricePerPyeong: deal.landPricePerPyeong, buildingUse: deal.buildingUse || '' })),
-      note: '같은 동·최근 6개월 공개 실거래 후보(동일 건물 거래로 확정하지 않음)',
+      note: '같은 동 또는 동 미확인·최근 6개월 공개 실거래 후보(동일 건물 거래로 확정하지 않음)',
+      legalDongUnconfirmedCount: used.filter((deal) => !String(deal.legalDong || '').trim()).length,
     },
     estimate: estimate ? { ...estimate, state: 'estimated', label: 'DA:ON 거래가능가격 추정', note: `비교거래 ${used.length}건 토지 평당가 하위25%·중앙값·상위25% × 본건 토지 ${Math.round(landPyeong * 100) / 100}평 · 감정평가 아님` }
       : { state: 'missing', label: 'DA:ON 거래가능가격 추정', note: `비교거래 부족(${used.length}건 < ${MIN_COMPARABLES}건) — 산출하지 않음` },
@@ -95,7 +96,19 @@ export function buildPriceLayers({ askingPrice, landAreaSqm, officialLandPricePe
  * Server-side achievable-price estimate over ALL comparable rows of a lookup (the response lists are truncated, so the
  * browser cannot compute this). Returns a compact, storable result; the broker confirms the final figure separately.
  */
-export function estimateAchievablePrice({ landAreaSqm, rows = [], computedAt = new Date().toISOString() }) {
+/** Rule id stored with each estimate so readers know how "same dong" was decided (Ruin review 2026-11-12). */
+export const DONG_SCOPE_RULE = 'legal_dong_exact_v1';
+
+/** Legal dong names are compared whole (spaces removed); '정동' must not match '신정동'. Blank on either side is never a match. */
+export function sameLegalDong(a, b) {
+  const left = String(a ?? '').replace(/\s+/g, ''); const right = String(b ?? '').replace(/\s+/g, '');
+  return Boolean(left && right && left === right);
+}
+
+// A deal is confirmed only when the lookup dong is known and the deal names exactly that dong.
+const dongUnconfirmed = (deal, subjectDong) => !sameLegalDong(deal.legalDong, subjectDong);
+
+export function estimateAchievablePrice({ landAreaSqm, rows = [], computedAt = new Date().toISOString(), subjectDong = undefined }) {
   const landPyeong = finite(landAreaSqm) ? landAreaSqm / SQM_PER_PYEONG : 0;
   const { used, dropped, excludedUpstream } = selectLandComparables(rows, landAreaSqm);
   const unitPrices = used.map((deal) => deal.landPricePerPyeong).sort((a, b) => a - b);
@@ -103,6 +116,9 @@ export function estimateAchievablePrice({ landAreaSqm, rows = [], computedAt = n
   for (const { reason } of dropped) { const key = reason.startsWith('여러 필지') ? 'bulk' : reason.includes('절반') ? 'tooSmall' : 'tooLarge'; droppedByReason[key] = (droppedByReason[key] || 0) + 1; }
   const base = {
     method: 'land_unit_price_iqr_v1', landAreaSqm: finite(landAreaSqm) ? landAreaSqm : undefined, comparableCount: used.length,
+    // Deals whose dong is not confirmed as the subject's (blank dong, or no subject dong). Outputs never call them "same dong".
+    legalDongUnconfirmedCount: used.filter((deal) => dongUnconfirmed(deal, subjectDong)).length,
+    subjectLegalDong: String(subjectDong ?? '').trim(), dongScopeRule: DONG_SCOPE_RULE,
     excluded: { upstream: excludedUpstream, ...droppedByReason }, computedAt,
     areaRange: finite(landAreaSqm) ? { minSqm: Math.round(landAreaSqm * AREA_RATIO_MIN * 10) / 10, maxSqm: Math.round(landAreaSqm * AREA_RATIO_MAX * 10) / 10 } : undefined,
     deals: used.sort((a, b) => String(b.dealDate).localeCompare(String(a.dealDate))).slice(0, 8).map((deal) => ({

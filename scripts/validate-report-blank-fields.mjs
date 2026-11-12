@@ -106,6 +106,24 @@ const oneInput = fill.detailPagePlan({ ...nullModel, location: { locationAnalysi
 if (oneInput.pages.some((p) => p.id === 3)) fail('입지 페이지는 실제 입력 2개 이상일 때만 출력합니다.');
 const withMap = fill.detailPagePlan({ ...nullModel, location: { locationAnalysis: rv('역세권') } }, true, 0);
 if (!withMap.pages.some((p) => p.id === 3)) fail('지도 + 입지 분석이면 입지 페이지를 출력해야 합니다.');
+// Owner test 2026-11-11: the production sample had occupancy + one feature line (page 5) and coverage/FAR/approval date
+// (page 6) but no use scenario or development plan, so both pages printed as fixed copy. They must now be omitted.
+const sampleLike = JSON.parse(JSON.stringify(nullModel));
+Object.assign(sampleLike.pricing, { occupancyStatus: rv('소유자 사옥·주택 / 잔금일 기준 전체 명도 협의'), landUnitPrice: rv(81_610_000) });
+Object.assign(sampleLike.investment, { features: rv('지하 방음시설 음악·취미·모임 공간 활용') });
+Object.assign(sampleLike.building, { buildingCoverageRate: rv(48.8), floorAreaRatio: rv(146.3), completionDate: rv('1978-07-31') });
+const samplePlan = fill.detailPagePlan(sampleLike, false, 6);
+if (JSON.stringify(samplePlan.pages.map((p) => p.id)) !== '[1,2,4,7]') fail(`서술 입력 없는 5·6쪽은 생략해야 합니다: ${samplePlan.pages.map((p) => p.id)}`);
+const withPlan = fill.detailPagePlan({ ...sampleLike, investment: { ...sampleLike.investment, developmentPlan: rv('리노베이션 또는 신축 검토') } }, false, 6);
+if (!withPlan.pages.some((p) => p.id === 5) || !withPlan.pages.some((p) => p.id === 6)) fail('개발 계획이 있으면 5·6쪽을 출력해야 합니다.');
+if (fill.detailPagePlan(sampleLike, false, 6, true).pages.some((p) => p.id === 6) !== true) fail('본건 외관 사진이 있으면 6쪽을 출력해야 합니다.');
+// Boundary (Luin review on PR #56): neighbourhood photos only must not keep page 6. The component passes Boolean(hero)
+// (main/exterior photo of the property), never the general photo list.
+if (fill.detailPagePlan(sampleLike, false, 6, false).pages.some((p) => p.id === 6)) fail('본건 사진 없이 주변 사진·건물 지표만으로 6쪽을 출력하면 안 됩니다.');
+{ const src = readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8');
+  if (!src.includes("useLines[0].split(/\\s*,\\s*/)")) fail('한 줄에 쉼표로 적은 활용안은 시나리오 카드로 나눠야 합니다.');
+  if (!src.includes('detailPagePlan(model, Boolean(map), comparables.length, Boolean(hero))') || /detailPagePlan\([^)]*hasPhotos/.test(src)) fail('6쪽 생략 판단에는 본건 외관 사진(hero)만 전달해야 합니다.'); }
+for (const marker of ["dd-p1-top${hero ? '' : ' no-photo'}", "dd-location-grid${map ? '' : ' no-map'}", '{scenarios.length > 0 && <SectionBar', '{points.length > 0 && <SectionBar right="KEY POINTS">']) if (!readFileSync('src/components/professionalReport/DaonDetail7PageMaster.tsx', 'utf8').includes(marker)) fail(`빈 사진·지도·제목 숨김 누락: ${marker}`);
 for (const file of ['src/components/professionalReport/DaonOnePageMaster.tsx', 'src/components/professionalReport/DaonDetail7PageMaster.tsx']) {
   const code = stripComments(readFileSync(file, 'utf8'));
   if (code.includes('aria-hidden="true" />')) fail(`${file}: 빈 자리 채움용 빈 칸(aria-hidden)이 남아 있습니다.`);
@@ -145,6 +163,9 @@ if (confirmed[3].state !== 'confirmed' || confirmed[3].value !== '38억원' || !
 if (pv.priceLayerCells({ salePrice: 3_000_000_000 }, null).length !== 1) fail('없는 단계는 숨김(빈 칸 없음)');
 if (pv.priceLayerCells(base8, { ...est, state: 'insufficient', low: undefined, mid: undefined, high: undefined, unitMid: undefined }).length !== 2) fail('비교거래 부족이면 시세·추정 칸 숨김');
 if (!pv.askingPosition(3_000_000_000, est).includes('낮습니다')) fail('희망가 위치 해석 오류');
+// Asking price ÷ land value at official price (calculated, 2026-11-11): 41.5억 ÷ 18.5억 → 약 2.24배; missing input → ''.
+if (!pv.officialMultipleLine(4_150_000_000, 1_850_781_000).includes('약 2.24배') || !pv.officialMultipleLine(4_150_000_000, 1_850_781_000).includes('계산값')) fail('공시지가 배율 산출 오류');
+if (pv.officialMultipleLine(4_150_000_000, 0) !== '' || pv.officialMultipleLine(undefined, 1_850_781_000) !== '') fail('공시지가 배율: 입력 누락 시 빈 값이어야 함');
 const srcs = [{ id: 'achievable-price:p1', propertyId: 'p1', metadata: { estimate: est } }, { id: 'achievable-price:p2', propertyId: 'p2', metadata: { estimate: { ...est, mid: 1 } } }];
 if (pv.findPriceEstimate(srcs, 'p1')?.mid !== est.mid || pv.findPriceEstimate(srcs, 'p3') !== null) fail('물건별 추정 출처 조회 오류');
 const one8 = readFileSync('src/components/professionalReport/DaonOnePageMaster.tsx', 'utf8');
