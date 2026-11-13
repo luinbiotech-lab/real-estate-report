@@ -3,11 +3,11 @@ import { activeBrand } from '../brand/activeBrand';
 import { AddRounded, ArrowBackRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, CloseRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { bottomTabOf, bottomTabs, navGroups, primaryNav, resolveRouteContext, type NavIconKey } from '../navigation/navConfig';
+import { bottomTabOf, bottomTabs, isMenuPanelPath, menuPanelGroups, primaryNav, resolveRouteContext, type NavIconKey } from '../navigation/navConfig';
 
 /* Stable navigation contract markers retained for CI validators (the rendered menu comes from src/navigation/navConfig.ts;
    scripts/validate-navigation-ia.mjs checks that every App route is actually reachable from it):
-to="/discover" 주소로 물건 조회
+to="/discover" 조회 (주소로 물건 조회)
 to="/control-center" A0 Control Center
 to="/readiness" Property Readiness
 to="/bulk-intake" A1–A3 Intake · Verification
@@ -61,11 +61,14 @@ export default function Layout() {
   const propertyId = editMatch?.[1];
   const route = useMemo(() => resolveRouteContext(location.pathname), [location.pathname]);
   const activeGroup = route.groupId ?? '';
-  const [openGroup, setOpenGroup] = useState(activeGroup);
+  // '설정' opens one panel holding admin screens first and every other screen below.
+  const panelActive = isMenuPanelPath(location.pathname);
+  const [openGroup, setOpenGroup] = useState(panelActive ? 'settings' : '');
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isMobile = useIsMobileShell();
   const toggleRef = useRef<HTMLButtonElement>(null);
-  useEffect(() => { if (activeGroup) setOpenGroup(activeGroup); setMobileNavOpen(false); }, [activeGroup, location.pathname]);
+  // Entering a panel screen opens the 설정 panel; going back to 물건/조회/보고서 closes it (루인 #58 review).
+  useEffect(() => { setOpenGroup(panelActive ? 'settings' : ''); setMobileNavOpen(false); }, [panelActive, location.pathname]);
   useEffect(() => {
     if (!mobileNavOpen) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMobileNavOpen(false); toggleRef.current?.focus(); } };
@@ -74,6 +77,7 @@ export default function Layout() {
   }, [mobileNavOpen]);
   // On phones the closed drawer is off-canvas; keep it out of the tab order and the accessibility tree.
   const drawerHidden = isMobile && !mobileNavOpen;
+  const panelOpen = isMobile ? mobileNavOpen : openGroup === 'settings';
   const activeTab = bottomTabOf(location.pathname);
   const openSettings = () => { setOpenGroup('settings'); setMobileNavOpen(true); };
 
@@ -82,23 +86,13 @@ export default function Layout() {
     <nav aria-label="DA:ON 주 메뉴" onClick={(event) => { if ((event.target as HTMLElement).closest('a')) setMobileNavOpen(false); }}>
       {!isMobile && <div className="side-primary">
         {primaryNav.map((item) => <NavLink key={item.to} to={item.to} end={item.to === '/'} className="side-primary-link">{navIcons[item.icon]}<span><strong>{item.title}</strong>{item.module && <small>{item.module}</small>}</span></NavLink>)}
+        <button type="button" className={`side-primary-link side-settings-toggle ${panelActive ? 'has-active' : ''}`} aria-expanded={panelOpen} aria-controls="side-menu-panel" onClick={() => setOpenGroup(openGroup === 'settings' ? '' : 'settings')}>{navIcons.settings}<span><strong>설정</strong><small>회사 · 권한 · 백업 · 전문 분석</small></span><KeyboardArrowDownRounded className="side-category-chevron" /></button>
       </div>}
-      <div className="side-category-list">{navGroups.map((group) => {
-        // Phones reach work screens through the bottom tabs and the property screen; the drawer only holds 설정.
-        if (isMobile && group.id !== 'settings') return null;
-        const open = openGroup === group.id;
-        const panelId = `side-group-${group.id}`;
-        return <section className={`side-category ${open ? 'open' : ''} ${activeGroup === group.id ? 'has-active' : ''}`} key={group.id}>
-          <button type="button" className="side-category-trigger" aria-expanded={open} aria-controls={panelId} onClick={() => setOpenGroup(open ? '' : group.id)}>
-            <span className="side-category-icon">{navIcons[group.icon]}</span>
-            <span className="side-category-copy"><strong>{group.label}</strong><small>{group.summary}</small></span>
-            <KeyboardArrowDownRounded className="side-category-chevron" />
-          </button>
-          {open && <div className="side-category-items" id={panelId}>{group.items.map((item) => <NavLink key={item.to} to={item.to} title={item.module}><span>{navIcons[item.icon]}</span><strong>{item.title}</strong></NavLink>)}</div>}
-        </section>;
-      })}</div>
+      {panelOpen && <div className="side-menu-panel" id="side-menu-panel">{menuPanelGroups().map((group) => <section className={`side-menu-section ${activeGroup === group.id ? 'has-active' : ''}`} key={group.id}>
+        <h2 className="side-menu-heading">{group.id === 'settings' ? '설정' : group.label}</h2>
+        <div className="side-category-items">{group.items.map((item) => <NavLink key={item.to} to={item.to} title={item.module}><span>{navIcons[item.icon]}</span><strong>{item.title}</strong></NavLink>)}</div>
+      </section>)}</div>}
     </nav>
-    <div className="side-note" aria-label="AGENT MODULAR ARCHITECTURE">{activeBrand.operationsLabel}<small>필요한 영역만 열어 집중해서 작업합니다.</small></div>
   </aside><main>
     {route.crumbs.length > 0 && <div className="shell-context-bar">
       {route.parent && <Button size="small" className="shell-back" startIcon={<ArrowBackRounded />} onClick={() => navigate(route.parent!.to)}>{route.parent.label}</Button>}
