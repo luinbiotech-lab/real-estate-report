@@ -497,3 +497,7 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 }
 .app-shell .home-hero h1{color:#fff!important}
 .home-principles{align-content:start}
+.home-sample-note{margin:16px 0 0;padding:10px 14px;border-radius:10px;background:#d7b46a22;border:1px solid #d7b46a66;color:#f3e3bd;font-size:13px;line-height:1.55}
+.home-head-tag{margin-left:8px;font-size:11px;font-weight:600;vertical-align:middle;padding:2px 8px;border-radius:999px;background:#fff4e0;color:#8a5a00}
+/* PC: keep the sidebar colour for the whole page height (full-page captures and long pages). */
+@media(min-width:901px){.app-shell{background:linear-gradient(to right,#021f3a 0,#021f3a 248px,transparent 248px)}}

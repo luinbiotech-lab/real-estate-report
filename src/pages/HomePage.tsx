@@ -4,7 +4,6 @@ import { Button, CircularProgress } from '@mui/material';
 import { AddRounded, AnalyticsRounded, ArrowForwardRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { reportSnapshotHistoryService } from '../services/reportSnapshotHistoryService';
-import { refreshProxyStatus, type ProxyStatus } from '../services/maps/proxyClient';
 import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
 import { classifyPropertyRecord, RECORD_CLASS_LABEL, splitSampleProperties } from '../domain/sampleProperty';
 import { isCoreProfileReady } from '../components/PortfolioOperationsHub';
@@ -19,9 +18,9 @@ import { PROPERTY_LIST_PATH } from '../navigation/navConfig';
  * Benchmarked on the landing pages of Redfin / Rightmove (hero + search entry + recent activity),
  * 디스코 / 밸류맵 (address lookup first, then my items) and CoStar (data-source trust band):
  *   1) hero with what DA:ON is and the two first actions, 2) 근거·검증·리포트 values,
- *   3) the work flow as entry cards, 4) recent properties and reports, 5) data sources with their live status.
- * Rules: counts exclude sample/test records; no figure is shown that was not loaded; a source shows '키 설정됨'
- * only from the server's /api/status — never '검증됨' — because a configured key is not proof of a working API.
+ *   3) the work flow as entry cards, 4) recent properties and reports, 5) data sources and principles.
+ * Rules: counts exclude sample/test records and say so when only samples exist; no figure is shown that was not loaded.
+ * Live connection status belongs to 설정 (회사 설정 › 데이터 연결), not the main page (coordinator review, PR #62).
  */
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -42,17 +41,13 @@ const FLOW: Array<{ step: string; title: string; detail: string; to: string; ico
   { step: '4', title: '보고서 · 공유', detail: '1P·7P 보고서 생성, 버전 이력, 외부 공유', to: '/report-history', icon: <ShareRounded />, more: [{ label: '외부 공유', to: '/external-shares' }] },
 ];
 
-function sourceRows(status: ProxyStatus | undefined) {
-  const state = (configured: boolean | undefined) => !status ? { label: '확인 중', tone: 'pending' }
-    : !status.proxyConnected ? { label: '서버 미연결', tone: 'off' }
-    : configured ? { label: '키 설정됨', tone: 'on' } : { label: '미설정', tone: 'off' };
-  return [
-    { name: '카카오 주소 · 좌표', use: '주소 → 좌표 · 법정동', ...state(status?.kakaoConfigured) },
-    { name: '공공데이터포털', use: '국토교통부 실거래가 · 건축물대장', ...state(status?.publicDataConfigured) },
-    { name: 'VWorld', use: '토지 특성 · 공시지가 · 용도지역', ...state(status?.vworldConfigured) },
-    { name: '카카오 지도', use: '홈 지도 · 로드뷰 표시', ...(!status ? state(undefined) : status.kakaoRoadviewConfigured ? { label: '키 설정됨', tone: 'on' } : { label: '미설정', tone: 'off' }) },
-  ];
-}
+/** Sources DA:ON reads from (what each is used for). Their live connection status is shown in 설정, not here. */
+const SOURCES = [
+  { name: '국토교통부 실거래가', use: '공공데이터포털 · 비교거래 후보' },
+  { name: '건축물대장 (건축HUB)', use: '공공데이터포털 · 건물 공식 정보' },
+  { name: 'VWorld 토지정보', use: '공시지가 · 토지 특성 · 용도지역' },
+  { name: '카카오 주소 · 지도', use: '주소 → 좌표 · 법정동 · 지도' },
+];
 
 export default function HomePage() {
   const navigate = useNavigate();
@@ -60,7 +55,6 @@ export default function HomePage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [reports, setReports] = useState<RecentReport[]>([]);
   const [reportState, setReportState] = useState<LoadState>('loading');
-  const [status, setStatus] = useState<ProxyStatus>();
 
   useEffect(() => {
     let active = true;
@@ -76,7 +70,6 @@ export default function HomePage() {
         .sort((a, b) => String(b.snapshot.generatedAt).localeCompare(String(a.snapshot.generatedAt)));
       setReports(rows.slice(0, 4)); setReportState(settled.some((result) => result.status === 'rejected') && !rows.length ? 'error' : 'ready');
     }).catch(() => { if (active) { setLoadState('error'); setReportState('error'); } });
-    void refreshProxyStatus().then((value) => { if (active) setStatus(value); });
     return () => { active = false; };
   }, []);
 
@@ -84,6 +77,7 @@ export default function HomePage() {
   const needsProfile = real.filter((item) => !isCoreProfileReady(item)).length;
   const recent = items.slice(0, 4);
   const readyReports = reports.filter((row) => row.snapshot.status === 'ready').length;
+  const sampleOnly = loadState === 'ready' && real.length === 0 && samples.length > 0;
 
   return <div className="home-page">
     <section className="home-hero" aria-label="DA:ON 소개">
@@ -96,6 +90,7 @@ export default function HomePage() {
           <Button variant="outlined" size="large" startIcon={<FormatListBulletedRounded />} onClick={() => navigate(PROPERTY_LIST_PATH)}>물건 목록</Button>
           <Button size="large" startIcon={<AddRounded />} onClick={() => navigate('/property/new')}>새 물건 등록</Button>
         </div>
+        {sampleOnly && <p className="home-sample-note" role="note">현재 운영 물건은 없고 샘플·테스트 물건 {samples.length}건만 있습니다. 아래 &lsquo;최근 물건&rsquo;은 샘플 표시이며 현황 숫자에는 넣지 않습니다.</p>}
       </div>
       <dl className="home-hero-kpis" aria-label="현재 현황">
         {loadState === 'loading' && <div className="is-loading"><CircularProgress size={18} /> <span>현황을 불러오는 중</span></div>}
@@ -122,7 +117,7 @@ export default function HomePage() {
 
     <div className="home-recent">
       <section aria-label="최근 물건">
-        <header className="home-section-head"><div><p className="eyebrow">RECENT</p><h2>최근 물건</h2></div><Link to={PROPERTY_LIST_PATH}>전체 보기</Link></header>
+        <header className="home-section-head"><div><p className="eyebrow">RECENT</p><h2>최근 물건{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={PROPERTY_LIST_PATH}>전체 보기</Link></header>
         {loadState === 'loading' && <p className="home-empty">불러오는 중입니다.</p>}
         {loadState === 'error' && <p className="home-empty">물건 목록을 불러오지 못했습니다. <Link to={PROPERTY_LIST_PATH}>물건 목록에서 다시 시도</Link></p>}
         {loadState === 'ready' && !recent.length && <p className="home-empty">등록된 물건이 없습니다. <Link to="/discover">주소로 조회해 첫 물건을 등록하세요.</Link></p>}
@@ -147,9 +142,9 @@ export default function HomePage() {
     </div>
 
     <section className="home-trust" aria-label="데이터 출처와 원칙">
-      <header className="home-section-head"><div><p className="eyebrow">TRUST</p><h2>데이터 출처 · 원칙</h2></div><small>연결 상태는 서버 설정 기준이며, 실제 응답 검증과는 별개입니다.</small></header>
+      <header className="home-section-head"><div><p className="eyebrow">TRUST</p><h2>데이터 출처 · 원칙</h2></div><Link to="/settings">연결 상태는 설정에서 확인</Link></header>
       <div className="home-trust-grid">
-        <ul className="home-sources">{sourceRows(status).map((row) => <li key={row.name}><span><strong>{row.name}</strong><small>{row.use}</small></span><em className={`tone-${row.tone}`}>{row.label}</em></li>)}</ul>
+        <ul className="home-sources">{SOURCES.map((row) => <li key={row.name}><span><strong>{row.name}</strong><small>{row.use}</small></span></li>)}</ul>
         <ul className="home-principles">
           <li><GavelRounded /> 자동 수집 자료는 사람 확인 전까지 &lsquo;후보&rsquo;입니다.</li>
           <li><HistoryRounded /> 보고서는 버전별 스냅샷으로 남고, 자료가 바뀌면 이전 스냅샷을 막습니다.</li>

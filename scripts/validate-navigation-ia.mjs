@@ -81,8 +81,9 @@ const expectTab = { '/': 'home', '/properties': 'property', '/property/abc': 'pr
 for (const [path, tab] of Object.entries(expectTab)) if (nav.bottomTabOf(path) !== tab) throw new Error(`하단 탭 매핑 불일치: ${path} → ${nav.bottomTabOf(path)} (기대 ${tab})`);
 for (const marker of ['bottomTabs.map', 'className="bottom-tabs"', 'aria-label="하단 메뉴"', 'primaryNav.map(renderSection)', 'side-advanced-toggle', 'aria-controls={`side-advanced-${advanced.id}`}']) if (!layout.includes(marker)) throw new Error(`메뉴 계약 누락: ${marker}`);
 const home = readFileSync('src/pages/HomePage.tsx', 'utf8');
-for (const marker of ['aria-label="DA:ON 소개"', 'aria-label="핵심 가치"', 'aria-label="업무 흐름"', 'aria-label="최근 물건"', 'aria-label="최근 보고서"', 'aria-label="데이터 출처와 원칙"', 'splitSampleProperties(items)', 'refreshProxyStatus()']) if (!home.includes(marker)) throw new Error(`메인페이지 구성 누락: ${marker}`);
-if (/검증됨|연결 완료/.test(home.slice(home.indexOf('function sourceRows'), home.indexOf('export default')))) throw new Error('키 설정 여부를 실제 검증 완료처럼 표시하면 안 됩니다.');
+for (const marker of ['aria-label="DA:ON 소개"', 'aria-label="핵심 가치"', 'aria-label="업무 흐름"', 'aria-label="최근 물건"', 'aria-label="최근 보고서"', 'aria-label="데이터 출처와 원칙"', 'splitSampleProperties(items)', 'home-sample-note', 'to="/settings"']) if (!home.includes(marker)) throw new Error(`메인페이지 구성 누락: ${marker}`);
+// Live connection status lives in 설정, not on the main page (PR #62 review: '서버 미연결' rows made the first screen look unfinished).
+if (/refreshProxyStatus|서버 미연결|키 설정됨/.test(home)) throw new Error('메인페이지에 연결 상태를 표시하지 않습니다(설정에서 확인).');
 
 // The shell must render from the config, keep the drawer out of the tab order when closed, and show breadcrumbs.
 for (const marker of ['primaryNav.map', 'resolveRouteContext(location.pathname)', 'inert={drawerHidden}', 'aria-label="현재 위치"', "event.key === 'Escape'"]) {

@@ -16,6 +16,7 @@ try {
   // 2026-11-13: the site opens on the main page (소개 · 핵심 가치 · 업무 흐름 · 최근 물건/보고서 · 출처), not straight into the list.
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   for (const name of ['DA:ON 소개', '핵심 가치', '업무 흐름', '최근 물건', '최근 보고서', '데이터 출처와 원칙']) await page.getByRole('region', { name }).waitFor({ state: 'visible' });
+  if (await page.getByText('서버 미연결').count()) throw new Error('메인페이지에 연결 상태가 남아 있습니다.');
   for (const text of ['근거로 확인하고', '주소로 물건 조회', '운영 물건']) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/home-main-page.png`, fullPage: true });
 
