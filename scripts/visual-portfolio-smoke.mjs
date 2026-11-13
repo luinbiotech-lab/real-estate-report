@@ -13,8 +13,14 @@ const browser = await chromium.launch({ headless: true });
 const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
 
 try {
+  // 2026-11-13: the site opens on the main page (소개 · 핵심 가치 · 업무 흐름 · 최근 물건/보고서 · 출처), not straight into the list.
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  // 2026-11-12 redesign: list first. Header actions, then either KPIs (real inventory) or the empty-state explanation.
+  for (const name of ['DA:ON 소개', '핵심 가치', '업무 흐름', '최근 물건', '최근 보고서', '데이터 출처와 원칙']) await page.getByRole('region', { name }).waitFor({ state: 'visible' });
+  for (const text of ['근거로 확인하고', '주소로 물건 조회', '운영 물건']) await waitForText(page, text);
+  await page.screenshot({ path: `${ARTIFACT_DIR}/home-main-page.png`, fullPage: true });
+
+  await page.goto(`${BASE_URL}/properties`, { waitUntil: 'domcontentloaded' });
+  // List page: header actions, then either KPIs (real inventory) or the empty-state explanation.
   for (const text of ['물건 관리', '주소 조회', '새 물건']) await waitForText(page, text);
   if (await page.getByText('DA:ON PROPERTY OPERATIONS').count()) throw new Error('홈 상단 영어 배너가 남아 있습니다.');
   await page.getByText(/등록 물건|등록된 실제 운영 물건이 없습니다/).first().waitFor({ state: 'visible' });
@@ -34,37 +40,25 @@ try {
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-operations-hub.png`, fullPage: true });
 
-  // IA (Issue #9): Korean domain groups expand to their pages and nested pages show a breadcrumb trail.
+  // IA (2026-11-13 rework): work-flow sections 홈/물건/조회/분석/보고서/설정 with their sub-pages visible; 설정 holds admin only.
   const mainNav = page.getByRole('navigation', { name: 'DA:ON 주 메뉴' });
-  // PC main menu (2026-11-12): the same 물건/조회/보고서 entries as the phone tabs, plus a 설정 toggle that opens every other screen.
-  for (const label of ['물건', '조회', '보고서']) await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().waitFor({ state: 'visible' });
-  const settingsToggle = mainNav.getByRole('button', { name: /설정/ });
-  await settingsToggle.waitFor({ state: 'visible' });
-  if (await mainNav.getByRole('link', { name: '공간 운영' }).count()) throw new Error('PC 메뉴가 처음부터 모든 화면을 펼쳐 보여 줍니다.');
-  await settingsToggle.click();
-  for (const heading of ['설정', '전문 분석', '조회 · 대량 등록']) await mainNav.getByRole('heading', { name: heading }).waitFor({ state: 'visible' });
+  for (const label of ['홈', '물건', '조회', '분석', '보고서', '설정']) await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().waitFor({ state: 'visible' });
+  for (const label of ['새 물건 등록', '엑셀 대량 등록', '리스크 · 규제 검토', '임대 · 수익 분석', '외부 공유 센터', '사용자 · 권한 관리']) await mainNav.getByRole('link', { name: label }).waitFor({ state: 'visible' });
+  // Low-frequency screens are folded: 전문 분석 under 분석, 연동 · 운영 under 설정.
+  if (await mainNav.getByRole('link', { name: '공간 운영' }).count()) throw new Error('전문 분석 블록이 처음부터 펼쳐져 있습니다.');
+  const advancedToggle = mainNav.getByRole('button', { name: /전문 분석/ });
+  await advancedToggle.click();
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-pc-menu-open.png` });
   await mainNav.getByRole('link', { name: '공간 운영' }).click();
   await page.waitForURL(/\/room-ops$/);
-  if (await settingsToggle.getAttribute('aria-expanded') !== 'true') throw new Error('패널 안 화면에서는 설정 메뉴가 펼쳐져 있어야 합니다.');
+  if (await advancedToggle.getAttribute('aria-expanded') !== 'true') throw new Error('전문 분석 화면에서는 전문 분석 블록이 펼쳐져 있어야 합니다.');
   const crumbs = page.getByRole('navigation', { name: '현재 위치' });
-  for (const text of ['물건 목록', '전문 분석', '공간 운영']) await crumbs.getByText(text).waitFor({ state: 'visible' });
-  // From a panel screen, the main entries close the panel again (루인 #58 review): 조회, 보고서, then 물건 via the breadcrumb.
-  for (const [label, path] of [['조회', '/discover'], ['보고서', '/report-history']]) {
-    await mainNav.getByRole('link', { name: '공간 운영' }).click().catch(async () => { await settingsToggle.click(); await mainNav.getByRole('link', { name: '공간 운영' }).click(); });
-    await page.waitForURL(/\/room-ops$/);
-    await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().click();
-    await page.waitForURL((url) => url.pathname === path);
-    const closed = await page.waitForFunction(() => document.querySelector('.side-settings-toggle')?.getAttribute('aria-expanded') === 'false' && !document.querySelector('#side-menu-panel'), null, { timeout: 5_000 }).then(() => true).catch(() => false);
-    if (!closed) throw new Error(`${label}로 이동했는데 설정 패널이 열려 있습니다.`);
-  }
-  await settingsToggle.click();
-  await mainNav.getByRole('link', { name: '공간 운영' }).click();
-  await page.waitForURL(/\/room-ops$/);
-  await crumbs.getByRole('link', { name: '물건 목록' }).click();
+  for (const text of ['홈', '분석', '전문 분석', '공간 운영']) await crumbs.getByText(text, { exact: true }).waitFor({ state: 'visible' });
+  await crumbs.getByRole('link', { name: '홈' }).click();
   await page.waitForURL((url) => url.pathname === '/');
-  const closedHome = await page.waitForFunction(() => document.querySelector('.side-settings-toggle')?.getAttribute('aria-expanded') === 'false', null, { timeout: 5_000 }).then(() => true).catch(() => false);
-  if (!closedHome) throw new Error('물건 목록으로 돌아왔는데 설정 패널이 열려 있습니다.');
+  await page.getByRole('region', { name: 'DA:ON 소개' }).waitFor({ state: 'visible' });
+  await page.goto(`${BASE_URL}/properties`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '물건 관리');
 
   // Phone width: the closed drawer is off-canvas and inert; the toggle opens it and Escape closes it.
   await page.setViewportSize({ width: 390, height: 844 });
@@ -75,16 +69,23 @@ try {
   // Phone home shows cards with a next step instead of the wide table.
   await page.locator('.property-cards li').first().waitFor({ state: 'visible' });
   await page.getByText('다음 할 일').first().waitFor({ state: 'visible' });
-  // Bottom tabs (2026-11-12): 물건/조회/보고서/설정; 설정 opens the menu on the admin group.
+  // Bottom tabs (2026-11-13): 홈/물건/조회/보고서/메뉴; 메뉴 opens every section, 설정 last.
   const tabs = page.getByRole('navigation', { name: '하단 메뉴' });
-  for (const label of ['물건', '조회', '보고서', '설정']) await tabs.getByText(label, { exact: true }).waitFor({ state: 'visible' });
-  await tabs.getByRole('button', { name: '설정' }).click();
-  for (const label of ['회사 설정', '사용자 · 권한 관리', '데이터 백업 · 복원']) await page.getByRole('navigation', { name: 'DA:ON 주 메뉴' }).getByRole('link', { name: label }).waitFor({ state: 'visible' });
+  for (const label of ['홈', '물건', '조회', '보고서', '메뉴']) await tabs.getByText(label, { exact: true }).waitFor({ state: 'visible' });
+  await tabs.getByRole('button', { name: '메뉴' }).click();
+  for (const label of ['리스크 · 규제 검토', '임대 · 수익 분석', '사용자 · 권한 관리', '데이터 백업 · 복원']) await page.getByRole('navigation', { name: 'DA:ON 주 메뉴' }).getByRole('link', { name: label }).waitFor({ state: 'visible' });
+  await page.waitForTimeout(400); // drawer slide-in
+  await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-phone-menu-open.png` });
   await page.keyboard.press('Escape');
   await page.waitForFunction(() => document.querySelector('#daon-main-drawer')?.hasAttribute('inert'));
   const overflow = await page.evaluate(() => document.scrollingElement.scrollWidth - window.innerWidth);
   if (overflow > 1) throw new Error(`390px 홈 화면이 가로로 ${overflow}px 넘칩니다.`);
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-operations-hub-390.png`, fullPage: true });
+  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.getByRole('region', { name: '업무 흐름' }).waitFor({ state: 'visible' });
+  const homeOverflow = await page.evaluate(() => document.scrollingElement.scrollWidth - window.innerWidth);
+  if (homeOverflow > 1) throw new Error(`390px 메인페이지가 가로로 ${homeOverflow}px 넘칩니다.`);
+  await page.screenshot({ path: `${ARTIFACT_DIR}/home-main-page-390.png`, fullPage: true });
   console.log('Rendered portfolio operations hub QA: PASS');
 } catch (error) {
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-hub-failure.png`, fullPage: true });

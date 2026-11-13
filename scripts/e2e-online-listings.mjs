@@ -92,7 +92,7 @@ async function fill(label, value) {
 
 const registered = [];
 try {
-  await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+  await page.goto(`${BASE_URL}/properties`, { waitUntil: 'domcontentloaded' }); // list moved off '/' (site main page, 2026-11-13)
   await visibleText('물건 관리', 30_000);
 
   for (const listing of LISTINGS) {
@@ -618,7 +618,7 @@ try {
 
   // 9. Home: test registrations appear in the list and KPIs count them.
   await check('전체', '홈 목록·KPI 반영', async () => {
-    await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
+    await page.goto(`${BASE_URL}/properties`, { waitUntil: 'domcontentloaded' });
     for (const item of registered) await visibleText(item.name, 20_000);
     await shot('home-after-registration');
     return `${registered.length}건 목록 표시`;

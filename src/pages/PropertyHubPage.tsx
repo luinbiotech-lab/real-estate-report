@@ -56,7 +56,7 @@ export default function PropertyHubPage({ section = 'summary' }: { section?: 'su
   const [showAllFacts, setShowAllFacts] = useState(false);
 
   if (loading) return <div className="center"><CircularProgress /><p>물건 상세 허브를 준비하는 중입니다.</p></div>;
-  if (!property) return <div className="property-hub"><Alert severity="error" action={<Button color="inherit" size="small" onClick={() => navigate('/')}>물건 목록</Button>}>{error || '물건을 찾을 수 없습니다.'}</Alert></div>;
+  if (!property) return <div className="property-hub"><Alert severity="error" action={<Button color="inherit" size="small" onClick={() => navigate('/properties')}>물건 목록</Button>}>{error || '물건을 찾을 수 없습니다.'}</Alert></div>;
 
   const factRows = hubFactRows(property);
   const missingFacts = factRows.filter((row) => row.missing).length;

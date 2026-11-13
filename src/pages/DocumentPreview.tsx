@@ -91,7 +91,7 @@ export default function DocumentPreview() {
   }, [id, kind, navigate, routeKey]);
 
   if (current.phase === 'loading') return <div className="center"><CircularProgress /><p>{kind === 'report' ? 'DAON_DETAIL_7P_MASTER를 생성하는 중입니다.' : '물건 보고서를 불러오는 중입니다.'}</p></div>;
-  if (current.phase === 'error') return <main className="snapshot-error"><p>{current.error}</p><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button></main>;
+  if (current.phase === 'error') return <main className="snapshot-error"><p>{current.error}</p><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/properties')}>물건 목록</Button></main>;
   if (kind !== 'proposal') return <div className="center"><CircularProgress /></div>;
 
   const property = current.property;
@@ -103,7 +103,7 @@ export default function DocumentPreview() {
   };
   return <div className="preview-shell">
     <div className="preview-toolbar">
-      <Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button>
+      <Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/properties')}>물건 목록</Button>
       <div><b>DA:ON ASSET 1P 요약제안서</b><small>DAON_1P_MASTER · 검증 데이터 기반 동적 렌더링</small></div>
       <Button variant="contained" startIcon={<PrintRounded />} onClick={requestPrint}>인쇄 / PDF 저장</Button>
     </div>

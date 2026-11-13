@@ -174,7 +174,7 @@ export default function BulkIntakePage() {
 
   return <main className="data-room-page">
     <header className="data-room-header">
-      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button><p className="eyebrow">BULK DATA INTAKE</p><h1>공적자료 일괄 등록 · 검증</h1><p>여러 문서를 한 번에 등록하고 자동 분류·텍스트 추출·OCR 후 후보값을 승인합니다.</p></div>
+      <div><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/properties')}>물건 목록</Button><p className="eyebrow">BULK DATA INTAKE</p><h1>공적자료 일괄 등록 · 검증</h1><p>여러 문서를 한 번에 등록하고 자동 분류·텍스트 추출·OCR 후 후보값을 승인합니다.</p></div>
     </header>
 
     {error && <Alert severity="error" onClose={() => setError('')}>{error}</Alert>}

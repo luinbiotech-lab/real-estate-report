@@ -7,6 +7,7 @@ import type { Settings } from './types';
 import Layout from './components/Layout';
 import ProductionAuthGate from './components/ProductionAuthGate';
 import PropertyList from './pages/PropertyList';
+import HomePage from './pages/HomePage';
 const PropertyForm = lazy(() => import('./pages/PropertyForm'));
 const PropertyDiscoveryPage = lazy(() => import('./pages/PropertyDiscoveryPage'));
 const ExcelImport = lazy(() => import('./pages/ExcelImport'));
@@ -97,7 +98,9 @@ function AppContent() {
 
   return <Suspense fallback={<div className="center"><CircularProgress /></div>}><Routes>
     <Route element={<Layout />}>
-      <Route index element={<PropertyList />} />
+      {/* 2026-11-13: site main page first, the list moved to /properties. */}
+      <Route index element={<HomePage />} />
+      <Route path="properties" element={<PropertyList />} />
       <Route path="control-center" element={<AgentControlCenterPage />} />
       <Route path="discover" element={<PropertyDiscoveryPage />} />
       <Route path="agents/:agentId" element={<AgentWorkspacePage />} />
