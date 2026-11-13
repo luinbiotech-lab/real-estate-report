@@ -10,6 +10,7 @@ import { formatUnitPricePerPyeong, hubFactRows, selectHubHeroMedia, summarizeCom
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property } from '../types';
 
+const MASTHEAD_FACTS = new Set(['매매가', '대지면적', '연면적', '용도지역']);
 const IN_TABS = new Set(['사진 · 미디어', '문서 · 공적자료', '비교거래', '보고서']);
 const emptyBundle: DataRoomBundle = { documents: [], media: [], verifications: [], verificationCandidates: [], dataSources: [], reportSnapshots: [], digitalTwinAssets: [] };
 
@@ -59,7 +60,8 @@ export default function PropertyHubPage({ section = 'summary' }: { section?: 'su
 
   const factRows = hubFactRows(property);
   const missingFacts = factRows.filter((row) => row.missing).length;
-  const keyFacts = new Set(factRows.filter((row) => !row.missing).slice(0, 4).map((row) => row.label));
+  // The title band already shows 매매가·대지·연면적·용도지역 (benchmark redesign 2026-11-12), so the card leads with the rest.
+  const keyFacts = new Set(factRows.filter((row) => !MASTHEAD_FACTS.has(row.label)).map((row) => row.label));
   const documentReadiness = `원본 ${summary?.requiredSourcePresent ?? 0}/${summary?.requiredDocumentTotal ?? 4} · 파일 ${summary?.requiredBinaryConnected ?? 0}/${summary?.requiredDocumentTotal ?? 4}`;
   // Only what still needs a person: blanks, documents, pending verification, floor data. Counts live on the 자료 tab.
   const checks = [
@@ -101,7 +103,7 @@ export default function PropertyHubPage({ section = 'summary' }: { section?: 'su
       <div className={`property-hub-summary-card ${showAllFacts ? 'show-all' : ''}`}>
         <p className="eyebrow" style={{ marginTop: 0 }}>물건 개요</p><h2 style={{ marginTop: 4 }}>핵심 정보</h2>
         <dl className="property-hub-facts" data-testid="hub-core-facts">
-          {/* Summary shows the first four filled facts; the rest (and blanks) open with '전체 항목 보기'. */}
+          {/* Facts not in the title band are shown; the four already there open with '전체 항목 보기'. */}
           {factRows.map(({ label, value, missing }) => <div key={label} className={`hub-fact ${keyFacts.has(label) ? 'is-key' : 'is-extra'} ${missing ? 'is-missing' : ''}`}><dt>{label}</dt><dd>{value}</dd></div>)}
         </dl>
         {factRows.length > keyFacts.size && <button type="button" className="hub-facts-toggle" onClick={() => setShowAllFacts((value) => !value)}>{showAllFacts ? '핵심 항목만 보기' : `전체 항목 보기 (${factRows.length}개)`}</button>}

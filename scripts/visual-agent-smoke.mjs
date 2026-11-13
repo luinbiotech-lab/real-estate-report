@@ -31,7 +31,10 @@ async function verifyPropertyHub(page) {
   await page.goto(`${BASE_URL}/property/daon-bangbae-815-11`, { waitUntil: 'domcontentloaded' });
   for (const text of ['방배동 815-11 코너빌딩', '물건 개요', '핵심 정보', '문서 준비도', '원본 3/4 · 파일 0/4', '대표 외관 미디어 미연결']) await waitForText(page, text);
   for (const name of ['요약', '토지·건물', '실거래·가격', '자료', '더 보기']) await page.getByRole('tab', { name, exact: true }).waitFor({ state: 'visible', timeout: 30_000 });
-  await page.getByRole('region', { name: '보고서' }).getByRole('button', { name: /보고서 (보기|만들기)/ }).waitFor({ state: 'visible', timeout: 30_000 });
+  // PC (>1200px) shows the report button in the 근거 · 신뢰도 column; narrower screens keep the bottom bar.
+  await page.getByRole('button', { name: /보고서 (보기|만들기)/ }).filter({ visible: true }).first().waitFor({ state: 'visible', timeout: 30_000 });
+  await page.getByRole('complementary', { name: '근거 · 신뢰도' }).waitFor({ state: 'visible' });
+  for (const label of ['매매가', '대지 평당가', '계산값']) await page.getByLabel('핵심 숫자').getByText(label, { exact: true }).first().waitFor({ state: 'visible' });
   await page.screenshot({ path: `${ARTIFACT_DIR}/bangbae-property-hub.png`, fullPage: true });
   await page.getByRole('tab', { name: '더 보기', exact: true }).click();
   for (const text of ['업무 바로가기', '임대 · 수익 분석', '검토 이력', '3D · 도면', '공간 인텔리전스', '5개 공간 · 승인된 3D 연결 0건', '실내 인텔리전스', '리스크 · 규제', '입지 브리핑', '고객 제안서(1P)']) await waitForText(page, text);

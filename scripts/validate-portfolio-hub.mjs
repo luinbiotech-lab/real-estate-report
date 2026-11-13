@@ -36,5 +36,7 @@ if (!text.shareProvider.includes("availability: 'ready'")) throw new Error('Remo
 // 2026-11-12 redesign: the list comes first; shortcuts move below it and phones get cards with a next step.
 if (text.hub.includes('DA:ON PROPERTY OPERATIONS') || text.list.includes('PROPERTY DATABASE')) throw new Error('홈 상단 영어 배너는 제거되었습니다.');
 if (!text.list.includes('<PortfolioShortcuts />') || text.list.indexOf('<PortfolioShortcuts />') < text.list.indexOf('className="table-wrap"')) throw new Error('전문 업무 바로가기는 물건 목록 아래에 있어야 합니다.');
-if (!text.list.includes('className="property-cards"') || !text.list.includes('다음 할 일') || !text.list.includes('isCoreProfileReady(property)')) throw new Error('휴대폰 물건 카드에 다음 할 일이 있어야 합니다.');
+if (!text.list.includes('className={`property-cards view-${view}`}') || !text.list.includes('다음 할 일') || !text.list.includes('isCoreProfileReady(property)')) throw new Error('휴대폰 물건 카드에 다음 할 일이 있어야 합니다.');
+// PC card grid (benchmark redesign 2026-11-12): card/table toggle, photos only under the property's photo policy, real-only KPIs.
+for (const marker of ["aria-label=\"보기 방식\"", 'internalPhotoAllowed(property)', 'splitSampleProperties(items)', 'aria-label="물건 현황"']) if (!text.list.includes(marker)) throw new Error(`홈 카드·현황 계약 누락: ${marker}`);
 console.log('Portfolio operations hub integrity: PASS');
