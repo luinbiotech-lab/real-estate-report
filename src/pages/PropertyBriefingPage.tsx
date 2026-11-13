@@ -34,7 +34,7 @@ export default function PropertyBriefingPage({ settings }: { settings: Settings 
     return () => { cancelled = true; };
   }, [id]);
   const print = useReactToPrint({ contentRef, documentTitle: property ? `${property.name}_입지브리핑` : '입지브리핑' });
-  if (loadError) return <div className="center"><Alert severity="error" action={<Button color="inherit" size="small" onClick={() => navigate('/')}>물건 목록</Button>}>{loadError}</Alert></div>;
+  if (loadError) return <div className="center"><Alert severity="error" action={<Button color="inherit" size="small" onClick={() => navigate('/properties')}>물건 목록</Button>}>{loadError}</Alert></div>;
   if (!property || property.id !== id) return <div className="center"><CircularProgress /><p>입지 브리핑을 준비하는 중입니다.</p></div>;
   const model = createBrandMapModel(property);
   const updated = new Date(property.briefingUpdatedAt || property.updatedAt).toLocaleDateString('ko-KR');

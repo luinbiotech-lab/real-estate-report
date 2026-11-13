@@ -292,7 +292,7 @@ export default function PropertyDataRoomPage() {
   };
 
   if (loading || (property && property.id !== id)) return <div className="center"><CircularProgress /><p>Property Data Room을 불러오는 중입니다.</p></div>;
-  if (!property) return <main className="data-room-error"><Alert severity="error">{error || '요청한 물건을 찾을 수 없습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/')}>물건 목록</Button></main>;
+  if (!property) return <main className="data-room-error"><Alert severity="error">{error || '요청한 물건을 찾을 수 없습니다.'}</Alert><Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/properties')}>물건 목록</Button></main>;
 
   const photos = [
     property.mainImage && { id: 'main', url: property.mainImage, label: '대표사진', primary: true },

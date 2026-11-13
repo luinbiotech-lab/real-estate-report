@@ -33,11 +33,11 @@ const samples = { '/property/:id': '/property/abc', '/property/:id/data-room': '
 for (const path of dynamicPaths) if (!samples[path]) throw new Error(`새 동적 경로의 breadcrumb 기대값이 없습니다: ${path}`);
 for (const path of [...menuPaths.filter((p) => p !== '/'), ...Object.values(samples)]) {
   const context = nav.resolveRouteContext(path);
-  if (!context.crumbs.length || context.crumbs[0].to !== '/') throw new Error(`breadcrumb가 홈에서 시작하지 않습니다: ${path}`);
+  if (!context.crumbs.length || context.crumbs[0].to !== '/' || context.crumbs[0].label !== '홈') throw new Error(`breadcrumb가 홈에서 시작하지 않습니다: ${path}`);
   const last = context.crumbs.at(-1);
   if (!last.label || last.to) throw new Error(`breadcrumb 마지막 항목은 현재 화면이어야 합니다: ${path}`);
 }
-const expectParent = { '/property/abc/data-room': '/', '/property/abc/edit': '/property/abc', '/property/abc': '/', '/agents/a1': '/agents', '/property/new': '/' };
+const expectParent = { '/property/abc/data-room': '/properties', '/property/abc/edit': '/property/abc', '/property/abc': '/properties', '/agents/a1': '/agents', '/property/new': '/properties' };
 for (const [path, parent] of Object.entries(expectParent)) {
   const actual = nav.resolveRouteContext(path).parent?.to;
   if (actual !== parent) throw new Error(`뒤로가기 대상 불일치: ${path} → ${actual} (기대 ${parent})`);
@@ -52,21 +52,41 @@ for (const item of [...nav.primaryNav, ...nav.navGroups.flatMap((group) => group
 for (const group of nav.navGroups) if (!/[가-힣]/.test(group.label)) throw new Error(`메뉴 그룹명은 한국어여야 합니다: ${group.label}`);
 if (nav.navGroups.length > 6) throw new Error(`메뉴 그룹은 6개 이하로 유지합니다: ${nav.navGroups.length}`);
 
-// Bottom tabs (2026-11-12 redesign): exactly 물건/조회/보고서/설정, and every screen lights one of them.
-if (nav.bottomTabs.map((tab) => tab.label).join('/') !== '물건/조회/보고서/설정') throw new Error(`하단 탭은 물건/조회/보고서/설정 4개여야 합니다: ${nav.bottomTabs.map((tab) => tab.label).join('/')}`);
-const expectTab = { '/': 'property', '/property/abc': 'property', '/property/new': 'property', '/risk': 'property', '/digital-twin': 'property', '/discover': 'discover', '/import': 'discover', '/bulk-intake': 'discover', '/report-history': 'report', '/external-shares': 'report', '/settings': 'settings', '/access': 'settings', '/backup': 'settings', '/control-center': 'settings', '/agents/a1': 'settings' };
+// 2026-11-13 IA rework (루치오: "이 모든 걸 설정으로 뺐네"): work-flow sections, 설정 = admin only.
+if (!app.includes('<Route index element={<HomePage />} />') || !app.includes('<Route path="properties" element={<PropertyList />} />')) throw new Error('첫 화면은 사이트 메인(HomePage), 물건 목록은 /properties 여야 합니다.');
+if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '홈:/|물건:/properties|조회:/discover|분석:/readiness|보고서:/report-history|설정:/settings') throw new Error(`PC 주 메뉴는 홈/물건/조회/분석/보고서/설정 업무 흐름 순서여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
+const groupPaths = (id) => nav.navGroups.find((group) => group.id === id)?.items.map((item) => item.to) ?? [];
+const expectGroups = {
+  property: ['/property/new', '/import', '/bulk-intake'],
+  analysis: ['/risk', '/income', '/review-history'],
+  advanced: ['/digital-twin-intake', '/digital-twin', '/spatial', '/interior', '/room-ops'],
+  report: ['/external-shares'],
+  settings: ['/access', '/backup'],
+  integrations: ['/control-center', '/agents', '/migration-readiness'],
+};
+for (const [id, paths] of Object.entries(expectGroups)) if (groupPaths(id).join('|') !== paths.join('|')) throw new Error(`메뉴 그룹 구성 불일치: ${id} → ${groupPaths(id).join(', ')}`);
+// 설정 must not hold work screens again (the defect this rework fixes).
+const settingsReach = [...groupPaths('settings'), ...groupPaths('integrations'), '/settings'];
+for (const work of [...expectGroups.property, ...expectGroups.analysis, ...expectGroups.advanced, ...expectGroups.report, '/readiness', '/discover', '/report-history']) if (settingsReach.includes(work)) throw new Error(`업무 화면이 설정에 들어가 있습니다: ${work}`);
+const sectionOf = Object.fromEntries(nav.primaryNav.map((section) => [section.id, section]));
+if (sectionOf.analysis.advanced !== 'advanced' || sectionOf.settings.advanced !== 'integrations') throw new Error('전문 분석은 분석 아래, 연동·운영은 설정 아래 접힘 블록이어야 합니다.');
+const expectSection = { '/': 'home', '/properties': 'property', '/property/abc': 'property', '/property/new': 'property', '/import': 'property', '/discover': 'discover', '/readiness': 'analysis', '/risk': 'analysis', '/digital-twin': 'analysis', '/room-ops': 'analysis', '/report-history': 'report', '/external-shares': 'report', '/settings': 'settings', '/access': 'settings', '/control-center': 'settings', '/agents/a1': 'settings' };
+for (const [path, id] of Object.entries(expectSection)) if (nav.resolveRouteContext(path).sectionId !== id) throw new Error(`메뉴 영역 판정 불일치: ${path} → ${nav.resolveRouteContext(path).sectionId} (기대 ${id})`);
+const riskCrumbs = nav.resolveRouteContext('/digital-twin').crumbs.map((crumb) => crumb.label).join('>');
+if (riskCrumbs !== '홈>분석>전문 분석>디지털 트윈') throw new Error(`전문 분석 breadcrumb 불일치: ${riskCrumbs}`);
+
+// Phone bottom tabs: 홈/물건/조회/보고서/메뉴; screens without their own tab light 메뉴.
+if (nav.bottomTabs.map((tab) => tab.label).join('/') !== '홈/물건/조회/보고서/메뉴') throw new Error(`하단 탭은 홈/물건/조회/보고서/메뉴여야 합니다: ${nav.bottomTabs.map((tab) => tab.label).join('/')}`);
+const expectTab = { '/': 'home', '/properties': 'property', '/property/abc': 'property', '/property/new': 'property', '/import': 'property', '/bulk-intake': 'property', '/discover': 'discover', '/report-history': 'report', '/external-shares': 'report', '/risk': 'menu', '/digital-twin': 'menu', '/readiness': 'menu', '/settings': 'menu', '/access': 'menu', '/agents/a1': 'menu' };
 for (const [path, tab] of Object.entries(expectTab)) if (nav.bottomTabOf(path) !== tab) throw new Error(`하단 탭 매핑 불일치: ${path} → ${nav.bottomTabOf(path)} (기대 ${tab})`);
-// PC main menu = the same 물건/조회/보고서 entries + a 설정 toggle; the 설정 panel lists every group, admin first.
-if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '물건:/|조회:/discover|보고서:/report-history') throw new Error(`PC 주 메뉴는 물건/조회/보고서여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
-if (nav.menuPanelGroups()[0].id !== 'settings' || nav.menuPanelGroups().length !== nav.navGroups.length) throw new Error('설정 패널은 설정 그룹을 먼저, 모든 그룹을 빠짐없이 보여야 합니다.');
-for (const [path, expected] of Object.entries({ '/': false, '/discover': false, '/report-history': false, '/property/abc': false, '/risk': true, '/settings': true, '/agents/a1': true, '/import': true })) if (nav.isMenuPanelPath(path) !== expected) throw new Error(`설정 패널 펼침 판정 오류: ${path}`);
-for (const marker of ['side-settings-toggle', 'aria-controls="side-menu-panel"']) if (!layout.includes(marker)) throw new Error(`PC 설정 토글 계약 누락: ${marker}`);
-const settingsGroup = nav.navGroups.find((group) => group.id === 'settings');
-for (const path of ['/settings', '/access', '/backup', '/control-center', '/agents', '/migration-readiness']) if (!settingsGroup?.items.some((item) => item.to === path)) throw new Error(`관리 화면은 설정 그룹에 있어야 합니다: ${path}`);
-for (const marker of ['bottomTabs.map', 'className="bottom-tabs"', 'aria-label="하단 메뉴"', "setOpenGroup('settings')"]) if (!layout.includes(marker)) throw new Error(`하단 탭 계약 누락: ${marker}`);
+for (const marker of ['bottomTabs.map', 'className="bottom-tabs"', 'aria-label="하단 메뉴"', 'primaryNav.map(renderSection)', 'side-advanced-toggle', 'aria-controls={`side-advanced-${advanced.id}`}']) if (!layout.includes(marker)) throw new Error(`메뉴 계약 누락: ${marker}`);
+const home = readFileSync('src/pages/HomePage.tsx', 'utf8');
+for (const marker of ['aria-label="DA:ON 소개"', 'aria-label="핵심 가치"', 'aria-label="업무 흐름"', 'aria-label="최근 물건"', 'aria-label="최근 보고서"', 'aria-label="데이터 출처와 원칙"', 'splitSampleProperties(items)', 'home-sample-note', 'to="/settings"']) if (!home.includes(marker)) throw new Error(`메인페이지 구성 누락: ${marker}`);
+// Live connection status lives in 설정, not on the main page (PR #62 review: '서버 미연결' rows made the first screen look unfinished).
+if (/refreshProxyStatus|서버 미연결|키 설정됨/.test(home)) throw new Error('메인페이지에 연결 상태를 표시하지 않습니다(설정에서 확인).');
 
 // The shell must render from the config, keep the drawer out of the tab order when closed, and show breadcrumbs.
-for (const marker of ['menuPanelGroups().map', 'primaryNav.map', 'resolveRouteContext(location.pathname)', 'inert={drawerHidden}', 'aria-label="현재 위치"', "event.key === 'Escape'"]) {
+for (const marker of ['primaryNav.map', 'resolveRouteContext(location.pathname)', 'inert={drawerHidden}', 'aria-label="현재 위치"', "event.key === 'Escape'"]) {
   if (!layout.includes(marker)) throw new Error(`Layout IA 계약 누락: ${marker}`);
 }
 
