@@ -6,6 +6,8 @@ import { useReactToPrint } from 'react-to-print';
 import { propertyRepository } from '../repositories/propertyRepository';
 import type { Property, Settings } from '../types';
 import BrandMapRenderer from '../components/BrandMapRenderer';
+import { A4_LANDSCAPE_PX, useReportDeviceFit } from '../hooks/useReportDeviceFit';
+import '../report-device-fit.css';
 import { createBrandMapModel } from '../services/locationIntelligence/brandMapService';
 
 function DaonBrand() {
@@ -15,6 +17,7 @@ function DaonBrand() {
 export default function PropertyBriefingPage({ settings }: { settings: Settings }) {
   const { id } = useParams();
   const navigate = useNavigate();
+  useReportDeviceFit({ pageWidthPx: A4_LANDSCAPE_PX, iosPrintFit: false });
   const [property, setProperty] = useState<Property>();
   const [loadError, setLoadError] = useState('');
   const contentRef = useRef<HTMLDivElement>(null);

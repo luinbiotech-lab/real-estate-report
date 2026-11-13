@@ -4,8 +4,10 @@ export function isIosLike(nav: Pick<Navigator, 'userAgent' | 'platform' | 'maxTo
 }
 
 export const A4_PX = 794;
+/** A4 landscape width (297mm) — used by the location briefing sheet. */
+export const A4_LANDSCAPE_PX = 1123;
 
-export function screenFit(viewportWidth: number, gutter = 16) {
-  return Math.min(1, Math.max(0.3, (viewportWidth - gutter) / A4_PX));
+export function screenFit(viewportWidth: number, gutter = 16, pageWidthPx = A4_PX) {
+  return Math.min(1, Math.max(0.3, (viewportWidth - gutter) / pageWidthPx));
 }
 
