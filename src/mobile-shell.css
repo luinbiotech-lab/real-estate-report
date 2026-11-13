@@ -315,3 +315,45 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 @media(max-width:900px){.app-shell .home-masthead{padding:18px 16px}.home-masthead-kpis>div{min-width:0;flex:1;padding:8px 10px}.home-masthead-kpis dd{font-size:18px}}
 @media(min-width:1201px){.property-hub-summary-card .property-hub-facts{grid-template-columns:repeat(2,minmax(0,1fr));column-gap:24px}}
 @media(max-width:900px){.list-view-toggle{display:none}.home-masthead .actions .MuiButton-root{white-space:nowrap}}
+
+/* 2026-11-13 시세 위치 (Redfin/Zillow price-insight benchmark) */
+.market-position{background:#fff;border:1px solid #dbe3ec;border-radius:16px;padding:18px 20px;margin:0 0 16px;display:grid;gap:12px;box-shadow:0 6px 18px #10243d0f}
+.market-position-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.app-shell .market-position .eyebrow{margin:0;color:#8a6d2b!important;font-size:11px;letter-spacing:.08em}
+.app-shell .market-position h2{margin:2px 0 0;font-size:18px;color:#0b2545}
+.market-position-tags{display:flex;gap:6px;flex-wrap:wrap}
+.market-position-tags .tag{font-size:12px;border:1px solid #cfd8e3;border-radius:999px;padding:3px 10px;color:#344054;background:#f7f9fb}
+.market-position-headline{margin:0;font-size:15px;font-weight:700;color:#0b2545;padding:10px 12px;border-radius:10px;background:#f3f6fa;border-left:4px solid #b8923f}
+.market-position-headline.band-unknown{border-left-color:#98a2b3;color:#475467;font-weight:600}
+.market-position-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;margin:0;background:#e4e9f0;border-radius:12px;overflow:hidden}
+.market-position-stats div{background:#fff;padding:10px 12px}
+.market-position-stats dt{font-size:12px;color:#667085}
+.market-position-stats dt small{color:#8a6d2b;margin-left:4px}
+.market-position-stats dd{margin:4px 0 0;font-size:16px;font-weight:700;color:#101828}
+.market-position-chart{margin:0}
+.market-position-chart svg{width:100%;height:auto;display:block}
+.market-position-chart .grid{stroke:#eaeef3;stroke-width:1}
+.market-position-chart .axis{font-size:11px;fill:#667085}
+.market-position-chart .median{stroke:#667085;stroke-width:2;stroke-dasharray:5 5}
+.market-position-chart .subject{stroke:#b8923f;stroke-width:2}
+.market-position-chart .ref-label{font-size:11px;fill:#475467}
+.market-position-chart .subject-label{fill:#8a6d2b;font-weight:700}
+.market-position-chart .dot{fill:#2f6fae;stroke:#fff;stroke-width:2}
+.market-position-chart .hit{fill:transparent;cursor:pointer}
+.market-position-chart g:focus{outline:none}
+.market-position-chart g:focus .dot{stroke:#0b2545}
+.market-position-chart figcaption{font-size:12px;color:#667085;margin-top:4px;min-height:18px}
+.market-position-table{width:100%;border-collapse:collapse;font-size:13px}
+.market-position-table th{text-align:left;color:#667085;font-weight:600;border-bottom:1px solid #e4e9f0;padding:6px 8px}
+.market-position-table td{border-bottom:1px solid #f0f3f7;padding:7px 8px;color:#101828}
+.market-position-table tr.is-active td{background:#f3f6fa}
+.market-position-basis{margin:0;padding-left:18px;font-size:12px;color:#667085;display:grid;gap:2px}
+.market-position-link{justify-self:start;background:none;border:1px solid #cfd8e3;border-radius:10px;padding:7px 12px;color:#0b2545;font-weight:600;cursor:pointer}
+.market-position.is-compact{margin-top:16px}
+@media (max-width:700px){
+  .market-position{padding:14px}
+  .market-position-stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .market-position-chart .axis,.market-position-chart .ref-label{font-size:20px}
+  .market-position-chart .dot{r:8px}
+  .market-position-table th:nth-child(4),.market-position-table td:nth-child(4){display:none}
+}
