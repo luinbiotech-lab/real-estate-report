@@ -1,7 +1,7 @@
 import { useEffect } from 'react';
 import { isIosLike, screenFit } from '../utils/reportDeviceFit';
 
-export { isIosLike, screenFit } from '../utils/reportDeviceFit';
+export { A4_LANDSCAPE_PX, isIosLike, screenFit } from '../utils/reportDeviceFit';
 
 /*
  * Report pages are fixed A4 (210mm ≈ 794px). Owner test 2026-11-07 on an iPhone showed two problems:
@@ -11,11 +11,12 @@ export { isIosLike, screenFit } from '../utils/reportDeviceFit';
  * This hook sets `--report-screen-fit` (screen scale for narrow viewports) and the `ios-print-fit` class (print zoom so a
  * page fits inside the iOS printable area). CSS lives in src/report-device-fit.css. Report MASTER layout is unchanged.
  */
-export function useReportDeviceFit() {
+export function useReportDeviceFit({ pageWidthPx, iosPrintFit = true }: { pageWidthPx?: number; iosPrintFit?: boolean } = {}) {
   useEffect(() => {
     const root = document.documentElement;
-    root.classList.toggle('ios-print-fit', isIosLike());
-    const update = () => root.style.setProperty('--report-screen-fit', String(screenFit(window.innerWidth)));
+    // The iOS print rule forces a 210mm portrait box, so landscape sheets (location briefing) opt out of it.
+    root.classList.toggle('ios-print-fit', iosPrintFit && isIosLike());
+    const update = () => root.style.setProperty('--report-screen-fit', String(screenFit(window.innerWidth, 16, pageWidthPx)));
     update();
     window.addEventListener('resize', update);
     return () => {
@@ -23,5 +24,5 @@ export function useReportDeviceFit() {
       root.classList.remove('ios-print-fit');
       root.style.removeProperty('--report-screen-fit');
     };
-  }, []);
+  }, [pageWidthPx, iosPrintFit]);
 }

@@ -185,6 +185,9 @@ try {
       images,
       logos,
       text: master?.textContent || '',
+      // A '확인 필요' placeholder is a value cell that holds only that phrase. A sentence such as
+      // '업무 사용 시 용도변경 확인 필요' (page 05 scenario caution, b5a1500) is real advice, not a blank value.
+      placeholders: [...master.querySelectorAll('*')].filter((el) => !el.children.length && /^\s*(확인 필요|확인필요|-?\s*확인 필요\s*-?)\s*$/.test(el.textContent || '')).map((el) => el.className || el.tagName),
     };
   });
 
@@ -208,7 +211,7 @@ try {
   assert(professional.images.length > 0 && professional.images.every((image) => image.width > 0 && image.height > 0), 'Professional MASTER contains broken images');
   assert(professional.images.every((image) => image.src.startsWith('/__qa__/')), 'Professional MASTER has unexpected production media dependency in rendered QA');
   assert(professional.text.includes('DAON 소개'), 'Professional MASTER closing content missing');
-  assert(!professional.text.includes('확인 필요'), 'Professional MASTER must omit empty-value placeholders');
+  assert(!professional.placeholders.length, `Professional MASTER must omit empty-value placeholders: ${professional.placeholders.slice(0, 5).join(', ')}`);
   await page.screenshot({ path: `${OUT_DIR}/daon-professional-master.png`, fullPage: true });
 
   console.log('Rendered DA:ON professional report smoke QA: PASS');
