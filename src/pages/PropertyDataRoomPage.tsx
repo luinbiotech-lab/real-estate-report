@@ -8,6 +8,7 @@ import PropertyTrustPanel from '../components/propertyScreen/PropertyTrustPanel'
 import { nextDataRoomFreshness, summaryForDisplay, type DataRoomFreshness } from '../domain/propertyDetail/propertyScreenModel';
 import ComparableTransactionOverviewPanel from '../components/propertyDataRoom/ComparableTransactionOverviewPanel';
 import MarketPositionPanel from '../components/propertyScreen/MarketPositionPanel';
+import LocationPanel from '../components/propertyScreen/LocationPanel';
 import ComparableTransactionPanel from '../components/propertyDataRoom/ComparableTransactionPanel';
 import DocumentExtractionPanel from '../components/propertyDataRoom/DocumentExtractionPanel';
 import MediaClassificationPanel from '../components/propertyDataRoom/MediaClassificationPanel';
@@ -321,7 +322,7 @@ export default function PropertyDataRoomPage() {
     </Tabs>
     {activeGroup.tabs.length > 1 && <div className="property-screen-subtabs" role="tablist" aria-label={`${activeGroup.label} 세부 메뉴`}>{activeGroup.tabs.map((key) => <Chip key={key} role="tab" aria-selected={tab === key} clickable color={tab === key ? 'primary' : 'default'} variant={tab === key ? 'filled' : 'outlined'} label={key === 'verification' && summary?.verificationPending ? `${SUB_TAB_LABELS[key]} ${summary.verificationPending}` : SUB_TAB_LABELS[key]} onClick={() => setTab(key)} />)}</div>}
     <div className="data-room-content">
-      {tab === 'summary' && <><PropertyHubPage section="summary" />{marketPanel(true)}</>}
+      {tab === 'summary' && <><PropertyHubPage section="summary" />{marketPanel(true)}{/* 입지 · 주변 (2026-11-13 benchmark gap: map, 로드뷰, nearby). */}<LocationPanel property={property} onOpenBriefing={() => navigate(`/properties/${property.id}/briefing`)} onEdit={() => navigate(`/property/${property.id}/edit`)} onSaved={() => { void load(); }} /></>}
       {tab === 'more' && <><PropertyHubPage section="more" /><nav className="property-more-docs" aria-label="문서 바로가기"><Button startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${property.id}`)}>투자분석보고서</Button><Button startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${property.id}`)}>고객 제안서(1P)</Button><Button startIcon={<MapOutlined />} onClick={() => navigate(`/properties/${property.id}/briefing`)}>입지 브리핑</Button></nav></>}
       {tab === 'overview' && <Overview property={property} bundle={bundle} missing={summary?.missingDocumentTypes ?? []} counts={{ media: summary?.media ?? 0, documents: summary?.documents ?? 0, digitalTwin: summary?.digitalTwin ?? 0 }} onTab={setTab} />}
       {tab === 'media' && <><div>{photos.length ? <div className="data-room-gallery">{photos.map((photo) => <figure key={photo.id}><img src={photo.url} alt={photo.label} /><figcaption>{photo.label}{photo.primary && <Chip size="small" label="대표" />}</figcaption></figure>)}</div> : <EmptyState title="등록된 사진/영상이 없습니다." detail="실제 촬영 자료와 출처가 확인된 미디어를 등록하세요. AI 시각화는 실제 현장사진과 분리해서 관리합니다." />}</div><MediaClassificationPanel propertyId={property.id} latitude={property.latitude} longitude={property.longitude} media={bundle.media} spaces={bundle.spaces ?? []} internalPhotoAllowed={property.internalPhotoAllowed !== false} onSaved={load} /></>}
