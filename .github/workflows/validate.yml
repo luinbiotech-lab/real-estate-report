@@ -283,6 +283,9 @@ jobs:
       - name: Rendered readiness center QA
         run: node scripts/visual-readiness-smoke.mjs
 
+      - name: Rendered verification approve/reject flow QA
+        run: node scripts/visual-verification-flow-smoke.mjs
+
       - name: Rendered company settings QA
         run: node scripts/visual-settings-smoke.mjs
 

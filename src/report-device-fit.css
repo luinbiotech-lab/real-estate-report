@@ -12,6 +12,9 @@
   /* 2026-11-12 review (iPhone 13, 390px): button labels split into three lines. Rows wrap, labels never do. */
   .professional-report-toolbar>div{flex-wrap:wrap;gap:8px!important}
   .professional-report-toolbar .MuiButton-root,.preview-toolbar .MuiButton-root{white-space:nowrap;flex:0 0 auto;min-width:auto}
+  /* 2026-11-13 location briefing (A4 landscape) at 390px: the title wrapped to 4 lines; keep the title, drop the subtitle. */
+  .briefing-preview .preview-toolbar>div{min-width:0}
+  .briefing-preview .preview-toolbar small{display:none}
 }
 
 /* Print: undo the narrow-screen rules (a phone prints at its own narrow width, so they would otherwise apply). */

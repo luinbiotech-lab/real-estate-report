@@ -14,6 +14,7 @@ import MediaClassificationPanel from '../components/propertyDataRoom/MediaClassi
 import PropertySpaceOverviewPanel from '../components/propertyDataRoom/PropertySpaceOverviewPanel';
 import SpatialDataRoomPanel from '../components/propertyDataRoom/SpatialDataRoomPanel';
 import { DOCUMENT_TYPE_LABELS, SOURCE_TYPE_LABELS, VERIFICATION_LABELS } from '../domain/propertyDataRoom/labels';
+import { verificationFieldLabel } from '../domain/propertyDataRoom/verificationFieldRegistry';
 import type { DataRoomBundle, DocumentType, PropertyDocument, PropertyVerificationCandidate, VerificationDecisionStatus, VerificationStatus } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -427,14 +428,14 @@ function VerificationPanel({ candidates, reviewingId, onDecision }: { candidates
     return b.createdAt.localeCompare(a.createdAt);
   });
   if (!ordered.length) return <EmptyState title="검증 대기 데이터가 없습니다." detail="Excel·공적자료·외부 데이터에서 후보값이 생성되면 기존값과 비교해 승인할 수 있습니다." />;
-  return <div><div className="document-toolbar"><div><h2>자료 검증</h2><p>후보값은 승인하기 전까지 Property 원본을 변경하지 않습니다.</p></div></div><div className="document-list">{ordered.map((candidate) => {
+  return <div><div className="document-toolbar"><div><h2>자료 검증</h2><p>후보값은 승인하기 전까지 물건 정보를 바꾸지 않습니다. 거절·보류한 값은 기록만 남습니다.</p></div></div><div className="document-list">{ordered.map((candidate) => {
     const active = candidate.decisionStatus === 'pending' || candidate.decisionStatus === 'held';
     const busy = reviewingId === candidate.id;
-    return <article key={candidate.id}>
+    return <article key={candidate.id} className="verification-row">
       <div className="file-icon"><DescriptionOutlined /></div>
-      <div><b>{candidate.fieldKey}</b><span>현재값: {displayCandidateValue(candidate.currentValue)}</span><span>후보값: {displayCandidateValue(candidate.candidateValue)}</span><small>{candidate.sourceName}{candidate.sourceDate ? ` · ${candidate.sourceDate}` : ''}{typeof candidate.confidence === 'number' ? ` · 신뢰도 ${Math.round(candidate.confidence * 100)}%` : ''}</small>{candidate.note && <small>{candidate.note}</small>}</div>
+      <div><b>{verificationFieldLabel(candidate.fieldKey)}</b><span>현재값: {displayCandidateValue(candidate.currentValue)}</span><span className="verification-candidate-value">후보값: {displayCandidateValue(candidate.candidateValue)}</span><small>{candidate.sourceName}{candidate.sourceDate ? ` · ${candidate.sourceDate}` : ''}{typeof candidate.confidence === 'number' ? ` · 신뢰도 ${Math.round(candidate.confidence * 100)}%` : ''}</small>{candidate.note && <small>{candidate.note}</small>}</div>
       <Chip size="small" label={DECISION_LABELS[candidate.decisionStatus]} color={candidate.decisionStatus === 'approved' ? 'success' : candidate.decisionStatus === 'rejected' ? 'error' : 'default'} />
-      {active && <><Button disabled={busy} color="success" onClick={() => onDecision(candidate, 'approved')}>승인</Button><Button disabled={busy} onClick={() => onDecision(candidate, 'held')}>보류</Button><Button disabled={busy} color="error" onClick={() => onDecision(candidate, 'rejected')}>거절</Button></>}
+      {active && <div className="verification-actions" role="group" aria-label={`${verificationFieldLabel(candidate.fieldKey)} 처리`}><Button disabled={busy} variant="contained" color="success" onClick={() => onDecision(candidate, 'approved')}>승인</Button><Button disabled={busy} variant="outlined" onClick={() => onDecision(candidate, 'held')}>보류</Button><Button disabled={busy} variant="outlined" color="error" onClick={() => onDecision(candidate, 'rejected')}>거절</Button></div>}
     </article>;
   })}</div></div>;
 }

@@ -98,8 +98,11 @@ eq(fit.isIosLike({ userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)',
 eq(fit.isIosLike({ userAgent: 'Mozilla/5.0 (Linux; Android 14)', platform: 'Linux armv8l', maxTouchPoints: 5 }), false, 'Android not iOS');
 eq(fit.screenFit(390), (390 - 16) / 794, 'iPhone width scale');
 eq(fit.screenFit(1440), 1, 'desktop not scaled');
+eq(fit.screenFit(390, 16, fit.A4_LANDSCAPE_PX), (390 - 16) / 1123, 'A4 landscape (location briefing) iPhone scale');
+eq(fit.screenFit(1440, 16, fit.A4_LANDSCAPE_PX), 1, 'A4 landscape desktop not scaled');
 const fitCss = readFileSync('src/report-device-fit.css', 'utf8');
 for (const needle of ['html.ios-print-fit .professional-report-document', 'html.ios-print-fit .professional-report-shell .daon-professional-report-master', 'padding:0 7mm!important;box-sizing:content-box!important', 'html.ios-print-fit .daon-closing-page{break-before:page!important', '.professional-report-shell{overflow:visible!important}', 'zoom:var(--report-screen-fit,1)']) if (!fitCss.includes(needle)) fail(`report-device-fit.css missing: ${needle}`);
+{ const brief = readFileSync('src/pages/PropertyBriefingPage.tsx', 'utf8'); if (!brief.includes('useReportDeviceFit({ pageWidthPx: A4_LANDSCAPE_PX, iosPrintFit: false });') || !brief.includes("import '../report-device-fit.css';")) fail('location briefing (A4 landscape) must scale to the phone width and opt out of the portrait iOS print rule'); }
 for (const page of ['src/pages/ProfessionalReportSnapshotPage.tsx', 'src/pages/DocumentPreview.tsx']) { const src = readFileSync(page, 'utf8'); if (!src.includes('useReportDeviceFit();') || !src.includes("import '../report-device-fit.css';")) fail(`${page} must use the device fit hook and CSS`); }
 
 // 5. 1P blank handling (owner iPhone PDF 2026-11-07): no "- (36평)" placeholder, no empty 핵심 포인트 box.
