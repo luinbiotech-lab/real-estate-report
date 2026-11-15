@@ -81,6 +81,7 @@
 .listing-staff-link svg{font-size:18px}
 .trust-panel-grade{display:grid;gap:6px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px solid #e4e9f0}
 .trust-panel-grade a{font-size:12px}
+.trust-panel-grade .trust-grade-badge,.trust-panel-grade a{justify-self:start}
 @media (max-width:900px){
   .explore-browse.has-map{grid-template-columns:1fr}
   .listing-hero,.listing-grid{grid-template-columns:1fr}
