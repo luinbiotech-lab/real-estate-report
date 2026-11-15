@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { activeBrand } from '../brand/activeBrand';
-import { AddRounded, ArrowBackRounded, AnalyticsRounded, FormatListBulletedRounded, HomeRounded, MenuRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, CloseRounded, MapOutlined, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
+import { AddRounded, ArrowBackRounded, AnalyticsRounded, FormatListBulletedRounded, HomeRounded, MenuRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, CloseRounded, MapOutlined, TravelExploreRounded, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { bottomTabOf, bottomTabs, groupById, primaryNav, resolveRouteContext, type NavIconKey, type NavSection } from '../navigation/navConfig';
@@ -36,7 +36,7 @@ const navIcons: Record<NavIconKey, ReactNode> = {
   readiness: <PlaylistAddCheckRounded />, review: <RateReviewRounded />, risk: <GavelRounded />, report: <HistoryRounded />, share: <ShareRounded />,
   income: <PaidRounded />, interior: <HomeWorkRounded />, spatial: <ViewInArRounded />, twinIntake: <UploadFileRounded />, twin: <ThreeDRotationRounded />,
   roomOps: <HubRounded />, access: <AdminPanelSettingsRounded />, control: <HubRounded />, agents: <AutoAwesomeRounded />, backup: <BackupRounded />,
-  migration: <CloudSyncRounded />, settings: <SettingsRounded />,
+  migration: <CloudSyncRounded />, settings: <SettingsRounded />, explore: <TravelExploreRounded />,
   groupProperty: <ApartmentRounded />, groupVerify: <FactCheckRounded />, groupReport: <DescriptionOutlined />, groupAnalysis: <ViewInArRounded />, groupOps: <SettingsRounded />,
 };
 

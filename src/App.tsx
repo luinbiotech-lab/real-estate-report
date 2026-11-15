@@ -34,6 +34,8 @@ const PropertyBriefingPage = lazy(() => import('./pages/PropertyBriefingPage'));
 const PropertyDataRoomPage = lazy(() => import('./pages/PropertyDataRoomPage'));
 const ProfessionalReportSnapshotPage = lazy(() => import('./pages/ProfessionalReportSnapshotPage'));
 const ReportHistoryPage = lazy(() => import('./pages/ReportHistoryPage'));
+const ExplorePage = lazy(() => import('./pages/ExplorePage'));
+const PublicListingPreviewPage = lazy(() => import('./pages/PublicListingPreviewPage'));
 import { REMOTE_OPERATIONAL_MODE } from './services/operationalDataMode';
 
 const DAON_MANAGER = '김은미 대표 / 공인중개사';
@@ -101,6 +103,9 @@ function AppContent() {
       {/* 2026-11-13: site main page first, the list moved to /properties. */}
       <Route index element={<HomePage />} />
       <Route path="properties" element={<PropertyList />} />
+      {/* 2026-11-15 platform upgrade: buyer-side explore + public listing preview (not published yet). */}
+      <Route path="explore" element={<ExplorePage />} />
+      <Route path="listing/:id" element={<PublicListingPreviewPage />} />
       <Route path="control-center" element={<AgentControlCenterPage />} />
       <Route path="discover" element={<PropertyDiscoveryPage />} />
       <Route path="agents/:agentId" element={<AgentWorkspacePage />} />

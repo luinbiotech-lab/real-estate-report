@@ -54,6 +54,9 @@ jobs:
       - name: Validate navigation IA and route coverage
         run: node scripts/validate-navigation-ia.mjs
 
+      - name: Validate platform trust grade and public listing rules
+        run: node scripts/validate-platform-trust.mjs
+
       - name: Validate property detail pages
         run: node scripts/validate-property-detail-pages.mjs
 
@@ -285,6 +288,9 @@ jobs:
 
       - name: Rendered verification approve/reject flow QA
         run: node scripts/visual-verification-flow-smoke.mjs
+
+      - name: Rendered platform explore and public listing preview QA
+        run: node scripts/visual-platform-smoke.mjs
 
       - name: Rendered company settings QA
         run: node scripts/visual-settings-smoke.mjs

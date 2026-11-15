@@ -29,7 +29,7 @@ const dangling = menuPaths.filter((path) => !staticPaths.includes(path));
 if (dangling.length) throw new Error(`존재하지 않는 경로를 가리키는 메뉴가 있습니다: ${dangling.join(', ')}`);
 
 // Every menu entry and every dynamic shell route must produce a breadcrumb trail rooted at home.
-const samples = { '/property/:id': '/property/abc', '/property/:id/data-room': '/property/abc/data-room', '/property/:id/edit': '/property/abc/edit', '/agents/:agentId': '/agents/a1' };
+const samples = { '/property/:id': '/property/abc', '/property/:id/data-room': '/property/abc/data-room', '/property/:id/edit': '/property/abc/edit', '/agents/:agentId': '/agents/a1', '/listing/:id': '/listing/abc' };
 for (const path of dynamicPaths) if (!samples[path]) throw new Error(`새 동적 경로의 breadcrumb 기대값이 없습니다: ${path}`);
 for (const path of [...menuPaths.filter((p) => p !== '/'), ...Object.values(samples)]) {
   const context = nav.resolveRouteContext(path);
@@ -37,7 +37,7 @@ for (const path of [...menuPaths.filter((p) => p !== '/'), ...Object.values(samp
   const last = context.crumbs.at(-1);
   if (!last.label || last.to) throw new Error(`breadcrumb 마지막 항목은 현재 화면이어야 합니다: ${path}`);
 }
-const expectParent = { '/property/abc/data-room': '/properties', '/property/abc/edit': '/property/abc', '/property/abc': '/properties', '/agents/a1': '/agents', '/property/new': '/properties' };
+const expectParent = { '/property/abc/data-room': '/properties', '/property/abc/edit': '/property/abc', '/property/abc': '/properties', '/agents/a1': '/agents', '/property/new': '/properties', '/listing/abc': '/explore' };
 for (const [path, parent] of Object.entries(expectParent)) {
   const actual = nav.resolveRouteContext(path).parent?.to;
   if (actual !== parent) throw new Error(`뒤로가기 대상 불일치: ${path} → ${actual} (기대 ${parent})`);
@@ -54,7 +54,7 @@ if (nav.navGroups.length > 6) throw new Error(`메뉴 그룹은 6개 이하로 �
 
 // 2026-11-13 IA rework (루치오: "이 모든 걸 설정으로 뺐네"): work-flow sections, 설정 = admin only.
 if (!app.includes('<Route index element={<HomePage />} />') || !app.includes('<Route path="properties" element={<PropertyList />} />')) throw new Error('첫 화면은 사이트 메인(HomePage), 물건 목록은 /properties 여야 합니다.');
-if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '홈:/|물건:/properties|조회:/discover|분석:/readiness|보고서:/report-history|설정:/settings') throw new Error(`PC 주 메뉴는 홈/물건/조회/분석/보고서/설정 업무 흐름 순서여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
+if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '홈:/|탐색:/explore|물건:/properties|조회:/discover|분석:/readiness|보고서:/report-history|설정:/settings') throw new Error(`PC 주 메뉴는 홈/탐색/물건/조회/분석/보고서/설정 업무 흐름 순서여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
 const groupPaths = (id) => nav.navGroups.find((group) => group.id === id)?.items.map((item) => item.to) ?? [];
 const expectGroups = {
   property: ['/property/new', '/import', '/bulk-intake'],
@@ -70,14 +70,14 @@ const settingsReach = [...groupPaths('settings'), ...groupPaths('integrations'),
 for (const work of [...expectGroups.property, ...expectGroups.analysis, ...expectGroups.advanced, ...expectGroups.report, '/readiness', '/discover', '/report-history']) if (settingsReach.includes(work)) throw new Error(`업무 화면이 설정에 들어가 있습니다: ${work}`);
 const sectionOf = Object.fromEntries(nav.primaryNav.map((section) => [section.id, section]));
 if (sectionOf.analysis.advanced !== 'advanced' || sectionOf.settings.advanced !== 'integrations') throw new Error('전문 분석은 분석 아래, 연동·운영은 설정 아래 접힘 블록이어야 합니다.');
-const expectSection = { '/': 'home', '/properties': 'property', '/property/abc': 'property', '/property/new': 'property', '/import': 'property', '/discover': 'discover', '/readiness': 'analysis', '/risk': 'analysis', '/digital-twin': 'analysis', '/room-ops': 'analysis', '/report-history': 'report', '/external-shares': 'report', '/settings': 'settings', '/access': 'settings', '/control-center': 'settings', '/agents/a1': 'settings' };
+const expectSection = { '/': 'home', '/explore': 'explore', '/listing/abc': 'explore', '/properties': 'property', '/property/abc': 'property', '/property/new': 'property', '/import': 'property', '/discover': 'discover', '/readiness': 'analysis', '/risk': 'analysis', '/digital-twin': 'analysis', '/room-ops': 'analysis', '/report-history': 'report', '/external-shares': 'report', '/settings': 'settings', '/access': 'settings', '/control-center': 'settings', '/agents/a1': 'settings' };
 for (const [path, id] of Object.entries(expectSection)) if (nav.resolveRouteContext(path).sectionId !== id) throw new Error(`메뉴 영역 판정 불일치: ${path} → ${nav.resolveRouteContext(path).sectionId} (기대 ${id})`);
 const riskCrumbs = nav.resolveRouteContext('/digital-twin').crumbs.map((crumb) => crumb.label).join('>');
 if (riskCrumbs !== '홈>분석>전문 분석>디지털 트윈') throw new Error(`전문 분석 breadcrumb 불일치: ${riskCrumbs}`);
 
-// Phone bottom tabs: 홈/물건/조회/보고서/메뉴; screens without their own tab light 메뉴.
-if (nav.bottomTabs.map((tab) => tab.label).join('/') !== '홈/물건/조회/보고서/메뉴') throw new Error(`하단 탭은 홈/물건/조회/보고서/메뉴여야 합니다: ${nav.bottomTabs.map((tab) => tab.label).join('/')}`);
-const expectTab = { '/': 'home', '/properties': 'property', '/property/abc': 'property', '/property/new': 'property', '/import': 'property', '/bulk-intake': 'property', '/discover': 'discover', '/report-history': 'report', '/external-shares': 'report', '/risk': 'menu', '/digital-twin': 'menu', '/readiness': 'menu', '/settings': 'menu', '/access': 'menu', '/agents/a1': 'menu' };
+// Phone bottom tabs (2026-11-15 platform upgrade): 홈/탐색/물건/보고서/메뉴; screens without their own tab light 메뉴.
+if (nav.bottomTabs.map((tab) => tab.label).join('/') !== '홈/탐색/물건/보고서/메뉴') throw new Error(`하단 탭은 홈/탐색/물건/보고서/메뉴여야 합니다: ${nav.bottomTabs.map((tab) => tab.label).join('/')}`);
+const expectTab = { '/': 'home', '/explore': 'explore', '/listing/abc': 'explore', '/properties': 'property', '/property/abc': 'property', '/property/new': 'property', '/import': 'property', '/bulk-intake': 'property', '/discover': 'menu', '/report-history': 'report', '/external-shares': 'report', '/risk': 'menu', '/digital-twin': 'menu', '/readiness': 'menu', '/settings': 'menu', '/access': 'menu', '/agents/a1': 'menu' };
 for (const [path, tab] of Object.entries(expectTab)) if (nav.bottomTabOf(path) !== tab) throw new Error(`하단 탭 매핑 불일치: ${path} → ${nav.bottomTabOf(path)} (기대 ${tab})`);
 for (const marker of ['bottomTabs.map', 'className="bottom-tabs"', 'aria-label="하단 메뉴"', 'primaryNav.map(renderSection)', 'side-advanced-toggle', 'aria-controls={`side-advanced-${advanced.id}`}']) if (!layout.includes(marker)) throw new Error(`메뉴 계약 누락: ${marker}`);
 const home = readFileSync('src/pages/HomePage.tsx', 'utf8');

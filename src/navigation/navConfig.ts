@@ -8,13 +8,17 @@
  * search · my items · analysis · reports at the top level and keep only account/admin under settings.
  * '설정' now holds company, users/permissions, backup and integrations only. Low-frequency specialist
  * screens sit in a collapsible '전문 분석' block under 분석, never in 설정.
+ *
+ * 2026-11-15 platform upgrade (루치오: "다온을 부동산플랫폼으로 격상"): '탐색' (buyer-side map + list with trust grades)
+ * comes right after 홈, like Zillow / Redfin / 직방 put search first. Phone tabs become 홈 / 탐색 / 물건 / 보고서 / 메뉴;
+ * 조회 (address lookup, a broker tool) stays one tap away in 메뉴 and in 물건.
  */
 
 export type NavIconKey =
   | 'home' | 'list' | 'search' | 'add' | 'upload' | 'intake' | 'readiness' | 'review' | 'risk'
   | 'report' | 'share' | 'income' | 'interior' | 'spatial' | 'twinIntake' | 'twin' | 'roomOps'
   | 'access' | 'control' | 'agents' | 'backup' | 'migration' | 'settings' | 'analysis' | 'menu'
-  | 'groupProperty' | 'groupVerify' | 'groupReport' | 'groupAnalysis' | 'groupOps';
+  | 'explore' | 'groupProperty' | 'groupVerify' | 'groupReport' | 'groupAnalysis' | 'groupOps';
 
 export interface NavItem {
   to: string;
@@ -35,7 +39,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export type SectionId = 'home' | 'property' | 'discover' | 'analysis' | 'report' | 'settings';
+export type SectionId = 'home' | 'explore' | 'property' | 'discover' | 'analysis' | 'report' | 'settings';
 
 /** One top-level menu entry. Its own page + the sub-pages of `group`, plus an optional collapsed block (`advanced`). */
 export interface NavSection extends NavItem {
@@ -46,10 +50,12 @@ export interface NavSection extends NavItem {
 
 export const HOME_PATH = '/';
 export const PROPERTY_LIST_PATH = '/properties';
+export const EXPLORE_PATH = '/explore';
 
 /** PC side menu, in work-flow order. Every entry is a real page; sub-pages are listed right under it. */
 export const primaryNav: NavSection[] = [
   { id: 'home', to: HOME_PATH, title: '홈', module: '오늘 할 일 · 최근 물건 · 보고서', icon: 'home' },
+  { id: 'explore', to: EXPLORE_PATH, title: '탐색', module: '신뢰 등급 · 지도 · 공개 매물', icon: 'explore' },
   { id: 'property', to: PROPERTY_LIST_PATH, title: '물건', module: '목록 · 지도 · 등록', icon: 'list', group: 'property' },
   { id: 'discover', to: '/discover', title: '조회', module: '주소 · 지번 공적자료 조회', icon: 'search' },
   { id: 'analysis', to: '/readiness', title: '분석', module: '준비도 · 리스크 · 수익', icon: 'analysis', group: 'analysis', advanced: 'advanced' },
@@ -97,13 +103,13 @@ export function sectionOfGroup(groupId: NavGroupId | undefined): SectionId | und
   return primaryNav.find((section) => section.group === groupId || section.advanced === groupId)?.id;
 }
 
-export type BottomTabKey = 'home' | 'property' | 'discover' | 'report' | 'menu';
+export type BottomTabKey = 'home' | 'explore' | 'property' | 'discover' | 'report' | 'menu';
 
-/** Mobile bottom tabs (Redfin/Rightmove app pattern): 홈 / 물건 / 조회 / 보고서 / 메뉴. 메뉴 opens every section, 설정 last. */
+/** Mobile bottom tabs (Zillow/Redfin app pattern): 홈 / 탐색 / 물건 / 보고서 / 메뉴. 메뉴 opens every section, 설정 last. */
 export const bottomTabs: { key: BottomTabKey; label: string; to?: string; icon: NavIconKey }[] = [
   { key: 'home', label: '홈', to: HOME_PATH, icon: 'home' },
+  { key: 'explore', label: '탐색', to: EXPLORE_PATH, icon: 'explore' },
   { key: 'property', label: '물건', to: PROPERTY_LIST_PATH, icon: 'list' },
-  { key: 'discover', label: '조회', to: '/discover', icon: 'search' },
   { key: 'report', label: '보고서', to: '/report-history', icon: 'report' },
   { key: 'menu', label: '메뉴', icon: 'menu' },
 ];
@@ -134,7 +140,7 @@ export function resolveRouteContext(pathname: string): RouteContext {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === HOME_PATH) return { crumbs: [], sectionId: 'home' };
   const section = primaryNav.find((entry) => entry.to === path);
-  if (section) return { crumbs: [HOME, { label: section.id === 'property' ? '물건 목록' : section.id === 'discover' ? '주소로 물건 조회' : section.id === 'analysis' ? '준비도 센터' : section.id === 'settings' ? '회사 설정' : section.title }], sectionId: section.id, groupId: section.group };
+  if (section) return { crumbs: [HOME, { label: section.id === 'property' ? '물건 목록' : section.id === 'discover' ? '주소로 물건 조회' : section.id === 'explore' ? '매물 탐색' : section.id === 'analysis' ? '준비도 센터' : section.id === 'settings' ? '회사 설정' : section.title }], sectionId: section.id, groupId: section.group };
 
   const property = path.match(/^\/property\/([^/]+)(?:\/(data-room|edit))?$/);
   if (property && property[1] !== 'new') {
@@ -143,6 +149,8 @@ export function resolveRouteContext(pathname: string): RouteContext {
     if (property[2] === 'edit') return { crumbs: [HOME, LIST, hub, { label: '정보 수정' }], parent: { label: '물건 상세', to: hub.to! }, groupId: 'property', sectionId: 'property' };
     return { crumbs: [HOME, LIST, { label: '물건 상세' }], parent: { label: '물건 목록', to: PROPERTY_LIST_PATH }, groupId: 'property', sectionId: 'property' };
   }
+  const listing = path.match(/^\/listing\/([^/]+)$/);
+  if (listing) return { crumbs: [HOME, { label: '탐색', to: EXPLORE_PATH }, { label: '공개 매물 미리보기' }], parent: { label: '탐색', to: EXPLORE_PATH }, sectionId: 'explore' };
   if (path === '/property/new') return { crumbs: [HOME, LIST, { label: '새 물건 등록' }], parent: { label: '물건 목록', to: PROPERTY_LIST_PATH }, groupId: 'property', sectionId: 'property' };
 
   const agent = path.match(/^\/agents\/([^/]+)$/);
@@ -161,7 +169,7 @@ export function resolveRouteContext(pathname: string): RouteContext {
 /** Which bottom tab is highlighted for a path. Screens without their own tab light 메뉴. */
 export function bottomTabOf(pathname: string): BottomTabKey {
   const { sectionId } = resolveRouteContext(pathname);
-  if (sectionId === 'home' || sectionId === 'property' || sectionId === 'discover' || sectionId === 'report') return sectionId;
+  if (sectionId === 'home' || sectionId === 'explore' || sectionId === 'property' || sectionId === 'report') return sectionId;
   return 'menu';
 }
 
