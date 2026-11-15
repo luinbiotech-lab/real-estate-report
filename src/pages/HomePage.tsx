@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, CircularProgress } from '@mui/material';
-import { AddRounded, AnalyticsRounded, ArrowForwardRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
+import { AddRounded, AnalyticsRounded, ArrowForwardRounded, BusinessRounded, HandshakeRounded, TravelExploreRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { reportSnapshotHistoryService } from '../services/reportSnapshotHistoryService';
 import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
@@ -11,7 +11,12 @@ import { activeBrand } from '../brand/activeBrand';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 import { formatWon } from '../utils/format';
-import { PROPERTY_LIST_PATH } from '../navigation/navConfig';
+import { EXPLORE_PATH, PROPERTY_LIST_PATH } from '../navigation/navConfig';
+import { loadListingTrustMany, type ListingTrust } from '../services/platformListingService';
+import { TRUST_GRADES } from '../domain/platform/trustGrade';
+import { DEFAULT_ADDRESS_LEVEL, maskAddress } from '../domain/platform/publicListing';
+import TrustGradeBadge from '../components/platform/TrustGradeBadge';
+import '../platform.css';
 
 /*
  * Site main page (2026-11-13, 루치오: "사이트 메인페이지도 있어야지. 바로 본론부터 들어가면 안돼").
@@ -21,6 +26,8 @@ import { PROPERTY_LIST_PATH } from '../navigation/navConfig';
  *   3) the work flow as entry cards, 4) recent properties and reports, 5) data sources and principles.
  * Rules: counts exclude sample/test records and say so when only samples exist; no figure is shown that was not loaded.
  * Live connection status belongs to 설정 (회사 설정 › 데이터 연결), not the main page (coordinator review, PR #62).
+ * 2026-11-15 platform upgrade: the hero leads with 탐색 (verified listings by trust grade), then who the site is for
+ * (매수자·투자자 / 중개사 / 소유주) and the highest-graded listings. Owner submission is phase 2 and says so.
  */
 
 type LoadState = 'loading' | 'ready' | 'error';
@@ -32,6 +39,12 @@ const VALUES = [
   { icon: <SourceRounded />, title: '근거', body: '공식 자료·제공 문서마다 출처와 수집 시점을 남깁니다. 실제값·계산값·추정값을 섞지 않습니다.' },
   { icon: <VerifiedUserRounded />, title: '검증', body: '자동 수집 결과는 후보로만 올라오고, 사람이 확인해야 확정됩니다. 비교거래는 동일 건물로 단정하지 않습니다.' },
   { icon: <DescriptionOutlined />, title: '리포트', body: '확정된 자료만 1P 제안서·7P 상세보고서(MASTER)로 만들고, 버전별 스냅샷으로 보관·공유합니다.' },
+];
+
+const AUDIENCES: Array<{ icon: ReactNode; title: string; body: string; to?: string; action: string }> = [
+  { icon: <TravelExploreRounded />, title: '매수자 · 투자자', body: '신뢰 등급과 근거 표시로 매물을 비교합니다. 공식확인 값과 입력값이 섞이지 않습니다.', to: EXPLORE_PATH, action: '매물 탐색' },
+  { icon: <HandshakeRounded />, title: '중개사', body: '주소로 등록하면 공적자료가 후보로 모이고, 확인한 값으로 1P·7P 보고서를 만듭니다.', to: '/property/new', action: '물건 등록' },
+  { icon: <BusinessRounded />, title: '건물주', body: '건물 자료를 직접 제출해 등급을 올리는 기능은 준비 중입니다(공개 게시 2단계).', action: '준비 중' },
 ];
 
 const FLOW: Array<{ step: string; title: string; detail: string; to: string; icon: ReactNode; more?: Array<{ label: string; to: string }> }> = [
@@ -55,6 +68,7 @@ export default function HomePage() {
   const [loadState, setLoadState] = useState<LoadState>('loading');
   const [reports, setReports] = useState<RecentReport[]>([]);
   const [reportState, setReportState] = useState<LoadState>('loading');
+  const [trust, setTrust] = useState<Map<string, ListingTrust>>();
 
   useEffect(() => {
     let active = true;
@@ -62,6 +76,8 @@ export default function HomePage() {
       if (!active) return;
       const sorted = [...values].sort(compareByUpdatedAtDesc);
       setItems(sorted); setLoadState('ready');
+      // Trust grades for the 등급 매물 block (bounded; a failed Data Room read leaves that listing out, never guessed).
+      void loadListingTrustMany(sorted, 60).then((map) => { if (active) setTrust(map); });
       // Recent reports: the latest snapshots across the most recently updated properties (bounded, one failure never blanks the list).
       const settled = await Promise.allSettled(sorted.slice(0, 30).map(async (property) => (await reportSnapshotHistoryService.list(property.id)).map(({ snapshot }) => ({ snapshot, property }))));
       if (!active) return;
@@ -78,16 +94,17 @@ export default function HomePage() {
   const recent = items.slice(0, 4);
   const readyReports = reports.filter((row) => row.snapshot.status === 'ready').length;
   const sampleOnly = loadState === 'ready' && real.length === 0 && samples.length > 0;
+  const graded = useMemo(() => (trust ? items.filter((property) => trust.has(property.id)).sort((a, b) => TRUST_GRADES.indexOf(trust.get(a.id)!.grade.grade) - TRUST_GRADES.indexOf(trust.get(b.id)!.grade.grade)).slice(0, 4) : []), [items, trust]);
 
   return <div className="home-page">
     <section className="home-hero" aria-label="DA:ON 소개">
       <div className="home-hero-copy">
-        <p className="home-hero-eyebrow">{activeBrand.name} · 부동산 전문 리포트 플랫폼</p>
-        <h1>근거로 확인하고, 검증해서,<br />보고서로 전달합니다.</h1>
-        <p className="home-hero-lead">주소 하나로 공적자료를 모으고, 사람이 확인한 자료만 1P·7P 전문 보고서로 만듭니다. 실제값·계산값·추정값은 화면과 보고서 모두에서 구분해 표시합니다.</p>
+        <p className="home-hero-eyebrow">{activeBrand.name} · 검증된 상업용 건물 플랫폼</p>
+        <h1>근거로 확인하고, 등급으로 보여 주고,<br />보고서로 전달합니다.</h1>
+        <p className="home-hero-lead">모든 매물에 신뢰 등급(A~D)을 붙입니다. 등급은 공적서류와 사람이 확인한 값만으로 계산하고, 공식확인·중개사 입력·계산값을 값마다 따로 표시합니다. 확인된 자료는 1P·7P 전문 보고서로 이어집니다.</p>
         <div className="home-hero-actions">
-          <Button variant="contained" size="large" startIcon={<SearchRounded />} onClick={() => navigate('/discover')}>주소로 물건 조회</Button>
-          <Button variant="outlined" size="large" startIcon={<FormatListBulletedRounded />} onClick={() => navigate(PROPERTY_LIST_PATH)}>물건 목록</Button>
+          <Button variant="contained" size="large" startIcon={<TravelExploreRounded />} onClick={() => navigate(EXPLORE_PATH)}>검증된 매물 탐색</Button>
+          <Button variant="outlined" size="large" startIcon={<SearchRounded />} onClick={() => navigate('/discover')}>주소로 물건 조회</Button>
           <Button size="large" startIcon={<AddRounded />} onClick={() => navigate('/property/new')}>새 물건 등록</Button>
         </div>
         {sampleOnly && <p className="home-sample-note" role="note">현재 운영 물건은 없고 샘플·테스트 물건 {samples.length}건만 있습니다. 아래 &lsquo;최근 물건&rsquo;은 샘플 표시이며 현황 숫자에는 넣지 않습니다.</p>}
@@ -101,6 +118,25 @@ export default function HomePage() {
           <div><dt>최근 보고서</dt><dd>{reportState === 'ready' ? reports.length : '-'}</dd><small>{reportState === 'ready' ? `확정 ${readyReports}건` : reportState === 'loading' ? '불러오는 중' : '불러오지 못함'}</small></div>
         </>}
       </dl>
+    </section>
+
+    <section className="home-audiences" aria-label="이용자별 시작">
+      {AUDIENCES.map((row) => <article key={row.title}><span className="home-value-icon">{row.icon}</span><h2>{row.title}</h2><p>{row.body}</p>{row.to ? <Link to={row.to} className="home-audience-link">{row.action} <ArrowForwardRounded /></Link> : <span className="home-audience-soon">{row.action}</span>}</article>)}
+    </section>
+
+    <section className="home-graded" aria-label="등급 매물">
+      <header className="home-section-head"><div><p className="eyebrow">TRUST GRADE</p><h2>신뢰 등급 매물{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={EXPLORE_PATH}>탐색에서 전체 보기</Link></header>
+      {loadState === 'ready' && !trust && <p className="home-empty">등급을 계산하는 중입니다.</p>}
+      {trust && !graded.length && <p className="home-empty">등급을 계산할 매물이 아직 없습니다.</p>}
+      {graded.length > 0 && <ul className="home-graded-list">{graded.map((property) => {
+        const recordClass = classifyPropertyRecord(property).recordClass;
+        return <li key={property.id}><Link to={`/listing/${encodeURIComponent(property.id)}`}>
+          <TrustGradeBadge grade={trust!.get(property.id)!.grade} />
+          <strong>{maskAddress(property.address, DEFAULT_ADDRESS_LEVEL) || '위치 확인 중'} {property.mainUse || '건물'}</strong>
+          <span>{property.salePrice > 0 ? formatWon(property.salePrice) : '가격 확인 중'}{recordClass !== 'operational' && <em>{RECORD_CLASS_LABEL[recordClass]}</em>}</span>
+        </Link></li>;
+      })}</ul>}
+      <p className="platform-footnote">공개 화면 미리보기입니다. 아직 인터넷에 게시되지 않았습니다.</p>
     </section>
 
     <section className="home-values" aria-label="핵심 가치">

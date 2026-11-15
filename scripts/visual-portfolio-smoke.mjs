@@ -17,7 +17,7 @@ try {
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
   for (const name of ['DA:ON 소개', '핵심 가치', '업무 흐름', '최근 물건', '최근 보고서', '데이터 출처와 원칙']) await page.getByRole('region', { name }).waitFor({ state: 'visible' });
   if (await page.getByText('서버 미연결').count()) throw new Error('메인페이지에 연결 상태가 남아 있습니다.');
-  for (const text of ['근거로 확인하고', '주소로 물건 조회', '운영 물건']) await waitForText(page, text);
+  for (const text of ['근거로 확인하고', '검증된 매물 탐색', '주소로 물건 조회', '운영 물건']) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/home-main-page.png`, fullPage: true });
 
   await page.goto(`${BASE_URL}/properties`, { waitUntil: 'domcontentloaded' });
@@ -41,9 +41,9 @@ try {
   ]) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/portfolio-operations-hub.png`, fullPage: true });
 
-  // IA (2026-11-13 rework): work-flow sections 홈/물건/조회/분석/보고서/설정 with their sub-pages visible; 설정 holds admin only.
+  // IA (2026-11-13 rework): work-flow sections 홈/탐색/물건/조회/분석/보고서/설정 (탐색 added 11/15) with their sub-pages visible; 설정 holds admin only.
   const mainNav = page.getByRole('navigation', { name: 'DA:ON 주 메뉴' });
-  for (const label of ['홈', '물건', '조회', '분석', '보고서', '설정']) await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().waitFor({ state: 'visible' });
+  for (const label of ['홈', '탐색', '물건', '조회', '분석', '보고서', '설정']) await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().waitFor({ state: 'visible' });
   for (const label of ['새 물건 등록', '엑셀 대량 등록', '리스크 · 규제 검토', '임대 · 수익 분석', '외부 공유 센터', '사용자 · 권한 관리']) await mainNav.getByRole('link', { name: label }).waitFor({ state: 'visible' });
   // Low-frequency screens are folded: 전문 분석 under 분석, 연동 · 운영 under 설정.
   if (await mainNav.getByRole('link', { name: '공간 운영' }).count()) throw new Error('전문 분석 블록이 처음부터 펼쳐져 있습니다.');
@@ -70,9 +70,9 @@ try {
   // Phone home shows cards with a next step instead of the wide table.
   await page.locator('.property-cards li').first().waitFor({ state: 'visible' });
   await page.getByText('다음 할 일').first().waitFor({ state: 'visible' });
-  // Bottom tabs (2026-11-13): 홈/물건/조회/보고서/메뉴; 메뉴 opens every section, 설정 last.
+  // Bottom tabs (2026-11-15): 홈/탐색/물건/보고서/메뉴; 메뉴 opens every section, 설정 last.
   const tabs = page.getByRole('navigation', { name: '하단 메뉴' });
-  for (const label of ['홈', '물건', '조회', '보고서', '메뉴']) await tabs.getByText(label, { exact: true }).waitFor({ state: 'visible' });
+  for (const label of ['홈', '탐색', '물건', '보고서', '메뉴']) await tabs.getByText(label, { exact: true }).waitFor({ state: 'visible' });
   await tabs.getByRole('button', { name: '메뉴' }).click();
   for (const label of ['리스크 · 규제 검토', '임대 · 수익 분석', '사용자 · 권한 관리', '데이터 백업 · 복원']) await page.getByRole('navigation', { name: 'DA:ON 주 메뉴' }).getByRole('link', { name: label }).waitFor({ state: 'visible' });
   await page.waitForTimeout(400); // drawer slide-in

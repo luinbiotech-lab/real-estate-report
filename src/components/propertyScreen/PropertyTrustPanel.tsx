@@ -1,5 +1,10 @@
 import { DescriptionOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
 import { Button } from '@mui/material';
+import { Link } from 'react-router-dom';
+import { trustGrade } from '../../domain/platform/trustGrade';
+import { factCompleteness } from '../../domain/platform/publicListing';
+import TrustGradeBadge from '../platform/TrustGradeBadge';
+import '../../platform.css';
 import { trustRows, type TrustSummaryInput } from '../../domain/propertyDetail/propertyScreenModel';
 import type { Property } from '../../types';
 
@@ -21,9 +26,13 @@ interface Props {
  */
 export default function PropertyTrustPanel({ property, summary, latestReportVersion, creating, onOpenVerification, onOpenDocuments, onReport, onProposal, onDetailReport }: Props) {
   const rows = trustRows(property, summary);
+  // Same grade as 탐색 / 공개 매물 (one rule everywhere). No summary (Data Room not read) → no grade, never a guess.
+  const facts = factCompleteness(property);
+  const grade = summary ? trustGrade({ factsFilled: facts.filled, factsTotal: facts.total, requiredSourcePresent: summary.requiredSourcePresent, requiredOfficiallyVerified: summary.requiredOfficiallyVerified, requiredDocumentTotal: summary.requiredDocumentTotal, verificationPending: summary.verificationPending }) : undefined;
   return <aside className="property-trust-panel" aria-label="근거 · 신뢰도">
     <h2>근거 · 신뢰도</h2>
     <p className="trust-note">값마다 출처와 검증 상태를 따로 관리합니다. 자동으로 '확인됨'이 되지 않습니다.</p>
+    <div className="trust-panel-grade"><TrustGradeBadge grade={grade} size="large" />{grade && <small className="trust-note">{grade.hint}</small>}<Link to={`/listing/${encodeURIComponent(property.id)}`}>공개 화면 미리보기</Link></div>
     <ul className="trust-rows">{rows.map((row) => <li key={row.key} className={`trust-row tone-${row.tone}`}>
       <span className="trust-label">{row.label}</span><b>{row.value}</b>
       {row.ratio !== undefined && <span className="trust-bar" aria-hidden="true"><i style={{ width: `${Math.round(row.ratio * 100)}%` }} /></span>}

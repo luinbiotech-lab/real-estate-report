@@ -1,0 +1,125 @@
+/* 2026-11-15 platform upgrade: 탐색 · 공개 매물 미리보기 · 신뢰 등급. Navy/gold tokens match mobile-shell.css. */
+.trust-grade-badge{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px 2px 3px;font-size:12px;font-weight:600;line-height:1.4;white-space:nowrap;border:1px solid transparent}
+.trust-grade-badge b{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;color:#fff;font-size:12px}
+.trust-grade-badge.size-large{font-size:14px;padding:3px 14px 3px 4px}
+.trust-grade-badge.size-large b{width:30px;height:30px;font-size:17px}
+.trust-grade-badge.grade-A{background:#e7f6ee;color:#0d6b3d;border-color:#b5e2c8}.trust-grade-badge.grade-A b{background:#11834b}
+.trust-grade-badge.grade-B{background:#e8f0fb;color:#16447c;border-color:#bcd0ee}.trust-grade-badge.grade-B b{background:#1f5aa6}
+.trust-grade-badge.grade-C{background:#fff5e0;color:#7a5200;border-color:#f0d9a6}.trust-grade-badge.grade-C b{background:#a06b00}
+.trust-grade-badge.grade-D{background:#fdecec;color:#922;border-color:#f3c3c3}.trust-grade-badge.grade-D b{background:#b42318}
+.trust-grade-badge.grade-none{background:#f2f4f7;color:#475467;border-color:#d0d5dd}.trust-grade-badge.grade-none b{background:#98a2b3}
+.trust-criteria{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.trust-criteria li{display:grid;grid-template-columns:18px minmax(0,1fr) auto;gap:6px;align-items:center;font-size:13px;color:#344054}
+.trust-criteria li.met>span:first-child{color:#11834b;font-weight:700}
+.trust-criteria li.unmet{color:#667085}
+.trust-criteria b{color:#0b2545}
+.platform-preview-note,.listing-preview-banner{display:flex;gap:8px;align-items:flex-start;margin:0 0 16px;padding:10px 14px;border-radius:12px;background:#fff8e6;border:1px solid #f0d9a6;color:#5c4300;font-size:13px;line-height:1.5}
+.platform-preview-note svg,.listing-preview-banner svg{flex:none;font-size:18px;margin-top:1px}
+.listing-preview-banner b{margin-right:6px}
+.platform-footnote{margin:8px 0 0;font-size:12px;color:#667085;line-height:1.5}
+.explore-head h1{margin-bottom:6px}
+.explore-filters{display:grid;gap:4px}
+.explore-filters .explore-grade-strip{padding:14px 16px 0}
+.explore-filters .region-filter{padding:0 16px 14px}
+.explore-grade-strip{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.explore-grade-strip button{display:inline-flex;align-items:center;gap:6px;border:1px solid #d0d5dd;background:#fff;border-radius:12px;padding:6px 12px 6px 6px;cursor:pointer;font:inherit;font-size:13px;color:#344054;min-height:40px}
+.explore-grade-strip button b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:8px;color:#fff}
+.explore-grade-strip button em{font-style:normal;font-weight:700;color:#0b2545}
+.explore-grade-strip .grade-A b{background:#11834b}.explore-grade-strip .grade-B b{background:#1f5aa6}.explore-grade-strip .grade-C b{background:#a06b00}.explore-grade-strip .grade-D b{background:#b42318}
+.explore-grade-strip button.active{border-color:#0b2545;box-shadow:0 0 0 2px #0b254522;background:#f5f8fc}
+.grade-none-count{font-size:12px;color:#667085}
+.explore-browse{display:grid;gap:16px;margin-top:16px}
+.explore-browse.has-map{grid-template-columns:minmax(0,1fr) minmax(320px,42%);align-items:start}
+.explore-count{margin:0 0 8px;font-size:13px;color:#475467;display:flex;gap:10px;align-items:center}
+.explore-count span{display:inline-flex;gap:6px;align-items:center}
+.explore-cards{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.explore-card{display:grid;grid-template-columns:104px minmax(0,1fr) 20px;gap:12px;align-items:center;padding:12px;background:#fff;border:1px solid #dbe3ec;border-radius:14px;text-decoration:none;color:inherit;box-shadow:0 4px 12px #10243d0a;transition:border-color .15s}
+.explore-card:hover,.explore-card.hover{border-color:#b8923f}
+.explore-card-visual{width:104px;height:88px;border-radius:10px;overflow:hidden;background:linear-gradient(135deg,#0b2545,#1d3f6e);display:grid;place-items:center}
+.explore-card-visual img{width:100%;height:100%;object-fit:cover}
+.explore-card-visual small{color:#d6deea;font-size:11px}
+.explore-card-body{display:grid;gap:4px;min-width:0}
+.explore-card-top{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.explore-card-body strong{font-size:15px;color:#0b2545;overflow-wrap:anywhere}
+.explore-card-price{font-size:16px;font-weight:700;color:#101828}
+.explore-card-facts{font-size:12px;color:#475467}
+.explore-card-facts i,.fact-badge{font-style:normal;font-size:11px;border-radius:6px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+.explore-card-facts i,.fact-badge.badge-calculated{background:#eef2f6;color:#475467}
+.explore-card-proof{font-size:12px;color:#667085}
+.explore-card-proof.met{color:#0d6b3d;font-weight:600}
+.explore-card-arrow{color:#98a2b3}
+.explore-sample{font-style:normal;font-size:11px;border:1px solid #f0b357;color:#8a5a00;border-radius:6px;padding:1px 6px}
+.listing-page{display:grid;gap:16px}
+.listing-preview-banner{margin:0}
+.listing-controls{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;color:#344054}
+.listing-controls small{color:#667085;flex-basis:100%}
+.listing-hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;background:#fff;border:1px solid #dbe3ec;border-radius:16px;padding:16px}
+.listing-photo{min-height:240px;border-radius:12px;overflow:hidden;background:linear-gradient(135deg,#0b2545,#1d3f6e);display:grid;place-items:center;color:#e4eaf3;text-align:center}
+.listing-photo img{width:100%;height:100%;object-fit:cover}
+.listing-photo span{display:grid;gap:6px;padding:16px}
+.listing-photo small{color:#b9c6d8;font-size:12px}
+.listing-summary{display:grid;gap:10px;align-content:start}
+.listing-tags{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.app-shell .listing-summary h1{margin:0;font-size:24px;color:#0b2545;line-height:1.3;overflow-wrap:anywhere}
+.listing-price{margin:0;font-size:26px;font-weight:800;color:#101828;display:flex;gap:8px;align-items:baseline}
+.listing-price small{font-size:13px;font-weight:600;color:#667085}
+.listing-actions{display:flex;flex-wrap:wrap;gap:8px}
+.listing-grid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}
+.listing-facts dl{margin:12px 0 0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 16px}
+.listing-facts dl div{display:grid;gap:2px;padding-bottom:8px;border-bottom:1px solid #eef2f6}
+.listing-facts dt{font-size:12px;color:#667085}
+.listing-facts dd{margin:0;font-size:14px;color:#101828;font-weight:600;overflow-wrap:anywhere}
+.fact-badge.badge-verified{background:#e7f6ee;color:#0d6b3d}
+.fact-badge.badge-input{background:#fff5e0;color:#7a5200}
+.listing-pending{margin:12px 0 0;font-size:13px;color:#475467}
+.listing-pending b{display:inline-block;margin-right:6px;font-size:11px;background:#f2f4f7;border-radius:6px;padding:1px 6px;color:#344054}
+.listing-trust{display:grid;gap:10px}
+.listing-page .panel{padding:18px 20px;margin:0}
+@media (max-width:600px){.listing-page .panel{padding:14px 16px}}
+.app-shell .listing-trust h2,.app-shell .listing-facts h2{margin:0;font-size:16px;color:#0b2545}
+.listing-staff-link{display:flex;gap:6px;align-items:center;font-size:13px;margin:0;color:#475467}
+.listing-staff-link svg{font-size:18px}
+.trust-panel-grade{display:grid;gap:6px;padding:10px 12px;border-radius:12px;background:#f8fafc;border:1px solid #e4e9f0}
+.trust-panel-grade a{font-size:12px}
+.trust-panel-grade .trust-grade-badge,.trust-panel-grade a{justify-self:start}
+@media (max-width:900px){
+  .explore-browse.has-map{grid-template-columns:1fr}
+  .listing-hero,.listing-grid{grid-template-columns:1fr}
+}
+@media (max-width:600px){
+  .explore-cards{grid-template-columns:1fr}
+  .explore-card{grid-template-columns:84px minmax(0,1fr) 16px;gap:10px;padding:10px}
+  .explore-card-visual{width:84px;height:76px}
+  .explore-grade-strip button{padding:4px 10px 4px 4px}
+  .explore-grade-strip button span{display:none}
+  .listing-facts dl{grid-template-columns:1fr}
+  .listing-photo{min-height:180px}
+  .app-shell .listing-summary h1{font-size:20px}
+  .listing-price{font-size:22px}
+  .listing-actions .MuiButton-root{flex:1 1 140px}
+}
+/* Home: 이용자별 시작 + 신뢰 등급 매물 */
+.home-audiences{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.home-audiences article{background:#fff;border:1px solid #e1e6ec;border-radius:14px;padding:20px 22px;display:grid;gap:6px;align-content:start}
+.home-audiences h2{margin:8px 0 0;font-size:17px;color:#10243d}
+.home-audiences p{margin:0;font-size:13px;line-height:1.65;color:#5b6778}
+.home-audience-link{display:inline-flex;align-items:center;gap:4px;font-weight:700;font-size:14px;color:#0b2545;text-decoration:none;margin-top:4px}
+.home-audience-link svg{font-size:18px}
+.home-audience-soon{font-size:12px;color:#667085;background:#f2f4f7;border-radius:6px;padding:2px 8px;justify-self:start;margin-top:4px}
+.home-graded{background:#fff;border:1px solid #e1e6ec;border-radius:14px;padding:18px 22px}
+.home-graded-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.home-graded-list a{display:grid;gap:6px;padding:12px;border:1px solid #e4e9f0;border-radius:12px;text-decoration:none;color:inherit;height:100%;box-sizing:border-box}
+.home-graded-list a:hover{border-color:#b8923f}
+.home-graded-list .trust-grade-badge{justify-self:start}
+.home-graded-list strong{font-size:14px;color:#0b2545;overflow-wrap:anywhere}
+.home-graded-list span{font-size:13px;color:#344054;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.home-graded-list em{font-style:normal;font-size:11px;border:1px solid #f0b357;color:#8a5a00;border-radius:6px;padding:0 6px}
+@media (max-width:900px){.home-graded-list{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:600px){
+  .home-audiences{grid-template-columns:1fr;gap:8px}
+  .home-audiences article{padding:14px 16px;grid-template-columns:38px 1fr;gap:4px 12px}
+  .home-audiences h2{margin:0;align-self:center}
+  .home-audiences p,.home-audiences .home-audience-link,.home-audiences .home-audience-soon{grid-column:1/-1}
+  .home-graded{padding:14px 16px}
+  .home-graded-list{grid-template-columns:1fr}
+}
