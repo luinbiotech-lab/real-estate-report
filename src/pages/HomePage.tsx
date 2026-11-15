@@ -47,6 +47,19 @@ const AUDIENCES: Array<{ icon: ReactNode; title: string; body: string; to?: stri
   { icon: <BusinessRounded />, title: '건물주', body: '건물 자료를 직접 제출해 등급을 올리는 기능은 준비 중입니다(공개 게시 2단계).', action: '준비 중' },
 ];
 
+/*
+ * 일반 매물 사이트와의 차이 (2026-11-15, 루치오: "직방, 다방, 네이버부동산 등과의 차별성이 필요해").
+ * Facts about general portals come from their own public material (네이버 확인매물 = 매물 실재 여부 확인, KISO 검증센터;
+ * 직방 직원 조사 / 다방 알고리즘 = 허위매물 거르기). Competitors are not named on the public page (comparative ads need
+ * objective proof per claim); the design doc keeps the named comparison with sources.
+ */
+const COMPARE: Array<{ topic: string; general: string; daon: string }> = [
+  { topic: '무엇을 확인하나', general: '매물이 실제로 있는지(허위매물 거르기)', daon: '면적·용도·준공 등 값마다 어떤 공적서류로 확인했는지와 확인 날짜' },
+  { topic: '매수 전 할 일', general: '서류 대조는 매수자·중개사가 따로 함', daon: '매수 전 확인표: 공적서류 4종·후보값·리스크 점검의 완료 여부를 매물마다 표시' },
+  { topic: '시세 비교', general: '실거래가 목록, 추정가는 참고용', daon: '비교거래를 후보로만 표시하고 계산 근거와 표본 수를 함께 공개' },
+  { topic: '결과물', general: '매물 정보 화면', daon: '확인된 자료로 만든 1P 제안서·7P 투자 분석 보고서(버전 보관)' },
+];
+
 const FLOW: Array<{ step: string; title: string; detail: string; to: string; icon: ReactNode; more?: Array<{ label: string; to: string }> }> = [
   { step: '1', title: '물건', detail: '주소로 조회해 등록하고 목록·지도에서 관리', to: PROPERTY_LIST_PATH, icon: <FormatListBulletedRounded />, more: [{ label: '주소 조회', to: '/discover' }, { label: '엑셀 대량 등록', to: '/import' }] },
   { step: '2', title: '자료 · 검증', detail: '공적자료·문서·사진을 붙이고 검증 후보를 확인', to: '/bulk-intake', icon: <FactCheckRounded />, more: [{ label: '검토 이력', to: '/review-history' }] },
@@ -137,6 +150,12 @@ export default function HomePage() {
         </Link></li>;
       })}</ul>}
       <p className="platform-footnote">공개 화면 미리보기입니다. 아직 인터넷에 게시되지 않았습니다.</p>
+    </section>
+
+    <section className="home-compare" aria-label="다른 부동산 사이트와 차이">
+      <header className="home-section-head"><div><p className="eyebrow">WHY {activeBrand.name}</p><h2>일반 매물 사이트와 무엇이 다른가요</h2></div></header>
+      <table className="home-compare-table"><thead><tr><th scope="col">구분</th><th scope="col">일반 매물 사이트</th><th scope="col">{activeBrand.name}</th></tr></thead>
+        <tbody>{COMPARE.map((row) => <tr key={row.topic}><th scope="row">{row.topic}</th><td>{row.general}</td><td>{row.daon}</td></tr>)}</tbody></table>
     </section>
 
     <section className="home-values" aria-label="핵심 가치">

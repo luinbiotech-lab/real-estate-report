@@ -65,4 +65,25 @@ expect((preview.match(/disabled>/g) || []).length >= 2, '문의·보고서 요�
 expect(explore.includes('Math.round(value * 1000) / 1000'), '공개 지도 핀은 약 100m 단위로 흐리게');
 expect(!/\.(put|create|update|delete)\(/.test(service), '등급 서비스는 읽기 전용');
 
+// Differentiation (11/15): evidence per value + buyer checklist. Only 'verified' rows count; open items are never hidden.
+const ledger = await importTs('src/domain/platform/evidenceLedger.ts');
+const ver = (over) => ({ id: 'v', propertyId: 'p1', fieldKey: 'zoning', status: 'verified', note: '', verifiedAt: '2026-11-10T01:00:00Z', createdAt: '', updatedAt: '2026-11-10', ...over });
+const src = (over) => ({ id: 's', propertyId: 'p1', fieldKey: 'zoning', sourceType: 'official_document', sourceName: '토지이용계획확인서', collectedAt: '2026-11-09T00:00:00Z', verificationStatus: 'verified', metadata: {}, createdAt: '', ...over });
+const proof = ledger.factEvidence('zoning', 'p1', [ver()], [src()]);
+expect(proof?.verifiedAt === '2026-11-10' && proof.sources[0] === '토지이용계획확인서(공식 문서, 2026-11-09 자료)', `근거 표시 형식 (${JSON.stringify(proof)})`);
+expect(ledger.factEvidence('zoning', 'p1', [ver({ status: 'confirmed' })], [src()]) === undefined, '사용자 확인(confirmed)은 공식확인 근거로 쓰지 않음');
+expect(ledger.factEvidence('zoning', 'p1', [ver({ propertyId: 'p2' })], [src()]) === undefined, '다른 물건의 검증 기록을 섞지 않음');
+expect(ledger.factEvidence('zoning', 'p1', [ver()], [src({ propertyId: 'p2' })])?.sources.length === 0, '다른 물건의 출처를 섞지 않음');
+const docs = [{ type: 'building_register', label: '건축물대장' }, { type: 'land_register', label: '토지대장' }, { type: 'land_use_plan', label: '토지이용계획' }, { type: 'registry', label: '등기부등본' }];
+const rows = ledger.dueDiligenceRows({ documents: docs, present: ['building_register', 'land_register'], verified: ['building_register'], pendingCandidates: 2, pendingFacts: ['연면적'], risk: undefined });
+const state = Object.fromEntries(rows.map((row) => [row.key, row.state]));
+expect(state['doc:building_register'] === 'done' && state['doc:land_register'] === 'partial' && state['doc:registry'] === 'open', '서류별 상태: 공식확인/원본만/미확보');
+expect(state.candidates === 'open' && state.facts === 'open' && state.risk === 'open', '후보값·빈 정보·미점검 리스크는 열린 항목');
+expect(ledger.dueDiligenceProgress(rows).done === 1 && ledger.dueDiligenceProgress(rows).total === 7, '확인표 진행률');
+const aiRisk = ledger.dueDiligenceRows({ documents: [], present: [], verified: [], pendingCandidates: 0, pendingFacts: [], risk: { checks: [{ key: 'k', label: '위반건축물', status: 'clear', detail: '' }], personConfirmed: false } });
+expect(aiRisk.find((row) => row.key === 'risk').state === 'partial' && aiRisk.find((row) => row.key === 'risk').detail.includes('사람 확인 전'), '자동 리스크 점검은 사람 확인 전이면 완료로 표시하지 않음');
+const home = readFileSync('src/pages/HomePage.tsx', 'utf8');
+expect(home.includes('aria-label="다른 부동산 사이트와 차이"') && !/직방|다방|네이버/.test(home.replace(/\/\*[\s\S]*?\*\//g, '')), '메인 비교표는 경쟁사 이름 없이(비교광고 근거 문제) 일반 매물 사이트로 표기');
+expect(preview.includes('aria-label="매수 전 확인표"') && preview.includes('aria-label="시세 위치"') && preview.includes('실거래가 아님'), '공개 화면: 확인표·시세 위치·계산값 설명');
+
 console.log(`Platform trust validation passed (${checks} checks).`);
