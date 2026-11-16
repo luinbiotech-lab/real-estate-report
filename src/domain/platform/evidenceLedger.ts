@@ -6,6 +6,7 @@
  * Pure functions over Data Room rows: the validator and the page share them. Nothing here marks anything verified.
  */
 import type { DataSourceType, PropertyDataSource, PropertyVerification, RiskCheckItem } from '../propertyDataRoom/types';
+import { publicSourceLabel } from './publicListingSnapshot';
 
 const SOURCE_LABEL: Record<DataSourceType, string> = {
   manual: '사용자 입력', excel_import: '엑셀 등록', public_api: '공공 API', official_document: '공식 문서',
@@ -20,6 +21,8 @@ export interface FactEvidence {
   verifiedAt: string;
   /** Where the value came from, newest first: "건축물대장(공식 문서, 2026-11-10 자료)". */
   sources: string[];
+  /** The same sources as a buyer may see them: allowlisted document names only, never a file name or note (루인 #65). */
+  publicSources: string[];
 }
 
 /** Evidence for one field: only a 'verified' verification row counts as confirmation; sources are listed as found. */
@@ -32,7 +35,8 @@ export function factEvidence(fieldKey: string, propertyId: string, verifications
     .filter((row) => row.propertyId === propertyId && row.fieldKey === fieldKey)
     .sort((a, b) => String(b.sourceDate ?? b.collectedAt).localeCompare(String(a.sourceDate ?? a.collectedAt)));
   const labels = [...new Set(rows.map((row) => { const date = day(row.sourceDate ?? row.collectedAt); return `${row.sourceName || '출처 이름 없음'}(${[SOURCE_LABEL[row.sourceType] ?? row.sourceType, date && `${date} 자료`].filter(Boolean).join(', ')})`; }))];
-  return { fieldKey, verifiedAt: day(verification.verifiedAt ?? verification.updatedAt), sources: labels.slice(0, 3) };
+  const publicLabels = [...new Set(rows.map((row) => publicSourceLabel(row.sourceName, SOURCE_LABEL[row.sourceType] ?? '출처', day(row.sourceDate ?? row.collectedAt))))];
+  return { fieldKey, verifiedAt: day(verification.verifiedAt ?? verification.updatedAt), sources: labels.slice(0, 3), publicSources: publicLabels.slice(0, 3) };
 }
 
 export type CheckState = 'done' | 'partial' | 'open';

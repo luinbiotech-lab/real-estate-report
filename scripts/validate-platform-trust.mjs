@@ -58,8 +58,9 @@ expect(!listing.inPriceBand(0, 'lt30') && listing.inPriceBand(0, 'all'), '가격
 const explore = readFileSync('src/pages/ExplorePage.tsx', 'utf8');
 const preview = readFileSync('src/pages/PublicListingPreviewPage.tsx', 'utf8');
 const service = readFileSync('src/services/platformListingService.ts', 'utf8');
-expect(!/\{property\.name\}/.test(explore) && explore.includes('publicTitle(property)'), '탐색 카드는 내부 물건명(지번 포함 가능) 대신 가린 주소를 제목으로 씀');
-expect(explore.includes('internalPhotoAllowed(property)') && preview.includes('internalPhotoAllowed(property)'), '공개 화면도 사진 정책(방배 815-11 사진 금지)을 따름');
+expect(!/\{property\.name\}/.test(explore) && explore.includes('{card.title}') && explore.includes('publicTitle(property)'), '탐색 카드는 내부 물건명(지번 포함 가능) 대신 가린 주소를 제목으로 씀');
+const snapshotSource = readFileSync('src/domain/platform/publicListingSnapshot.ts', 'utf8');
+expect(snapshotSource.includes('internalPhotoAllowed(property)') && explore.includes('card.photo') && preview.includes('view.photo'), '공개 화면도 사진 정책(방배 815-11 사진 금지)을 따름 (공개 스냅샷 경유)');
 expect(preview.includes('공개 화면 미리보기') && preview.includes('아직 인터넷에 게시되지 않았습니다'), '미리보기 배너 필수');
 expect((preview.match(/disabled>/g) || []).length >= 2, '문의·보고서 요청은 2단계 전까지 비활성');
 expect(explore.includes('Math.round(value * 1000) / 1000'), '공개 지도 핀은 약 100m 단위로 흐리게');
