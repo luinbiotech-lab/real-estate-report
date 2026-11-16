@@ -5,17 +5,17 @@
 // was requested from an iPhone, Android, Windows or Mac browser.
 import path from 'node:path';
 import { allowedOrigin, fail, securityHeaders } from './_lib/providerProxy.mjs';
-import { MAX_REPORT_PDF_BODY_BYTES, renderReportPdf, reportPdfFileName, validateReportPdfPayload } from './_lib/reportPdf.mjs';
+import { MAX_REPORT_PDF_BODY_BYTES, RENDER_CHROMIUM_ARGS, renderReportPdf, reportPdfFileName, validateReportPdfPayload } from './_lib/reportPdf.mjs';
 
 let browserPromise;
 async function launchBrowser() {
   const { chromium } = await import('playwright-core');
   if (process.env.VERCEL || process.env.AWS_LAMBDA_FUNCTION_NAME) {
     const { default: serverless } = await import('@sparticuz/chromium');
-    return chromium.launch({ executablePath: await serverless.executablePath(), args: serverless.args, headless: true });
+    return chromium.launch({ executablePath: await serverless.executablePath(), args: [...new Set([...serverless.args, ...RENDER_CHROMIUM_ARGS])], headless: true });
   }
   // Local development / CI: Playwright's own Chromium (same major version as @sparticuz/chromium in package.json).
-  return chromium.launch({ headless: true, ...(process.env.REPORT_PDF_CHROMIUM ? { executablePath: process.env.REPORT_PDF_CHROMIUM } : {}) });
+  return chromium.launch({ headless: true, args: RENDER_CHROMIUM_ARGS, ...(process.env.REPORT_PDF_CHROMIUM ? { executablePath: process.env.REPORT_PDF_CHROMIUM } : {}) });
 }
 async function sharedBrowser() {
   if (!browserPromise) browserPromise = launchBrowser().catch((error) => { browserPromise = undefined; throw error; });

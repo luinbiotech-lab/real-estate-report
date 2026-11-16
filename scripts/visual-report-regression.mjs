@@ -20,7 +20,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 import { chromium } from 'playwright';
-import { renderReportPdf, validateReportPdfPayload } from '../api/_lib/reportPdf.mjs';
+import { RENDER_CHROMIUM_ARGS, renderReportPdf, validateReportPdfPayload } from '../api/_lib/reportPdf.mjs';
 import { routeQaImages, seedReportFixture, waitForSeed } from './lib/report-qa-fixtures.mjs';
 
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
@@ -97,11 +97,13 @@ async function rasterize(pdfPath) {
         const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data;
         const gray = new Array(canvas.width * canvas.height);
         for (let i = 0; i < gray.length; i++) gray[i] = Math.round(0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2]);
-        out.push({ width: canvas.width, height: canvas.height, data: gray });
+        const text = await pdfPage.getTextContent();
+        const words = text.items.filter((item) => item.str && item.str.trim()).map((item) => [item.str, ...[item.transform[4], item.transform[5], item.width, item.height].map((v) => Math.round(v * 10) / 10)]);
+        out.push({ width: canvas.width, height: canvas.height, data: gray, words });
       }
       return out;
     }, { origin: PDFJS_ORIGIN, dpi: DPI });
-    return pages.map((p) => ({ width: p.width, height: p.height, data: Buffer.from(p.data) }));
+    return pages.map((p) => ({ width: p.width, height: p.height, data: Buffer.from(p.data), words: p.words }));
   } finally { await page.close(); }
 }
 function compare(a, b) {
@@ -113,21 +115,31 @@ function compare(a, b) {
 
 
 const WORD_TOLERANCE_PT = 0.6;
-/** Words per page as [text, xMin, yMin, xMax, yMax] (points, 0.1 pt). */
-function pdfWords(pdfPath) {
-  const html = execFileSync('pdftotext', ['-bbox', pdfPath, '-'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
-  const decode = (text) => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
-  return html.split(/<page /).slice(1).map((chunk) => [...chunk.matchAll(/<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)<\/word>/g)]
-    .map((m) => [decode(m[5]), ...m.slice(1, 5).map((v) => Math.round(Number(v) * 10) / 10)]));
+/**
+ * Text lines per page from pinned pdf.js: [y, xStart, xEnd, text without spaces] in PDF points (0.1 pt). pdf.js may
+ * split or merge runs differently between calls, so runs are joined into lines (same baseline) before comparing.
+ */
+async function pdfWords(pdfPath) {
+  return (await rasterize(pdfPath)).map((page) => {
+    const lines = new Map();
+    for (const [str, x, y, width] of page.words) {
+      const key = Math.round(y * 2) / 2;
+      const line = lines.get(key) || []; line.push([x, x + width, str]); lines.set(key, line);
+    }
+    return [...lines.entries()].sort((a, b) => b[0] - a[0]).map(([y, runs]) => {
+      runs.sort((a, b) => a[0] - b[0]);
+      return [runs.map((r) => r[2]).join('').replace(/\s+/g, ''), y, Math.round(runs[0][0] * 10) / 10, Math.round(Math.max(...runs.map((r) => r[1])) * 10) / 10];
+    });
+  });
 }
 function compareWords(current, base) {
   const diffs = [];
   if (current.length !== base.length) diffs.push(`쪽수 ${current.length} vs 기준 ${base.length}`);
   for (let p = 0; p < Math.min(current.length, base.length); p++) {
     const a = current[p]; const b = base[p];
-    if (a.length !== b.length) diffs.push(`${p + 1}쪽 단어 수 ${a.length} vs 기준 ${b.length}`);
+    if (a.length !== b.length) diffs.push(`${p + 1}쪽 줄 수 ${a.length} vs 기준 ${b.length}`);
     for (let i = 0; i < Math.min(a.length, b.length); i++) {
-      const moved = [1, 2, 3, 4].some((k) => Math.abs(a[i][k] - b[i][k]) > WORD_TOLERANCE_PT);
+      const moved = [1, 2, 3].some((k) => Math.abs(a[i][k] - b[i][k]) > WORD_TOLERANCE_PT);
       if (a[i][0] !== b[i][0] || moved) { diffs.push(`${p + 1}쪽 "${a[i][0]}"(${a[i].slice(1).join(',')}) vs 기준 "${b[i][0]}"(${b[i].slice(1).join(',')})`); break; }
     }
   }
@@ -195,7 +207,7 @@ async function inspectPage(page) { return { system: await platformFonts(page), l
 assert(existsSync(path.join(DIST, 'render.html')), `${DIST}/render.html 없음: 먼저 npx vite build`);
 await mkdir(OUT, { recursive: true });
 await mkdir(BASELINES, { recursive: true });
-const browser = await chromium.launch({ headless: true });
+const browser = await chromium.launch({ headless: true, args: RENDER_CHROMIUM_ARGS }); // same flags as the server renderer
 const context = await browser.newContext({ viewport: { width: 1440, height: 1100 }, locale: 'ko-KR', timezoneId: 'Asia/Seoul', acceptDownloads: true });
 await context.clock.setFixedTime(FROZEN_NOW);
 await routeQaImages(context);
@@ -261,17 +273,17 @@ async function verifyPdf(fx, kind, result, expectPages) {
     assert(!issues.length, `${issues.length}건: ${issues.slice(0, 6).join(' | ')}`);
     return '0건';
   });
-  // Raster-independent layout check: every word's text and position inside the PDF (pdftotext -bbox, points).
+  // Raster-independent layout check: every text run and its position inside the PDF (pinned pdf.js, points).
   // Separates "the PDF layout moved" from "the machine draws the same PDF a little differently" (CI 2026-11-16).
   await check(fx.key, `${label} 글자 위치 기준 비교(허용 ${WORD_TOLERANCE_PT}pt)`, async () => {
-    const current = pdfWords(pdfPath);
+    const current = await pdfWords(pdfPath);
     const file = path.join(BASELINES, `${fx.key}-${kind}.words.json`);
-    if (UPDATE) { await writeFile(file, `${JSON.stringify(current)}\n`); return `${current.flat().length}단어 기준 저장`; }
+    if (UPDATE) { await writeFile(file, `${JSON.stringify(current)}\n`); return `${current.flat().length}줄 기준 저장`; }
     assert(existsSync(file), `글자 위치 기준 없음: ${file}`);
     const base = JSON.parse(await readFile(file, 'utf8'));
     const diffs = compareWords(current, base);
     assert(!diffs.length, `${diffs.length}곳 다름: ${diffs.slice(0, 6).join(' | ')}`);
-    return `${current.length}쪽 ${current.flat().length}단어 일치`;
+    return `${current.length}쪽 ${current.flat().length}줄 일치`;
   });
   await check(fx.key, `${label} 기준 이미지 비교(${DPI}dpi, 허용 ${MAX_CHANGED_RATIO * 100}%)`, async () => {
     const pages = await rasterize(pdfPath);

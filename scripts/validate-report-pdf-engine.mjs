@@ -49,3 +49,9 @@ for (const file of ['src/pages/DocumentPreview.tsx', 'src/pages/ProfessionalRepo
 const lock = read('src/assets/fonts/report-font-lock/index.css');
 for (const family of ['Pretendard', 'Noto Sans KR', 'Montserrat', 'Georgia', 'Times New Roman', 'NanumMyeongjo']) assert.ok(lock.includes(`font-family:'${family}'`), `font lock missing ${family}`);
 pass('report pages: font lock + layout guard on app and render page, PDF 저장 = fixed engine, browser print labelled fallback');
+// 2026-11-16: every renderer (Vercel, local API, CI regression) uses the same Chromium text flags as @sparticuz/chromium.
+const lib = read('api/_lib/reportPdf.mjs');
+assert.ok(/RENDER_CHROMIUM_ARGS = \[[^\]]*'--font-render-hinting=none'/.test(lib), 'renderer must fix font hinting (--font-render-hinting=none)');
+assert.ok(read('api/report-pdf.mjs').match(/RENDER_CHROMIUM_ARGS/g)?.length >= 3, 'API must pass RENDER_CHROMIUM_ARGS to both the serverless and the local browser');
+assert.ok(read('scripts/visual-report-regression.mjs').includes('args: RENDER_CHROMIUM_ARGS'), 'visual regression must launch Chromium with the server renderer flags');
+pass('renderer flags: --font-render-hinting=none on Vercel, local API and visual regression');

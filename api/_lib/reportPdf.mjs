@@ -9,6 +9,12 @@ import path from 'node:path';
 export const RENDER_ORIGIN = 'http://daon-render.local';
 export const MAX_REPORT_PDF_BODY_BYTES = 4_200_000; // Vercel request body limit is 4.5 MB.
 export const A4_PX = { width: 794, height: 1123 };
+/**
+ * Chromium flags every report renderer must use (2026-11-16). @sparticuz/chromium (Vercel) already passes
+ * --font-render-hinting=none; without it Chromium takes text hinting from the machine's fontconfig, so glyph advances
+ * (and line breaks) differ by machine: CI moved words up to 3 pt against the dev machine with the same fonts.
+ */
+export const RENDER_CHROMIUM_ARGS = ['--font-render-hinting=none'];
 
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
