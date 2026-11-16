@@ -111,6 +111,29 @@ function compare(a, b) {
   return { changed: changed / a.data.length, diff: { width: a.width, height: a.height, data: diff } };
 }
 
+
+const WORD_TOLERANCE_PT = 0.6;
+/** Words per page as [text, xMin, yMin, xMax, yMax] (points, 0.1 pt). */
+function pdfWords(pdfPath) {
+  const html = execFileSync('pdftotext', ['-bbox', pdfPath, '-'], { encoding: 'utf8', maxBuffer: 64 * 1024 * 1024 });
+  const decode = (text) => text.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&amp;/g, '&');
+  return html.split(/<page /).slice(1).map((chunk) => [...chunk.matchAll(/<word xMin="([\d.]+)" yMin="([\d.]+)" xMax="([\d.]+)" yMax="([\d.]+)">([^<]*)<\/word>/g)]
+    .map((m) => [decode(m[5]), ...m.slice(1, 5).map((v) => Math.round(Number(v) * 10) / 10)]));
+}
+function compareWords(current, base) {
+  const diffs = [];
+  if (current.length !== base.length) diffs.push(`쪽수 ${current.length} vs 기준 ${base.length}`);
+  for (let p = 0; p < Math.min(current.length, base.length); p++) {
+    const a = current[p]; const b = base[p];
+    if (a.length !== b.length) diffs.push(`${p + 1}쪽 단어 수 ${a.length} vs 기준 ${b.length}`);
+    for (let i = 0; i < Math.min(a.length, b.length); i++) {
+      const moved = [1, 2, 3, 4].some((k) => Math.abs(a[i][k] - b[i][k]) > WORD_TOLERANCE_PT);
+      if (a[i][0] !== b[i][0] || moved) { diffs.push(`${p + 1}쪽 "${a[i][0]}"(${a[i].slice(1).join(',')}) vs 기준 "${b[i][0]}"(${b[i].slice(1).join(',')})`); break; }
+    }
+  }
+  return diffs;
+}
+
 // ---- reporting ----
 const results = [];
 function record(fixture, step, status, detail = '') {
@@ -237,6 +260,18 @@ async function verifyPdf(fx, kind, result, expectPages) {
     const issues = result.inspection?.layout || [];
     assert(!issues.length, `${issues.length}건: ${issues.slice(0, 6).join(' | ')}`);
     return '0건';
+  });
+  // Raster-independent layout check: every word's text and position inside the PDF (pdftotext -bbox, points).
+  // Separates "the PDF layout moved" from "the machine draws the same PDF a little differently" (CI 2026-11-16).
+  await check(fx.key, `${label} 글자 위치 기준 비교(허용 ${WORD_TOLERANCE_PT}pt)`, async () => {
+    const current = pdfWords(pdfPath);
+    const file = path.join(BASELINES, `${fx.key}-${kind}.words.json`);
+    if (UPDATE) { await writeFile(file, `${JSON.stringify(current)}\n`); return `${current.flat().length}단어 기준 저장`; }
+    assert(existsSync(file), `글자 위치 기준 없음: ${file}`);
+    const base = JSON.parse(await readFile(file, 'utf8'));
+    const diffs = compareWords(current, base);
+    assert(!diffs.length, `${diffs.length}곳 다름: ${diffs.slice(0, 6).join(' | ')}`);
+    return `${current.length}쪽 ${current.flat().length}단어 일치`;
   });
   await check(fx.key, `${label} 기준 이미지 비교(${DPI}dpi, 허용 ${MAX_CHANGED_RATIO * 100}%)`, async () => {
     const pages = await rasterize(pdfPath);
