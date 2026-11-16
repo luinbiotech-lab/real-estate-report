@@ -7,17 +7,16 @@
 //   2. Every PDF page is exactly A4 (595 x 842 pt) and every report page box is exactly 794 x 1123 px; page counts match.
 //   3. Only the bundled web fonts are used (CDP platform-font check): no device/system fallback font, so the result
 //      cannot change with the machine that renders it.
-//   4. Every page is compared with its approved baseline image (50 dpi grayscale). More than 0.4 % changed pixels on any
+//   4. Every page is rasterized by pinned pdf.js in the pinned Chromium and compared with its approved baseline image (50 dpi grayscale). More than 0.4 % changed pixels on any
 //      page fails, and a diff image is written to artifacts.
 // Time is frozen (2026-11-16 09:00 KST) so dates printed in the report do not change the pixels.
 //
 // Usage: npx vite build && (vite dev server on 4174) && node scripts/visual-report-regression.mjs
 //   UPDATE_BASELINES=1  write the current pages as the new baselines (only after a person approved the new look)
 //   QA_MUTATE_CSS='…'   inject CSS before printing to show the check FAILs on a layout change (self-test)
-import { execFileSync } from 'node:child_process';
 import { existsSync } from 'node:fs';
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
-import os from 'node:os';
+import { execFileSync } from 'node:child_process';
+import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { deflateSync, inflateSync } from 'node:zlib';
 import { chromium } from 'playwright';
@@ -65,18 +64,45 @@ function decodeGrayPng(buf) {
   for (let y = 0; y < height; y++) { if (raw[y * (width + 1)] !== 0) throw new Error('baseline PNG uses an unsupported filter'); raw.copy(data, y * width, y * (width + 1) + 1, (y + 1) * (width + 1)); }
   return { width, height, data };
 }
-function readPgm(buf) {
-  const header = buf.toString('latin1', 0, 64).match(/^P5\s+(\d+)\s+(\d+)\s+(\d+)\s/);
-  if (!header) throw new Error('pdftoppm output is not PGM');
-  return { width: Number(header[1]), height: Number(header[2]), data: buf.subarray(header[0].length) };
-}
+// Pages are rasterized by pinned pdf.js inside the same pinned Chromium, never by the machine's pdftoppm: the CI runner
+// (Ubuntu 26.04, newer poppler) anti-aliased text differently from the dev machine and moved 2-4 % of pixels on every
+// page although the PDF itself was the same (2026-11-16, CI run 43780675455). Result = f(PDF, pdf.js 4.10.38, Chromium).
+const PDFJS_DIR = 'node_modules/pdfjs-dist';
+const PDFJS_ORIGIN = 'http://daon-pdfjs.local';
 async function rasterize(pdfPath) {
-  const dir = await mkdtemp(path.join(os.tmpdir(), 'daon-vr-'));
+  const page = await browser.newPage({ viewport: { width: 800, height: 600 }, deviceScaleFactor: 1 });
   try {
-    execFileSync('pdftoppm', ['-r', String(DPI), '-gray', pdfPath, path.join(dir, 'p')]);
-    const files = (await readdir(dir)).filter((f) => f.endsWith('.pgm')).sort();
-    return Promise.all(files.map(async (f) => readPgm(await readFile(path.join(dir, f)))));
-  } finally { await rm(dir, { recursive: true, force: true }); }
+    await page.route(`${PDFJS_ORIGIN}/**`, async (route) => {
+      const url = new URL(route.request().url());
+      if (url.pathname === '/') return route.fulfill({ contentType: 'text/html', body: '<!doctype html><meta charset="utf-8"><body></body>' });
+      if (url.pathname === '/report.pdf') return route.fulfill({ contentType: 'application/pdf', body: await readFile(pdfPath) });
+      const file = path.join(PDFJS_DIR, url.pathname.replace(/^\/pdfjs\//, ''));
+      if (!url.pathname.startsWith('/pdfjs/') || !existsSync(file)) return route.abort();
+      return route.fulfill({ contentType: file.endsWith('.mjs') ? 'text/javascript' : 'application/octet-stream', body: await readFile(file) });
+    });
+    await page.goto(`${PDFJS_ORIGIN}/`);
+    const pages = await page.evaluate(async ({ origin, dpi }) => {
+      const pdfjs = await import(`${origin}/pdfjs/build/pdf.min.mjs`);
+      pdfjs.GlobalWorkerOptions.workerSrc = `${origin}/pdfjs/build/pdf.worker.min.mjs`;
+      const doc = await pdfjs.getDocument({ url: `${origin}/report.pdf`, cMapUrl: `${origin}/pdfjs/cmaps/`, cMapPacked: true, standardFontDataUrl: `${origin}/pdfjs/standard_fonts/`, isEvalSupported: false }).promise;
+      const out = [];
+      for (let n = 1; n <= doc.numPages; n++) {
+        const pdfPage = await doc.getPage(n);
+        const viewport = pdfPage.getViewport({ scale: dpi / 72 });
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+        const context = canvas.getContext('2d', { willReadFrequently: true });
+        context.fillStyle = '#ffffff'; context.fillRect(0, 0, canvas.width, canvas.height);
+        await pdfPage.render({ canvasContext: context, viewport }).promise;
+        const rgba = context.getImageData(0, 0, canvas.width, canvas.height).data;
+        const gray = new Array(canvas.width * canvas.height);
+        for (let i = 0; i < gray.length; i++) gray[i] = Math.round(0.299 * rgba[i * 4] + 0.587 * rgba[i * 4 + 1] + 0.114 * rgba[i * 4 + 2]);
+        out.push({ width: canvas.width, height: canvas.height, data: gray });
+      }
+      return out;
+    }, { origin: PDFJS_ORIGIN, dpi: DPI });
+    return pages.map((p) => ({ width: p.width, height: p.height, data: Buffer.from(p.data) }));
+  } finally { await page.close(); }
 }
 function compare(a, b) {
   if (a.width !== b.width || a.height !== b.height) return { changed: 1, size: `${a.width}x${a.height} vs ${b.width}x${b.height}` };
