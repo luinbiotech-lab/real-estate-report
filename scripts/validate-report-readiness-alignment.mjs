@@ -390,7 +390,9 @@ assert.deepEqual(mediaIds(spatialView.buildReportSpatialSnapshot({
   'Data Room media policy must not be bypassed by an unrestricted caller');
 assert.match(builder, /buildReportSpatialSnapshot\(spatialBundle,\s*internalPhotoAllowed\(property\)\)/,
   'report builder must propagate authoritative Property media restriction');
-const snapshotPageSource = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+const snapshotPageSource = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8')
+  // 2026-11-16: the Snapshot media policy and identity guard moved to a module shared with the fixed-engine PDF page.
+  + '\n' + readFileSync('src/domain/professionalReport/snapshotRenderModel.ts', 'utf8');
 assert.match(snapshotPageSource, /spatial:\s*model\.spatial\s*\?/,
   'legacy Snapshot preview/print must sanitize spatial media before rendering');
 assert.match(snapshotSource, /spatial:\s*viewModel\.spatial\s*\?/,

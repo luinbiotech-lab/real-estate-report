@@ -1,14 +1,15 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PrintRounded, RefreshRounded } from '@mui/icons-material';
+import { ArrowBackRounded, CheckCircleOutlineRounded, LockOutlined, PictureAsPdfRounded, PrintRounded, RefreshRounded } from '@mui/icons-material';
+import { useFixedReportPdf } from '../hooks/useFixedReportPdf';
+import { FixedPdfStatus } from '../components/professionalReport/FixedPdfStatus';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
 import { useReactToPrint } from 'react-to-print';
 import { DaonProfessionalReportMaster } from '../components/professionalReport/DaonProfessionalReportMaster';
 import { ReportBlankFieldsDialog, ReportBlankFieldsNotice } from '../components/professionalReport/ReportBlankFieldsGate';
 import { blankFieldsSignature, detailBlankFields, needsBlankFieldConfirmation, type ReportPublishAction } from '../domain/professionalReport/reportBlankFields';
-import { reportMediaCategoryAllowed, reportSnapshotInternalPhotoAllowed, reportSpatialMediaAllowed } from '../domain/professionalReport/reportAccessPolicy';
+import { buildDetailRenderModel, isViewModel, snapshotMatchesProperty } from '../domain/professionalReport/snapshotRenderModel';
 import { DAON_DETAIL_MASTER_TEMPLATE_ID, resolveProfessionalTemplate } from '../domain/professionalReport/templateIds';
-import type { ProfessionalReportViewModel } from '../domain/professionalReport/types';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { reportSnapshotFreshnessService, reportSnapshotService, type ReportSnapshotFreshness } from '../services/reportEngine';
@@ -20,45 +21,11 @@ import '../assets/fonts/noto-sans-kr/index.css';
 import '../report-device-fit.css';
 import { useReportDeviceFit } from '../hooks/useReportDeviceFit';
 import '../assets/fonts/montserrat/index.css';
+// Device-independent fonts for the report (2026-11-16): MASTER family names -> bundled files.
+import '../assets/fonts/report-font-lock/index.css';
 import '../daon-master-refinement.css';
 import '../daon-detail-quality.css';
-
-function isViewModel(value: unknown): value is ProfessionalReportViewModel {
-  if (!value || typeof value !== 'object') return false;
-  const candidate = value as Partial<ProfessionalReportViewModel>;
-  return Boolean(candidate.identity?.name && candidate.pricing?.salePrice && candidate.generated?.generatedAt && candidate.dataQuality);
-}
-
-function applySnapshotMediaPolicy(model: ProfessionalReportViewModel, propertyId: string): ProfessionalReportViewModel {
-  const allowInternal = reportSnapshotInternalPhotoAllowed({
-    id: propertyId,
-    name: model.identity.name.value ?? '',
-    address: model.identity.address.value ?? '',
-    detailAddress: model.identity.detailAddress.value ?? '',
-  }, model.media.internalPhotoAllowed);
-  if (allowInternal) return model;
-  return {
-    ...model,
-    spatial: model.spatial ? {
-      ...model.spatial,
-      media: model.spatial.media.filter((item) => reportSpatialMediaAllowed(item.mediaType, item.sourceOrigin, false)),
-    } : undefined,
-    media: {
-      ...model.media,
-      internalPhotoAllowed: false,
-      mainImage: { ...model.media.mainImage, value: null, display: '미연결', state: 'missing', sourceIds: [] },
-      additionalImages: { ...model.media.additionalImages, value: [], display: '미연결', state: 'missing', sourceIds: [] },
-      items: model.media.items.filter((item) => item.id !== 'property-main' && item.category !== 'additional' && reportMediaCategoryAllowed(item.category, false)),
-    },
-  };
-}
-
-// Never display or print a Snapshot whose embedded Property differs from its owner.
-// markReady() already rejects this mismatch, but historical drafts are printable.
-function snapshotMatchesProperty(snapshot: ReportSnapshot): boolean {
-  const identity = (snapshot.snapshotData as Partial<ProfessionalReportViewModel>).identity;
-  return typeof snapshot.propertyId === 'string' && snapshot.propertyId.length > 0 && identity?.id === snapshot.propertyId;
-}
+import '../report-layout-guard.css';
 
 export default function ProfessionalReportSnapshotPage() {
   useReportDeviceFit();
@@ -79,6 +46,10 @@ export default function ProfessionalReportSnapshotPage() {
   const currentRouteSnapshotId = useRef(snapshotId);
   currentRouteSnapshotId.current = snapshotId;
   const print = useReactToPrint({ contentRef, documentTitle: snapshot ? `DAON_Professional_Report_MASTER_v${snapshot.reportVersion}` : 'DAON_Professional_Report_MASTER' });
+  const buildPdfBase = useCallback(() => (snapshot && snapshot.id === snapshotId ? { version: 1 as const, kind: 'detail' as const, snapshot } : null), [snapshot, snapshotId]);
+  const fixedPdf = useFixedReportPdf(contentRef, buildPdfBase, snapshot ? `DAON_Professional_Report_MASTER_v${snapshot.reportVersion}` : 'DAON_Professional_Report_MASTER');
+  // Output the pre-publish dialog continues to when the action is 'print': the fixed-engine PDF or the browser print.
+  const [pendingOutput, setPendingOutput] = useState<'pdf' | 'print'>('pdf');
 
   useEffect(() => {
     // React Router reuses this component when only :snapshotId changes.
@@ -171,17 +142,7 @@ export default function ProfessionalReportSnapshotPage() {
     </main>;
   }
 
-  const model = applySnapshotMediaPolicy({
-    ...snapshot.snapshotData,
-    building: {
-      ...snapshot.snapshotData.building,
-      floors: snapshot.snapshotData.building.floors ?? [],
-    },
-    investment: {
-      ...snapshot.snapshotData.investment,
-      comparables: snapshot.snapshotData.investment.comparables ?? [],
-    },
-  }, snapshot.propertyId);
+  const model = buildDetailRenderModel({ ...snapshot, snapshotData: snapshot.snapshotData });
   const reportReady = model.dataQuality.reportReady;
   // The embedded reportReady flag is historical. Never present a draft as
   // confirmable until live freshness has been checked successfully.
@@ -190,10 +151,11 @@ export default function ProfessionalReportSnapshotPage() {
   const blankFields = detailBlankFields(model);
   // A final (ready) Snapshot is already published; its blanks were acknowledged when it was confirmed.
   const blankAcknowledgedNow = snapshot.status !== 'draft' || !needsBlankFieldConfirmation(blankFields, blankAcknowledged);
-  const runPublishAction = (action: ReportPublishAction) => { if (action === 'finalize') void markReady(); else print(); };
-  const requestPublishAction = (action: ReportPublishAction) => {
+  const runPublishAction = (action: ReportPublishAction, output: 'pdf' | 'print' = pendingOutput) => { if (action === 'finalize') void markReady(); else if (output === 'pdf') void fixedPdf.save(); else print(); };
+  const requestPublishAction = (action: ReportPublishAction, output: 'pdf' | 'print' = 'pdf') => {
+    setPendingOutput(output);
     if (!blankAcknowledgedNow) { setBlankPrompt(action); return; }
-    runPublishAction(action);
+    runPublishAction(action, output);
   };
 
   return <main className="professional-report-shell">
@@ -202,14 +164,16 @@ export default function ProfessionalReportSnapshotPage() {
       <div>
         {(snapshot.status === 'draft' || freshness?.isStale) && <Button startIcon={<RefreshRounded />} disabled={regenerating} onClick={regenerateWithMaster}>{regenerating ? '재생성 중…' : snapshot.status === 'ready' ? '최신 데이터로 새 버전 생성' : '최신 데이터로 다시 생성'}</Button>}
         {snapshot.status === 'draft' && <Button variant="outlined" startIcon={<CheckCircleOutlineRounded />} disabled={confirming || !finalizationUi.canRequestReady} onClick={() => requestPublishAction('finalize')}>보고서 확정</Button>}
-        <Button variant="contained" startIcon={<PrintRounded />} onClick={() => requestPublishAction('print')}>인쇄 / PDF 저장</Button>
+        <Button variant="outlined" startIcon={<PrintRounded />} onClick={() => requestPublishAction('print', 'print')} title="이 기기의 인쇄 기능을 씁니다. 기기마다 크기·여백이 달라질 수 있습니다.">브라우저 인쇄</Button>
+        <Button variant="contained" startIcon={<PictureAsPdfRounded />} disabled={fixedPdf.state.phase === 'working'} onClick={() => requestPublishAction('print', 'pdf')}>{fixedPdf.state.phase === 'working' ? 'PDF 만드는 중…' : 'PDF 저장'}</Button>
       </div>
     </nav>
     <ReportBlankFieldsNotice fields={blankFields} acknowledged={blankAcknowledgedNow} className="professional-report-alert" />
+    <FixedPdfStatus state={fixedPdf.state} onClose={fixedPdf.reset} onFallbackPrint={() => { fixedPdf.reset(); print(); }} className="professional-report-alert" />
     <ReportBlankFieldsDialog
       open={blankPrompt !== null}
       fields={blankFields}
-      actionLabel={blankPrompt === 'finalize' ? '보고서 확정' : '인쇄 / PDF 저장'}
+      actionLabel={blankPrompt === 'finalize' ? '보고서 확정' : pendingOutput === 'pdf' ? 'PDF 저장' : '브라우저 인쇄'}
       onClose={() => setBlankPrompt(null)}
       onEnterValues={() => { setBlankPrompt(null); navigate(`/property/${encodeURIComponent(snapshot.propertyId)}/edit`); }}
       onContinue={() => {

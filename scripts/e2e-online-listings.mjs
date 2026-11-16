@@ -251,7 +251,7 @@ try {
       const noticeText = await notice.innerText();
       const requiredMissing = noticeText.includes('필수 항목 미입력');
       assert(noticeText.includes('숨김 처리되어 발행'), `공란 안내 오류: ${noticeText.slice(0, 100)}`);
-      await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+      await page.getByRole('button', { name: '브라우저 인쇄' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 10_000 });
       const dialogText = await dialog.innerText();
@@ -300,7 +300,7 @@ try {
         await page.waitForSelector('.d1-sheet', { timeout: 30_000 });
         const statusText = await page.locator('.d1-status-strip').innerText();
         assert(statusText.replace(/\s+/g, ' ').includes('현재 소유자 직접 사용 중이며'), '긴 원문이 1P에 원문 그대로 시작하지 않습니다.');
-        await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+        await page.getByRole('button', { name: '브라우저 인쇄' }).click();
         const longDialog = page.getByRole('dialog');
         await longDialog.waitFor({ state: 'visible', timeout: 10_000 });
         assert(await longDialog.getByTestId('report-long-fields').count() > 0, '긴 명도 원문인데 발행 전 길이 경고가 없습니다.');
@@ -319,7 +319,7 @@ try {
       }
       if (!clip.chips.length) return `사실표·칩 잘림 0 · ${longChecked}`;
       const longNotice = page.getByTestId('report-long-fields-notice').or(page.getByTestId('report-blank-fields-notice'));
-      await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+      await page.getByRole('button', { name: '브라우저 인쇄' }).click();
       const dialog = page.getByRole('dialog');
       await dialog.waitFor({ state: 'visible', timeout: 10_000 });
       assert(await dialog.getByTestId('report-long-fields').count() > 0, `칩 ${clip.chips.length}개가 잘리는데 발행 전 길이 경고가 없습니다: ${clip.chips.join(' | ')}`);
@@ -400,7 +400,7 @@ try {
       if (await notice.count()) {
         const noticeText = await notice.innerText();
         assert(noticeText.includes('숨김 처리되어 발행'), '7P 공란 안내가 없습니다.');
-        await page.getByRole('button', { name: '인쇄 / PDF 저장' }).click();
+        await page.getByRole('button', { name: '브라우저 인쇄' }).click();
         const dialog = page.getByRole('dialog');
         await dialog.waitFor({ state: 'visible', timeout: 10_000 });
         assert((await dialog.innerText()).includes('값 입력하러 가기'), '7P 발행 전 공란 확인 대화상자가 없습니다.');

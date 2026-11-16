@@ -29,6 +29,8 @@ for (const file of Object.values(files)) {
 }
 
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
+// 2026-11-16: the Snapshot media policy moved to a module shared with the fixed-engine PDF render page.
+text.snapshotPage += `\n${readFileSync('src/domain/professionalReport/snapshotRenderModel.ts', 'utf8')}`;
 
 if (!text.app.includes('path="document/:kind/:id"') || !text.app.includes('ProfessionalReportSnapshotPage')) throw new Error('1P/7P 보고서 라우트 연결이 누락되었습니다.');
 if (!text.dataRoom.includes('/document/report/${property.id}') || !text.dataRoom.includes('/document/proposal/${property.id}')) throw new Error('Data Room에서 1P/7P 보고서 진입 경로를 유지해야 합니다.');

@@ -54,6 +54,9 @@ jobs:
       - name: Validate navigation IA and route coverage
         run: node scripts/validate-navigation-ia.mjs
 
+      - name: Validate fixed-engine report PDF contract
+        run: node scripts/validate-report-pdf-engine.mjs
+
       - name: Validate platform trust grade and public listing rules
         run: node scripts/validate-platform-trust.mjs
 
@@ -362,6 +365,17 @@ jobs:
       - name: Report PDF text and page-count check (full 9 pages / long text / sparse)
         if: success() || failure()
         run: node scripts/qa-report-pdf-text.mjs
+
+      # Owner 2026-11-16: the report must keep one format on every device. Build render.html, print each test property
+      # through the real "PDF 저장" button and the server renderer, and compare every page with the approved baselines
+      # (tests/visual-baselines/report). Fails on changed pixels, device fonts, cut-off boxes or non-A4 pages.
+      - name: Build bundle for the fixed-engine report renderer
+        if: success() || failure()
+        run: npx vite build
+
+      - name: Report PDF visual regression (fixed engine, 4 properties, baseline pixel compare)
+        if: success() || failure()
+        run: node scripts/visual-report-regression.mjs
 
       - name: Upload E2E screenshots and results
         if: always()

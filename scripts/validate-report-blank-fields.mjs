@@ -69,12 +69,12 @@ if (!onePage.includes("label=\"지목\" value={p.landCategory || ''}")) fail('1P
 
 // 5. Publish points ask first (1P print, 7P confirm + print) and show the hide notice.
 const preview = readFileSync('src/pages/DocumentPreview.tsx', 'utf8');
-for (const marker of ['onePageBlankFields(property)', 'onClick={requestPrint}', 'if (!blankAcknowledgedNow) { setBlankDialogOpen(true); return; }', '<ReportBlankFieldsNotice', 'setBlankAcknowledged(blankFieldsSignature(blankFields))']) {
+for (const marker of ['onePageBlankFields(property)', "onClick={() => requestOutput('pdf')}", "onClick={() => requestOutput('print')}", 'if (!blankAcknowledgedNow) { setBlankDialogOpen(true); return; }', '<ReportBlankFieldsNotice', 'setBlankAcknowledged(blankFieldsSignature(blankFields))']) {
   if (!preview.includes(marker)) fail(`1P 발행 전 공란 확인 누락: ${marker}`);
 }
 if (/onClick=\{\(\) => print\(\)\}/.test(preview)) fail('1P 인쇄 버튼이 공란 확인을 우회합니다.');
 const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
-for (const marker of ['detailBlankFields(model)', "onClick={() => requestPublishAction('finalize')}", "onClick={() => requestPublishAction('print')}", 'if (!blankAcknowledgedNow) { setBlankPrompt(action); return; }', '<ReportBlankFieldsNotice']) {
+for (const marker of ['detailBlankFields(model)', "onClick={() => requestPublishAction('finalize')}", "onClick={() => requestPublishAction('print', 'pdf')}", "onClick={() => requestPublishAction('print', 'print')}", 'if (!blankAcknowledgedNow) { setBlankPrompt(action); return; }', '<ReportBlankFieldsNotice']) {
   if (!snapshotPage.includes(marker)) fail(`7P 발행 전 공란 확인 누락: ${marker}`);
 }
 if (/onClick=\{markReady\}|onClick=\{\(\) => print\(\)\}/.test(snapshotPage)) fail('7P 확정/인쇄 버튼이 공란 확인을 우회합니다.');

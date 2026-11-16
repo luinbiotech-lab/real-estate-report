@@ -115,6 +115,12 @@ const server = http.createServer(async (request, response) => {
     }
 
     const url = new URL(request.url || '/', `http://${request.headers.host || `${HOST}:${PORT}`}`);
+    // Fixed-engine report PDF (2026-11-16): same handler as Vercel; uses Playwright Chromium and the built dist/.
+    if (url.pathname === '/api/report-pdf') {
+      if (!process.env.MAP_PROXY_ALLOWED_ORIGINS) process.env.MAP_PROXY_ALLOWED_ORIGINS = serverEnv.mapProxyAllowedOrigins.join(',');
+      const { default: reportPdfHandler } = await import('../api/report-pdf.mjs');
+      return await reportPdfHandler(request, response);
+    }
     if (request.method !== 'GET') return fail(response, 405, 'METHOD_NOT_ALLOWED', 'GET 요청만 지원합니다.', allowedOrigin);
     if (url.pathname === '/api/status') return json(response, 200, {
       naverConfigured: naverConfigured(),

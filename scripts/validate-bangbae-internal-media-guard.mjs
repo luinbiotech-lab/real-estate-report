@@ -70,7 +70,9 @@ assert.equal(reportSnapshotInternalPhotoAllowed({ id: 'sample-bangbae-815-11' },
 assert.equal(reportSnapshotInternalPhotoAllowed({ address: '방배동 815-11' }, true), false, 'legacy parcel snapshot must be denied');
 assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 1' }, true), true, 'unrelated snapshot must retain explicit permission');
 assert.equal(reportSnapshotInternalPhotoAllowed({ address: '서초구 서초동 1' }, false), false, 'explicit deny remains denied');
-const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8')
+  // 2026-11-16: the Snapshot media policy and identity guard moved to a module shared with the fixed-engine PDF page.
+  + '\n' + readFileSync('src/domain/professionalReport/snapshotRenderModel.ts', 'utf8');
 assert.match(snapshotPage, /reportSnapshotInternalPhotoAllowed\(\{/, 'snapshot preview must re-evaluate current property privacy');
 assert.match(snapshotPage, /id: propertyId/, 'authoritative snapshot property ID must override untrusted stored identity');
 assert.match(snapshotPage, /\}, snapshot\.propertyId\);/, 'snapshot preview must pass authoritative property ID');
