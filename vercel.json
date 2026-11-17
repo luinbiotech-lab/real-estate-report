@@ -127,6 +127,22 @@
     {
       "source": "/professional-report/:path*",
       "destination": "/index.html"
+    },
+    {
+      "source": "/explore",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/listing/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/agents",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/properties",
+      "destination": "/index.html"
     }
   ]
 }
