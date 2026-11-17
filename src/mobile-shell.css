@@ -501,3 +501,40 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
 .home-head-tag{margin-left:8px;font-size:11px;font-weight:600;vertical-align:middle;padding:2px 8px;border-radius:999px;background:#fff4e0;color:#8a5a00}
 /* PC: keep the sidebar colour for the whole page height (full-page captures and long pages). */
 @media(min-width:901px){.app-shell{background:linear-gradient(to right,#021f3a 0,#021f3a 248px,transparent 248px)}}
+
+/* 입지 · 주변 panel (2026-11-13). */
+.location-panel{background:#fff;border:1px solid #e1e6ec;border-radius:14px;padding:18px 20px;margin-top:16px}
+.location-headline{margin:6px 0 14px;font-size:15px;font-weight:700;color:#10243d}
+.location-grid{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:18px;align-items:start}
+.location-visual{display:grid;gap:8px}
+.location-visual .portfolio-map{display:grid;gap:6px;position:static;max-height:none}
+.location-visual .portfolio-map-canvas{height:300px}
+.location-visual-empty{display:grid;justify-items:center;gap:6px;padding:34px 16px;border:1px dashed #cfd7e1;border-radius:12px;background:#f7f9fb;color:#667085;text-align:center}
+.location-visual-empty p{margin:0;font-size:13px}
+.location-roadview-toggle{justify-self:start}
+.location-roadview-canvas{height:280px;border-radius:12px;overflow:hidden;background:#e8edf2}
+.location-note{margin:4px 0;font-size:12px;color:#667085;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.location-note.is-error{color:#a02a2a}
+.location-facts{display:grid;gap:12px}
+.location-station{display:flex;gap:10px;align-items:center;padding:10px 12px;border:1px solid #eef1f4;border-radius:10px}
+.location-station svg{color:#b8923f}
+.location-station span{display:grid;gap:1px}
+.location-station strong{font-size:15px;color:#10243d}
+.location-station small{font-size:12px;color:#667085}
+.location-station em{font-style:normal;font-size:10.5px;background:#eef1f5;border-radius:6px;padding:0 5px;margin-left:4px}
+.location-groups{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.location-groups h3{margin:0 0 4px;font-size:13px;color:#10243d}
+.location-groups h3 small{font-weight:500;color:#667085}
+.location-groups ul{list-style:none;margin:0;padding:0;display:grid;gap:3px}
+.location-groups ul li{display:grid;grid-template-columns:16px minmax(0,1fr) auto;gap:6px;align-items:center;font-size:12.5px;color:#3d4959}
+.location-groups ul li svg{font-size:15px;color:#9aa6b6}
+.location-groups ul li span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.location-groups ul li small{font-size:11px;color:#8a94a3;white-space:nowrap}
+.location-search{display:grid;gap:8px;justify-items:start}
+.location-found{display:grid;gap:8px;width:100%;padding:10px 12px;border:1px solid #d7b46a66;border-radius:10px;background:#fffaf0}
+@media(max-width:900px){.location-grid{grid-template-columns:1fr}.location-panel{padding:14px}.location-visual .portfolio-map-canvas{height:240px}}
+.location-visual,.location-visual .portfolio-map,.location-roadview{background:transparent}
+.location-visual .portfolio-map-pin[data-pin-id^="poi-"]{background:#fff;color:#10243d;border-color:#10243d33;padding:2px 7px;font-size:11px;z-index:1}
+.location-visual .portfolio-map-pin[data-pin-id^="poi-"] b{font-size:10px;color:#8a94a3}
+.location-visual .portfolio-map-pin:not([data-pin-id^="poi-"]){z-index:2;background:#b8923f;border-color:#fff}
+.location-visual .portfolio-map-pin[data-pin-id^="poi-"] span{color:#10243d}
