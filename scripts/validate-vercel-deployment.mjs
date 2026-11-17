@@ -33,6 +33,21 @@ for (const [source, destination] of [
 ]) {
   if (rewriteMap.get(source) !== destination) throw new Error(`Vercel rewrite missing: ${source} -> ${destination}`);
 }
+// 2026-11-17: /explore and /listing/:id shipped without rewrites, so opening or refreshing them in Production gave a
+// Vercel 404. Every top-level React route must reach index.html: an exact rewrite, or a "/segment/:path*" rewrite.
+{
+  const appText = readFileSync('src/App.tsx', 'utf8');
+  const routePaths = [...appText.matchAll(/path="([^"]+)"/g)].map((m) => m[1]).filter((p) => p !== '*');
+  const spaSources = rewrites.filter((row) => row.destination === '/index.html').map((row) => String(row.source));
+  for (const routePath of routePaths) {
+    const segments = routePath.split('/');
+    const top = `/${segments[0]}`;
+    const covered = segments.length === 1
+      ? spaSources.includes(top)
+      : spaSources.includes(`${top}/:path*`);
+    if (!covered) throw new Error(`Vercel SPA rewrite missing for route /${routePath} (add ${segments.length === 1 ? top : `${top}/:path*`} -> /index.html)`);
+  }
+}
 if (rewrites.some((row) => String(row.source).includes('api/') && row.destination === '/index.html')) {
   throw new Error('Vercel SPA rewrites must not shadow /api routes.');
 }
