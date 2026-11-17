@@ -32,6 +32,8 @@ export interface AuthSession {
 export interface RemoteAuthGateway {
   getSession(): Promise<AuthSession | null>;
   signIn(email: string, password: string): Promise<AuthSession>;
+  signInWithPasskey(): Promise<AuthSession>;
+  registerPasskey(): Promise<{ id: string; friendlyName?: string }>;
   signOut(): Promise<void>;
   inviteUser(email: string, role: AccessRole, displayName?: string): Promise<void>;
   updateRole(userId: string, role: AccessRole): Promise<void>;

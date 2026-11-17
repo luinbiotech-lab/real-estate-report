@@ -258,6 +258,9 @@ jobs:
           npm install --no-save playwright@1.63.0
           npx playwright install --with-deps chromium
 
+      - name: Passkey (face/fingerprint) login regression
+        run: node scripts/validate-passkey-login.mjs
+
       - name: Start remote production preview
         run: |
           npx vite preview --host 127.0.0.1 --port 4177 > /tmp/daon-remote-preview.log 2>&1 &

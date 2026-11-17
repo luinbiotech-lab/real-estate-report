@@ -30,3 +30,15 @@
     padding: 22px 18px;
   }
 }
+
+/* Passkey (얼굴·지문) sign-in — 2026-11-17 */
+.daon-passkey-block { display: grid; gap: 8px; margin-bottom: 4px; }
+.daon-passkey-button { min-height: 48px; border-radius: 12px !important; font-weight: 700 !important; }
+.daon-passkey-hint { margin: 0; color: #667085; font-size: 13px; line-height: 1.5; }
+.daon-auth-divider { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; color: #98a2b3; font-size: 12px; }
+.daon-auth-divider::before, .daon-auth-divider::after { content: ''; flex: 1; height: 1px; background: #e4e7ec; }
+.daon-passkey-dialog { border-radius: 20px !important; }
+.daon-passkey-visual { width: 72px; height: 72px; margin: 8px auto 12px; border-radius: 22px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #2f6fed, #22b8cf); box-shadow: 0 12px 30px rgba(47,111,237,.28); }
+.daon-passkey-visual svg { font-size: 40px; }
+.daon-passkey-title { margin: 0 0 8px; text-align: center; font-size: 20px; line-height: 1.35; }
+.daon-passkey-body { margin: 0; text-align: center; color: #475467; line-height: 1.6; font-size: 14px; }
