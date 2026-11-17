@@ -5,11 +5,11 @@ import { ChevronRightRounded, InfoOutlined } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { loadListingTrustMany, type ListingTrust } from '../services/platformListingService';
 import { gradeAtLeast, TRUST_GRADE_LABEL, TRUST_GRADES, type TrustGrade } from '../domain/platform/trustGrade';
-import { DEFAULT_ADDRESS_LEVEL, inPriceBand, maskAddress, PRICE_BAND_LABEL, type PriceBand } from '../domain/platform/publicListing';
+import { inPriceBand, PRICE_BAND_LABEL, type PriceBand } from '../domain/platform/publicListing';
+import { buildPublicListingSnapshot } from '../domain/platform/publicListingSnapshot';
 import { classifyPropertyRecord, RECORD_CLASS_LABEL } from '../domain/sampleProperty';
 import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
 import { effectiveRegion, mapPins, regionCounts, regionOf } from '../domain/propertyDetail/portfolioMap';
-import { internalPhotoAllowed } from '../domain/professionalReport/reportAccessPolicy';
 import PortfolioMapPanel, { portfolioMapAvailable } from '../components/PortfolioMapPanel';
 import TrustGradeBadge from '../components/platform/TrustGradeBadge';
 import type { Property } from '../types';
@@ -23,6 +23,7 @@ import '../platform.css';
  * documents, and the grade filter lets a buyer see only listings that a person has verified.
  * Phase 1 is an internal preview: nothing here is published to the internet, addresses are masked to 동·도로명 and
  * map pins are blurred to about 100 m, the way the public page will show them.
+ * 2026-11-16 (루인 #65): card text and photos come from buildPublicListingSnapshot (allowlist), not from the row.
  */
 
 type GradeFilter = 'all' | 'A' | 'B' | 'C';
@@ -32,8 +33,7 @@ const GRADE_FILTER_LABEL: Record<GradeFilter, string> = { all: '등급 전체', 
 
 /** Public title: masked address + main use. Internal property names can carry lot numbers, so they are not shown. */
 export function publicTitle(property: Property) {
-  const place = maskAddress(property.address, DEFAULT_ADDRESS_LEVEL) || '위치 확인 중';
-  return `${place} ${property.mainUse || '건물'}`;
+  return buildPublicListingSnapshot(property, null).title;
 }
 
 /** ~100 m blur for public map pins (3 decimals ≈ 110 m latitude). */
@@ -130,18 +130,19 @@ export default function ExplorePage() {
         {loadState === 'error' && <p className="home-empty">매물을 불러오지 못했습니다. 새로고침해 주세요.</p>}
         {loadState === 'ready' && !filtered.length && <p className="home-empty">{pool.length ? '조건에 맞는 매물이 없습니다. 등급·가격 조건을 넓혀 보세요.' : '아직 등록된 매물이 없습니다.'} <Link to="/property/new">중개사로 물건 등록</Link></p>}
         <ul className="explore-cards">{filtered.map((property) => {
-          const record = classifyPropertyRecord(property).recordClass;
           const row = trust.get(property.id);
+          const card = buildPublicListingSnapshot(property, row);
+          const record = card.recordClass;
           const official = row?.grade.criteria.find((item) => item.key === 'official');
-          const perPyeong = property.salePrice > 0 && property.landAreaPyeong > 0 ? Math.round(property.salePrice / property.landAreaPyeong / 10000) : 0;
+          const perPyeong = card.salePrice > 0 && card.landAreaPyeong > 0 ? Math.round(card.salePrice / card.landAreaPyeong / 10000) : 0;
           return <li key={property.id} onMouseEnter={() => setHoverId(property.id)} onMouseLeave={() => setHoverId(undefined)}>
             <Link to={`/listing/${encodeURIComponent(property.id)}`} className={`explore-card ${hoverId === property.id ? 'hover' : ''}`}>
-              <span className="explore-card-visual">{property.mainImage && internalPhotoAllowed(property) ? <img src={property.mainImage} alt="" loading="lazy" /> : <small>사진 미공개</small>}</span>
+              <span className="explore-card-visual">{card.photo ? <img src={card.photo} alt="" loading="lazy" /> : <small>사진 미공개</small>}</span>
               <span className="explore-card-body">
                 <span className="explore-card-top">{gradeState === 'ready' ? <TrustGradeBadge grade={row?.grade} /> : <span className="trust-grade-badge grade-none size-small"><b>…</b><span>계산 중</span></span>}{record !== 'operational' && <em className="explore-sample">{RECORD_CLASS_LABEL[record]}</em>}</span>
-                <strong>{publicTitle(property)}</strong>
-                <span className="explore-card-price">{property.salePrice > 0 ? formatWon(property.salePrice) : '가격 확인 중'}</span>
-                <span className="explore-card-facts">{property.landAreaPyeong > 0 ? `대지 ${property.landAreaPyeong.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평` : '대지 확인 중'}{perPyeong > 0 && <> · 평당 {perPyeong.toLocaleString('ko-KR')}만 원 <i>계산값</i></>}</span>
+                <strong>{card.title}</strong>
+                <span className="explore-card-price">{card.priceText}</span>
+                <span className="explore-card-facts">{card.landAreaPyeong > 0 ? `대지 ${card.landAreaPyeong.toLocaleString('ko-KR', { maximumFractionDigits: 1 })}평` : '대지 확인 중'}{perPyeong > 0 && <> · 평당 {perPyeong.toLocaleString('ko-KR')}만 원 <i>계산값</i></>}</span>
                 {official && <span className={`explore-card-proof ${official.met ? 'met' : ''}`}>필수 공적서류 공식확인 {official.value}</span>}
               </span>
               <ChevronRightRounded className="explore-card-arrow" />

@@ -40,6 +40,24 @@ try {
   await page.reload({ waitUntil: 'networkidle' });
   await assertGate();
 
+  // 루인 #65 (2026-11-16): unauthenticated deep links to the buyer preview and the workspace must show only the gate.
+  // No listing text, no property data request (Supabase REST / storage / report PDF) before sign-in.
+  const dataRequests = [];
+  page.on('request', (request) => { if (/\/rest\/v1\/|\/storage\/v1\/|\/api\/report-pdf|\/api\/public-data/.test(request.url())) dataRequests.push(request.url()); });
+  for (const path of ['/explore', '/listing/daon-bangbae-815-11', '/property/daon-bangbae-815-11', '/property/daon-bangbae-815-11/data-room', '/reports']) {
+    await page.goto(`${BASE_URL}${path}`, { waitUntil: 'networkidle' });
+    await assertGate();
+    const body = await page.locator('body').innerText();
+    for (const leaked of ['공개 화면 미리보기', '매수 전 확인표', '신뢰 등급 근거', '방배', '815-11', '동광로', '억 원']) {
+      if (body.includes(leaked)) throw new Error(`Unauthenticated ${path} shows listing content: ${leaked}`);
+    }
+    const html = await page.content();
+    if (/815-11|daon-bangbae|동광로/.test(html.replace(/<script[\s\S]*?<\/script>/g, '').replace(new RegExp(path.replace(/[/-]/g, '\\$&'), 'g'), ''))) throw new Error(`Unauthenticated ${path} HTML carries property data`);
+    console.log(`PASS unauthenticated ${path}: login gate only`);
+  }
+  if (dataRequests.length) throw new Error(`Unauthenticated pages requested property data: ${dataRequests.join(' | ')}`);
+  console.log('PASS unauthenticated deep links made no property data request');
+
   if (pageErrors.length) throw new Error(`Browser page errors: ${pageErrors.join(' | ')}`);
 
   await page.screenshot({ path: `${ARTIFACT_DIR}/production-auth-gate.png`, fullPage: true });

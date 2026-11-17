@@ -22,6 +22,7 @@ async function run(viewport, tag) {
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: '검증된 매물 탐색' }).waitFor({ timeout: 30_000 });
   check(await page.getByRole('region', { name: '이용자별 시작' }).count() === 1, `${tag} 메인: 이용자별 시작(매수자·중개사·건물주)`);
+  check(await page.getByRole('region', { name: '다른 부동산 사이트와 차이' }).locator('tbody tr').count() === 4, `${tag} 메인: 일반 매물 사이트와 차이 4항목`);
   check(await page.getByText('준비 중', { exact: true }).count() >= 1, `${tag} 메인: 건물주 자료 제출은 준비 중으로 정직하게 표시`);
   await page.locator('.home-graded-list .trust-grade-badge').first().waitFor({ timeout: 30_000 });
   check(await page.locator('.home-graded-list li').count() >= 1, `${tag} 메인: 신뢰 등급 매물 표시`);
@@ -59,6 +60,10 @@ async function run(viewport, tag) {
   check(await page.getByRole('button', { name: '문의하기' }).isDisabled() && await page.getByRole('button', { name: '투자 보고서 요청' }).isDisabled(), `${tag} 미리보기: 문의·보고서 요청 비활성(2단계 전)`);
   const badges = await page.locator('.listing-facts .fact-badge').allInnerTexts();
   check(badges.length >= 1 && badges.every((b) => ['공식확인', '중개사 입력', '계산값'].includes(b)), `${tag} 미리보기: 값마다 근거 표시 (${[...new Set(badges)].join('/')})`);
+  await page.locator('.checklist-rows li').first().waitFor({ timeout: 30_000 });
+  const checklist = await page.locator('.checklist-rows li').count();
+  check(checklist >= 7, `${tag} 미리보기: 매수 전 확인표 ${checklist}항목(서류 4·후보값·기본정보·리스크)`);
+  check((await page.locator('.listing-market-head').innerText()).length > 0, `${tag} 미리보기: 시세 위치 문장 (${await page.locator('.listing-market-head').innerText()})`);
   const masked = await page.locator('.listing-summary h1').innerText();
   await page.getByRole('button', { name: '전체 주소' }).click();
   const full = await page.locator('.listing-summary h1').innerText();
