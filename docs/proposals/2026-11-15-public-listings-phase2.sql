@@ -1,4 +1,6 @@
 -- DA:ON platform phase 2: public listings + inquiries.
+-- SUPERSEDED 2026-11-17: applied to production as supabase/migrations/20261117075320_daon_public_listings_phase2.sql
+-- (private.* helpers, anon-only public_id + column grants). Kept for history; do not apply this file.
 -- PROPOSAL ONLY. NOT APPLIED. Kept outside supabase/migrations on purpose so nothing applies it by accident.
 -- Applying it changes the production database and needs 루치오's explicit approval (CLAUDE.md: production DB changes).
 -- Requires: 20260916_auth_profiles_rls.sql, 20260916_property_data_rls.sql (daon_is_active_user / daon_can_edit_data /
