@@ -138,7 +138,10 @@ assert.equal(badState.property?.id, 'A', 'negative control must reproduce stale 
 
 // Exercise the actual Snapshot identity gate, not a parallel implementation.
 // Previously markReady() checked embedded identity, but preview/PDF did not.
-const snapshotPageSource = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+// 2026-11-16: the identity guard moved to a module shared with the fixed-engine PDF page; it is read first (it is
+// imported, so it is defined before the page's render guard uses it).
+const snapshotPageSource = readFileSync('src/domain/professionalReport/snapshotRenderModel.ts', 'utf8')
+  + '\n' + readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
 const snapshotGuardStart = snapshotPageSource.indexOf('function snapshotMatchesProperty(');
 const snapshotGuardEnd = snapshotPageSource.indexOf('\n}\n', snapshotGuardStart);
 assert.ok(snapshotGuardStart >= 0 && snapshotGuardEnd > snapshotGuardStart, 'Snapshot identity guard must exist');

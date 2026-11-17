@@ -48,7 +48,9 @@ const detailCss = readFileSync('src/daon-detail-master.css', 'utf8');
 const refinementCss = readFileSync('src/daon-master-refinement.css', 'utf8');
 const frameCss = readFileSync('src/daon-report-frame.css', 'utf8');
 const documentPreview = readFileSync('src/pages/DocumentPreview.tsx', 'utf8');
-const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8');
+const snapshotPage = readFileSync('src/pages/ProfessionalReportSnapshotPage.tsx', 'utf8')
+  // 2026-11-16: the Snapshot media policy and identity guard moved to a module shared with the fixed-engine PDF page.
+  + '\n' + readFileSync('src/domain/professionalReport/snapshotRenderModel.ts', 'utf8');
 const templateIds = readFileSync('src/domain/professionalReport/templateIds.ts', 'utf8');
 const snapshotService = readFileSync('src/services/reportEngine/reportSnapshotService.ts', 'utf8');
 const accessPolicy = readFileSync('src/domain/professionalReport/reportAccessPolicy.ts', 'utf8');

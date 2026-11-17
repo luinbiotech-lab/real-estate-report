@@ -20,6 +20,8 @@ export default defineConfig(({ mode }) => {
   };
   return {
     plugins: [localBootstrapBoundary, react()],
+    // render.html: fixed-engine report PDF page (2026-11-16), loaded only by api/_lib/reportPdf.mjs.
+    build: { rollupOptions: { input: { main: 'index.html', render: 'render.html' } } },
     define: {
       __DAON_INCLUDE_LOCAL_BOOTSTRAP__: JSON.stringify(includeLocalBootstrap),
     },

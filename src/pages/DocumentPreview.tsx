@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button, CircularProgress } from '@mui/material';
-import { ArrowBackRounded, PrintRounded } from '@mui/icons-material';
+import { ArrowBackRounded, PictureAsPdfRounded, PrintRounded } from '@mui/icons-material';
+import { useFixedReportPdf } from '../hooks/useFixedReportPdf';
+import { FixedPdfStatus } from '../components/professionalReport/FixedPdfStatus';
 import { useReactToPrint } from 'react-to-print';
 import { propertyDataRoomRepository } from '../repositories/propertyDataRoomRepository';
 import { propertyRepository } from '../repositories/propertyRepository';
@@ -19,8 +21,11 @@ import '../assets/fonts/noto-sans-kr/index.css';
 import '../report-device-fit.css';
 import { useReportDeviceFit } from '../hooks/useReportDeviceFit';
 import '../assets/fonts/montserrat/index.css';
+// Device-independent fonts for the report (2026-11-16): MASTER family names -> bundled files.
+import '../assets/fonts/report-font-lock/index.css';
 import '../daon-master-refinement.css';
 import '../daon-one-page-quality.css';
+import '../report-layout-guard.css';
 
 type PreviewState =
   | { routeKey: string; phase: 'loading' }
@@ -49,6 +54,10 @@ export default function DocumentPreview() {
     contentRef,
     documentTitle: current.phase === 'ready' ? `${current.property.name}_DAON_1P_MASTER` : 'DAON_1P_MASTER',
   });
+  const buildPdfBase = () => (current.phase === 'ready' ? { version: 1 as const, kind: 'proposal' as const, property: current.property, priceEstimate: current.priceEstimate } : null);
+  const fixedPdf = useFixedReportPdf(contentRef, buildPdfBase, current.phase === 'ready' ? `${current.property.name}_DAON_1P_MASTER` : 'DAON_1P_MASTER');
+  // Which output the pre-publish dialog continues to: the fixed-engine PDF (default) or the browser print fallback.
+  const [pendingOutput, setPendingOutput] = useState<'pdf' | 'print'>('pdf');
 
   useEffect(() => {
     let cancelled = false;
@@ -97,24 +106,28 @@ export default function DocumentPreview() {
   const property = current.property;
   const blankFields = [...onePageBlankFields(property), ...onePageLengthWarnings(property)];
   const blankAcknowledgedNow = !needsBlankFieldConfirmation(blankFields, blankAcknowledged);
-  const requestPrint = () => {
+  const runOutput = (output: 'pdf' | 'print') => { if (output === 'pdf') void fixedPdf.save(); else print(); };
+  const requestOutput = (output: 'pdf' | 'print') => {
+    setPendingOutput(output);
     if (!blankAcknowledgedNow) { setBlankDialogOpen(true); return; }
-    print();
+    runOutput(output);
   };
   return <div className="preview-shell">
     <div className="preview-toolbar">
       <Button startIcon={<ArrowBackRounded />} onClick={() => navigate('/properties')}>물건 목록</Button>
       <div><b>DA:ON ASSET 1P 요약제안서</b><small>DAON_1P_MASTER · 검증 데이터 기반 동적 렌더링</small></div>
-      <Button variant="contained" startIcon={<PrintRounded />} onClick={requestPrint}>인쇄 / PDF 저장</Button>
+      <Button variant="outlined" startIcon={<PrintRounded />} onClick={() => requestOutput('print')} title="이 기기의 인쇄 기능을 씁니다. 기기마다 크기·여백이 달라질 수 있습니다.">브라우저 인쇄</Button>
+      <Button variant="contained" startIcon={<PictureAsPdfRounded />} disabled={fixedPdf.state.phase === 'working'} onClick={() => requestOutput('pdf')}>{fixedPdf.state.phase === 'working' ? 'PDF 만드는 중…' : 'PDF 저장'}</Button>
     </div>
+    <FixedPdfStatus state={fixedPdf.state} onClose={fixedPdf.reset} onFallbackPrint={() => { fixedPdf.reset(); print(); }} className="preview-blank-notice" />
     <ReportBlankFieldsNotice fields={blankFields} acknowledged={blankAcknowledgedNow} className="preview-blank-notice" />
     <ReportBlankFieldsDialog
       open={blankDialogOpen}
       fields={blankFields}
-      actionLabel="인쇄 / PDF 저장"
+      actionLabel={pendingOutput === 'pdf' ? 'PDF 저장' : '브라우저 인쇄'}
       onClose={() => setBlankDialogOpen(false)}
       onEnterValues={() => { setBlankDialogOpen(false); navigate(`/property/${encodeURIComponent(property.id)}/edit`); }}
-      onContinue={() => { setBlankAcknowledged(blankFieldsSignature(blankFields)); setBlankDialogOpen(false); print(); }}
+      onContinue={() => { setBlankAcknowledged(blankFieldsSignature(blankFields)); setBlankDialogOpen(false); runOutput(pendingOutput); }}
     />
     <div className="paper-stage"><div ref={contentRef}><DaonOnePageMaster property={property} priceEstimate={current.priceEstimate} /></div></div>
   </div>;

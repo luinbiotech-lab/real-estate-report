@@ -1,0 +1,20 @@
+/* Report layout guards (2026-11-16, owner: the report must never come out broken, whatever the data).
+   Found by the long-text / long-address fixtures of scripts/visual-report-regression.mjs. The MASTER design (sizes,
+   colours, positions) is unchanged; these rules only stop long values from pushing or bleeding out of their boxes.
+   Every selector starts with html:root so it wins regardless of the order Vite emits the shared CSS chunks in. */
+
+/* 1P status strip and highlight strip: the 2-line clamp had overflow:visible, so the 3rd line was painted half-cut
+   under the strip. Hide the clamped remainder (the full text stays in the Data Room; the pre-publish notice warns). */
+html:root .daon-one-page-master .d1-status-strip>div b,html:root .daon-one-page-master .d1-highlight-strip b{overflow:hidden}
+
+/* Detail page 1: a long address in the price card (nowrap) widened the right grid column and squeezed the hero copy
+   to a 2-character column. The address now wraps (at most two lines), so the column is again only as wide as the price
+   needs; the price itself is never shortened. */
+html:root .daon-detail-master .dd-price-card span{white-space:normal;overflow:hidden;text-overflow:clip;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow-wrap:anywhere;word-break:keep-all}
+
+/* Detail page 6 (building & development): with three photos and a long 신축 검토 text the last insight box was pushed
+   below the A4 page and cut off. The page body becomes a column in which only the photo row may give up height
+   (down to 28mm); when everything fits nothing moves. */
+html:root .daon-detail-master .daon-detail-page-6 .dd-body{display:flex;flex-direction:column}
+html:root .daon-detail-master .daon-detail-page-6 .dd-body>*{flex:0 0 auto}
+html:root .daon-detail-master .daon-detail-page-6 .dd-body>.dd-photo-three{flex:0 1 auto;min-height:28mm}
