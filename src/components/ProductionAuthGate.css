@@ -2,31 +2,68 @@
   min-height: 100vh;
   min-height: 100dvh;
   box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  overflow-y: auto;
-  padding: 24px;
-  background: #f3f5f8;
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(380px, 520px);
+  align-items: stretch;
+  background: #f4f6fa;
 }
+.daon-auth-loading { display: flex; align-items: center; justify-content: center; }
+/* Brand panel — DA:ON navy + gold, same palette as the main page hero */
+.daon-auth-brand {
+  position: relative; overflow: hidden; color: #eef2f8;
+  padding: clamp(40px, 7vw, 88px);
+  display: flex; flex-direction: column; justify-content: center; gap: 18px;
+  background:
+    radial-gradient(700px 420px at 85% 10%, rgba(214,178,106,.28), transparent 60%),
+    radial-gradient(600px 500px at 0% 100%, rgba(47,111,237,.30), transparent 60%),
+    linear-gradient(160deg, #0b1b33 0%, #10284a 55%, #0d203d 100%);
+}
+.daon-auth-brand::after { content: ''; position: absolute; right: -120px; bottom: -120px; width: 380px; height: 380px; border-radius: 50%; border: 1px solid rgba(214,178,106,.25); }
+.daon-auth-brand-mark { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font: 700 28px/1 Georgia, 'Times New Roman', serif; color: #d6b26a; border: 1.5px solid #d6b26a; background: rgba(214,178,106,.08); }
+.daon-auth-brand-name { margin: 0; letter-spacing: .22em; font-size: 13px; font-weight: 700; color: #d6b26a; }
+.daon-auth-brand-title { margin: 0; font-size: clamp(30px, 3.2vw, 44px); line-height: 1.25; letter-spacing: -.02em; font-weight: 800; word-break: keep-all; }
+.daon-auth-brand-points { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 10px; color: #c7d2e3; font-size: 15px; }
+.daon-auth-brand-points li { display: flex; align-items: center; gap: 10px; }
+.daon-auth-brand-points li::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #d6b26a; box-shadow: 0 0 0 4px rgba(214,178,106,.18); }
+/* Sign-in card */
 .daon-auth-card {
-  width: min(460px, 100%);
-  box-sizing: border-box;
-  padding: 24px;
-  background: #fff;
-  border: 1px solid #d9e0e8;
-  border-radius: 16px;
-  box-shadow: 0 18px 50px rgba(16,36,63,.08);
+  align-self: center; justify-self: center;
+  width: min(420px, calc(100% - 48px)); box-sizing: border-box;
+  margin: 32px 0; padding: 36px 32px 28px;
+  background: #fff; border: 1px solid #e3e8ef; border-radius: 24px;
+  box-shadow: 0 24px 60px rgba(16,36,63,.10);
 }
-.daon-auth-loading { align-items: center; }
-@media (max-width: 600px) {
-  .daon-auth-screen {
-    align-items: flex-start;
-    justify-content: center;
-    padding: 24px 16px max(24px, env(safe-area-inset-bottom));
-    min-height: 100svh;
-  }
-  .daon-auth-card {
-    padding: 22px 18px;
-  }
+.daon-auth-head { text-align: center; margin-bottom: 22px; }
+.daon-auth-mark { width: 60px; height: 60px; margin: 0 auto 14px; border-radius: 18px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #10284a, #2f6fed); box-shadow: 0 12px 28px rgba(47,111,237,.28); }
+.daon-auth-mark svg { font-size: 30px; }
+.daon-auth-eyebrow { margin: 0 0 4px; font-size: 11px; letter-spacing: .18em; font-weight: 700; color: #9a7b3c; }
+.daon-auth-title { margin: 0; font-weight: 700; font-size: 26px; line-height: 1.3; letter-spacing: -.01em; color: #0f1b2d; }
+.daon-auth-sub { margin: 6px 0 0; color: #5b6b80; font-size: 15px; }
+.daon-auth-fields { display: grid; gap: 12px; }
+.daon-auth-fields .MuiOutlinedInput-root { border-radius: 14px; }
+.daon-auth-primary, .daon-auth-secondary { min-height: 52px; border-radius: 14px !important; font-weight: 700 !important; font-size: 16px !important; box-shadow: none !important; }
+.daon-auth-primary { background: linear-gradient(135deg, #10284a, #2f6fed) !important; }
+.daon-auth-foot { margin: 18px 0 0; color: #7a8799; font-size: 12.5px; line-height: 1.6; text-align: center; word-break: keep-all; }
+.daon-auth-legal { margin: 6px 0 0; color: #a0abba; font-size: 11.5px; text-align: center; word-break: keep-all; }
+@media (max-width: 900px) {
+  .daon-auth-screen { grid-template-columns: 1fr; align-content: start; background: #f4f6fa; }
+  .daon-auth-brand { padding: 36px 24px 76px; gap: 12px; }
+  .daon-auth-brand-mark { width: 44px; height: 44px; font-size: 22px; border-radius: 13px; }
+  .daon-auth-brand-title { font-size: 26px; }
+  .daon-auth-brand-points { display: none; }
+  .daon-auth-card { width: calc(100% - 32px); margin: -52px 0 max(24px, env(safe-area-inset-bottom)); padding: 28px 20px 22px; border-radius: 22px; position: relative; z-index: 1; }
+  .daon-auth-mark { display: none; }
+  .daon-auth-head { text-align: left; }
 }
+
+/* Passkey (얼굴·지문) sign-in — 2026-11-17 */
+.daon-passkey-block { display: grid; gap: 8px; margin-bottom: 4px; }
+.daon-passkey-button { min-height: 54px; border-radius: 14px !important; font-weight: 700 !important; font-size: 16px !important; background: linear-gradient(135deg, #10284a, #2f6fed) !important; box-shadow: 0 12px 28px rgba(47,111,237,.28) !important; }
+.daon-passkey-hint { margin: 0; color: #667085; font-size: 13px; line-height: 1.5; }
+.daon-auth-divider { display: flex; align-items: center; gap: 10px; margin: 10px 0 6px; color: #98a2b3; font-size: 12px; }
+.daon-auth-divider::before, .daon-auth-divider::after { content: ''; flex: 1; height: 1px; background: #e4e7ec; }
+.daon-passkey-dialog { border-radius: 20px !important; }
+.daon-passkey-visual { width: 72px; height: 72px; margin: 8px auto 12px; border-radius: 22px; display: grid; place-items: center; color: #fff; background: linear-gradient(135deg, #2f6fed, #22b8cf); box-shadow: 0 12px 30px rgba(47,111,237,.28); }
+.daon-passkey-visual svg { font-size: 40px; }
+.daon-passkey-title { margin: 0 0 8px; text-align: center; font-size: 20px; line-height: 1.35; }
+.daon-passkey-body { margin: 0; text-align: center; color: #475467; line-height: 1.6; font-size: 14px; }

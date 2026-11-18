@@ -28,7 +28,7 @@ for (const marker of [
   "signInAndVerify(deviceB, 'device-B')",
   "getByLabel('이메일')",
   "getByLabel('비밀번호')",
-  "getByRole('button', { name: 'Production 로그인', exact: true })",
+  "getByRole('button', { name: '로그인', exact: true })",
   "'/migration-readiness'",
   "'/backup'",
   "'/external-shares'",

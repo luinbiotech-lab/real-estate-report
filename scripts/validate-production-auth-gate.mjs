@@ -16,8 +16,10 @@ for (const marker of [
   "REMOTE_OPERATIONAL_MODE || import.meta.env.VITE_REQUIRE_REMOTE_AUTH === 'true'",
   'remoteAuthGateway.getSession()',
   'remoteAuthGateway.signIn(email, password)',
-  'DA:ON PRODUCTION ACCESS',
-  'Production 운영 화면은 Supabase Auth의 active profile을 가진 사용자만 접근할 수 있습니다.',
+  // 2026-11-18 login redesign: plain Korean, no developer terms on the first screen.
+  '운영자 로그인',
+  '등록된 중개사·운영자 계정으로 들어갑니다.',
+  '비밀번호는 저장하지 않습니다.',
 ]) if (!text.gate.includes(marker)) throw new Error(`Production Auth Gate 계약 누락: ${marker}`);
 
 for (const marker of [

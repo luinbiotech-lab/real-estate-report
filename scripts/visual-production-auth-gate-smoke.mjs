@@ -11,21 +11,22 @@ const pageErrors = [];
 page.on('pageerror', (error) => pageErrors.push(error.message));
 
 async function assertGate() {
-  await page.getByText('DA:ON PRODUCTION ACCESS').waitFor({ state: 'visible', timeout: 30_000 });
-  await page.getByRole('heading', { name: '운영자 로그인' }).waitFor({ state: 'visible' });
+  await page.getByRole('heading', { name: '운영자 로그인' }).waitFor({ state: 'visible', timeout: 30_000 });
   await page.getByLabel('이메일').waitFor({ state: 'visible' });
   await page.getByLabel('비밀번호').waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Production 로그인', exact: true }).waitFor({ state: 'visible' });
+  await page.getByRole('button', { name: '로그인', exact: true }).waitFor({ state: 'visible' });
 
   const body = await page.locator('body').innerText();
   for (const required of [
-    'Supabase Auth의 active profile',
-    'sessionStorage',
-    '새로고침 후 세션을 복원',
+    '등록된 중개사·운영자 계정',
+    '비밀번호는 저장하지 않습니다',
+    '탭을 닫으면 자동으로 로그아웃',
   ]) {
     if (!body.includes(required)) throw new Error(`Remote auth gate marker missing: ${required}`);
   }
   for (const forbidden of [
+    // 2026-11-18: developer terms must not reach the first screen.
+    'Supabase', 'sessionStorage', 'active profile', 'PRODUCTION ACCESS',
     '플랫폼 초기화 실패',
     'REMOTE AUTH access token이 없습니다',
   ]) {

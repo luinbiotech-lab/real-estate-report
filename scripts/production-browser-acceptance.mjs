@@ -17,11 +17,11 @@ async function signInAndVerify(context, label) {
   await page.goto(base.origin, { waitUntil: 'domcontentloaded' });
   await page.getByLabel('이메일').fill(email);
   await page.getByLabel('비밀번호').fill(password);
-  await page.getByRole('button', { name: 'Production 로그인', exact: true }).click();
+  await page.getByRole('button', { name: '로그인', exact: true }).click();
   await page.waitForFunction(() => !document.body?.innerText.includes('운영자 로그인'), undefined, { timeout: 30_000 });
 
   const body = await page.locator('body').innerText();
-  if (!body || body.includes('Production 로그인에 실패했습니다.')) throw new Error(`${label}: Production 로그인 실패`);
+  if (!body || body.includes('로그인에 실패했습니다.')) throw new Error(`${label}: Production 로그인 실패`);
 
   for (const path of ['/', '/migration-readiness', '/backup', '/external-shares']) {
     await page.goto(new URL(path, base), { waitUntil: 'domcontentloaded' });

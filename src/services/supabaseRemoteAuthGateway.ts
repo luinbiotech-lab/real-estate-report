@@ -1,6 +1,13 @@
 import type { AccessRole } from './accessControlService';
 import type { AuthSession, RemoteAuthGateway } from './authProviderService';
 import { requireBrowserSafeSupabaseKey } from './supabaseBrowserCredential';
+import {
+  browserSupportsPasskey,
+  decodeCreationOptions,
+  decodeRequestOptions,
+  encodeAuthenticationCredential,
+  encodeRegistrationCredential,
+} from './passkeyWebAuthn';
 
 export interface RemoteAuthTokens {
   accessToken: string;
@@ -166,12 +173,13 @@ export class SupabaseRemoteAuthGateway implements RemoteAuthGateway {
     }
     if (!response.ok) {
       const row = jsonObject(payload);
+      const code = typeof row.error_code === 'string' ? row.error_code : '';
       const detail = typeof row.error_description === 'string' ? row.error_description
         : typeof row.msg === 'string' ? row.msg
           : typeof row.error === 'string' ? row.error
             : typeof row.message === 'string' ? row.message
               : '';
-      throw new Error(`REMOTE AUTH 요청 실패 (${response.status})${detail ? `: ${detail}` : ''}`);
+      throw new Error(`REMOTE AUTH 요청 실패 (${response.status})${detail ? `: ${detail}` : ''}${code && code !== detail ? ` [${code}]` : ''}`);
     }
     return payload;
   }
@@ -242,6 +250,51 @@ export class SupabaseRemoteAuthGateway implements RemoteAuthGateway {
       await this.tokenStore.clear();
       throw error;
     }
+  }
+
+  /**
+   * Passkey sign-in (Face ID / Touch ID / Windows Hello / fingerprint / PIN).
+   * Uses Supabase Auth native passkey endpoints; same profile/active checks as password sign-in.
+   */
+  async signInWithPasskey(): Promise<AuthSession> {
+    if (!browserSupportsPasskey()) throw new Error('이 브라우저는 패스키를 지원하지 않습니다.');
+    const start = jsonObject(await this.request('/auth/v1/passkeys/authentication/options', { method: 'POST', body: '{}' }));
+    const challengeId = typeof start.challenge_id === 'string' ? start.challenge_id : '';
+    if (!challengeId) throw new Error('패스키 서버 응답에 challenge_id가 없습니다.');
+    const credential = await navigator.credentials.get({ publicKey: decodeRequestOptions(start.options) });
+    if (!credential) throw new Error('패스키 확인이 취소되었습니다.');
+    const payload = await this.request('/auth/v1/passkeys/authentication/verify', {
+      method: 'POST',
+      body: JSON.stringify({ challenge_id: challengeId, credential: encodeAuthenticationCredential(credential as PublicKeyCredential) }),
+    });
+    const tokens = tokenResponse(payload);
+    await this.tokenStore.set(tokens);
+    try {
+      const user = jsonObject(jsonObject(payload).user);
+      const userId = String(user.id ?? '') || (await this.userIdFor(tokens)).userId;
+      return await this.loadProfile(userId, tokens.accessToken);
+    } catch (error) {
+      await this.tokenStore.clear();
+      throw error;
+    }
+  }
+
+  /** Register a passkey on this device for the currently signed-in user. Password stays valid. */
+  async registerPasskey(): Promise<{ id: string; friendlyName?: string }> {
+    if (!browserSupportsPasskey()) throw new Error('이 브라우저는 패스키를 지원하지 않습니다.');
+    const stored = await this.tokenStore.get();
+    if (!stored) throw new Error('먼저 이메일·비밀번호로 로그인해 주세요.');
+    const resolved = await this.userIdFor(stored);
+    const start = jsonObject(await this.request('/auth/v1/passkeys/registration/options', { method: 'POST', body: '{}' }, resolved.tokens.accessToken));
+    const challengeId = typeof start.challenge_id === 'string' ? start.challenge_id : '';
+    if (!challengeId) throw new Error('패스키 서버 응답에 challenge_id가 없습니다.');
+    const credential = await navigator.credentials.create({ publicKey: decodeCreationOptions(start.options) });
+    if (!credential) throw new Error('패스키 등록이 취소되었습니다.');
+    const payload = jsonObject(await this.request('/auth/v1/passkeys/registration/verify', {
+      method: 'POST',
+      body: JSON.stringify({ challenge_id: challengeId, credential: encodeRegistrationCredential(credential as PublicKeyCredential) }),
+    }, resolved.tokens.accessToken));
+    return { id: String(payload.id ?? ''), friendlyName: typeof payload.friendly_name === 'string' ? payload.friendly_name : undefined };
   }
 
   async signOut(): Promise<void> {
