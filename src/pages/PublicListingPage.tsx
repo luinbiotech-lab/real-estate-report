@@ -15,18 +15,27 @@ import '../public-listing.css';
 
 const KIND_LABEL: Record<InquiryKind, string> = { inquiry: '매물 문의', report_request: '투자 보고서 요청' };
 
+/**
+ * 루인 #71 review: switching /p/A → /p/B must not show A's listing or keep A's open inquiry form (whose text would be
+ * sent to B). The page body is keyed by the public id, so a new id remounts it: record, dialog and form state start
+ * empty, and an answer for an earlier id is dropped (it is bound to the id it was asked for).
+ */
 export default function PublicListingPage() {
   const { publicId = '' } = useParams();
-  const [record, setRecord] = useState<PublicListingRecord | null>();
-  const [loadError, setLoadError] = useState('');
+  return <PublicListingBody key={publicId} publicId={publicId} />;
+}
+
+function PublicListingBody({ publicId }: { publicId: string }) {
+  const [loaded, setLoaded] = useState<{ publicId: string; record: PublicListingRecord | null; error: string } | null>(null);
   const [kind, setKind] = useState<InquiryKind | null>(null);
+  const record = loaded && loaded.publicId === publicId ? loaded.record : undefined;
+  const loadError = loaded && loaded.publicId === publicId ? loaded.error : '';
 
   useEffect(() => {
     let active = true;
-    setRecord(undefined); setLoadError('');
     publicListingStore.getPublished(publicId)
-      .then((value) => { if (active) setRecord(value); })
-      .catch(() => { if (active) { setRecord(null); setLoadError('매물 정보를 불러오지 못했습니다. 잠시 후 다시 열어 주세요.'); } });
+      .then((value) => { if (active) setLoaded({ publicId, record: value, error: '' }); })
+      .catch(() => { if (active) setLoaded({ publicId, record: null, error: '매물 정보를 불러오지 못했습니다. 잠시 후 다시 열어 주세요.' }); });
     return () => { active = false; };
   }, [publicId]);
 
@@ -59,7 +68,7 @@ export default function PublicListingPage() {
       DA:ON은 자료실에 실제로 있는 공적서류와 담당자가 확인한 값만 '공식확인'으로 표시합니다. 비교거래는 같은 건물 거래로 확정하지 않은 후보이며,
       평당가는 매매가를 대지면적으로 나눈 계산값입니다. 사진이 없는 매물의 그림은 실제 건물이 아닌 일러스트입니다.
     </footer>
-    {record && kind && <InquiryDialog publicId={publicId} kind={kind} title={record.snapshot.title} onClose={() => setKind(null)} />}
+    {record && kind && <InquiryDialog key={`${publicId}:${kind}`} publicId={publicId} kind={kind} title={record.snapshot.title} onClose={() => setKind(null)} />}
   </div>;
 }
 

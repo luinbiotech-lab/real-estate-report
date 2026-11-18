@@ -134,6 +134,7 @@ for (const [name, source] of [['공유 매물 화면', listingView], ['공개 �
   expect(!/propertyRepository|propertyDataRoomRepository|remoteDataGateway|platformListingService/.test(source), `${name}이 업무 자료 저장소를 읽음`);
 }
 expect(publicPage.includes('publicListingStore.getPublished(publicId)') && publicPage.includes('view={record.snapshot}'), '공개 페이지는 게시된 스냅샷만 렌더');
+expect(publicPage.includes('<PublicListingBody key={publicId}') && publicPage.includes('loaded.publicId === publicId'), '공개 번호가 바뀌면 화면·문의창을 새로 시작하고, 이전 번호의 응답은 버림(루인 #71)');
 const buyerRead = store.slice(store.indexOf('async getPublished(publicId)'), store.indexOf('async submitInquiry(publicId, input)'));
 expect(buyerRead.includes('headers: anonHeaders') && !buyerRead.includes('staffHeaders') && buyerRead.includes('status=eq.published'), '구매자 조회는 anon 키로 게시 상태만');
 expect(!/BUYER_COLUMNS = '[^']*property_id/.test(store), '구매자 조회 열에 내부 물건 번호 없음');

@@ -11,6 +11,7 @@ import { chromium } from 'playwright';
 const BASE_URL = process.env.REPORT_QA_BASE_URL || 'http://127.0.0.1:4174';
 const ARTIFACT_DIR = 'artifacts/agent-qa';
 const SEED_ID = 'daon-bangbae-815-11';
+const SECOND_ID = 'sample-seongsu';
 const PRIVATE = [SEED_ID, '815-11', '김은미', '010 9953 1270', '010-9953-1270', 'daonasset.korea@gmail.com'];
 const failures = [];
 const check = (ok, label) => { console.log(`${ok ? 'PASS' : 'FAIL'} ${label}`); if (!ok) failures.push(label); };
@@ -26,8 +27,8 @@ async function waitForSeed(page) {
   }, SEED_ID, { timeout: 45_000 });
 }
 
-async function openPreview(page) {
-  await page.goto(`${BASE_URL}/listing/${SEED_ID}`, { waitUntil: 'domcontentloaded' });
+async function openPreview(page, id = SEED_ID) {
+  await page.goto(`${BASE_URL}/listing/${id}`, { waitUntil: 'domcontentloaded' });
   await page.getByText('공개 화면 미리보기').first().waitFor({ timeout: 30_000 });
   await page.locator('.checklist-rows li').first().waitFor({ timeout: 30_000 });
   await page.locator('.publish-status').filter({ hasNotText: '확인 중' }).first().waitFor({ timeout: 15_000 });
@@ -87,6 +88,39 @@ async function run(viewport, tag) {
     await page.screenshot({ path: `${ARTIFACT_DIR}/public-listing-inquiry-${tag}.png` });
     await dialog.getByRole('button', { name: '닫기' }).click();
 
+
+    // 루인 #71 review: /p/A → /p/B must drop A's listing and A's open inquiry form; A → B → A must end on A.
+    await openPreview(page, SECOND_ID);
+    await page.getByRole('button', { name: '게시', exact: true }).click();
+    await page.locator('.publish-panel a').first().waitFor({ timeout: 10_000 });
+    const hrefB = await page.locator('.publish-panel a').first().getAttribute('href');
+    const pathA = new URL(href).pathname;
+    const pathB = new URL(hrefB).pathname;
+    const go = (path) => page.evaluate((next) => { history.pushState({}, '', next); dispatchEvent(new PopStateEvent('popstate')); }, path);
+    await page.goto(href, { waitUntil: 'domcontentloaded' });
+    await page.locator('.pl-head h1').waitFor({ timeout: 30_000 });
+    const titleA = await page.locator('.pl-head h1').innerText();
+    await (tag === 'phone' ? page.locator('.public-mobile-cta') : page.locator('.pl-side')).getByRole('button', { name: '문의하기' }).click();
+    await page.getByRole('dialog').getByLabel('이름').fill('전환시험');
+    await page.getByRole('dialog').getByLabel('연락처 (전화 또는 이메일)').fill('010-3333-4444');
+    await page.getByRole('dialog').getByLabel('개인정보 수집·이용에 동의합니다 (필수)').check();
+    await go(pathB);
+    await page.waitForFunction((a) => { const h = document.querySelector('.pl-head h1'); return h && h.textContent !== a; }, titleA, { timeout: 15_000 });
+    const titleB = await page.locator('.pl-head h1').innerText();
+    check(titleB !== titleA && !(await page.locator('body').innerText()).includes(titleA), `${tag} A→B 전환: A 매물 내용이 남지 않음 (${titleA} → ${titleB})`);
+    check(await page.getByRole('dialog').count() === 0, `${tag} A→B 전환: A에서 열어 둔 문의창 닫힘(A 내용이 B로 갈 수 없음)`);
+    const afterSwitch = await page.evaluate(() => JSON.parse(localStorage.getItem('daon-public-inquiries-v1') || '[]'));
+    check(!afterSwitch.some((row) => row.name === '전환시험'), `${tag} A→B 전환: A 문의 내용이 어디에도 접수되지 않음`);
+    // Same with a lookup that finds nothing (unknown / withdrawn id): A's form must not survive either.
+    await (tag === 'phone' ? page.locator('.public-mobile-cta') : page.locator('.pl-side')).getByRole('button', { name: '문의하기' }).click();
+    await page.getByRole('dialog').getByLabel('이름').fill('전환시험');
+    await go('/p/00000000-0000-4000-8000-000000000000');
+    await page.getByText('게시가 끝났거나 없는 매물입니다').waitFor({ timeout: 15_000 });
+    check(await page.getByRole('dialog').count() === 0 && await page.locator('.pl-head').count() === 0, `${tag} B→없는 매물 전환: 이전 매물·문의창 모두 사라짐`);
+    await go(pathA); await go(pathB); await go(pathA);
+    await page.waitForFunction((a) => document.querySelector('.pl-head h1')?.textContent === a, titleA, { timeout: 15_000 }).catch(() => undefined);
+    await page.waitForTimeout(500);
+    check(await page.locator('.pl-head h1').innerText() === titleA && page.url().endsWith(pathA), `${tag} A→B→A 빠른 전환: 마지막 주소(A)의 매물만 표시`);
     await openPreview(page);
     await page.getByRole('button', { name: '게시 철회' }).click();
     await page.locator('.publish-status').filter({ hasText: '철회' }).waitFor({ timeout: 10_000 });
