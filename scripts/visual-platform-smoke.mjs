@@ -37,7 +37,7 @@ async function run(viewport, tag) {
   check(cards.length >= 1, `${tag} 탐색: 매물 카드 ${cards.length}건`);
   check(cards.every((card) => /^[ABCD–]$/.test(card.badge)), `${tag} 탐색: 모든 카드에 등급(또는 확인 불가) 표시 (${cards.map((c) => c.badge).join('')})`);
   check(cards.every((card) => !/\d+-\d+/.test(card.title)), `${tag} 탐색: 카드 제목에 지번 없음 (${cards[0]?.title})`);
-  check(await page.getByText('아직 인터넷에 공개되지 않았고').count() === 1, `${tag} 탐색: 내부 미리보기 안내`);
+  check(await page.getByText('구매자에게는 물건마다').count() === 1, `${tag} 탐색: 내부 미리보기 안내`);
   if (tag === 'phone') {
     check(await page.locator('.bottom-tab.active').innerText() === '탐색', `${tag} 하단 탭 '탐색' 활성`);
     check(await overflow() <= 1, `${tag} 탐색 가로 넘침 없음`);
@@ -55,7 +55,7 @@ async function run(viewport, tag) {
   await page.locator('.explore-card').first().click();
   await page.waitForURL('**/listing/**');
   await page.getByText('공개 화면 미리보기').first().waitFor({ timeout: 30_000 });
-  await page.locator('.listing-trust .trust-criteria, .listing-trust .trust-note').first().waitFor();
+  await page.locator('.listing-trust .trust-criteria, .listing-trust .pl-lead').first().waitFor();
   check(await page.getByRole('navigation', { name: '현재 위치' }).innerText().then((t) => t.includes('공개 매물 미리보기')), `${tag} 미리보기: 위치 표시(홈 › 탐색 › 공개 매물 미리보기)`);
   check(await page.getByRole('button', { name: '문의하기' }).isDisabled() && await page.getByRole('button', { name: '투자 보고서 요청' }).isDisabled(), `${tag} 미리보기: 문의·보고서 요청 비활성(2단계 전)`);
   const badges = await page.locator('.listing-facts .fact-badge').allInnerTexts();
@@ -64,11 +64,11 @@ async function run(viewport, tag) {
   const checklist = await page.locator('.checklist-rows li').count();
   check(checklist >= 7, `${tag} 미리보기: 매수 전 확인표 ${checklist}항목(서류 4·후보값·기본정보·리스크)`);
   check((await page.locator('.listing-market-head').innerText()).length > 0, `${tag} 미리보기: 시세 위치 문장 (${await page.locator('.listing-market-head').innerText()})`);
-  const masked = await page.locator('.listing-summary h1').innerText();
+  const masked = await page.locator('.pl-head h1').innerText();
   await page.getByRole('button', { name: '전체 주소' }).click();
-  const full = await page.locator('.listing-summary h1').innerText();
+  const full = await page.locator('.pl-head h1').innerText();
   await page.getByRole('button', { name: '구까지' }).click();
-  const gu = await page.locator('.listing-summary h1').innerText();
+  const gu = await page.locator('.pl-head h1').innerText();
   check(full.length >= masked.length && gu.length <= masked.length && !/\d+-\d+/.test(masked), `${tag} 미리보기: 주소 공개 범위 (${gu} / ${masked} / ${full})`);
   await page.getByRole('button', { name: '동·도로명까지' }).click();
   if (tag === 'phone') check(await overflow() <= 1, `${tag} 미리보기 가로 넘침 없음`);

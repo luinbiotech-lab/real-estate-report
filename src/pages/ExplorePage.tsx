@@ -11,10 +11,12 @@ import { classifyPropertyRecord, RECORD_CLASS_LABEL } from '../domain/sampleProp
 import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
 import { effectiveRegion, mapPins, regionCounts, regionOf } from '../domain/propertyDetail/portfolioMap';
 import PortfolioMapPanel, { portfolioMapAvailable } from '../components/PortfolioMapPanel';
+import BuildingPlaceholder from '../components/platform/BuildingPlaceholder';
 import TrustGradeBadge from '../components/platform/TrustGradeBadge';
 import type { Property } from '../types';
 import { formatWon } from '../utils/format';
 import '../platform.css';
+import '../public-listing.css';
 
 /*
  * 탐색 (2026-11-15 platform upgrade, 루치오: "다온을 부동산플랫폼으로 격상").
@@ -106,7 +108,7 @@ export default function ExplorePage() {
       <h1>근거가 확인된 건물부터 봅니다</h1>
       <p>모든 매물에 신뢰 등급(A~D)이 붙습니다. 등급은 자료실에 실제로 있는 공적서류와 사람이 확인한 값만으로 계산합니다.</p>
     </div></header>
-    <p className="platform-preview-note" role="note"><InfoOutlined /> 내부 미리보기입니다. 아직 인터넷에 공개되지 않았고, 공개 게시는 승인 후 2단계에서 시작합니다. 주소는 동·도로명까지, 지도 위치는 약 100m 단위로 흐리게 보여 줍니다.</p>
+    <p className="platform-preview-note" role="note"><InfoOutlined /> 업무용 탐색 화면입니다. 구매자에게는 물건마다 '게시'한 공개 주소만 보입니다. 주소는 동·도로명까지, 지도 위치는 약 100m 단위로 흐리게 보여 줍니다.</p>
 
     <section className="panel explore-filters" aria-label="탐색 조건">
       <div className="explore-grade-strip" role="group" aria-label="신뢰 등급 분포">
@@ -137,7 +139,7 @@ export default function ExplorePage() {
           const perPyeong = card.salePrice > 0 && card.landAreaPyeong > 0 ? Math.round(card.salePrice / card.landAreaPyeong / 10000) : 0;
           return <li key={property.id} onMouseEnter={() => setHoverId(property.id)} onMouseLeave={() => setHoverId(undefined)}>
             <Link to={`/listing/${encodeURIComponent(property.id)}`} className={`explore-card ${hoverId === property.id ? 'hover' : ''}`}>
-              <span className="explore-card-visual">{card.photo ? <img src={card.photo} alt="" loading="lazy" /> : <small>사진 미공개</small>}</span>
+              <span className="explore-card-visual">{card.photo ? <img src={card.photo} alt="" loading="lazy" /> : <BuildingPlaceholder compact note={card.photoNote} />}</span>
               <span className="explore-card-body">
                 <span className="explore-card-top">{gradeState === 'ready' ? <TrustGradeBadge grade={row?.grade} /> : <span className="trust-grade-badge grade-none size-small"><b>…</b><span>계산 중</span></span>}{record !== 'operational' && <em className="explore-sample">{RECORD_CLASS_LABEL[record]}</em>}</span>
                 <strong>{card.title}</strong>

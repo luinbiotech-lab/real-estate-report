@@ -44,7 +44,7 @@ const VALUES = [
 const AUDIENCES: Array<{ icon: ReactNode; title: string; body: string; to?: string; action: string }> = [
   { icon: <TravelExploreRounded />, title: '매수자 · 투자자', body: '신뢰 등급과 근거 표시로 매물을 비교합니다. 공식확인 값과 입력값이 섞이지 않습니다.', to: EXPLORE_PATH, action: '매물 탐색' },
   { icon: <HandshakeRounded />, title: '중개사', body: '주소로 등록하면 공적자료가 후보로 모이고, 확인한 값으로 1P·7P 보고서를 만듭니다.', to: '/property/new', action: '물건 등록' },
-  { icon: <BusinessRounded />, title: '건물주', body: '건물 자료를 직접 제출해 등급을 올리는 기능은 준비 중입니다(공개 게시 2단계).', action: '준비 중' },
+  { icon: <BusinessRounded />, title: '건물주', body: '건물 자료를 직접 제출해 등급을 올리는 기능은 준비 중입니다.', action: '준비 중' },
 ];
 
 /*
@@ -149,7 +149,7 @@ export default function HomePage() {
           <span>{property.salePrice > 0 ? formatWon(property.salePrice) : '가격 확인 중'}{recordClass !== 'operational' && <em>{RECORD_CLASS_LABEL[recordClass]}</em>}</span>
         </Link></li>;
       })}</ul>}
-      <p className="platform-footnote">공개 화면 미리보기입니다. 아직 인터넷에 게시되지 않았습니다.</p>
+      <p className="platform-footnote">업무용 미리보기입니다. 물건마다 '게시'해야 인터넷에 공개됩니다.</p>
     </section>
 
     <section className="home-compare" aria-label="다른 부동산 사이트와 차이">

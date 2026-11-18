@@ -57,12 +57,13 @@ expect(!listing.inPriceBand(0, 'lt30') && listing.inPriceBand(0, 'all'), '가격
 
 const explore = readFileSync('src/pages/ExplorePage.tsx', 'utf8');
 const preview = readFileSync('src/pages/PublicListingPreviewPage.tsx', 'utf8');
+const listingView = readFileSync('src/components/platform/PublicListingView.tsx', 'utf8');
 const service = readFileSync('src/services/platformListingService.ts', 'utf8');
 expect(!/\{property\.name\}/.test(explore) && explore.includes('{card.title}') && explore.includes('publicTitle(property)'), '탐색 카드는 내부 물건명(지번 포함 가능) 대신 가린 주소를 제목으로 씀');
 const snapshotSource = readFileSync('src/domain/platform/publicListingSnapshot.ts', 'utf8');
-expect(snapshotSource.includes('internalPhotoAllowed(property)') && explore.includes('card.photo') && preview.includes('view.photo'), '공개 화면도 사진 정책(방배 815-11 사진 금지)을 따름 (공개 스냅샷 경유)');
-expect(preview.includes('공개 화면 미리보기') && preview.includes('아직 인터넷에 게시되지 않았습니다'), '미리보기 배너 필수');
-expect((preview.match(/disabled>/g) || []).length >= 2, '문의·보고서 요청은 2단계 전까지 비활성');
+expect(snapshotSource.includes('internalPhotoAllowed(property)') && explore.includes('card.photo') && listingView.includes('view.photo') && preview.includes('<PublicListingView view={view}'), '공개 화면도 사진 정책(방배 815-11 사진 금지)을 따름 (공개 스냅샷 경유)');
+expect(preview.includes('공개 화면 미리보기') && preview.includes('눌러야 인터넷 주소가 생깁니다'), '미리보기 배너 필수');
+expect((listingView.match(/disabled>/g) || []).length >= 2 && !/actions=/.test(preview), '미리보기의 문의·보고서 요청은 비활성(동작은 게시된 공개 주소에서만)');
 expect(explore.includes('Math.round(value * 1000) / 1000'), '공개 지도 핀은 약 100m 단위로 흐리게');
 expect(!/\.(put|create|update|delete)\(/.test(service), '등급 서비스는 읽기 전용');
 
@@ -85,6 +86,6 @@ const aiRisk = ledger.dueDiligenceRows({ documents: [], present: [], verified: [
 expect(aiRisk.find((row) => row.key === 'risk').state === 'partial' && aiRisk.find((row) => row.key === 'risk').detail.includes('사람 확인 전'), '자동 리스크 점검은 사람 확인 전이면 완료로 표시하지 않음');
 const home = readFileSync('src/pages/HomePage.tsx', 'utf8');
 expect(home.includes('aria-label="다른 부동산 사이트와 차이"') && !/직방|다방|네이버/.test(home.replace(/\/\*[\s\S]*?\*\//g, '')), '메인 비교표는 경쟁사 이름 없이(비교광고 근거 문제) 일반 매물 사이트로 표기');
-expect(preview.includes('aria-label="매수 전 확인표"') && preview.includes('aria-label="시세 위치"') && preview.includes('실거래가 아님'), '공개 화면: 확인표·시세 위치·계산값 설명');
+expect(listingView.includes('aria-label="매수 전 확인표"') && listingView.includes('aria-label="시세 위치"') && listingView.includes('실거래가 아님'), '공개 화면: 확인표·시세 위치·계산값 설명');
 
 console.log(`Platform trust validation passed (${checks} checks).`);

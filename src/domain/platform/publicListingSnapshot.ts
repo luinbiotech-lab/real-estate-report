@@ -159,3 +159,35 @@ export function publicSnapshotStrings(snapshot: PublicListingSnapshot): string[]
   walk(snapshot);
   return out;
 }
+
+/** Address levels that may be published. 'full' needs the owner's written consent and is not offered in phase 2. */
+export const PUBLISHABLE_ADDRESS_LEVELS: readonly AddressLevel[] = ['gu', 'dong'];
+
+/**
+ * Last check before a snapshot leaves the workspace (phase 2 publish, 2026-11-18). Returns the reasons it may not be
+ * published; empty = publishable. The snapshot is already an allowlist; this catches anything that still slipped in
+ * from free text: the internal id, the lot / detail address, staff contact data.
+ */
+export function publishBlockers(property: Property, snapshot: PublicListingSnapshot, level: AddressLevel, options: { allowNonOperational?: boolean } = {}): string[] {
+  const reasons: string[] = [];
+  if (!PUBLISHABLE_ADDRESS_LEVELS.includes(level)) reasons.push('전체 주소 공개는 소유자 서면 동의가 필요해 게시할 수 없습니다.');
+  if (snapshot.recordClass !== 'operational' && !options.allowNonOperational) reasons.push('샘플·테스트 물건은 인터넷에 게시하지 않습니다.');
+  if (!snapshot.salePrice) reasons.push('가격이 입력되지 않았습니다.');
+  if (!snapshot.place || snapshot.place === '위치 확인 중') reasons.push('주소가 입력되지 않았습니다.');
+  const text = publicSnapshotStrings(snapshot).join('\n');
+  const privateValues: Array<[string, unknown]> = [
+    ['내부 물건 번호', property.id],
+    ['상세 주소', property.detailAddress],
+    ['담당자 이름', property.managerName],
+    ['담당자 전화', property.managerPhone],
+    ['담당자 이메일', property.managerEmail],
+    ['회사 이름', property.companyName],
+  ];
+  for (const [label, value] of privateValues) {
+    const needle = String(value ?? '').trim();
+    if (needle.length >= 3 && text.includes(needle)) reasons.push(`공개 내용에 ${label}이(가) 들어 있습니다.`);
+  }
+  const lot = String(property.address ?? '').match(/산?\d{1,5}-\d{1,4}/)?.[0];
+  if (lot && text.includes(lot)) reasons.push('공개 내용에 지번이 들어 있습니다.');
+  return [...new Set(reasons)];
+}
