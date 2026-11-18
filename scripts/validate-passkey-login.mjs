@@ -14,7 +14,7 @@ const helper = readFileSync('src/services/passkeyWebAuthn.ts', 'utf8');
 const failures = [];
 const check = (ok, label) => { if (ok) console.log(`PASS ${label}`); else { console.error(`FAIL ${label}`); failures.push(label); } };
 
-check(gate.includes("'Production 로그인'") && gate.includes('remoteAuthGateway.signIn(email, password)'), 'password login kept');
+check(gate.includes("'로그인'") && gate.includes('remoteAuthGateway.signIn(email, password)'), 'password login kept');
 check(gate.includes('PASSKEY_FEATURE_ENABLED && browserSupportsPasskey()'), 'passkey button only when flag on and browser supports');
 check(helper.includes("VITE_DAON_PASSKEY_ENABLED === 'true'"), 'passkey default off (flag)');
 for (const path of ['/auth/v1/passkeys/authentication/options', '/auth/v1/passkeys/authentication/verify', '/auth/v1/passkeys/registration/options', '/auth/v1/passkeys/registration/verify']) {
