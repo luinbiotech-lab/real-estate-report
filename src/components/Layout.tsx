@@ -61,6 +61,9 @@ export default function Layout() {
   const propertyId = editMatch?.[1];
   const route = useMemo(() => resolveRouteContext(location.pathname), [location.pathname]);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  // PC: a section's sub-pages stay folded unless it is the current section or the user unfolds it (2026-11-19 UI pass:
+  // 13 always-open sub-links made the left menu long). The phone drawer is the full menu and always shows them.
+  const [unfolded, setUnfolded] = useState<string[]>([]);
   // 전문 분석 / 연동·운영 blocks stay folded unless one of their screens is open (or the user unfolds them).
   const [openAdvanced, setOpenAdvanced] = useState<string>(route.groupId === 'advanced' || route.groupId === 'integrations' ? route.groupId : '');
   const isMobile = useIsMobileShell();
@@ -84,9 +87,15 @@ export default function Layout() {
     const sub = section.group ? groupById(section.group).items : [];
     const advanced = section.advanced ? groupById(section.advanced) : undefined;
     const sectionActive = route.sectionId === section.id;
-    return <section key={section.id} className={`side-section ${sectionActive ? 'has-active' : ''}`} data-section={section.id}>
-      <NavLink to={section.to} end className={`side-primary-link ${sectionActive ? 'section-active' : ''}`}>{navIcons[section.icon]}<span><strong>{section.title}</strong>{section.module && <small>{section.module}</small>}</span></NavLink>
-      {(sub.length > 0 || advanced) && <div className="side-section-items">
+    const foldable = sub.length > 0 || Boolean(advanced);
+    const expanded = foldable && (isMobile || sectionActive || unfolded.includes(section.id));
+    const count = sub.length + (advanced ? 1 : 0);
+    return <section key={section.id} className={`side-section ${sectionActive ? 'has-active' : ''} ${foldable && !isMobile ? 'is-foldable' : ''}`} data-section={section.id}>
+      <div className="side-section-head">
+        <NavLink to={section.to} end className={`side-primary-link ${sectionActive ? 'section-active' : ''}`}>{navIcons[section.icon]}<span><strong>{section.title}</strong>{section.module && <small>{section.module}</small>}</span></NavLink>
+        {foldable && !isMobile && !sectionActive && <button type="button" className="side-section-toggle" aria-expanded={expanded} aria-controls={`side-items-${section.id}`} aria-label={`${section.title} 하위 메뉴 ${count}개 ${expanded ? '접기' : '펼치기'}`} onClick={() => setUnfolded((list) => list.includes(section.id) ? list.filter((id) => id !== section.id) : [...list, section.id])}><KeyboardArrowDownRounded className="side-category-chevron" /></button>}
+      </div>
+      {expanded && <div className="side-section-items" id={`side-items-${section.id}`}>
         {sub.map((item) => <NavLink key={item.to} to={item.to} title={item.module}><span>{navIcons[item.icon]}</span><strong>{item.title}</strong></NavLink>)}
         {advanced && <>
           <button type="button" className="side-advanced-toggle" aria-expanded={openAdvanced === advanced.id} aria-controls={`side-advanced-${advanced.id}`} onClick={() => setOpenAdvanced(openAdvanced === advanced.id ? '' : advanced.id)}><span>{navIcons[advanced.icon]}</span><strong>{advanced.label}</strong><small>{advanced.items.length}</small><KeyboardArrowDownRounded className="side-category-chevron" /></button>

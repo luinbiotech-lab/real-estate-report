@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, CircularProgress } from '@mui/material';
-import { AddRounded, AnalyticsRounded, ArrowForwardRounded, BusinessRounded, HandshakeRounded, TravelExploreRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
+import { AddRounded, AnalyticsRounded, ArrowForwardRounded, CheckCircleOutlineRounded, ChevronRightRounded, EditNoteRounded, BusinessRounded, HandshakeRounded, TravelExploreRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { reportSnapshotHistoryService } from '../services/reportSnapshotHistoryService';
 import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
@@ -82,6 +82,8 @@ export default function HomePage() {
   const [reports, setReports] = useState<RecentReport[]>([]);
   const [reportState, setReportState] = useState<LoadState>('loading');
   const [trust, setTrust] = useState<Map<string, ListingTrust>>();
+  /** Confirmed (ready) snapshots across the 30 most recently updated properties, not only the 4 listed. */
+  const [readyCount, setReadyCount] = useState(0);
 
   useEffect(() => {
     let active = true;
@@ -97,6 +99,7 @@ export default function HomePage() {
       const rows = settled.flatMap((result) => result.status === 'fulfilled' ? result.value : [])
         .filter((row) => row.snapshot.status !== 'archived')
         .sort((a, b) => String(b.snapshot.generatedAt).localeCompare(String(a.snapshot.generatedAt)));
+      setReadyCount(rows.filter((row) => row.snapshot.status === 'ready').length);
       setReports(rows.slice(0, 4)); setReportState(settled.some((result) => result.status === 'rejected') && !rows.length ? 'error' : 'ready');
     }).catch(() => { if (active) { setLoadState('error'); setReportState('error'); } });
     return () => { active = false; };
@@ -105,32 +108,42 @@ export default function HomePage() {
   const { real, samples } = useMemo(() => splitSampleProperties(items), [items]);
   const needsProfile = real.filter((item) => !isCoreProfileReady(item)).length;
   const recent = items.slice(0, 4);
-  const readyReports = reports.filter((row) => row.snapshot.status === 'ready').length;
   const sampleOnly = loadState === 'ready' && real.length === 0 && samples.length > 0;
+  /* 오늘 할 일 (2026-11-19 UI pass): built only from what was loaded; nothing is shown as a task that was not counted. */
+  const tasks: Array<{ key: string; icon: ReactNode; title: string; detail: string; to: string }> = [];
+  if (loadState === 'ready') {
+    if (real.length === 0) tasks.push({ key: 'first', icon: <SearchRounded />, title: '첫 운영 물건 등록', detail: '주소로 조회하면 공적자료가 후보로 모입니다', to: '/discover' });
+    if (needsProfile > 0) tasks.push({ key: 'profile', icon: <EditNoteRounded />, title: `기본정보 보완 ${needsProfile}건`, detail: '주소 · 면적 · 담당자 중 빠진 값 채우기', to: PROPERTY_LIST_PATH });
+    if (real.length > 0 && reportState === 'ready' && readyCount === 0) tasks.push({ key: 'report', icon: <DescriptionOutlined />, title: '첫 보고서 확정', detail: '물건 화면 자료 탭에서 1P · 7P 보고서 만들기', to: PROPERTY_LIST_PATH });
+  }
   const graded = useMemo(() => (trust ? items.filter((property) => trust.has(property.id)).sort((a, b) => TRUST_GRADES.indexOf(trust.get(a.id)!.grade.grade) - TRUST_GRADES.indexOf(trust.get(b.id)!.grade.grade)).slice(0, 4) : []), [items, trust]);
 
   return <div className="home-page">
     <section className="home-hero" aria-label="DA:ON 소개">
       <div className="home-hero-copy">
         <p className="home-hero-eyebrow">{activeBrand.name} · 검증된 상업용 건물 플랫폼</p>
-        <h1>근거로 확인하고, 등급으로 보여 주고,<br />보고서로 전달합니다.</h1>
+        <h1><span>근거로 확인하고,</span> <span>등급으로 보여 주고,</span> <span>보고서로 전달합니다.</span></h1>
         <p className="home-hero-lead">모든 매물에 신뢰 등급(A~D)을 붙입니다. 등급은 공적서류와 사람이 확인한 값만으로 계산하고, 공식확인·중개사 입력·계산값을 값마다 따로 표시합니다. 확인된 자료는 1P·7P 전문 보고서로 이어집니다.</p>
         <div className="home-hero-actions">
           <Button variant="contained" size="large" startIcon={<TravelExploreRounded />} onClick={() => navigate(EXPLORE_PATH)}>검증된 매물 탐색</Button>
           <Button variant="outlined" size="large" startIcon={<SearchRounded />} onClick={() => navigate('/discover')}>주소로 물건 조회</Button>
           <Button size="large" startIcon={<AddRounded />} onClick={() => navigate('/property/new')}>새 물건 등록</Button>
         </div>
-        {sampleOnly && <p className="home-sample-note" role="note">현재 운영 물건은 없고 샘플·테스트 물건 {samples.length}건만 있습니다. 아래 &lsquo;최근 물건&rsquo;은 샘플 표시이며 현황 숫자에는 넣지 않습니다.</p>}
+        {sampleOnly && <p className="home-sample-note" role="note">아직 운영 물건이 없어 아래 매물 · 최근 물건은 샘플로 보여 드립니다.</p>}
       </div>
-      <dl className="home-hero-kpis" aria-label="현재 현황">
-        {loadState === 'loading' && <div className="is-loading"><CircularProgress size={18} /> <span>현황을 불러오는 중</span></div>}
-        {loadState === 'error' && <div className="is-error"><dt>현황</dt><dd>불러오지 못함</dd></div>}
-        {loadState === 'ready' && <>
-          <div><dt>운영 물건</dt><dd>{real.length}</dd><small>샘플 · 테스트 {samples.length}건 제외</small></div>
-          <div><dt>기본정보 보완 필요</dt><dd>{needsProfile}</dd><small>주소 · 면적 · 담당자 기준</small></div>
-          <div><dt>최근 보고서</dt><dd>{reportState === 'ready' ? reports.length : '-'}</dd><small>{reportState === 'ready' ? `확정 ${readyReports}건` : reportState === 'loading' ? '불러오는 중' : '불러오지 못함'}</small></div>
-        </>}
-      </dl>
+      <div className="home-today" role="region" aria-label="오늘 할 일">
+        <header><h2>오늘 할 일</h2>{loadState === 'ready' && tasks.length > 0 && <span className="home-today-count">{tasks.length}</span>}</header>
+        {loadState === 'loading' && <p className="home-today-state"><CircularProgress size={16} /> 현황을 불러오는 중</p>}
+        {loadState === 'error' && <p className="home-today-state">현황을 불러오지 못했습니다. <Link to={PROPERTY_LIST_PATH}>물건 목록에서 다시 시도</Link></p>}
+        {loadState === 'ready' && (tasks.length ? <ul className="home-today-list">{tasks.map((task) => <li key={task.key}><Link to={task.to}><span className="home-today-icon">{task.icon}</span><span><strong>{task.title}</strong><small>{task.detail}</small></span><ChevronRightRounded className="home-today-arrow" /></Link></li>)}</ul>
+          : <p className="home-today-state is-clear"><CheckCircleOutlineRounded /> 지금 처리할 일이 없습니다.</p>)}
+        <dl className="home-today-stats" aria-label="현재 현황">
+          <div><dt>운영 물건</dt><dd>{loadState === 'ready' ? real.length : '-'}</dd></div>
+          <div><dt>보완 필요</dt><dd>{loadState === 'ready' ? needsProfile : '-'}</dd></div>
+          <div title="최근 수정한 물건 30개 기준"><dt>확정 보고서</dt><dd>{reportState === 'ready' ? readyCount : '-'}</dd></div>
+        </dl>
+        {loadState === 'ready' && samples.length > 0 && <p className="home-today-note">샘플 · 테스트 {samples.length}건은 숫자에서 뺐습니다.</p>}
+      </div>
     </section>
 
     <section className="home-audiences" aria-label="이용자별 시작">
