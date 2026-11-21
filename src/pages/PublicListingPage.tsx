@@ -103,7 +103,7 @@ function InquiryDialog({ publicId, kind, title, onClose }: { publicId: string; k
         <TextField size="small" label="이름" value={name} onChange={(event) => setName(event.target.value)} inputProps={{ maxLength: INQUIRY_LIMITS.name }} autoComplete="name" />
         <TextField size="small" label="연락처 (전화 또는 이메일)" value={contact} onChange={(event) => setContact(event.target.value)} inputProps={{ maxLength: INQUIRY_LIMITS.contact }} autoComplete="tel" />
         <TextField size="small" label={kind === 'report_request' ? '받아 보실 내용 (선택)' : '문의 내용 (선택)'} value={message} onChange={(event) => setMessage(event.target.value)} multiline minRows={3} inputProps={{ maxLength: INQUIRY_LIMITS.message }} />
-        <p className="inquiry-consent">수집 항목: 이름, 연락처, 문의 내용 · 목적: 이 매물 문의에 대한 답변 · 보관: 접수일로부터 90일 뒤 삭제. 동의하지 않으면 문의를 보낼 수 없습니다.</p>
+        <p className="inquiry-consent">수집 항목: 이름, 연락처, 문의 내용 · 목적: 이 매물 문의에 대한 답변 · 보관: 연락처는 접수일로부터 90일 뒤 삭제, 이름·문의 내용은 문의 이력으로 3년 보관 뒤 삭제. 동의하지 않으면 문의를 보낼 수 없습니다.</p>
         <FormControlLabel control={<Checkbox checked={consent} onChange={(event) => setConsent(event.target.checked)} />} label="개인정보 수집·이용에 동의합니다 (필수)" />
         {error && <Alert severity="error">{error}</Alert>}
       </>}
