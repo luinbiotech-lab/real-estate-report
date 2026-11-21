@@ -36,6 +36,7 @@ const ProfessionalReportSnapshotPage = lazy(() => import('./pages/ProfessionalRe
 const ReportHistoryPage = lazy(() => import('./pages/ReportHistoryPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const PublicListingPreviewPage = lazy(() => import('./pages/PublicListingPreviewPage'));
+const PublicListingPage = lazy(() => import('./pages/PublicListingPage'));
 import { REMOTE_OPERATIONAL_MODE } from './services/operationalDataMode';
 
 const DAON_MANAGER = '김은미 대표 / 공인중개사';
@@ -141,6 +142,16 @@ function AppContent() {
 }
 
 export default function App() {
+  const { pathname } = useLocation();
+  // Buyer pages (/p/<public id>) are the only screens served without the workspace login (phase 2, 2026-11-18).
+  // They read a published snapshot with the anon key and never mount the workspace, its bootstrap or its data.
+  if (pathname.startsWith('/p/')) {
+    return <ThemeProvider theme={theme}>
+      <Suspense fallback={<div className="center"><CircularProgress /></div>}><Routes>
+        <Route path="p/:publicId" element={<PublicListingPage />} />
+      </Routes></Suspense>
+    </ThemeProvider>;
+  }
   return <ThemeProvider theme={theme}>
     <ProductionAuthGate>
       <AppContent />

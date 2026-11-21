@@ -307,6 +307,9 @@ jobs:
       - name: Rendered public listing privacy smoke (PC and phone)
         run: node scripts/visual-public-listing-privacy-smoke.mjs
 
+      - name: Rendered public listing publish smoke (publish, buyer page, inquiry, withdraw; PC and phone)
+        run: node scripts/visual-public-listing-publish-smoke.mjs
+
       - name: Rendered company settings QA
         run: node scripts/visual-settings-smoke.mjs
 

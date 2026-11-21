@@ -124,4 +124,39 @@ const cardBlock = explore.slice(explore.indexOf('<ul className="explore-cards">'
 const cardRowReads = [...cardBlock.matchAll(/property\.(\w+)/g)].map((match) => match[1]).filter((field) => field !== 'id');
 expect(cardRowReads.length === 0, `탐색 카드가 Property 행을 직접 읽음: ${cardRowReads.join(', ')}`);
 
+// 6. Phase 2 publish (2026-11-18): the buyer page and the shared view read only the published snapshot.
+const listingView = strip(readFileSync('src/components/platform/PublicListingView.tsx', 'utf8'));
+const publicPage = strip(readFileSync('src/pages/PublicListingPage.tsx', 'utf8'));
+const store = strip(readFileSync('src/services/publicListingStore.ts', 'utf8'));
+const app = strip(readFileSync('src/App.tsx', 'utf8'));
+for (const [name, source] of [['공유 매물 화면', listingView], ['공개 매물 페이지', publicPage]]) {
+  expect(![...source.matchAll(/property\.(\w+)/g)].length, `${name}이 Property 행을 읽음`);
+  expect(!/propertyRepository|propertyDataRoomRepository|remoteDataGateway|platformListingService/.test(source), `${name}이 업무 자료 저장소를 읽음`);
+}
+expect(publicPage.includes('publicListingStore.getPublished(publicId)') && publicPage.includes('view={record.snapshot}'), '공개 페이지는 게시된 스냅샷만 렌더');
+expect(publicPage.includes('<PublicListingBody key={publicId}') && publicPage.includes('loaded.publicId === publicId'), '공개 번호가 바뀌면 화면·문의창을 새로 시작하고, 이전 번호의 응답은 버림(루인 #71)');
+const buyerRead = store.slice(store.indexOf('async getPublished(publicId)'), store.indexOf('async submitInquiry(publicId, input)'));
+expect(buyerRead.includes('headers: anonHeaders') && !buyerRead.includes('staffHeaders') && buyerRead.includes('status=eq.published'), '구매자 조회는 anon 키로 게시 상태만');
+expect(!/BUYER_COLUMNS = '[^']*property_id/.test(store), '구매자 조회 열에 내부 물건 번호 없음');
+expect(store.includes("status: 'draft', address_level: level") && store.includes("status: 'published', address_level: level"), '새 행은 draft로 넣고 게시는 별도 갱신(RLS: 대표·관리자만)');
+expect(/if \(pathname\.startsWith\('\/p\/'\)\)/.test(app) && app.indexOf("pathname.startsWith('/p/')") < app.indexOf('<ProductionAuthGate>'), '/p/ 공개 주소만 로그인 밖에서 열림');
+const pub = await importTs('src/domain/platform/publicInquiry.ts');
+{
+  const base = { kind: 'inquiry', name: '김매수', contact: '010-1111-2222', message: '', consent: true };
+  expect(pub.inquiryProblems(base).length === 0, '정상 문의는 통과');
+  expect(pub.inquiryProblems({ ...base, consent: false }).some((m) => m.includes('동의')), '동의 없으면 문의 불가');
+  expect(pub.inquiryProblems({ ...base, contact: '010' }).length === 1, '연락처 5자 미만 거부(DB 제약과 같음)');
+  expect(pub.inquiryProblems({ ...base, message: 'x'.repeat(1001) }).length === 1, '내용 1000자 초과 거부(DB 제약과 같음)');
+}
+// Publish guard: blocks the full address, samples (remote), and anything private that slipped into the snapshot.
+const opProperty = { ...property, recordClass: 'operational' };
+const opSnap = snap.buildPublicListingSnapshot(opProperty, detail, 'dong');
+expect(snap.publishBlockers(opProperty, opSnap, 'dong').length === 0 || snap.publishBlockers(opProperty, opSnap, 'dong').every((r) => !r.includes('들어 있습니다')), `정상 스냅샷에서 개인정보 차단 오탐 없음 (${snap.publishBlockers(opProperty, opSnap, 'dong').join(' / ')})`);
+expect(snap.publishBlockers(opProperty, snap.buildPublicListingSnapshot(opProperty, detail, 'full'), 'full').some((r) => r.includes('전체 주소')), '전체 주소 게시 차단');
+const leaked = { ...opSnap, facts: [...opSnap.facts, { key: 'x', label: 'x', value: `연락 ${property.managerPhone}`, badge: 'input' }] };
+expect(snap.publishBlockers(opProperty, leaked, 'dong').some((r) => r.includes('담당자 전화')), '스냅샷에 섞인 담당자 전화 차단');
+const lotLeak = { ...opSnap, title: `${opSnap.title} ${property.address.match(/\d+-\d+/)?.[0] ?? ''}` };
+expect(snap.publishBlockers(opProperty, lotLeak, 'dong').some((r) => r.includes('지번')), '스냅샷에 섞인 지번 차단');
+expect(snap.publishBlockers({ ...property, recordClass: 'sample' }, { ...opSnap, recordClass: 'sample' }, 'dong').some((r) => r.includes('샘플')), '샘플 물건 게시 차단(운영)');
+
 console.log(`Public listing privacy validation passed (${checks} checks).`);
