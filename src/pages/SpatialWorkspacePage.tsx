@@ -89,8 +89,8 @@ export default function SpatialWorkspacePage() {
 
   return <div className="workspace-page" style={{ padding: 28, maxWidth: 1360, margin: '0 auto' }}>
     <header style={{ marginBottom: 24 }}>
-      <p className="eyebrow">INTERIOR · FLOOR PLAN · DIGITAL TWIN</p>
-      <h1 style={{ margin: '6px 0' }}>Spatial Workspace</h1>
+      <p className="eyebrow">Spatial Workspace</p>
+      <h1 style={{ margin: '6px 0' }}>공간 분석</h1>
       <p style={{ color: '#667085' }}>사진과 PDF/DWG/DXF 도면을 공간 단위 데이터로 정리하고 Agent Queue, 리노베이션 검토 및 Digital Twin 자산으로 연결합니다.</p>
     </header>
 

@@ -55,7 +55,7 @@ export default function RiskWorkspacePage() {
 
   const reviewRequired = jobs.filter((job) => job.agentType === 'risk_compliance' && job.status === 'review_required').length;
   return <main style={{ padding: 28, maxWidth: 1280, margin: '0 auto' }}>
-    <header style={{ marginBottom: 24 }}><p className="eyebrow">PRE-CHECK · NOT A LEGAL OPINION</p><h1 style={{ margin: '6px 0' }}>Risk / Compliance Workspace</h1><p style={{ color: '#667085' }}>공적자료·검증상태·도면·공간·리노베이션 데이터를 자동 점검하되 법률·건축·인허가의 확정 판단은 하지 않습니다.</p></header>
+    <header style={{ marginBottom: 24 }}><p className="eyebrow">Risk / Compliance Workspace · 사전 점검, 법률 의견 아님</p><h1 style={{ margin: '6px 0' }}>리스크 · 규제 검토</h1><p style={{ color: '#667085' }}>공적자료·검증상태·도면·공간·리노베이션 데이터를 자동 점검하되 법률·건축·인허가의 확정 판단은 하지 않습니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20, alignItems: 'center' }}>

@@ -47,7 +47,7 @@ export default function AgentControlCenterPage() {
   const attentionAgents = health.filter((item) => item.agentId !== 'integrator' && item.state === 'attention').length;
 
   return <main style={{ padding: 28, maxWidth: 1380, margin: '0 auto' }}>
-    <header style={{ marginBottom: 22 }}><p className="eyebrow">A0 · INTEGRATOR</p><h1 style={{ margin: '6px 0' }}>Agent Control Center</h1><p style={{ color: '#667085' }}>각 Agent는 독립된 데이터/기능 경계를 유지하고, A0는 Property 단위 readiness·Human Review·실패 상태만 통합 관제합니다.</p></header>
+    <header style={{ marginBottom: 22 }}><p className="eyebrow">Agent Control Center · A0 · INTEGRATOR</p><h1 style={{ margin: '6px 0' }}>AI 에이전트 관제</h1><p style={{ color: '#667085' }}>각 Agent는 독립된 데이터/기능 경계를 유지하고, A0는 Property 단위 readiness·Human Review·실패 상태만 통합 관제합니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 18, marginBottom: 18 }}>
@@ -64,7 +64,7 @@ export default function AgentControlCenterPage() {
 
     <Alert severity={failedJobs || blockedAgents ? 'error' : pendingReviews || attentionAgents ? 'warning' : 'success'} sx={{ mb: 2 }}>{failedJobs ? `실패 Job ${failedJobs}건 · ` : ''}{pendingReviews ? `Human Review ${pendingReviews}건 · ` : ''}{blockedAgents ? `Blocked Agent ${blockedAgents}개 · ` : ''}{attentionAgents ? `검토 필요 Agent ${attentionAgents}개` : '현재 주요 병목 없음'}</Alert>
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(285px,1fr))', gap: 14 }}>
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(min(285px,100%),1fr))', gap: 14 }}>
       {activeAgents.map((agent) => {
         const status = healthByAgent.get(agent.id);
         return <article key={agent.id} className="ds-card" style={{ padding: 17, display: 'grid', gap: 10 }}>

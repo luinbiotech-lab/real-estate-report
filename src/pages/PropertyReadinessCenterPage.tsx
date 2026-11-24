@@ -79,7 +79,7 @@ export default function PropertyReadinessCenterPage() {
 
   return <div className="readiness-center" style={{ maxWidth: 1480, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
-      <div><p className="eyebrow">PROPERTY READINESS · DATA ROOM PIPELINE</p><h1 style={{ margin: '5px 0' }}>Property Readiness Center</h1><p style={{ margin: 0, color: '#667085' }}>기본정보 → 문서 → 구조화/출처 → 검증 → 미디어 → 보고서 → 3D 준비상태를 실제 저장 데이터로 점검합니다.</p></div>
+      <div><p className="eyebrow">Property Readiness Center</p><h1 style={{ margin: '5px 0' }}>준비도 센터</h1><p style={{ margin: 0, color: '#667085' }}>기본정보 → 문서 → 구조화/출처 → 검증 → 미디어 → 보고서 → 3D 준비상태를 실제 저장 데이터로 점검합니다.</p></div>
       <Button startIcon={<RefreshRounded />} onClick={() => void load()}>재검사 / 새로고침</Button>
     </header>
     {loadError && <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>}
