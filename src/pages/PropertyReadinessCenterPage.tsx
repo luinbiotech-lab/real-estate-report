@@ -95,7 +95,7 @@ export default function PropertyReadinessCenterPage() {
       </div>
       {!nextActions.length && <div style={{ padding: 18, color: '#667085' }}>현재 준비도 기준으로 보완할 항목이 없습니다.</div>}
       <div style={{ display: 'grid' }}>{nextActions.slice(0, 12).map((action, index) => <div key={action.id} style={{ display: 'grid', gridTemplateColumns: '90px minmax(220px,.8fr) 150px 1fr auto', gap: 10, alignItems: 'center', padding: '11px 14px', borderTop: index === 0 ? 'none' : '1px solid #edf0f4' }}>
-        <Chip size="small" color={action.state === 'missing' ? 'default' : 'warning'} variant="outlined" label={action.state.toUpperCase()} />
+        <Chip size="small" color={action.state === 'missing' ? 'default' : 'warning'} variant="outlined" label={stateLabel(action.state)} />
         <div><strong style={{ display: 'block', fontSize: 13 }}>{action.propertyName}</strong><small style={{ color: '#98a2b3' }}>{action.workflowOrder}단계{openIds.has(action.id) ? ' · 열어 봄' : ''}</small></div>
         <strong style={{ fontSize: 13 }}>{action.stageLabel}</strong><span style={{ color: '#667085', fontSize: 12 }}>{action.detail}</span>
         <Button size="small" endIcon={<ArrowForwardRounded />} onClick={() => openAction(action)}>{openIds.has(action.id) ? '다시 보완' : '보완 화면'}</Button>
@@ -108,7 +108,7 @@ export default function PropertyReadinessCenterPage() {
       {!recentProgress.length && <div style={{ padding: 16, color: '#667085', fontSize: 13 }}>아직 실제 준비도 변화로 완료·개선된 작업이 없습니다. 보완 후 `재검사 / 새로고침`하면 자동 판정됩니다.</div>}
       {recentProgress.map((entry) => <div key={`${entry.id}:${entry.progressedAt}`} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 150px 1fr', gap: 10, padding: '10px 14px', borderTop: '1px solid #edf0f4', alignItems: 'center' }}>
         <Chip size="small" color={entry.status === 'completed' ? 'success' : 'warning'} variant="outlined" label={entry.status === 'completed' ? 'COMPLETED' : 'IMPROVED'} />
-        <strong style={{ fontSize: 13 }}>{entry.propertyName}</strong><span style={{ fontSize: 13 }}>{entry.stageLabel}</span><span style={{ color: '#667085', fontSize: 12 }}>{entry.initialState.toUpperCase()} → {entry.lastObservedState.toUpperCase()} · {entry.lastObservedDetail}</span>
+        <strong style={{ fontSize: 13 }}>{entry.propertyName}</strong><span style={{ fontSize: 13 }}>{entry.stageLabel}</span><span style={{ color: '#667085', fontSize: 12 }}>{stateLabel(entry.initialState)} → {stateLabel(entry.lastObservedState)} · {entry.lastObservedDetail}</span>
       </div>)}
     </section>
 
