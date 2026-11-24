@@ -41,7 +41,7 @@ if (!interiorVision.includes('interiorVisionAgentPort.updateMedia') || !visionFa
 if (control.includes('../repositories/propertyDataRoomRepository') || control.includes('../repositories/propertyRepository')) throw new Error('A0 Control Center must not directly import repositories.');
 if (!control.includes('integratorReadPort.getProperties') || !control.includes('integratorReadPort.getBundle')) throw new Error('A0 Control Center must use the read-only integrator port.');
 
-if (!control.includes('Agent Control Center') || !control.includes('buildAgentHealthSnapshots') || !control.includes('Blocked Agent') || !control.includes('검토 필요 Agent')) throw new Error('A0 readiness Control Center incomplete.');
+if (!control.includes('Agent Control Center') || !control.includes('buildAgentHealthSnapshots') || !control.includes('막힌 에이전트') || !control.includes('검토 필요 에이전트')) throw new Error('A0 readiness Control Center incomplete.');
 if (!workspace.includes('ISOLATED AGENT WORKSPACE') || !workspace.includes('Agent Isolation Rule') || !workspace.includes('Contract Input → Output') || !workspace.includes('Direct Write Owns') || !workspace.includes('Forbidden Direct Writes') || !workspace.includes('Promotion Rule') || !workspace.includes('Safety Boundary')) throw new Error('Isolated Agent IO/write-boundary workspace incomplete.');
 if (!app.includes('path="control-center"') || !app.includes('path="agents/:agentId"')) throw new Error('Agent routes missing.');
 if (!layout.includes('A0 Control Center') || !layout.includes('AGENT MODULAR ARCHITECTURE')) throw new Error('Agent modular navigation missing.');
