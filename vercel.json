@@ -33,6 +33,10 @@
       "destination": "/index.html"
     },
     {
+      "source": "/guide",
+      "destination": "/index.html"
+    },
+    {
       "source": "/discover",
       "destination": "/index.html"
     },

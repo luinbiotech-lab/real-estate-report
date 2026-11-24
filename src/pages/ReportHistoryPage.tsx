@@ -1,12 +1,15 @@
 import { useEffect, useState } from 'react';
-import { ArchiveOutlined, DescriptionOutlined, VisibilityOutlined } from '@mui/icons-material';
-import { Alert, Box, Button, Card, CardActions, CardContent, Chip, CircularProgress, Stack, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { ArchiveOutlined, DescriptionOutlined, PictureAsPdfOutlined, PostAddRounded, VisibilityOutlined } from '@mui/icons-material';
+import { Alert, Box, Button, Card, CardContent, Chip, CircularProgress, Stack, Typography } from '@mui/material';
+import { Link, useNavigate } from 'react-router-dom';
 import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { reportSnapshotHistoryService, type ReportSnapshotHistoryItem } from '../services/reportSnapshotHistoryService';
 import type { Property } from '../types';
 import { classifyPropertyRecord, RECORD_CLASS_LABEL } from '../domain/sampleProperty';
+import { reportSnapshotService } from '../services/reportEngine';
+import InfoTip from '../components/InfoTip';
+import '../platform.css';
 
 type PropertyHistory = {
   property: Property;
@@ -33,6 +36,10 @@ export default function ReportHistoryPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [archivingId, setArchivingId] = useState('');
+  /** Every property, for the 보고서 만들기 list (2026-11-24: the report menu must create reports, not only list them). */
+  const [allProperties, setAllProperties] = useState<Property[]>([]);
+  const [latestVersion, setLatestVersion] = useState<Record<string, number>>({});
+  const [creatingId, setCreatingId] = useState('');
 
   const load = async () => {
     setLoading(true);
@@ -45,6 +52,8 @@ export default function ReportHistoryPage() {
         history: await reportSnapshotHistoryService.list(property.id),
       })));
       const rows = settled.flatMap((result) => result.status === 'fulfilled' ? [result.value] : []);
+      setAllProperties(properties);
+      setLatestVersion(Object.fromEntries(rows.filter((row) => row.history.length).map((row) => [row.property.id, Math.max(...row.history.map(({ snapshot }) => snapshot.reportVersion))])));
       const failed = settled.flatMap((result, index) => result.status === 'rejected' ? [properties[index].name || properties[index].id] : []);
       setItems(rows.filter((row) => row.history.length > 0).sort((a, b) => String(b.history[0]?.snapshot.generatedAt ?? '').localeCompare(String(a.history[0]?.snapshot.generatedAt ?? ''))));
       if (failed.length) setError(`일부 물건의 보고서 이력을 불러오지 못했습니다: ${failed.slice(0, 3).join(', ')}${failed.length > 3 ? ` 외 ${failed.length - 3}건` : ''}`);
@@ -56,6 +65,20 @@ export default function ReportHistoryPage() {
   };
 
   useEffect(() => { void load(); }, []);
+
+  /** Same call as the property screen's '보고서 만들기': a draft from the data confirmed now, then its preview. */
+  const create = async (property: Property) => {
+    if (creatingId) return;
+    setCreatingId(property.id); setError('');
+    try {
+      const created = await reportSnapshotService.createDraft(property.id, property.managerName || undefined);
+      navigate(`/professional-report/snapshot/${created.id}`);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : '보고서 초안을 만들지 못했습니다.');
+    } finally {
+      setCreatingId('');
+    }
+  };
 
   const archive = async (snapshotId: string) => {
     setArchivingId(snapshotId);
@@ -72,18 +95,38 @@ export default function ReportHistoryPage() {
 
   if (loading) return <div className="center"><CircularProgress /><p>보고서 이력을 불러오는 중입니다.</p></div>;
 
-  return <Box sx={{ p: 3 }}>
+  return <Box sx={{ p: { xs: 0.5, md: 3 } }}>
     <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={2} sx={{ mb: 3 }}>
       <Box>
-                <Typography variant="h4" component="h1">보고서</Typography>
-        <Typography color="text.secondary">만든 시점의 자료로 고정된 보고서 버전을 물건별로 봅니다.</Typography>
+        <Typography variant="h4" component="h1">보고서</Typography>
+        <Typography color="text.secondary">물건을 골라 보고서를 만들고, 만든 보고서의 버전을 물건별로 봅니다.</Typography>
       </Box>
-      <Stack direction="row" spacing={1}><Button variant="outlined" onClick={() => navigate('/external-shares')}>외부 공유 센터</Button><Button variant="outlined" onClick={() => void load()}>새로고침</Button></Stack>
+      <Button variant="outlined" onClick={() => void load()}>새로고침</Button>
     </Stack>
 
     {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-    {!items.length ? <Alert severity="info">아직 만든 보고서가 없습니다. 물건 화면 아래 '보고서 만들기'로 만듭니다.</Alert> : <Stack spacing={3}>
+    <section className="report-make" aria-label="보고서 만들기">
+      <header><h2>보고서 만들기<InfoTip label="보고서 만들기" text="지금 확인된 자료로 보고서 초안을 만듭니다. 초안을 검토해 '확정'하면 그 시점의 버전으로 고정되고, 자료가 바뀌면 새 버전을 다시 만듭니다." /></h2>
+        <ol className="report-steps"><li><b>1</b>물건 고르기</li><li><b>2</b>초안 만들기</li><li><b>3</b>검토 · 확정</li><li><Link to="/external-shares"><b>4</b>외부 공유</Link></li></ol></header>
+      {!allProperties.length ? <p className="home-empty">등록된 물건이 없습니다. 먼저 물건을 등록해 주세요.</p> : <ul className="report-make-list">{allProperties.map((property) => {
+        const record = classifyPropertyRecord(property).recordClass;
+        const version = latestVersion[property.id];
+        return <li key={property.id}>
+          <div className="report-make-info"><strong>{property.name || property.address || '이름 없음'}</strong><small>{property.address || '주소 미입력'}</small>
+            <span className="report-make-tags">{version ? <em className="has-report">보고서 v{version}</em> : <em>보고서 없음</em>}{record !== 'operational' && <em className="sample">{RECORD_CLASS_LABEL[record]}</em>}</span></div>
+          <div className="report-make-actions">
+            <Button variant="contained" size="small" startIcon={<PostAddRounded />} disabled={Boolean(creatingId)} onClick={() => void create(property)}>{creatingId === property.id ? '만드는 중…' : version ? '새 버전 만들기' : '보고서 만들기'}</Button>
+            <Button size="small" startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${encodeURIComponent(property.id)}`)}>1P 제안서</Button>
+            <Button size="small" startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${encodeURIComponent(property.id)}`)}>7P 상세보고서</Button>
+          </div>
+        </li>;
+      })}</ul>}
+    </section>
+
+    <Typography variant="h6" component="h2" sx={{ mt: 4, mb: 1.5 }}>만든 보고서 이력</Typography>
+
+    {!items.length ? <Alert severity="info">아직 만든 보고서가 없습니다. 위에서 물건을 골라 &lsquo;보고서 만들기&rsquo;를 누르면 여기에 버전별로 쌓입니다.</Alert> : <Stack spacing={3}>
       {items.map(({ property, history }) => <Card key={property.id} variant="outlined">
         <CardContent>
           <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" spacing={2} sx={{ mb: 2 }}>
@@ -113,9 +156,6 @@ export default function ReportHistoryPage() {
             </Box>)}
           </Stack>
         </CardContent>
-        <CardActions sx={{ px: 2, pb: 2 }}>
-          <Button startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${property.id}`)}>현재 데이터 보고서</Button>
-        </CardActions>
       </Card>)}
     </Stack>}
   </Box>;

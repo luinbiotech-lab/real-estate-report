@@ -54,7 +54,7 @@ if (nav.navGroups.length > 6) throw new Error(`메뉴 그룹은 6개 이하로 �
 
 // 2026-11-13 IA rework (루치오: "이 모든 걸 설정으로 뺐네"): work-flow sections, 설정 = admin only.
 if (!app.includes('<Route index element={<HomePage />} />') || !app.includes('<Route path="properties" element={<PropertyList />} />')) throw new Error('첫 화면은 사이트 메인(HomePage), 물건 목록은 /properties 여야 합니다.');
-if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '홈:/|탐색:/explore|물건:/properties|조회:/discover|분석:/readiness|보고서:/report-history|설정:/settings') throw new Error(`PC 주 메뉴는 홈/탐색/물건/조회/분석/보고서/설정 업무 흐름 순서여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
+if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '홈:/|탐색:/explore|물건:/properties|조회:/discover|분석:/readiness|보고서:/report-history|설정:/settings|사용설명서:/guide') throw new Error(`PC 주 메뉴는 홈/탐색/물건/조회/분석/보고서/설정 업무 흐름 순서(끝에 사용설명서)여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
 const groupPaths = (id) => nav.navGroups.find((group) => group.id === id)?.items.map((item) => item.to) ?? [];
 const expectGroups = {
   property: ['/property/new', '/inquiries', '/import', '/bulk-intake'],

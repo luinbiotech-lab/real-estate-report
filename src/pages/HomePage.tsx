@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, CircularProgress } from '@mui/material';
-import { AddRounded, AnalyticsRounded, ArrowForwardRounded, CheckCircleOutlineRounded, ChevronRightRounded, EditNoteRounded, InboxRounded, BusinessRounded, HandshakeRounded, TravelExploreRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
+import { AddRounded, MenuBookRounded, ArrowForwardRounded, CheckCircleOutlineRounded, ChevronRightRounded, EditNoteRounded, InboxRounded, BusinessRounded, HandshakeRounded, TravelExploreRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { reportSnapshotHistoryService } from '../services/reportSnapshotHistoryService';
 import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
@@ -17,6 +17,8 @@ import { loadListingTrustMany, type ListingTrust } from '../services/platformLis
 import { TRUST_GRADES } from '../domain/platform/trustGrade';
 import { DEFAULT_ADDRESS_LEVEL, maskAddress } from '../domain/platform/publicListing';
 import TrustGradeBadge from '../components/platform/TrustGradeBadge';
+import InfoTip from '../components/InfoTip';
+import { START_STEPS } from '../navigation/guideContent';
 import '../platform.css';
 
 /*
@@ -61,12 +63,7 @@ const COMPARE: Array<{ topic: string; general: string; daon: string }> = [
   { topic: '결과물', general: '매물 정보 화면', daon: '확인된 자료로 만든 1P 제안서·7P 투자 분석 보고서(버전 보관)' },
 ];
 
-const FLOW: Array<{ step: string; title: string; detail: string; to: string; icon: ReactNode; more?: Array<{ label: string; to: string }> }> = [
-  { step: '1', title: '물건', detail: '주소로 조회해 등록하고 목록·지도에서 관리', to: PROPERTY_LIST_PATH, icon: <FormatListBulletedRounded />, more: [{ label: '주소 조회', to: '/discover' }, { label: '엑셀 대량 등록', to: '/import' }] },
-  { step: '2', title: '자료 · 검증', detail: '공적자료·문서·사진을 붙이고 검증 후보를 확인', to: '/bulk-intake', icon: <FactCheckRounded />, more: [{ label: '검토 이력', to: '/review-history' }] },
-  { step: '3', title: '분석', detail: '준비도·시세 위치·리스크·임대수익 검토', to: '/readiness', icon: <AnalyticsRounded />, more: [{ label: '리스크 · 규제', to: '/risk' }, { label: '임대 · 수익', to: '/income' }] },
-  { step: '4', title: '보고서 · 공유', detail: '1P·7P 보고서 생성, 버전 이력, 외부 공유', to: '/report-history', icon: <ShareRounded />, more: [{ label: '외부 공유', to: '/external-shares' }] },
-];
+const STEP_ICONS: Record<string, ReactNode> = { '1': <AddRounded />, '2': <FactCheckRounded />, '3': <DescriptionOutlined />, '4': <ShareRounded /> };
 
 /** Sources DA:ON reads from (what each is used for). Their live connection status is shown in 설정, not here. */
 const SOURCES = [
@@ -121,9 +118,8 @@ export default function HomePage() {
   const tasks: Array<{ key: string; icon: ReactNode; title: string; detail: string; to: string }> = [];
   if (newInquiries) tasks.push({ key: 'inquiry', icon: <InboxRounded />, title: `새 매수 문의 ${newInquiries}건`, detail: '연락한 뒤 문의함에서 답변함으로 바꿔 주세요', to: '/inquiries' });
   if (loadState === 'ready') {
-    if (real.length === 0) tasks.push({ key: 'first', icon: <SearchRounded />, title: '첫 운영 물건 등록', detail: '주소로 조회하면 공적자료가 후보로 모입니다', to: '/discover' });
     if (needsProfile > 0) tasks.push({ key: 'profile', icon: <EditNoteRounded />, title: `기본정보 보완 ${needsProfile}건`, detail: '주소 · 면적 · 담당자 중 빠진 값 채우기', to: PROPERTY_LIST_PATH });
-    if (real.length > 0 && reportState === 'ready' && readyCount === 0) tasks.push({ key: 'report', icon: <DescriptionOutlined />, title: '첫 보고서 확정', detail: '물건 화면 자료 탭에서 1P · 7P 보고서 만들기', to: PROPERTY_LIST_PATH });
+    if (real.length > 0 && reportState === 'ready' && readyCount === 0) tasks.push({ key: 'report', icon: <DescriptionOutlined />, title: '첫 보고서 확정', detail: '보고서 메뉴에서 물건을 골라 초안을 만들고 확정', to: '/report-history' });
   }
   const graded = useMemo(() => (trust ? items.filter((property) => trust.has(property.id)).sort((a, b) => TRUST_GRADES.indexOf(trust.get(a.id)!.grade.grade) - TRUST_GRADES.indexOf(trust.get(b.id)!.grade.grade)).slice(0, 4) : []), [items, trust]);
 
@@ -132,11 +128,10 @@ export default function HomePage() {
       <div className="home-hero-copy">
         <p className="home-hero-eyebrow">{activeBrand.name} · 검증된 상업용 건물 플랫폼</p>
         <h1><span>근거로 확인하고,</span> <span>등급으로 보여 주고,</span> <span>보고서로 전달합니다.</span></h1>
-        <p className="home-hero-lead">모든 매물에 신뢰 등급(A~D)을 붙입니다. 등급은 공적서류와 사람이 확인한 값만으로 계산하고, 공식확인·중개사 입력·계산값을 값마다 따로 표시합니다. 확인된 자료는 1P·7P 전문 보고서로 이어집니다.</p>
+        <p className="home-hero-lead">공적서류와 사람이 확인한 값으로 매물마다 신뢰 등급(A~D)을 매기고, 확인된 자료로 1P·7P 보고서를 만듭니다.</p>
         <div className="home-hero-actions">
           <Button variant="contained" size="large" startIcon={<TravelExploreRounded />} onClick={() => navigate(EXPLORE_PATH)}>검증된 매물 탐색</Button>
-          <Button variant="outlined" size="large" startIcon={<SearchRounded />} onClick={() => navigate('/discover')}>주소로 물건 조회</Button>
-          <Button size="large" startIcon={<AddRounded />} onClick={() => navigate('/property/new')}>새 물건 등록</Button>
+          <Button variant="outlined" size="large" startIcon={<MenuBookRounded />} onClick={() => navigate('/guide')}>처음이라면 사용설명서</Button>
         </div>
         {sampleOnly && <p className="home-sample-note" role="note">아직 운영 물건이 없어 아래 매물 · 최근 물건은 샘플로 보여 드립니다.</p>}
       </div>
@@ -155,8 +150,11 @@ export default function HomePage() {
       </div>
     </section>
 
-    <section className="home-audiences" aria-label="이용자별 시작">
-      {AUDIENCES.map((row) => <article key={row.title}><span className="home-value-icon">{row.icon}</span><h2>{row.title}</h2><p>{row.body}</p>{row.to ? <Link to={row.to} className="home-audience-link">{row.action} <ArrowForwardRounded /></Link> : <span className="home-audience-soon">{row.action}</span>}</article>)}
+    <section className="home-flow" aria-label="업무 흐름">
+      <header className="home-section-head"><div><p className="eyebrow">START</p><h2>처음 쓰는 순서<InfoTip label="처음 쓰는 순서" text="물건을 등록하고, 자료를 확인하고, 보고서를 만들어 공유하는 네 단계입니다. 단계마다 한 번 누르면 해당 화면으로 갑니다." /></h2></div><Link to="/guide">사용설명서 전체 보기</Link></header>
+      <ol>{START_STEPS.map((item) => <li key={item.step}>
+        <Link to={item.to} className="home-flow-main"><span className="home-flow-step">{item.step}</span><span className="home-flow-icon">{STEP_ICONS[item.step]}</span><strong>{item.title}</strong><small>{item.body}</small><span className="home-flow-action">{item.action} <ArrowForwardRounded className="home-flow-arrow" /></span></Link>
+      </li>)}</ol>
     </section>
 
     <section className="home-graded" aria-label="등급 매물">
@@ -174,30 +172,15 @@ export default function HomePage() {
       <p className="platform-footnote">업무용 미리보기입니다. 물건마다 '게시'해야 인터넷에 공개됩니다.</p>
     </section>
 
-    <section className="home-compare" aria-label="다른 부동산 사이트와 차이">
-      <header className="home-section-head"><div><p className="eyebrow">WHY {activeBrand.name}</p><h2>일반 매물 사이트와 무엇이 다른가요</h2></div></header>
-      <table className="home-compare-table"><thead><tr><th scope="col">구분</th><th scope="col">일반 매물 사이트</th><th scope="col">{activeBrand.name}</th></tr></thead>
-        <tbody>{COMPARE.map((row) => <tr key={row.topic}><th scope="row">{row.topic}</th><td>{row.general}</td><td>{row.daon}</td></tr>)}</tbody></table>
-    </section>
 
-    <section className="home-values" aria-label="핵심 가치">
-      {VALUES.map((value) => <article key={value.title}><span className="home-value-icon">{value.icon}</span><h2>{value.title}</h2><p>{value.body}</p></article>)}
-    </section>
 
-    <section className="home-flow" aria-label="업무 흐름">
-      <header className="home-section-head"><div><p className="eyebrow">WORK FLOW</p><h2>업무 흐름</h2></div><small>물건 → 자료·검증 → 분석 → 보고서·공유</small></header>
-      <ol>{FLOW.map((item) => <li key={item.title}>
-        <Link to={item.to} className="home-flow-main"><span className="home-flow-step">{item.step}</span><span className="home-flow-icon">{item.icon}</span><strong>{item.title}</strong><small>{item.detail}</small><ArrowForwardRounded className="home-flow-arrow" /></Link>
-        {item.more && <div className="home-flow-more">{item.more.map((link) => <Link key={link.to} to={link.to}>{link.label}</Link>)}</div>}
-      </li>)}</ol>
-    </section>
 
     <div className="home-recent">
       <section aria-label="최근 물건">
-        <header className="home-section-head"><div><p className="eyebrow">RECENT</p><h2>최근 물건{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={PROPERTY_LIST_PATH}>전체 보기</Link></header>
+        <header className="home-section-head"><div><p className="eyebrow">RECENT</p><h2>최근 물건{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={PROPERTY_LIST_PATH}>물건 전체</Link></header>
         {loadState === 'loading' && <p className="home-empty">불러오는 중입니다.</p>}
         {loadState === 'error' && <p className="home-empty">물건 목록을 불러오지 못했습니다. <Link to={PROPERTY_LIST_PATH}>물건 목록에서 다시 시도</Link></p>}
-        {loadState === 'ready' && !recent.length && <p className="home-empty">등록된 물건이 없습니다. <Link to="/discover">주소로 조회해 첫 물건을 등록하세요.</Link></p>}
+        {loadState === 'ready' && !recent.length && <p className="home-empty">등록된 물건이 없습니다. 위 1단계에서 첫 물건을 등록하세요.</p>}
         {loadState === 'ready' && recent.length > 0 && <ul className="home-list">{recent.map((property) => {
           const recordClass = classifyPropertyRecord(property).recordClass;
           return <li key={property.id}><Link to={`/property/${encodeURIComponent(property.id)}`}>
@@ -207,16 +190,33 @@ export default function HomePage() {
         })}</ul>}
       </section>
       <section aria-label="최근 보고서">
-        <header className="home-section-head"><div><p className="eyebrow">REPORTS</p><h2>최근 보고서</h2></div><Link to="/report-history">보고서 이력</Link></header>
+        <header className="home-section-head"><div><p className="eyebrow">REPORTS</p><h2>최근 보고서</h2></div><Link to="/report-history">보고서 전체</Link></header>
         {reportState === 'loading' && <p className="home-empty">불러오는 중입니다.</p>}
         {reportState === 'error' && <p className="home-empty">보고서 이력을 불러오지 못했습니다.</p>}
-        {reportState === 'ready' && !reports.length && <p className="home-empty">아직 만든 보고서가 없습니다. 물건 화면의 자료 탭에서 보고서를 만들 수 있습니다.</p>}
+        {reportState === 'ready' && !reports.length && <p className="home-empty">아직 만든 보고서가 없습니다. <Link to="/report-history">보고서 메뉴에서 물건을 골라 만들 수 있습니다.</Link></p>}
         {reportState === 'ready' && reports.length > 0 && <ul className="home-list">{reports.map(({ snapshot, property }) => <li key={snapshot.id}><Link to={`/professional-report/snapshot/${encodeURIComponent(snapshot.id)}`}>
           <span><strong>{property.name || property.address}</strong><small>v{snapshot.reportVersion} · {String(snapshot.generatedAt).slice(0, 10)}</small></span>
           <span className="home-list-side"><em className={`status-${snapshot.status}`}>{STATUS_LABEL[snapshot.status]}</em></span>
         </Link></li>)}</ul>}
       </section>
     </div>
+
+
+    <details className="home-more">
+      <summary>{activeBrand.name} 소개 더 보기 <small>이용자별 쓰임 · 일반 매물 사이트와 차이 · 핵심 가치 · 데이터 출처</small></summary>
+    <section className="home-audiences" aria-label="이용자별 시작">
+      {AUDIENCES.map((row) => <article key={row.title}><span className="home-value-icon">{row.icon}</span><h2>{row.title}</h2><p>{row.body}</p>{!row.to && <span className="home-audience-soon">{row.action}</span>}</article>)}
+    </section>
+
+    <section className="home-compare" aria-label="다른 부동산 사이트와 차이">
+      <header className="home-section-head"><div><p className="eyebrow">WHY {activeBrand.name}</p><h2>일반 매물 사이트와 무엇이 다른가요</h2></div></header>
+      <table className="home-compare-table"><thead><tr><th scope="col">구분</th><th scope="col">일반 매물 사이트</th><th scope="col">{activeBrand.name}</th></tr></thead>
+        <tbody>{COMPARE.map((row) => <tr key={row.topic}><th scope="row">{row.topic}</th><td>{row.general}</td><td>{row.daon}</td></tr>)}</tbody></table>
+    </section>
+
+    <section className="home-values" aria-label="핵심 가치">
+      {VALUES.map((value) => <article key={value.title}><span className="home-value-icon">{value.icon}</span><h2>{value.title}</h2><p>{value.body}</p></article>)}
+    </section>
 
     <section className="home-trust" aria-label="데이터 출처와 원칙">
       <header className="home-section-head"><div><p className="eyebrow">TRUST</p><h2>데이터 출처 · 원칙</h2></div><Link to="/settings">연결 상태는 설정에서 확인</Link></header>
@@ -230,5 +230,6 @@ export default function HomePage() {
         </ul>
       </div>
     </section>
+    </details>
   </div>;
 }
