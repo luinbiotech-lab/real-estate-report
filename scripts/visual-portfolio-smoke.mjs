@@ -44,6 +44,11 @@ try {
   // IA (2026-11-13 rework): work-flow sections 홈/탐색/물건/조회/분석/보고서/설정 (탐색 added 11/15) with their sub-pages visible; 설정 holds admin only.
   const mainNav = page.getByRole('navigation', { name: 'DA:ON 주 메뉴' });
   for (const label of ['홈', '탐색', '물건', '조회', '분석', '보고서', '설정']) await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().waitFor({ state: 'visible' });
+  // 2026-11-19: on PC each section's sub-pages are folded unless it is the current section; its chevron unfolds them.
+  // This page is under 물건, so 물건 stays open (no toggle); the other sections start folded.
+  await mainNav.getByRole('link', { name: '엑셀 대량 등록' }).waitFor({ state: 'visible' });
+  if (await mainNav.getByRole('link', { name: '리스크 · 규제 검토' }).count()) throw new Error('PC 메뉴: 현재 구역이 아닌 하위 항목이 처음부터 펼쳐져 있습니다.');
+  for (const section of ['분석', '보고서', '설정']) await mainNav.getByRole('button', { name: new RegExp(`^${section} 하위 메뉴 \\d+개 펼치기$`) }).click();
   for (const label of ['새 물건 등록', '엑셀 대량 등록', '리스크 · 규제 검토', '임대 · 수익 분석', '외부 공유 센터', '사용자 · 권한 관리']) await mainNav.getByRole('link', { name: label }).waitFor({ state: 'visible' });
   // Low-frequency screens are folded: 전문 분석 under 분석, 연동 · 운영 under 설정.
   if (await mainNav.getByRole('link', { name: '공간 운영' }).count()) throw new Error('전문 분석 블록이 처음부터 펼쳐져 있습니다.');
