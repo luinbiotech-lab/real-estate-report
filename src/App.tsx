@@ -36,6 +36,7 @@ const ProfessionalReportSnapshotPage = lazy(() => import('./pages/ProfessionalRe
 const ReportHistoryPage = lazy(() => import('./pages/ReportHistoryPage'));
 const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const PublicListingPreviewPage = lazy(() => import('./pages/PublicListingPreviewPage'));
+const InquiryInboxPage = lazy(() => import('./pages/InquiryInboxPage'));
 const PublicListingPage = lazy(() => import('./pages/PublicListingPage'));
 import { REMOTE_OPERATIONAL_MODE } from './services/operationalDataMode';
 
@@ -107,6 +108,7 @@ function AppContent() {
       {/* 2026-11-15 platform upgrade: buyer-side explore + public listing preview (not published yet). */}
       <Route path="explore" element={<ExplorePage />} />
       <Route path="listing/:id" element={<PublicListingPreviewPage />} />
+      <Route path="inquiries" element={<InquiryInboxPage />} />
       <Route path="control-center" element={<AgentControlCenterPage />} />
       <Route path="discover" element={<PropertyDiscoveryPage />} />
       <Route path="agents/:agentId" element={<AgentWorkspacePage />} />

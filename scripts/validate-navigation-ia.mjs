@@ -57,7 +57,7 @@ if (!app.includes('<Route index element={<HomePage />} />') || !app.includes('<R
 if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '홈:/|탐색:/explore|물건:/properties|조회:/discover|분석:/readiness|보고서:/report-history|설정:/settings') throw new Error(`PC 주 메뉴는 홈/탐색/물건/조회/분석/보고서/설정 업무 흐름 순서여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
 const groupPaths = (id) => nav.navGroups.find((group) => group.id === id)?.items.map((item) => item.to) ?? [];
 const expectGroups = {
-  property: ['/property/new', '/import', '/bulk-intake'],
+  property: ['/property/new', '/inquiries', '/import', '/bulk-intake'],
   analysis: ['/risk', '/income', '/review-history'],
   advanced: ['/digital-twin-intake', '/digital-twin', '/spatial', '/interior', '/room-ops'],
   report: ['/external-shares'],

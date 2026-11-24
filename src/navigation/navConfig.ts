@@ -17,7 +17,7 @@
 export type NavIconKey =
   | 'home' | 'list' | 'search' | 'add' | 'upload' | 'intake' | 'readiness' | 'review' | 'risk'
   | 'report' | 'share' | 'income' | 'interior' | 'spatial' | 'twinIntake' | 'twin' | 'roomOps'
-  | 'access' | 'control' | 'agents' | 'backup' | 'migration' | 'settings' | 'analysis' | 'menu'
+  | 'inbox' | 'access' | 'control' | 'agents' | 'backup' | 'migration' | 'settings' | 'analysis' | 'menu'
   | 'explore' | 'groupProperty' | 'groupVerify' | 'groupReport' | 'groupAnalysis' | 'groupOps';
 
 export interface NavItem {
@@ -66,6 +66,7 @@ export const primaryNav: NavSection[] = [
 export const navGroups: NavGroup[] = [
   { id: 'property', label: '물건', summary: '등록 · 대량 등록', icon: 'groupProperty', items: [
     { to: '/property/new', title: '새 물건 등록', icon: 'add' },
+    { to: '/inquiries', title: '매수 문의함', icon: 'inbox' },
     { to: '/import', title: '엑셀 대량 등록', icon: 'upload' },
     { to: '/bulk-intake', title: '대량 자료 등록 · 검증', module: 'Intake · Verification', icon: 'intake' },
   ]},

@@ -196,3 +196,31 @@
   .explore-filters .region-filter{flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none}
   .explore-filters .region-filter>*{flex:0 0 auto}
 }
+/* 2026-11-24 매수 문의함 */
+.inbox-page{display:grid;gap:14px}
+.inbox-filters{display:flex;gap:8px;flex-wrap:wrap}
+.inbox-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+.inbox-card{display:grid;grid-template-columns:minmax(0,1fr);min-width:0;gap:10px;background:#fff;border:1px solid #e4e9f0;border-radius:18px;padding:16px 18px;box-shadow:0 6px 18px #10243d0d;border-left:4px solid #d0d5dd}
+.inbox-card.status-new{border-left-color:#d7b46a}
+.inbox-card.status-answered{border-left-color:#11834b}
+.inbox-card.status-closed{opacity:.75}
+.inbox-card-head{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:12px;color:#667085}
+.inbox-kind{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:#0b2545;background:#f2f5f9;border-radius:999px;padding:3px 10px}
+.inbox-kind svg{font-size:15px}
+.inbox-kind.kind-report_request{background:#f7f4ec;color:#5c4a1f}
+.inbox-card-who{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px}
+.inbox-card-who strong{font-size:17px;color:#101828}
+.inbox-contact{display:inline-flex;align-items:center;gap:4px;font-size:14px;font-weight:600;color:#1f5aa6;text-decoration:none}
+.inbox-contact svg{font-size:17px}
+.inbox-contact.erased{color:#98a2b3;font-weight:500;font-size:12.5px}
+.inbox-message{margin:0;font-size:13.5px;line-height:1.6;color:#344054;white-space:pre-wrap;overflow-wrap:anywhere;background:#f8fafc;border-radius:10px;padding:10px 12px}
+.inbox-message.empty{color:#98a2b3;background:transparent;padding:0;text-align:left}
+.inbox-card>*{min-width:0}
+.inbox-list>li{min-width:0}
+.inbox-card-foot{display:flex;min-width:0;justify-content:space-between;align-items:center;gap:10px;border-top:1px solid #eef2f6;padding-top:10px}
+.inbox-listing{display:inline-flex;align-items:center;gap:4px;font-size:12.5px;color:#475467;text-decoration:none;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inbox-listing svg{font-size:15px;flex-shrink:0}
+.inbox-listing span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.inbox-listing.missing{color:#98a2b3}
+.inbox-card-foot .MuiSelect-select{font-size:13px;padding-top:6px;padding-bottom:6px}
+@media(max-width:900px){.inbox-list{grid-template-columns:1fr}.inbox-filters{flex-wrap:nowrap;overflow-x:auto}.inbox-filters>*{flex:0 0 auto}}

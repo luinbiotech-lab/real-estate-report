@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button, CircularProgress } from '@mui/material';
-import { AddRounded, AnalyticsRounded, ArrowForwardRounded, CheckCircleOutlineRounded, ChevronRightRounded, EditNoteRounded, BusinessRounded, HandshakeRounded, TravelExploreRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
+import { AddRounded, AnalyticsRounded, ArrowForwardRounded, CheckCircleOutlineRounded, ChevronRightRounded, EditNoteRounded, InboxRounded, BusinessRounded, HandshakeRounded, TravelExploreRounded, DescriptionOutlined, FactCheckRounded, FormatListBulletedRounded, GavelRounded, HistoryRounded, SearchRounded, ShareRounded, SourceRounded, UploadFileRounded, VerifiedUserRounded } from '@mui/icons-material';
 import { propertyRepository } from '../repositories/propertyRepository';
 import { reportSnapshotHistoryService } from '../services/reportSnapshotHistoryService';
 import { compareByUpdatedAtDesc } from '../domain/propertyRecordGuard';
@@ -12,6 +12,7 @@ import type { ReportSnapshot } from '../domain/propertyDataRoom/types';
 import type { Property } from '../types';
 import { formatWon } from '../utils/format';
 import { EXPLORE_PATH, PROPERTY_LIST_PATH } from '../navigation/navConfig';
+import { publicListingStore } from '../services/publicListingStore';
 import { loadListingTrustMany, type ListingTrust } from '../services/platformListingService';
 import { TRUST_GRADES } from '../domain/platform/trustGrade';
 import { DEFAULT_ADDRESS_LEVEL, maskAddress } from '../domain/platform/publicListing';
@@ -84,6 +85,13 @@ export default function HomePage() {
   const [trust, setTrust] = useState<Map<string, ListingTrust>>();
   /** Confirmed (ready) snapshots across the 30 most recently updated properties, not only the 4 listed. */
   const [readyCount, setReadyCount] = useState(0);
+  /** Unanswered buyer inquiries (undefined while loading or when the inbox cannot be read, e.g. no permission). */
+  const [newInquiries, setNewInquiries] = useState<number>();
+  useEffect(() => {
+    let active = true;
+    publicListingStore.listInquiries().then((rows) => { if (active) setNewInquiries(rows.filter((row) => row.status === 'new').length); }).catch(() => undefined);
+    return () => { active = false; };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -111,6 +119,7 @@ export default function HomePage() {
   const sampleOnly = loadState === 'ready' && real.length === 0 && samples.length > 0;
   /* 오늘 할 일 (2026-11-19 UI pass): built only from what was loaded; nothing is shown as a task that was not counted. */
   const tasks: Array<{ key: string; icon: ReactNode; title: string; detail: string; to: string }> = [];
+  if (newInquiries) tasks.push({ key: 'inquiry', icon: <InboxRounded />, title: `새 매수 문의 ${newInquiries}건`, detail: '연락한 뒤 문의함에서 답변함으로 바꿔 주세요', to: '/inquiries' });
   if (loadState === 'ready') {
     if (real.length === 0) tasks.push({ key: 'first', icon: <SearchRounded />, title: '첫 운영 물건 등록', detail: '주소로 조회하면 공적자료가 후보로 모입니다', to: '/discover' });
     if (needsProfile > 0) tasks.push({ key: 'profile', icon: <EditNoteRounded />, title: `기본정보 보완 ${needsProfile}건`, detail: '주소 · 면적 · 담당자 중 빠진 값 채우기', to: PROPERTY_LIST_PATH });

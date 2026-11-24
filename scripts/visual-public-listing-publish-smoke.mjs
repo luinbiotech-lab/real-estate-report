@@ -88,6 +88,27 @@ async function run(viewport, tag) {
     await page.screenshot({ path: `${ARTIFACT_DIR}/public-listing-inquiry-${tag}.png` });
     await dialog.getByRole('button', { name: '닫기' }).click();
 
+    // 2026-11-24 pilot: the inquiry reaches the staff inbox and the home to-do, and its status can be changed.
+    await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
+    await page.getByText('새 매수 문의 1건').waitFor({ timeout: 30_000 });
+    check(true, `${tag} 홈 오늘 할 일에 새 매수 문의 1건`);
+    await page.goto(`${BASE_URL}/inquiries`, { waitUntil: 'domcontentloaded' });
+    const card = page.locator('.inbox-card').filter({ hasText: '김매수' });
+    await card.waitFor({ timeout: 30_000 });
+    check(await card.locator('a.inbox-contact[href="tel:01011112222"]').count() === 1, `${tag} 문의함: 이름·전화 걸기 링크`);
+    check((await card.locator('.inbox-listing').innerText()).length > 0 && !(await card.innerText()).includes('815-11'), `${tag} 문의함: 매물 제목(지번 없음) 표시`);
+    await card.getByRole('combobox').click();
+    await page.getByRole('option', { name: '답변함' }).click();
+    await page.getByText('처리 전 문의가 없습니다.').waitFor({ timeout: 10_000 });
+    const afterStatus = await page.evaluate(() => JSON.parse(localStorage.getItem('daon-public-inquiries-v1') || '[]'));
+    check(afterStatus[0]?.status === 'answered', `${tag} 문의함: 답변함으로 바꾸면 저장되고 처리 전 목록에서 빠짐`);
+    const inboxOverflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
+    check(inboxOverflow <= 1, `${tag} 문의함 가로 넘침 없음 (${inboxOverflow}px)`);
+    await page.locator('.inbox-filters').getByRole('button', { name: /^전체/ }).click();
+    await page.locator('.inbox-card').first().waitFor();
+    await page.waitForTimeout(400);
+    await page.screenshot({ path: `${ARTIFACT_DIR}/inquiry-inbox-${tag}.png`, fullPage: true });
+
 
     // 루인 #71 review: /p/A → /p/B must drop A's listing and A's open inquiry form; A → B → A must end on A.
     await openPreview(page, SECOND_ID);

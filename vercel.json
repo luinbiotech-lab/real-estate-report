@@ -29,6 +29,10 @@
   ],
   "rewrites": [
     {
+      "source": "/inquiries",
+      "destination": "/index.html"
+    },
+    {
       "source": "/discover",
       "destination": "/index.html"
     },
