@@ -47,3 +47,8 @@
    desktop rendering is unchanged. Keep this list in sync with every Georgia stack (checked by
    scripts/validate-report-display-rules.mjs). */
 html.ios-print-fit :is(.df-side-copy,.df-brand-center strong,.df-brand-center p,.df-opening-copy h1,.df-opening-quote,.df-closing-lead h1,.df-contact-card b,.df-closing-quote,.df-frame-footer b,.dc-page-no,.dc-head-title h1,.dc-head-brand strong,.dc-foot b,.dc-side-copy,.dc-brand-center strong,.dc-brand-center p,.dc-summary-copy h2,.dc-summary-title>b,.dc-summary-title h1,.dc-property-line h2,.daon-opening-page .df-cover-title time,.daon-cover-simple .dcs-foot b,.dd-brand strong,.daon-detail-master .dd-brand strong,.daon-detail-master .dd-mark,.daon-detail-master .dd-contact-brand strong,.d1-logo-mark,.d1-logo strong,.d1-tagline,.daon-one-page-master .d1-logo strong,.daon-one-page-master .d1-tagline){font-family:Georgia,'Noto Sans KR Variable',serif}
+
+/* 2026-11-25: toolbar buttons never break one word per line on PC (자료실·보고서 확정); the toolbar wraps to two rows instead. Screen-only, hidden in print. */
+.professional-report-toolbar{flex-wrap:wrap;row-gap:8px}
+.professional-report-toolbar>div{flex-wrap:wrap;gap:6px}
+.professional-report-toolbar .MuiButton-root{white-space:nowrap;flex:0 0 auto}
