@@ -17,7 +17,7 @@
 export type NavIconKey =
   | 'home' | 'list' | 'search' | 'add' | 'upload' | 'intake' | 'readiness' | 'review' | 'risk'
   | 'report' | 'share' | 'income' | 'interior' | 'spatial' | 'twinIntake' | 'twin' | 'roomOps'
-  | 'access' | 'control' | 'agents' | 'backup' | 'migration' | 'settings' | 'analysis' | 'menu'
+  | 'inbox' | 'guide' | 'access' | 'control' | 'agents' | 'backup' | 'migration' | 'settings' | 'analysis' | 'menu'
   | 'explore' | 'groupProperty' | 'groupVerify' | 'groupReport' | 'groupAnalysis' | 'groupOps';
 
 export interface NavItem {
@@ -27,6 +27,8 @@ export interface NavItem {
   /** Optional established module name, shown as secondary text only. */
   module?: string;
   icon: NavIconKey;
+  /** An action (not a place): reachable from page buttons, left out of the side menu so the same button is not shown twice. */
+  menuHidden?: boolean;
 }
 
 export type NavGroupId = 'property' | 'analysis' | 'advanced' | 'report' | 'settings' | 'integrations';
@@ -39,7 +41,7 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-export type SectionId = 'home' | 'explore' | 'property' | 'discover' | 'analysis' | 'report' | 'settings';
+export type SectionId = 'home' | 'explore' | 'property' | 'discover' | 'analysis' | 'report' | 'settings' | 'guide';
 
 /** One top-level menu entry. Its own page + the sub-pages of `group`, plus an optional collapsed block (`advanced`). */
 export interface NavSection extends NavItem {
@@ -56,16 +58,18 @@ export const EXPLORE_PATH = '/explore';
 export const primaryNav: NavSection[] = [
   { id: 'home', to: HOME_PATH, title: '홈', module: '오늘 할 일 · 최근 물건 · 보고서', icon: 'home' },
   { id: 'explore', to: EXPLORE_PATH, title: '탐색', module: '신뢰 등급 · 지도 · 공개 매물', icon: 'explore' },
-  { id: 'property', to: PROPERTY_LIST_PATH, title: '물건', module: '목록 · 지도 · 등록', icon: 'list', group: 'property' },
+  { id: 'property', to: PROPERTY_LIST_PATH, title: '물건', module: '목록 · 지도 · 문의', icon: 'list', group: 'property' },
   { id: 'discover', to: '/discover', title: '조회', module: '주소 · 지번 공적자료 조회', icon: 'search' },
   { id: 'analysis', to: '/readiness', title: '분석', module: '준비도 · 리스크 · 수익', icon: 'analysis', group: 'analysis', advanced: 'advanced' },
   { id: 'report', to: '/report-history', title: '보고서', module: '보고서 이력 · 외부 공유', icon: 'report', group: 'report' },
   { id: 'settings', to: '/settings', title: '설정', module: '회사 · 권한 · 백업 · 연동', icon: 'settings', group: 'settings', advanced: 'integrations' },
+  { id: 'guide', to: '/guide', title: '사용설명서', module: '처음 쓰는 법 · 메뉴 안내', icon: 'guide' },
 ];
 
 export const navGroups: NavGroup[] = [
-  { id: 'property', label: '물건', summary: '등록 · 대량 등록', icon: 'groupProperty', items: [
-    { to: '/property/new', title: '새 물건 등록', icon: 'add' },
+  { id: 'property', label: '물건', summary: '문의함 · 대량 등록', icon: 'groupProperty', items: [
+    { to: '/property/new', title: '새 물건 등록', icon: 'add', menuHidden: true },
+    { to: '/inquiries', title: '매수 문의함', icon: 'inbox' },
     { to: '/import', title: '엑셀 대량 등록', icon: 'upload' },
     { to: '/bulk-intake', title: '대량 자료 등록 · 검증', module: 'Intake · Verification', icon: 'intake' },
   ]},
@@ -140,7 +144,7 @@ export function resolveRouteContext(pathname: string): RouteContext {
   const path = pathname.replace(/\/+$/, '') || '/';
   if (path === HOME_PATH) return { crumbs: [], sectionId: 'home' };
   const section = primaryNav.find((entry) => entry.to === path);
-  if (section) return { crumbs: [HOME, { label: section.id === 'property' ? '물건 목록' : section.id === 'discover' ? '주소로 물건 조회' : section.id === 'explore' ? '매물 탐색' : section.id === 'analysis' ? '준비도 센터' : section.id === 'settings' ? '회사 설정' : section.title }], sectionId: section.id, groupId: section.group };
+  if (section) return { crumbs: [HOME, { label: section.id === 'property' ? '물건 목록' : section.id === 'discover' ? '주소로 물건 조회' : section.id === 'explore' ? '매물 탐색' : section.id === 'analysis' ? '준비도 센터' : section.id === 'settings' ? '회사 설정' : section.id === 'guide' ? '사용설명서' : section.title }], sectionId: section.id, groupId: section.group };
 
   const property = path.match(/^\/property\/([^/]+)(?:\/(data-room|edit))?$/);
   if (property && property[1] !== 'new') {

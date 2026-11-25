@@ -11,7 +11,7 @@
  */
 import type { AddressLevel } from '../domain/platform/publicListing';
 import type { PublicListingSnapshot } from '../domain/platform/publicListingSnapshot';
-import { inquiryProblems, type InquiryInput } from '../domain/platform/publicInquiry';
+import { inquiryProblems, sortInquiries, type InquiryInput, type InquiryStatus, type ReceivedInquiry } from '../domain/platform/publicInquiry';
 import { remoteAuthGateway } from './authProviderService';
 import { REMOTE_OPERATIONAL_MODE } from './operationalDataMode';
 import { DAON_SUPABASE_PROJECT_URL, DAON_SUPABASE_PUBLISHABLE_KEY } from './supabaseProductionConfig';
@@ -27,7 +27,7 @@ export interface PublicListingRecord {
   publishedAt?: string;
 }
 
-export type { InquiryInput, InquiryKind } from '../domain/platform/publicInquiry';
+export type { InquiryInput, InquiryKind, InquiryStatus, ReceivedInquiry } from '../domain/platform/publicInquiry';
 
 export interface PublicListingStore {
   readonly mode: 'remote' | 'local';
@@ -38,6 +38,9 @@ export interface PublicListingStore {
   /** Buyer: a published listing by its public id, or null (unknown, withdrawn or not yet published). */
   getPublished(publicId: string): Promise<PublicListingRecord | null>;
   submitInquiry(publicId: string, input: InquiryInput): Promise<void>;
+  /** Staff inbox: every received inquiry with its listing (RLS: active staff only). */
+  listInquiries(): Promise<ReceivedInquiry[]>;
+  setInquiryStatus(id: string, status: InquiryStatus): Promise<void>;
 }
 
 export { INQUIRY_LIMITS, inquiryProblems } from '../domain/platform/publicInquiry';
@@ -144,6 +147,33 @@ export function createRemotePublicListingStore(fetchImpl: typeof fetch = (...arg
       });
       if (!response.ok) throw new Error('문의를 보내지 못했습니다. 게시가 끝난 매물이거나 입력값이 올바르지 않습니다.');
     },
+    async listInquiries() {
+      const headers = await staffHeaders();
+      const [inquiries, listings] = await Promise.all([
+        fetchImpl(`${base}/public_listing_inquiries?select=*&order=created_at.desc&limit=500`, { headers }),
+        fetchImpl(`${base}/public_listings?select=public_id,property_id,snapshot->>title`, { headers }),
+      ]);
+      if (!inquiries.ok) throw await readError(inquiries);
+      if (!listings.ok) throw await readError(listings);
+      const byPublicId = new Map(((await listings.json()) as Row[]).map((row) => [String(row.public_id), row]));
+      return sortInquiries(((await inquiries.json()) as Row[]).map((row) => {
+        const listing = byPublicId.get(String(row.public_listing_id));
+        return {
+          id: String(row.id), publicListingId: String(row.public_listing_id), kind: row.kind as ReceivedInquiry['kind'],
+          name: String(row.name ?? ''), contact: typeof row.contact === 'string' ? row.contact : null, message: String(row.message ?? ''),
+          status: (row.status as InquiryStatus) ?? 'new', createdAt: String(row.created_at ?? ''), consentAt: String(row.consent_at ?? ''),
+          propertyId: listing ? String(listing.property_id) : undefined, listingTitle: listing && typeof listing.title === 'string' ? listing.title : undefined,
+        };
+      }));
+    },
+    async setInquiryStatus(id, status) {
+      if (!UUID.test(id)) throw new Error('문의를 찾을 수 없습니다.');
+      const response = await fetchImpl(`${base}/public_listing_inquiries?id=eq.${id}&select=id`, {
+        method: 'PATCH', headers: { ...(await staffHeaders()), Prefer: 'return=representation' }, body: JSON.stringify({ status }),
+      });
+      if (!response.ok) throw await readError(response);
+      if (!((await response.json()) as Row[])[0]) throw new Error('문의 상태를 바꿀 권한이 없습니다.');
+    },
   };
 }
 
@@ -194,7 +224,24 @@ export function createLocalPublicListingStore(): PublicListingStore {
       if (problems.length) throw new Error(problems[0]);
       if (!all().some((item) => item.publicId === publicId && item.status === 'published')) throw new Error('문의를 보내지 못했습니다. 게시가 끝난 매물입니다.');
       const rows = readLocal<unknown[]>(LOCAL_INQUIRIES, []);
-      writeLocal(LOCAL_INQUIRIES, [...rows, { publicListingId: publicId, kind: input.kind, name: input.name.trim(), contact: input.contact.trim(), message: input.message.trim(), consentAt: new Date().toISOString(), status: 'new' }]);
+      const now = new Date().toISOString();
+      writeLocal(LOCAL_INQUIRIES, [...rows, { id: newPublicId(), publicListingId: publicId, kind: input.kind, name: input.name.trim(), contact: input.contact.trim(), message: input.message.trim(), consentAt: now, createdAt: now, status: 'new' }]);
+    },
+    async listInquiries() {
+      const listings = all();
+      const rows = readLocal<Array<Partial<ReceivedInquiry>>>(LOCAL_INQUIRIES, []);
+      return sortInquiries(rows.map((row, index) => {
+        const listing = listings.find((item) => item.publicId === row.publicListingId);
+        return {
+          id: row.id ?? `local-${index}`, publicListingId: String(row.publicListingId ?? ''), kind: row.kind ?? 'inquiry', name: row.name ?? '',
+          contact: row.contact ?? null, message: row.message ?? '', status: row.status ?? 'new', createdAt: row.createdAt ?? row.consentAt ?? '', consentAt: row.consentAt ?? '',
+          propertyId: listing?.propertyId, listingTitle: listing?.snapshot.title,
+        };
+      }));
+    },
+    async setInquiryStatus(id, status) {
+      const rows = readLocal<Array<Partial<ReceivedInquiry>>>(LOCAL_INQUIRIES, []);
+      writeLocal(LOCAL_INQUIRIES, rows.map((row, index) => ((row.id ?? `local-${index}`) === id ? { ...row, status } : row)));
     },
   };
 }

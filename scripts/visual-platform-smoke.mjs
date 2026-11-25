@@ -21,6 +21,9 @@ async function run(viewport, tag) {
   const overflow = async () => page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   await page.goto(`${BASE_URL}/`, { waitUntil: 'domcontentloaded' });
   await page.getByRole('button', { name: '검증된 매물 탐색' }).waitFor({ timeout: 30_000 });
+  // 2026-11-25 메인 단순화: 소개 · 비교표 · 가치 · 출처는 '소개 더 보기' 안에 접혀 있고, 펼치면 그대로 보입니다.
+  check(await page.getByRole('region', { name: '다른 부동산 사이트와 차이' }).count() === 0, `${tag} 메인: 소개 블록은 처음에 접혀 있음`);
+  await page.locator('.home-more > summary').click();
   check(await page.getByRole('region', { name: '이용자별 시작' }).count() === 1, `${tag} 메인: 이용자별 시작(매수자·중개사·건물주)`);
   check(await page.getByRole('region', { name: '다른 부동산 사이트와 차이' }).locator('tbody tr').count() === 4, `${tag} 메인: 일반 매물 사이트와 차이 4항목`);
   check(await page.getByText('준비 중', { exact: true }).count() >= 1, `${tag} 메인: 건물주 자료 제출은 준비 중으로 정직하게 표시`);

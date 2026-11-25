@@ -64,7 +64,7 @@ export default function InteriorWorkspacePage() {
   const approvedEvidencePositions = roomEvidencePositions.filter((item) => item.decision === 'approved').length;
 
   return <div className="workspace-page" style={{ padding: 28, maxWidth: 1280, margin: '0 auto' }}>
-    <header style={{ marginBottom: 24 }}><p className="eyebrow">INTERIOR INTELLIGENCE · 3D ROOM OPERATIONS</p><h1 style={{ margin: '6px 0' }}>Interior Workspace</h1><p style={{ color: '#667085' }}>실내 사진 → Vision → Human Review → 3D Room 연결 → 사진·설비 위치 검토 → 상태/리노베이션 이력 → 외부 Room Viewer로 이어지는 작업 화면입니다.</p></header>
+    <header style={{ marginBottom: 24 }}><p className="eyebrow">Interior Workspace</p><h1 style={{ margin: '6px 0' }}>실내 자료 분석</h1><p style={{ color: '#667085' }}>실내 사진 → Vision → Human Review → 3D Room 연결 → 사진·설비 위치 검토 → 상태/리노베이션 이력 → 외부 Room Viewer로 이어지는 작업 화면입니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
     <section style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, padding: 20, marginBottom: 20 }}>

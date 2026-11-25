@@ -1,8 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { activeBrand } from '../brand/activeBrand';
-import { AddRounded, ArrowBackRounded, AnalyticsRounded, FormatListBulletedRounded, HomeRounded, MenuRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, KeyboardArrowDownRounded, CloseRounded, MapOutlined, TravelExploreRounded, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
+import { AddRounded, ArrowBackRounded, AnalyticsRounded, FormatListBulletedRounded, HomeRounded, MenuRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, InboxRounded, MenuBookRounded, KeyboardArrowDownRounded, CloseRounded, MapOutlined, TravelExploreRounded, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import InfoTip from './InfoTip';
+import { helpForPath } from '../navigation/guideContent';
 import { bottomTabOf, bottomTabs, groupById, primaryNav, resolveRouteContext, type NavIconKey, type NavSection } from '../navigation/navConfig';
 
 /* Stable navigation contract markers retained for CI validators (the rendered menu comes from src/navigation/navConfig.ts;
@@ -27,6 +29,8 @@ to="/import" 엑셀 대량 등록
 to="/backup" 데이터 백업 · 복원
 to="/migration-readiness" Remote Migration 준비
 to="/settings" 회사 설정
+to="/inquiries" 매수 문의함
+to="/guide" 사용설명서
 AGENT MODULAR ARCHITECTURE
 */
 // Navigation validation contracts: to="/report-history" to="/digital-twin-intake" to="/income" to="/review-history" to="/external-shares"
@@ -35,7 +39,7 @@ const navIcons: Record<NavIconKey, ReactNode> = {
   home: <HomeRounded />, list: <FormatListBulletedRounded />, analysis: <AnalyticsRounded />, menu: <MenuRounded />, search: <SearchRounded />, add: <AddRounded />, upload: <UploadFileRounded />, intake: <FactCheckRounded />,
   readiness: <PlaylistAddCheckRounded />, review: <RateReviewRounded />, risk: <GavelRounded />, report: <HistoryRounded />, share: <ShareRounded />,
   income: <PaidRounded />, interior: <HomeWorkRounded />, spatial: <ViewInArRounded />, twinIntake: <UploadFileRounded />, twin: <ThreeDRotationRounded />,
-  roomOps: <HubRounded />, access: <AdminPanelSettingsRounded />, control: <HubRounded />, agents: <AutoAwesomeRounded />, backup: <BackupRounded />,
+  roomOps: <HubRounded />, inbox: <InboxRounded />, guide: <MenuBookRounded />, access: <AdminPanelSettingsRounded />, control: <HubRounded />, agents: <AutoAwesomeRounded />, backup: <BackupRounded />,
   migration: <CloudSyncRounded />, settings: <SettingsRounded />, explore: <TravelExploreRounded />,
   groupProperty: <ApartmentRounded />, groupVerify: <FactCheckRounded />, groupReport: <DescriptionOutlined />, groupAnalysis: <ViewInArRounded />, groupOps: <SettingsRounded />,
 };
@@ -84,7 +88,7 @@ export default function Layout() {
 
   /* One section = its own page link + its sub-pages listed underneath + an optional folded block (전문 분석 / 연동·운영). */
   const renderSection = (section: NavSection) => {
-    const sub = section.group ? groupById(section.group).items : [];
+    const sub = section.group ? groupById(section.group).items.filter((item) => !item.menuHidden) : [];
     const advanced = section.advanced ? groupById(section.advanced) : undefined;
     const sectionActive = route.sectionId === section.id;
     const foldable = sub.length > 0 || Boolean(advanced);
@@ -105,6 +109,7 @@ export default function Layout() {
     </section>;
   };
 
+  const pageHelp = helpForPath(location.pathname);
   return <div className="app-shell">{mobileNavOpen && <button type="button" className="mobile-nav-backdrop" aria-label="메뉴 닫기" tabIndex={-1} onClick={() => setMobileNavOpen(false)} />}<aside id="daon-main-drawer" aria-label={isMobile ? '전체 메뉴' : undefined} className={mobileNavOpen ? 'mobile-nav-open' : ''} inert={drawerHidden} aria-hidden={drawerHidden || undefined}>
     {isMobile && <button type="button" className="mobile-drawer-close" aria-label="메뉴 닫기" onClick={() => { setMobileNavOpen(false); toggleRef.current?.focus(); }}><CloseRounded /></button>}<Link to="/" className="brand" aria-label="DA:ON 홈"><span aria-hidden="true">{activeBrand.mark}</span><div>{activeBrand.name}<small>{activeBrand.tagline}</small></div></Link>
     <nav aria-label="DA:ON 주 메뉴" onClick={(event) => { if ((event.target as HTMLElement).closest('a')) setMobileNavOpen(false); }}>
@@ -112,11 +117,12 @@ export default function Layout() {
     </nav>
   </aside><main>
     {route.crumbs.length > 0 && <div className="shell-context-bar">
-      {route.parent && <Button size="small" className="shell-back" startIcon={<ArrowBackRounded />} onClick={() => navigate(route.parent!.to)}>{route.parent.label}</Button>}
+      {route.parent && !route.crumbs.some((crumb) => crumb.to === route.parent!.to) && <Button size="small" className="shell-back" startIcon={<ArrowBackRounded />} onClick={() => navigate(route.parent!.to)}>{route.parent.label}</Button>}
       <nav aria-label="현재 위치" className="shell-breadcrumbs"><ol>{route.crumbs.map((crumb, index) => {
         const last = index === route.crumbs.length - 1;
         return <li key={`${crumb.label}-${index}`}>{crumb.to && !last ? <Link to={crumb.to}>{crumb.label}</Link> : <span aria-current={last ? 'page' : undefined}>{crumb.label}</span>}</li>;
       })}</ol></nav>
+      {pageHelp && <InfoTip label={pageHelp.title} text={pageHelp.short} />}
     </div>}
     {propertyId && <div className="detail-document-actions"><span>MASTER 문서</span><Button size="small" startIcon={<DescriptionOutlined />} onClick={() => navigate(`/document/report/${propertyId}`)}>7P 상세보고서</Button><Button size="small" startIcon={<PictureAsPdfOutlined />} onClick={() => navigate(`/document/proposal/${propertyId}`)}>1P 요약제안서</Button><Button size="small" startIcon={<MapOutlined />} onClick={() => navigate(`/properties/${propertyId}/briefing`)}>입지 브리핑</Button></div>}
     <Outlet />
