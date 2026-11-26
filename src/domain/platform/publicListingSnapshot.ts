@@ -179,8 +179,7 @@ export function publishBlockers(property: Property, snapshot: PublicListingSnaps
   const missingOffice = missingBrokerOfficeFields(snapshot.office);
   if (missingOffice.length) reasons.push(`설정 > 중개사무소 정보에 ${missingOffice.join('·')}을(를) 입력해야 게시할 수 있습니다.`);
   // The office block is an intentional disclosure; the leak check covers everything else.
-  const { office: _office, ...rest } = snapshot;
-  const text = publicSnapshotStrings(rest as PublicListingSnapshot).join('\n');
+  const text = publicSnapshotStrings({ ...snapshot, office: undefined }).join('\n');
   const privateValues: Array<[string, unknown]> = [
     ['내부 물건 번호', property.id],
     ['상세 주소', property.detailAddress],
