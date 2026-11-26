@@ -140,6 +140,13 @@ expect(buyerRead.includes('headers: anonHeaders') && !buyerRead.includes('staffH
 expect(!/BUYER_COLUMNS = '[^']*property_id/.test(store), '구매자 조회 열에 내부 물건 번호 없음');
 expect(store.includes("status: 'draft', address_level: level") && store.includes("status: 'published', address_level: level"), '새 행은 draft로 넣고 게시는 별도 갱신(RLS: 대표·관리자만)');
 expect(/if \(pathname\.startsWith\('\/p\/'\)\)/.test(app) && app.indexOf("pathname.startsWith('/p/')") < app.indexOf('<ProductionAuthGate>'), '/p/ 공개 주소만 로그인 밖에서 열림');
+// 2026-11-21 retention: the consent text and the DB job must say the same periods (연락처 90일, 이름·내용 3년).
+{
+  const retention = readFileSync('supabase/migrations/20261121030000_daon_inquiry_contact_retention.sql', 'utf8');
+  expect(publicPage.includes('연락처는 접수일로부터 90일 뒤 삭제') && publicPage.includes('3년 보관 뒤 삭제'), '문의 동의 문구에 연락처 90일·이력 3년 보관 기간 표시');
+  expect(retention.includes("interval '90 days'") && retention.includes('set contact = null') && retention.includes("interval '3 years'") && retention.includes('cron.schedule('), '보관 작업: 90일 뒤 연락처 삭제, 3년 뒤 행 삭제, 매일 예약');
+  expect(retention.includes('contact is not null or contact_purged_at is not null'), '새 문의는 연락처 없이 넣을 수 없음');
+}
 const pub = await importTs('src/domain/platform/publicInquiry.ts');
 {
   const base = { kind: 'inquiry', name: '김매수', contact: '010-1111-2222', message: '', consent: true };
