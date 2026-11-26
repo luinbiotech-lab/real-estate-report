@@ -243,8 +243,8 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
   return <main style={{ padding: 28, maxWidth: 1380, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 18, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
       <div>
-        <p className="eyebrow">REMOTE MIGRATION · CONTROLLED RELEASE</p>
-        <h1 style={{ margin: '5px 0' }}>Migration Readiness Review</h1>
+        <p className="eyebrow">Migration Readiness Review · REMOTE MIGRATION · CONTROLLED RELEASE</p>
+        <h1 style={{ margin: '5px 0' }}>원격 이관 준비</h1>
         <p style={{ margin: 0, color: '#667085', maxWidth: 760 }}>먼저 IndexedDB 기준 dry-run 계획을 생성하고 검토합니다. 실제 Production 이관은 blocker 0, 동일 plan, 정확한 승인 문구, 최종 확인을 모두 통과한 경우에만 실행됩니다.</p>
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

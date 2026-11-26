@@ -88,7 +88,7 @@ export default function AgentOpsPage() {
   if (loading) return <div className="center"><CircularProgress /><p>Agent Operations를 준비하는 중입니다.</p></div>;
 
   return <main style={{ padding: 28, maxWidth: 1280, margin: '0 auto' }}>
-    <header style={{ marginBottom: 24 }}><p className="eyebrow">PROPERTY INTELLIGENCE ORCHESTRATOR</p><h1 style={{ margin: '6px 0' }}>Agent Operations</h1><p style={{ color: '#667085' }}>Interior Vision → Floor Plan → Space Model → Renovation → Risk / Compliance → Digital Twin 흐름을 Job·Result·Human Review로 관리합니다.</p></header>
+    <header style={{ marginBottom: 24 }}><p className="eyebrow">Agent Operations</p><h1 style={{ margin: '6px 0' }}>AI 운영 상세</h1><p style={{ color: '#667085' }}>Interior Vision → Floor Plan → Space Model → Renovation → Risk / Compliance → Digital Twin 흐름을 Job·Result·Human Review로 관리합니다.</p></header>
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
 
     <section className="ds-card" style={{ marginBottom: 20 }}>

@@ -25,3 +25,39 @@ export function inquiryProblems(input: InquiryInput): string[] {
   return problems;
 }
 
+
+/* Staff inbox (2026-11-24, pilot readiness): what a broker sees of a received inquiry. */
+export type InquiryStatus = 'new' | 'answered' | 'closed';
+export const INQUIRY_STATUS_LABEL: Record<InquiryStatus, string> = { new: '새 문의', answered: '답변함', closed: '종료' };
+export const INQUIRY_KIND_LABEL: Record<InquiryKind, string> = { inquiry: '매물 문의', report_request: '투자 보고서 요청' };
+
+export interface ReceivedInquiry {
+  id: string;
+  publicListingId: string;
+  kind: InquiryKind;
+  name: string;
+  /** null once the retention job erased it (90 days after receipt). */
+  contact: string | null;
+  message: string;
+  status: InquiryStatus;
+  createdAt: string;
+  consentAt: string;
+  /** From the staff-readable listing row; absent when the listing was removed. */
+  propertyId?: string;
+  listingTitle?: string;
+}
+
+/** tel: / mailto: link for a contact value, or undefined when it is neither. */
+export function contactHref(contact: string | null | undefined): string | undefined {
+  const value = (contact ?? '').trim();
+  if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) return `mailto:${value}`;
+  const digits = value.replace(/[^\d+]/g, '');
+  if (/^\+?\d{8,15}$/.test(digits)) return `tel:${digits}`;
+  return undefined;
+}
+
+/** New first, then newest received. */
+export function sortInquiries(rows: ReceivedInquiry[]): ReceivedInquiry[] {
+  const rank: Record<InquiryStatus, number> = { new: 0, answered: 1, closed: 2 };
+  return [...rows].sort((a, b) => rank[a.status] - rank[b.status] || b.createdAt.localeCompare(a.createdAt));
+}

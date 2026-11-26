@@ -15,9 +15,12 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1200 } });
 try {
   // 2026-11-13: the site opens on the main page (소개 · 핵심 가치 · 업무 흐름 · 최근 물건/보고서 · 출처), not straight into the list.
   await page.goto(BASE_URL, { waitUntil: 'domcontentloaded' });
-  for (const name of ['DA:ON 소개', '핵심 가치', '업무 흐름', '최근 물건', '최근 보고서', '데이터 출처와 원칙']) await page.getByRole('region', { name }).waitFor({ state: 'visible' });
+  for (const name of ['DA:ON 소개', '업무 흐름', '최근 물건', '최근 보고서']) await page.getByRole('region', { name }).waitFor({ state: 'visible' });
+  // 2026-11-25: 핵심 가치 · 데이터 출처는 '소개 더 보기' 안에 접혀 있습니다.
+  await page.locator('.home-more > summary').click();
+  for (const name of ['핵심 가치', '데이터 출처와 원칙']) await page.getByRole('region', { name }).waitFor({ state: 'visible' });
   if (await page.getByText('서버 미연결').count()) throw new Error('메인페이지에 연결 상태가 남아 있습니다.');
-  for (const text of ['근거로 확인하고', '검증된 매물 탐색', '주소로 물건 조회', '운영 물건']) await waitForText(page, text);
+  for (const text of ['근거로 확인하고', '검증된 매물 탐색', '처음이라면 사용설명서', '운영 물건']) await waitForText(page, text);
   await page.screenshot({ path: `${ARTIFACT_DIR}/home-main-page.png`, fullPage: true });
 
   await page.goto(`${BASE_URL}/properties`, { waitUntil: 'domcontentloaded' });
@@ -44,7 +47,14 @@ try {
   // IA (2026-11-13 rework): work-flow sections 홈/탐색/물건/조회/분석/보고서/설정 (탐색 added 11/15) with their sub-pages visible; 설정 holds admin only.
   const mainNav = page.getByRole('navigation', { name: 'DA:ON 주 메뉴' });
   for (const label of ['홈', '탐색', '물건', '조회', '분석', '보고서', '설정']) await mainNav.getByRole('link', { name: new RegExp(`^${label}`) }).first().waitFor({ state: 'visible' });
-  for (const label of ['새 물건 등록', '엑셀 대량 등록', '리스크 · 규제 검토', '임대 · 수익 분석', '외부 공유 센터', '사용자 · 권한 관리']) await mainNav.getByRole('link', { name: label }).waitFor({ state: 'visible' });
+  // 2026-11-19: on PC each section's sub-pages are folded unless it is the current section; its chevron unfolds them.
+  // This page is under 물건, so 물건 stays open (no toggle); the other sections start folded.
+  await mainNav.getByRole('link', { name: '엑셀 대량 등록' }).waitFor({ state: 'visible' });
+  if (await mainNav.getByRole('link', { name: '리스크 · 규제 검토' }).count()) throw new Error('PC 메뉴: 현재 구역이 아닌 하위 항목이 처음부터 펼쳐져 있습니다.');
+  for (const section of ['분석', '보고서', '설정']) await mainNav.getByRole('button', { name: new RegExp(`^${section} 하위 메뉴 \\d+개 펼치기$`) }).click();
+  // 2026-11-25: '새 물건 등록' is an action button on the pages, not a side-menu item (no duplicate buttons).
+  if (await mainNav.getByRole('link', { name: '새 물건 등록' }).count()) throw new Error('PC 메뉴: 새 물건 등록이 페이지 버튼과 중복돼 있습니다.');
+  for (const label of ['매수 문의함', '엑셀 대량 등록', '리스크 · 규제 검토', '임대 · 수익 분석', '외부 공유 센터', '사용자 · 권한 관리']) await mainNav.getByRole('link', { name: label }).waitFor({ state: 'visible' });
   // Low-frequency screens are folded: 전문 분석 under 분석, 연동 · 운영 under 설정.
   if (await mainNav.getByRole('link', { name: '공간 운영' }).count()) throw new Error('전문 분석 블록이 처음부터 펼쳐져 있습니다.');
   const advancedToggle = mainNav.getByRole('button', { name: /전문 분석/ });

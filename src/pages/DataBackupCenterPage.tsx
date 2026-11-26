@@ -115,7 +115,7 @@ export default function DataBackupCenterPage() {
 
   return <main style={{ padding: 28, maxWidth: 1320, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
-      <div><p className="eyebrow">LOCAL DATA SAFETY · FULL EXPORT / RESTORE</p><h1 style={{ margin: '5px 0' }}>Data Backup Center</h1><p style={{ margin: 0, color: '#667085' }}>부동산 플랫폼의 브라우저 로컬 데이터를 보존·복원하고, 원격 운영 전환 전 데이터 이관 상태를 사전점검합니다.</p></div>
+      <div><p className="eyebrow">Data Backup Center</p><h1 style={{ margin: '5px 0' }}>데이터 백업 · 복원</h1><p style={{ margin: 0, color: '#667085' }}>부동산 플랫폼의 브라우저 로컬 데이터를 보존·복원하고, 원격 운영 전환 전 데이터 이관 상태를 사전점검합니다.</p></div>
       <Button variant="contained" startIcon={<BackupRounded />} disabled={busy} onClick={() => void createBackup()}>전체 백업 다운로드</Button>
     </header>
 

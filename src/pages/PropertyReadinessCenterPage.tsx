@@ -14,7 +14,7 @@ type Row = { property: Property; readiness: PropertyReadinessAssessment };
 type Filter = 'all' | 'attention' | 'strong';
 
 const stateColor: Record<ReadinessState, 'success' | 'warning' | 'default'> = { ready: 'success', partial: 'warning', missing: 'default' };
-function stateLabel(state: ReadinessState) { return state === 'ready' ? 'READY' : state === 'partial' ? 'PARTIAL' : 'MISSING'; }
+function stateLabel(state: ReadinessState) { return state === 'ready' ? '완료' : state === 'partial' ? '일부' : '없음'; }
 
 export default function PropertyReadinessCenterPage() {
   const navigate = useNavigate();
@@ -79,7 +79,7 @@ export default function PropertyReadinessCenterPage() {
 
   return <div className="readiness-center" style={{ maxWidth: 1480, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
-      <div><p className="eyebrow">PROPERTY READINESS · DATA ROOM PIPELINE</p><h1 style={{ margin: '5px 0' }}>Property Readiness Center</h1><p style={{ margin: 0, color: '#667085' }}>기본정보 → 문서 → 구조화/출처 → 검증 → 미디어 → 보고서 → 3D 준비상태를 실제 저장 데이터로 점검합니다.</p></div>
+      <div><p className="eyebrow">Property Readiness Center</p><h1 style={{ margin: '5px 0' }}>준비도 센터</h1><p style={{ margin: 0, color: '#667085' }}>기본정보 → 문서 → 구조화/출처 → 검증 → 미디어 → 보고서 → 3D 준비상태를 실제 저장 데이터로 점검합니다.</p></div>
       <Button startIcon={<RefreshRounded />} onClick={() => void load()}>재검사 / 새로고침</Button>
     </header>
     {loadError && <Alert severity="error" sx={{ mb: 2 }}>{loadError}</Alert>}
@@ -91,12 +91,12 @@ export default function PropertyReadinessCenterPage() {
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
       <div style={{ background: '#10243f', color: '#fff', padding: '14px 16px', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
         <div><small style={{ color: '#d7c8a7', letterSpacing: '.1em' }}>NEXT ACTION QUEUE</small><strong style={{ display: 'block', marginTop: 3 }}>준비도 기반 다음 작업</strong></div>
-        <div style={{ display: 'flex', gap: 6 }}><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`MISSING ${missingActions}`} /><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`PARTIAL ${partialActions}`} /><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`OPENED ${openWork.length}`} /></div>
+        <div style={{ display: 'flex', gap: 6 }}><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`없음 ${missingActions}`} /><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`일부 ${partialActions}`} /><Chip size="small" sx={{ color: '#fff', borderColor: 'rgba(255,255,255,.35)' }} variant="outlined" label={`열어 봄 ${openWork.length}`} /></div>
       </div>
       {!nextActions.length && <div style={{ padding: 18, color: '#667085' }}>현재 준비도 기준으로 보완할 항목이 없습니다.</div>}
       <div style={{ display: 'grid' }}>{nextActions.slice(0, 12).map((action, index) => <div key={action.id} style={{ display: 'grid', gridTemplateColumns: '90px minmax(220px,.8fr) 150px 1fr auto', gap: 10, alignItems: 'center', padding: '11px 14px', borderTop: index === 0 ? 'none' : '1px solid #edf0f4' }}>
-        <Chip size="small" color={action.state === 'missing' ? 'default' : 'warning'} variant="outlined" label={action.state.toUpperCase()} />
-        <div><strong style={{ display: 'block', fontSize: 13 }}>{action.propertyName}</strong><small style={{ color: '#98a2b3' }}>workflow #{action.workflowOrder}{openIds.has(action.id) ? ' · OPENED' : ''}</small></div>
+        <Chip size="small" color={action.state === 'missing' ? 'default' : 'warning'} variant="outlined" label={stateLabel(action.state)} />
+        <div><strong style={{ display: 'block', fontSize: 13 }}>{action.propertyName}</strong><small style={{ color: '#98a2b3' }}>{action.workflowOrder}단계{openIds.has(action.id) ? ' · 열어 봄' : ''}</small></div>
         <strong style={{ fontSize: 13 }}>{action.stageLabel}</strong><span style={{ color: '#667085', fontSize: 12 }}>{action.detail}</span>
         <Button size="small" endIcon={<ArrowForwardRounded />} onClick={() => openAction(action)}>{openIds.has(action.id) ? '다시 보완' : '보완 화면'}</Button>
       </div>)}</div>
@@ -108,7 +108,7 @@ export default function PropertyReadinessCenterPage() {
       {!recentProgress.length && <div style={{ padding: 16, color: '#667085', fontSize: 13 }}>아직 실제 준비도 변화로 완료·개선된 작업이 없습니다. 보완 후 `재검사 / 새로고침`하면 자동 판정됩니다.</div>}
       {recentProgress.map((entry) => <div key={`${entry.id}:${entry.progressedAt}`} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 150px 1fr', gap: 10, padding: '10px 14px', borderTop: '1px solid #edf0f4', alignItems: 'center' }}>
         <Chip size="small" color={entry.status === 'completed' ? 'success' : 'warning'} variant="outlined" label={entry.status === 'completed' ? 'COMPLETED' : 'IMPROVED'} />
-        <strong style={{ fontSize: 13 }}>{entry.propertyName}</strong><span style={{ fontSize: 13 }}>{entry.stageLabel}</span><span style={{ color: '#667085', fontSize: 12 }}>{entry.initialState.toUpperCase()} → {entry.lastObservedState.toUpperCase()} · {entry.lastObservedDetail}</span>
+        <strong style={{ fontSize: 13 }}>{entry.propertyName}</strong><span style={{ fontSize: 13 }}>{entry.stageLabel}</span><span style={{ color: '#667085', fontSize: 12 }}>{stateLabel(entry.initialState)} → {stateLabel(entry.lastObservedState)} · {entry.lastObservedDetail}</span>
       </div>)}
     </section>
 
@@ -123,7 +123,7 @@ export default function PropertyReadinessCenterPage() {
         <div><button className="property-name-link" onClick={() => navigate(`/property/${property.id}`)}>{property.name}</button><small style={{ display: 'block', color: '#667085', marginTop: 4 }}>{property.address}</small><small style={{ display: 'block', color: '#98a2b3', marginTop: 2 }}>{property.propertyNumber || '물건번호 미입력'}</small></div>
         <div style={{ textAlign: 'center' }}><strong style={{ display: 'block', fontSize: 26, color: readiness.scorePct >= 80 ? '#157347' : readiness.scorePct >= 50 ? '#a26200' : '#b42318' }}>{readiness.scorePct}%</strong><small style={{ color: '#667085' }}>준비도</small></div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{readiness.stages.map((stage) => <Chip key={stage.id} size="small" clickable onClick={() => openStage(property.id, stage)} color={stateColor[stage.state]} variant={stage.state === 'ready' ? 'filled' : 'outlined'} label={`${stage.label} · ${stateLabel(stage.state)} · ${stage.detail}`} />)}</div>
-        <div style={{ display: 'flex', gap: 6, flexDirection: 'column', minWidth: 120 }}><Chip size="small" color="success" variant="outlined" label={`READY ${readiness.readyCount}`} /><Chip size="small" color="warning" variant="outlined" label={`PARTIAL ${readiness.partialCount}`} /><Chip size="small" variant="outlined" label={`MISSING ${readiness.missingCount}`} /></div>
+        <div style={{ display: 'flex', gap: 6, flexDirection: 'column', minWidth: 120 }}><Chip size="small" color="success" variant="outlined" label={`완료 ${readiness.readyCount}`} /><Chip size="small" color="warning" variant="outlined" label={`일부 ${readiness.partialCount}`} /><Chip size="small" variant="outlined" label={`없음 ${readiness.missingCount}`} /></div>
       </div></article>)}
     </section>
 

@@ -1,6 +1,6 @@
 import { AdminPanelSettingsRounded, FactCheckRounded, HistoryRounded, PaidRounded, PlaylistAddCheckRounded, RateReviewRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded } from '@mui/icons-material';
 import { Alert, Button, Chip, CircularProgress } from '@mui/material';
-import { ArrowForwardRounded, ExpandMoreRounded } from '@mui/icons-material';
+import { ExpandMoreRounded } from '@mui/icons-material';
 import { useNavigate } from 'react-router-dom';
 import { AUTH_BACKEND_CONNECTED } from '../services/accessControlService';
 import { externalShareProviderService } from '../services/externalShareProviderService';
@@ -26,7 +26,6 @@ function isRecentlyUpdated(property: Property) {
 export type PortfolioLoadState = 'loading' | 'ready' | 'error';
 
 export default function PortfolioOperationsHub({ items, loadState = 'ready', loadError = '', rejected = [], onRetry }: { items: Property[]; loadState?: PortfolioLoadState; loadError?: string; rejected?: RejectedPropertyRecord[]; onRetry?: () => void }) {
-  const navigate = useNavigate();
   // KPIs describe the operator's real inventory only; sample/demo records are reported separately (Issue #9).
   const { real: realItems, samples } = splitSampleProperties(items);
   const metrics = {
@@ -53,7 +52,6 @@ export default function PortfolioOperationsHub({ items, loadState = 'ready', loa
     {loaded && realItems.length === 0 && <div className="portfolio-empty-state" role="status">
       <strong>등록된 실제 운영 물건이 없습니다.</strong>
       <p>{samples.length > 0 ? `현재 목록의 ${samples.length}건은 샘플·테스트 자료로 분류되어 운영 물건 수에 포함하지 않습니다.` : '주소 조회로 건물을 확인한 뒤 첫 물건을 등록하세요.'}</p>
-      <Button size="small" variant="contained" onClick={() => navigate('/discover')}>주소 조회부터 시작 <ArrowForwardRounded fontSize="small" /></Button>
     </div>}
 
     {(!loaded || realItems.length > 0) && <div className="portfolio-focus-metrics">
