@@ -38,6 +38,7 @@ const ExplorePage = lazy(() => import('./pages/ExplorePage'));
 const PublicListingPreviewPage = lazy(() => import('./pages/PublicListingPreviewPage'));
 const InquiryInboxPage = lazy(() => import('./pages/InquiryInboxPage'));
 const GuidePage = lazy(() => import('./pages/GuidePage'));
+const AskPage = lazy(() => import('./pages/AskPage'));
 const PublicListingPage = lazy(() => import('./pages/PublicListingPage'));
 import { REMOTE_OPERATIONAL_MODE } from './services/operationalDataMode';
 
@@ -111,6 +112,7 @@ function AppContent() {
       <Route path="listing/:id" element={<PublicListingPreviewPage />} />
       <Route path="inquiries" element={<InquiryInboxPage />} />
       <Route path="guide" element={<GuidePage />} />
+      <Route path="ask" element={<AskPage />} />
       <Route path="control-center" element={<AgentControlCenterPage />} />
       <Route path="discover" element={<PropertyDiscoveryPage />} />
       <Route path="agents/:agentId" element={<AgentWorkspacePage />} />

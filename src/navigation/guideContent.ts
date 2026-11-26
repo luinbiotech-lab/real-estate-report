@@ -45,6 +45,7 @@ export const PAGE_HELP: PageHelp[] = [
   { path: '/control-center', title: 'AI 에이전트 관제', short: '자동 수집·검증을 맡은 AI 작업의 상태를 한눈에 봅니다.' },
   { path: '/agents', title: 'AI 운영 상세', short: 'AI 에이전트별 작업 기록과 결과를 봅니다.' },
   { path: '/migration-readiness', title: '원격 이관 준비', short: '이 기기에만 저장된 자료를 서버로 옮길 준비가 됐는지 점검합니다.' },
+  { path: '/ask', title: '세무·법률 질문', short: '마이크를 누르고 말하거나 글로 물으면 중개보수·세금을 계산해 근거와 함께 답합니다. 참고용이며 신고·계약 전 전문가 확인이 필요합니다.' },
   { path: '/guide', title: '사용설명서', short: '다온을 처음 쓰는 순서와 메뉴별 쓰임을 한 화면에 모았습니다.' },
 ];
 
