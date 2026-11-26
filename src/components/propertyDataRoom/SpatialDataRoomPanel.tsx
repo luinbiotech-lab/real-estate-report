@@ -112,7 +112,7 @@ export default function SpatialDataRoomPanel({
 
     <section>
       <div className="section-heading-row">
-        <div><p className="eyebrow">SPATIAL DATA QUALITY</p><h2>{mode === 'viewer' ? '3D / Walkthrough 준비도' : '도면 · 공간 · 미디어 준비도'}</h2></div>
+        <div><p className="eyebrow">공간 자료 품질</p><h2>{mode === 'viewer' ? '3D / Walkthrough 준비도' : '도면 · 공간 · 미디어 준비도'}</h2></div>
         <Chip size="small" color={summary.reportSpatialReady ? 'success' : 'warning'} label={summary.reportSpatialReady ? '보고서 연결 가능' : '보완 필요'} />
       </div>
       <div className="data-room-summary">
@@ -131,7 +131,7 @@ export default function SpatialDataRoomPanel({
     </section>
 
     {effectivePolicy && <section>
-      <p className="eyebrow">PROPERTY MEDIA POLICY</p>
+      <p className="eyebrow">사진 공개 정책</p>
       <h2>매물별 미디어 사용 정책</h2>
       <div className="missing-list">
         <span>내부 사진 <Chip size="small" color={effectivePolicy.allowInteriorPhotos ? 'success' : 'warning'} label={effectivePolicy.allowInteriorPhotos ? '허용' : '사용 제한'} /></span>
@@ -145,7 +145,7 @@ export default function SpatialDataRoomPanel({
 
     {mode === 'spatial' && <>
       <section>
-        <div className="section-heading-row"><div><p className="eyebrow">FLOOR PLAN PIPELINE</p><h2>도면</h2></div><Chip size="small" label={String(summary.verifiedFloorPlans) + '/' + String(summary.floorPlans) + ' 검증'} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">도면 처리</p><h2>도면</h2></div><Chip size="small" label={String(summary.verifiedFloorPlans) + '/' + String(summary.floorPlans) + ' 검증'} /></div>
         {bundle.floorPlans.length ? <div className="asset-list">{bundle.floorPlans.map((plan) => <article key={plan.id}>
           <div><b>{plan.floorLabel || plan.originalFilename}</b><span>{plan.fileType.toUpperCase()} · {FLOOR_PLAN_EXTRACTION_LABELS[plan.extractionStatus]}</span></div>
           <StatusChip status={plan.verificationStatus} />
@@ -153,7 +153,7 @@ export default function SpatialDataRoomPanel({
       </section>
 
       <section>
-        <div className="section-heading-row"><div><p className="eyebrow">SPACE MODEL</p><h2>층 · 공간 구조</h2></div><Chip size="small" label={String(summary.verifiedSpaces) + '/' + String(summary.spaces) + ' 검증'} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">공간 모델</p><h2>층 · 공간 구조</h2></div><Chip size="small" label={String(summary.verifiedSpaces) + '/' + String(summary.spaces) + ' 검증'} /></div>
         {bundle.spaces.length ? <div className="asset-list">{bundle.spaces.map((space) => <article key={space.id}>
           <div><b>{space.spaceName}</b><span>{(space.floorId || '층 미지정') + ' · ' + space.spaceType + (typeof space.areaM2 === 'number' ? ' · ' + space.areaM2.toFixed(1) + '㎡' : '')}</span></div>
           <StatusChip status={space.verificationStatus} />
@@ -161,7 +161,7 @@ export default function SpatialDataRoomPanel({
       </section>
 
       <section>
-        <div className="section-heading-row"><div><p className="eyebrow">MEDIA TO SPACE</p><h2>사진 · 영상 → 공간 매칭</h2></div><Chip size="small" color={summary.unmatchedMedia ? 'warning' : 'success'} label={'미매칭 ' + String(summary.unmatchedMedia)} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">사진 · 공간 연결</p><h2>사진 · 영상 → 공간 매칭</h2></div><Chip size="small" color={summary.unmatchedMedia ? 'warning' : 'success'} label={'미매칭 ' + String(summary.unmatchedMedia)} /></div>
         {bundle.mediaAssets.length ? <div className="asset-list">{bundle.mediaAssets.map((asset) => {
           const links = bundle.mediaSpaceLinks.filter((link) => link.mediaAssetId === asset.id);
           const best = links.find((link) => link.matchStatus === 'verified') ?? links.find((link) => link.matchStatus === 'matched') ?? links[0];
@@ -175,13 +175,13 @@ export default function SpatialDataRoomPanel({
 
     {mode === 'viewer' && <>
       {bundle.spaces.some((space) => space.geometry2d?.type === 'normalized_rect' && space.geometry2d?.coordinateSpace === 'floor_plan_image') && <section>
-        <div className="section-heading-row"><div><p className="eyebrow">SCHEMATIC 3D</p><h2>Raster 공간 박스 3D</h2></div><Chip size="small" color={rasterScaleVerified ? 'success' : 'warning'} label={rasterScaleVerified ? 'scale verified · height unknown' : 'unscaled'} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">개략 3D</p><h2>Raster 공간 박스 3D</h2></div><Chip size="small" color={rasterScaleVerified ? 'success' : 'warning'} label={rasterScaleVerified ? 'scale verified · height unknown' : 'unscaled'} /></div>
         <Suspense fallback={<div className="center"><CircularProgress size={28} /><p>공간 3D 모듈을 불러오는 중입니다.</p></div>}>
           <ThreeSchematicSpaceViewer spaces={bundle.spaces} />
         </Suspense>
       </section>}
       {Boolean(legacyTwinAssets.some((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)) && <section>
-        <div className="section-heading-row"><div><p className="eyebrow">GENERATED GLB ASSETS</p><h2>Digital Twin GLB</h2></div><Chip size="small" color="warning" label="provenance preserved" /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">생성된 3D 파일</p><h2>Digital Twin GLB</h2></div><Chip size="small" color="warning" label="provenance preserved" /></div>
         {legacyTwinAssets
           .filter((asset) => (asset.assetType === 'glb' || asset.assetType === 'gltf') && !asset.deletedAt)
           .map((asset) => <Suspense key={asset.id} fallback={<div className="center"><CircularProgress size={28} /><p>GLB 자산을 불러오는 중입니다.</p></div>}>
@@ -189,7 +189,7 @@ export default function SpatialDataRoomPanel({
           </Suspense>)}
       </section>}
       {modelEvidence.modelCount > 0 && <section>
-        <div className="section-heading-row"><div><p className="eyebrow">THREE.JS MODEL</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color={modelEvidenceComplete ? 'success' : 'warning'} label={modelEvidenceComplete ? '검증기록 충족 · 독립확인 별도' : '모델 연결 · 실측 미검증'} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">3D 모델</p><h2>GLB / GLTF Viewer</h2></div><Chip size="small" color={modelEvidenceComplete ? 'success' : 'warning'} label={modelEvidenceComplete ? '검증기록 충족 · 독립확인 별도' : '모델 연결 · 실측 미검증'} /></div>
         <Alert severity="info" sx={{ mb: 2 }}>3D 파일 연결은 실제 도면의 치수·축척·층 또는 현장 실측 검증을 의미하지 않습니다. 검증된 원본 자료와 독립 확인이 필요합니다.</Alert>
         {bundle.viewerScenes
           .filter((scene) => !scene.deletedAt && (scene.modelSourceType === 'glb' || scene.modelSourceType === 'gltf') && typeof scene.modelUrl === 'string' && scene.modelUrl.trim().length > 0)
@@ -199,11 +199,11 @@ export default function SpatialDataRoomPanel({
           </div>)}
       </section>}
       <section>
-        <div className="section-heading-row"><div><p className="eyebrow">LIGHTWEIGHT VIEWER</p><h2>층 · 공간 구조 Viewer</h2></div><Chip size="small" label={String(summary.spaces) + ' spaces'} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">간이 뷰어</p><h2>층 · 공간 구조 Viewer</h2></div><Chip size="small" label={String(summary.spaces) + ' spaces'} /></div>
         <LightweightSpatialViewer spaces={bundle.spaces} />
       </section>
       <section>
-        <div className="section-heading-row"><div><p className="eyebrow">VIEWER SCENES</p><h2>3D Viewer</h2></div><Chip size="small" label={String(summary.readyViewerScenes) + '/' + String(summary.viewerScenes) + ' 준비'} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">뷰어 장면</p><h2>3D Viewer</h2></div><Chip size="small" label={String(summary.readyViewerScenes) + '/' + String(summary.viewerScenes) + ' 준비'} /></div>
         {bundle.viewerScenes.length ? <div className="asset-list">{bundle.viewerScenes.map((scene) => <article key={scene.id}>
           <div><b>{scene.title}</b><span>{scene.sceneType + ' · ' + scene.generationStatus}</span></div>
           <StatusChip status={scene.verificationStatus} />
@@ -211,7 +211,7 @@ export default function SpatialDataRoomPanel({
       </section>
 
       <section>
-        <div className="section-heading-row"><div><p className="eyebrow">WALKTHROUGH</p><h2>이동 경로</h2></div><Chip size="small" color={summary.walkthroughReady ? 'success' : 'default'} label={summary.walkthroughReady ? '준비됨' : '미구성'} /></div>
+        <div className="section-heading-row"><div><p className="eyebrow">둘러보기</p><h2>이동 경로</h2></div><Chip size="small" color={summary.walkthroughReady ? 'success' : 'default'} label={summary.walkthroughReady ? '준비됨' : '미구성'} /></div>
         {bundle.walkthroughRoutes.length ? <div className="asset-list">{bundle.walkthroughRoutes.map((route) => {
           const steps = bundle.walkthroughSteps.filter((step) => step.routeId === route.id).sort((a, b) => a.sequenceOrder - b.sequenceOrder);
           return <article key={route.id}>
@@ -222,7 +222,7 @@ export default function SpatialDataRoomPanel({
       </section>
 
       <section>
-        <p className="eyebrow">NEXT ACTION</p>
+        <p className="eyebrow">다음 할 일</p>
         <h2>3D 원본 연결</h2>
         <p className="readiness-copy">정밀 BIM을 먼저 만들지 않고 도면/공간/미디어가 검증된 뒤 lightweight viewer를 생성합니다.</p>
         {onOpenDigitalTwinIntake && <Button variant="contained" onClick={onOpenDigitalTwinIntake}>도면 · 3D 자료 등록/추가</Button>}

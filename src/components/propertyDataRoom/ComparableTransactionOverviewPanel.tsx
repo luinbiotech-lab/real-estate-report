@@ -60,7 +60,7 @@ export default function ComparableTransactionOverviewPanel({ sources, onOpenMark
 
   return <section style={{ gridColumn: '1 / -1', border: '1px solid #dfe5ec', borderRadius: 12, background: '#fff', overflow: 'hidden' }}>
     <div style={{ padding: '15px 18px', background: '#f7f9fb', borderBottom: '1px solid #e5eaf0', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><TrendingUpRounded color="primary" /><div><p className="eyebrow" style={{ margin: 0 }}>MARKET COMPARABLES</p><h2 style={{ margin: '3px 0 0' }}>비교거래 요약</h2></div></div>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}><TrendingUpRounded color="primary" /><div><p className="eyebrow" style={{ margin: 0 }}>주변 거래 비교</p><h2 style={{ margin: '3px 0 0' }}>비교거래 요약</h2></div></div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}><Chip size="small" variant="outlined" label={`${rows.length}건`} />{source && <Chip size="small" variant="outlined" color={source.verificationStatus === 'verified' || source.verificationStatus === 'confirmed' ? 'success' : source.verificationStatus === 'imported' ? 'info' : 'warning'} label={VERIFICATION_LABELS[source.verificationStatus]} />}</div>
     </div>
 

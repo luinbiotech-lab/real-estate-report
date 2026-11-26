@@ -280,7 +280,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
         <div style={{ display: 'grid', gap: 14 }}>
           <section style={{ background: '#fff', border: `1px solid ${plan.readyForRemoteWrite ? '#b9d8c4' : '#edc5c5'}`, borderRadius: 14, padding: 18 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div><p className="eyebrow">MIGRATION GATE</p><h2 style={{ margin: '4px 0' }}>{plan.readyForRemoteWrite ? 'READY FOR REMOTE WRITE REVIEW' : 'BLOCKED BEFORE REMOTE WRITE'}</h2></div>
+              <div><p className="eyebrow">이관 관문</p><h2 style={{ margin: '4px 0' }}>{plan.readyForRemoteWrite ? 'READY FOR REMOTE WRITE REVIEW' : 'BLOCKED BEFORE REMOTE WRITE'}</h2></div>
               <Chip color={plan.readyForRemoteWrite ? 'success' : 'error'} label={plan.readyForRemoteWrite ? 'BLOCKER 0' : `BLOCKER ${plan.blockers.length}`} />
             </div>
             <p style={{ color: '#667085', marginBottom: 0 }}>대상 {targetProperty?.name || targetPropertyId} · schema {plan.schemaVersion} · 생성 {new Date(plan.generatedAt).toLocaleString('ko-KR')} · dryRun={String(plan.dryRun)} · networkWrites={plan.networkWrites}</p>
@@ -288,7 +288,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
 
           <section className="ds-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div><p className="eyebrow">CONTENT READINESS · NON-BLOCKING</p><h2 style={{ margin: '4px 0' }}>Data Room 완성도</h2></div>
+              <div><p className="eyebrow">자료 준비도 · 진행 가능</p><h2 style={{ margin: '4px 0' }}>Data Room 완성도</h2></div>
               <Chip
                 size="small"
                 color={contentReadiness &&
@@ -321,13 +321,13 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
           </section>
 
           <section className="ds-card">
-            <p className="eyebrow">BLOCKER REVIEW</p><h2 style={{ margin: '4px 0 12px' }}>차단 항목</h2>
+            <p className="eyebrow">막힌 항목 검토</p><h2 style={{ margin: '4px 0 12px' }}>차단 항목</h2>
             {!plan.blockers.length && <Alert severity="success"><strong>구조적 blocker가 없습니다.</strong> 이것은 실제 Supabase migration 승인이나 production READY를 의미하지 않습니다.</Alert>}
             {!!plan.blockers.length && <div style={{ display: 'grid', gap: 8 }}>{plan.blockers.map((blocker, index) => <div key={`${blocker.code}-${blocker.store}-${blocker.id ?? index}`} style={{ border: '1px solid #efcaca', background: '#fffafa', borderRadius: 10, padding: 12 }}><div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 6 }}><Chip size="small" color="error" label={blocker.code} /><Chip size="small" variant="outlined" label={blocker.store} />{blocker.id && <Chip size="small" variant="outlined" label={blocker.id} />}</div><strong>{blocker.message}</strong>{blocker.propertyId && <small style={{ display: 'block', color: '#667085', marginTop: 4 }}>propertyId: {blocker.propertyId}</small>}</div>)}</div>}
           </section>
 
           <section className="ds-card">
-            <p className="eyebrow">CONTROLLED PRODUCTION RELEASE</p><h2 style={{ margin: '4px 0 10px' }}>Production 이관 승인</h2>
+            <p className="eyebrow">운영 반영 절차</p><h2 style={{ margin: '4px 0 10px' }}>Production 이관 승인</h2>
             <Alert severity="warning" sx={{ mb: 1.5 }}>이 작업은 원격 DB와 private Storage를 변경합니다. Dry-run 이후 데이터가 바뀌면 반드시 다시 Dry-run을 실행해야 합니다.</Alert>
             <Alert severity="info" sx={{ mb: 1.5 }}><strong>INITIAL MIGRATION · NO OVERWRITE</strong> · 같은 propertyId가 Production에 이미 존재하면 실행기는 쓰기 전에 중단합니다. 기존 원격 Property 갱신은 별도 동기화 워크플로로 분리합니다.</Alert>
             <Alert severity="warning" sx={{ mb: 1.5 }}><strong>PARTIAL WRITE SAFETY</strong> · 모든 local binary와 기존 원격 Property 충돌은 첫 write 전에 검사합니다. 이후 네트워크/서버 오류로 실행이 중단되면 성공으로 처리하지 않으며, 재실행 전에 원격 상태를 확인하고 reconciliation 기준으로 판단해야 합니다.</Alert>
@@ -340,7 +340,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
           </section>
 
           <section className="ds-card">
-            <p className="eyebrow">STORAGE PLAN</p><h2 style={{ margin: '4px 0 12px' }}>Private Storage 업로드 예정</h2>
+            <p className="eyebrow">저장소 계획</p><h2 style={{ margin: '4px 0 12px' }}>Private Storage 업로드 예정</h2>
             {!plan.assetUploads.length && <p style={{ color: '#667085' }}>업로드 예정 asset이 없습니다.</p>}
             {!!plan.assetUploads.length && <div style={{ display: 'grid', gap: 7 }}>{plan.assetUploads.slice(0, 40).map((asset) => <div key={`${asset.resourceType}-${asset.id}`} style={{ display: 'grid', gridTemplateColumns: '110px minmax(0,1fr) 150px', gap: 10, padding: '9px 10px', border: '1px solid #e4e9ef', borderRadius: 9, alignItems: 'center', fontSize: 12 }}><strong>{asset.resourceType}</strong><span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{asset.storagePath}</span><span>{asset.binarySource}{asset.fileSize != null ? ` · ${(asset.fileSize / 1024 / 1024).toFixed(1)} MiB` : ''}</span></div>)}</div>}
             {plan.assetUploads.length > 40 && <p style={{ color: '#667085', fontSize: 12 }}>외 {plan.assetUploads.length - 40}건은 JSON manifest에서 확인할 수 있습니다.</p>}
@@ -349,13 +349,13 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
 
         <aside style={{ display: 'grid', gap: 14, position: 'sticky', top: 24 }}>
           <section style={{ background: '#10243f', color: '#fff', borderRadius: 14, padding: 18 }}>
-            <p className="eyebrow" style={{ color: '#d7c8a7' }}>SAFETY BOUNDARY</p><h2 style={{ margin: '4px 0 12px' }}>Dry-run과 Production 실행 분리</h2>
+            <p className="eyebrow" style={{ color: '#d7c8a7' }}>안전 경계</p><h2 style={{ margin: '4px 0 12px' }}>Dry-run과 Production 실행 분리</h2>
             <div style={{ display: 'grid', gap: 8, fontSize: 13 }}><div>Dry-run writes <strong style={{ float: 'right' }}>{plan.networkWrites}</strong></div><div>Blockers <strong style={{ float: 'right' }}>{plan.blockers.length}</strong></div><div>Explicit phrase <strong style={{ float: 'right' }}>REQUIRED</strong></div><div>Final confirm <strong style={{ float: 'right' }}>REQUIRED</strong></div></div>
           </section>
 
           <section className="ds-card">
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-              <div><p className="eyebrow">PRODUCTION ACCEPTANCE · EXTERNAL GATES</p><h2 style={{ margin: '4px 0' }}>실운영 승인 전 남은 항목</h2></div>
+              <div><p className="eyebrow">운영 승인 · 외부 확인</p><h2 style={{ margin: '4px 0' }}>실운영 승인 전 남은 항목</h2></div>
               <Chip size="small" color="warning" label="NOT PRODUCTION READY" />
             </div>
             <Alert severity="warning" sx={{ my: 1.25 }}>Migration BLOCKER 0과 실제 Production READY는 다릅니다. 아래 외부 운영 항목은 코드가 임의 완료 처리하지 않습니다.</Alert>
@@ -376,7 +376,7 @@ export default function RemoteMigrationReadinessPage({ settings }: Props) {
           </section>
 
           <section className="ds-card">
-            <p className="eyebrow">REHEARSAL CHECKLIST</p><h2 style={{ margin: '4px 0 12px' }}>실제 연결 전 순서</h2>
+            <p className="eyebrow">리허설 점검표</p><h2 style={{ margin: '4px 0 12px' }}>실제 연결 전 순서</h2>
             <div style={{ display: 'grid', gap: 10 }}>{rehearsal.map((item, index) => <div key={item} style={{ display: 'grid', gridTemplateColumns: '28px 1fr', gap: 8, alignItems: 'start' }}><span style={{ width: 24, height: 24, display: 'grid', placeItems: 'center', borderRadius: 20, background: '#edf3f8', color: '#073a69', fontWeight: 800, fontSize: 12 }}>{index + 1}</span><span style={{ fontSize: 12, lineHeight: 1.55 }}>{item}</span></div>)}</div>
           </section>
 

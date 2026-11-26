@@ -16,9 +16,9 @@ try {
   await page.goto(`${BASE_URL}/settings`, { waitUntil: 'domcontentloaded' });
   for (const text of [
     '회사 설정',
-    'BRAND IDENTITY',
-    'DEFAULT CONTACT',
-    'REPORT POLICY',
+    '브랜드',
+    '기본 담당자',
+    '보고서 연락처 정책',
     '보고서 연락처 미리보기',
     '휴대폰과 이메일만 사용합니다',
     '기존 물건 담당자 자동 덮어쓰기 없음',

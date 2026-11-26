@@ -30,15 +30,15 @@ for (const marker of [
   'Dry-Run 실행',
   'Manifest JSON 다운로드',
   'Handoff Bundle 다운로드',
-  'BLOCKER REVIEW',
-  'STORAGE PLAN',
-  'REHEARSAL CHECKLIST',
+  '막힌 항목 검토',
+  '저장소 계획',
+  '리허설 점검표',
   'remoteMigrationDryRunService.run',
   'propertyIds: [targetPropertyId]',
   '이관 대상 물건',
   'remoteMigrationDryRunService.download',
   'remoteMigrationHandoffService.download',
-  'CONTROLLED PRODUCTION RELEASE',
+  '운영 반영 절차',
   'Production 이관 최종 확인',
   'Phase 1 패키지 연결 + Dry-Run',
   'importBangbaePhase1Package',
@@ -108,7 +108,7 @@ if (text.dryRun.includes("db.get('settings'") || text.dryRun.includes("db.getAll
 
 
 for (const marker of [
-  'CONTENT READINESS · NON-BLOCKING',
+  '자료 준비도 · 진행 가능',
   'Data Room 완성도',
   'STRUCTURAL MIGRATION READY ≠ DATA ROOM COMPLETE.',
   'CONTENT INCOMPLETE',
@@ -129,7 +129,7 @@ if (!text.page.includes('Supabase Auth Leaked Password Protection guarded workfl
 }
 
 for (const marker of [
-  'PRODUCTION ACCEPTANCE · EXTERNAL GATES',
+  '운영 승인 · 외부 확인',
   '실운영 승인 전 남은 항목',
   'NOT PRODUCTION READY',
   '실사용 OWNER 로그인 · profile/role acceptance',

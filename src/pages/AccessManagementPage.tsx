@@ -24,6 +24,9 @@ const AUTH_CAPABILITY_LABELS = [
   ['multiDevicePersistence', '멀티디바이스 동기화'],
 ] as const;
 
+/** Plain Korean role names for the operator-facing parts; the technical matrix keeps ROLE_LABELS. */
+const ROLE_KO: Record<AccessRole, string> = { owner: '대표 관리자', admin: '관리', editor: '편집', viewer: '조회' };
+
 export default function AccessManagementPage() {
   const [profiles, setProfiles] = useState<AccessProfile[]>(() => accessControlService.listProfiles());
   const [displayName, setDisplayName] = useState('');
@@ -194,19 +197,62 @@ export default function AccessManagementPage() {
   return <main style={{ padding: 28, maxWidth: 1380, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
       <div>
-        <p className="eyebrow">USER · ROLE · ACCESS POLICY</p>
+        <p className="eyebrow">사용자 · 역할 · 권한</p>
         <h1 style={{ margin: '5px 0' }}>사용자 · 권한 관리</h1>
-        <p style={{ margin: 0, color: '#667085' }}>로컬 역할정책과 production Supabase Auth/RLS를 함께 관리합니다. 실제 원격 권한은 서버 RLS가 최종 강제합니다.</p>
+        <p style={{ margin: 0, color: '#667085' }}>함께 쓰는 사람을 초대하고 역할(조회·편집·관리)을 정합니다. 실제 권한은 서버가 최종 확인합니다.</p>
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Chip color="success" icon={<ShieldRounded />} label="LOCAL POLICY READY" />
-        <Chip color="success" icon={<LockPersonRounded />} label="REMOTE AUTH BACKEND CONNECTED" />
-        <Chip color={remoteSession?.role === 'owner' ? 'warning' : 'default'} label={remoteSession?.role === 'owner' ? 'OWNER SESSION · ACCEPTANCE PENDING' : 'REAL OPERATOR OWNER REQUIRED'} />
-      </div>
+      <Chip color={remoteSession ? 'success' : 'default'} icon={<LockPersonRounded />} label={remoteSession ? `로그인됨 · ${ROLE_KO[remoteSession.role]}` : '로그인 필요'} />
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
+    {remoteSession?.role === 'owner' && <section style={{ background: '#fff', border: '1px solid #b7d8c2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div><strong style={{ fontSize: 16 }}>사용자 초대 · 권한</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>관리자만 볼 수 있습니다. 초대 메일을 보내고 역할과 사용 여부를 바꿉니다.</p></div>
+        <Button size="small" variant="outlined" disabled={remoteBusy} onClick={() => void loadRemoteProfiles()}>목록 새로고침</Button>
+      </div>
+      <Alert severity="info" sx={{ my: 1.25 }}>안전장치: 마지막 active OWNER 강등·비활성화, self-promotion, 비인가 role 변경은 UI가 아니라 Edge Function/RLS가 최종 차단합니다.</Alert>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 8, marginBottom: 12 }}>
+        <TextField size="small" label="초대 이메일" type="email" value={remoteInviteEmail} onChange={(event) => setRemoteInviteEmail(event.target.value)} />
+        <TextField size="small" label="표시명(선택)" value={remoteInviteName} onChange={(event) => setRemoteInviteName(event.target.value)} />
+        <TextField select size="small" label="초대 역할" value={remoteInviteRole} onChange={(event) => setRemoteInviteRole(event.target.value as AccessRole)}>{ROLES.map((role) => <MenuItem key={role} value={role}>{ROLE_KO[role]}</MenuItem>)}</TextField>
+        <Button variant="contained" startIcon={<PersonAddAltRounded />} disabled={remoteBusy || !remoteInviteEmail} onClick={() => void inviteRemoteUser()}>초대 메일 보내기</Button>
+      </div>
+      <div style={{ display: 'grid', gap: 8 }}>
+        {remoteProfiles.map((profile) => <div key={profile.userId} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 8, alignItems: 'center', border: '1px solid #e7ebf0', borderRadius: 10, padding: 10 }}>
+          <div><strong style={{ display: 'block', fontSize: 13 }}>{profile.displayName || profile.email || profile.userId}</strong><small style={{ color: '#667085' }}>{profile.email || '이메일 미확인'} · {profile.active ? '사용 중' : '중지됨'}</small></div>
+          <TextField select size="small" value={profile.role} disabled={remoteBusy} onChange={(event) => void updateRemoteRole(profile, event.target.value as AccessRole)}>{ROLES.map((role) => <MenuItem key={role} value={role}>{ROLE_KO[role]}</MenuItem>)}</TextField>
+          <Button size="small" color={profile.active ? 'warning' : 'success'} disabled={remoteBusy} onClick={() => void toggleRemoteActive(profile)}>{profile.active ? '비활성화' : '활성화'}</Button>
+        </div>)}
+        {!remoteProfiles.length && <p style={{ color: '#7b8794', margin: 0 }}>사용자 목록을 아직 불러오지 않았습니다. '목록 새로고침'을 눌러 주세요.</p>}
+      </div>
+    </section>}
+    <section className="ds-card" style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div>
+          <strong>로그인 상태</strong>
+          <p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>운영 서버 계정으로 로그인합니다. 탭을 닫으면 자동으로 로그아웃됩니다.</p>
+        </div>
+        <Chip size="small" color={remoteSession ? 'success' : 'default'} label={remoteSession ? `로그인됨 · ${ROLE_KO[remoteSession.role]}` : '로그아웃 상태'} />
+      </div>
+      {remoteSession ? <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <span><strong>{remoteSession.displayName || remoteSession.email || remoteSession.userId}</strong></span>
+        <span style={{ color: '#667085', fontSize: 12 }}>{remoteSession.email}</span>
+        <Button variant="outlined" disabled={remoteBusy} onClick={signOutRemote}>로그아웃</Button>
+      </div> : <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 10 }}>
+        <TextField size="small" label="이메일" type="email" autoComplete="username" value={remoteEmail} onChange={(event) => setRemoteEmail(event.target.value)} />
+        <TextField size="small" label="비밀번호" type="password" autoComplete="current-password" value={remotePassword} onChange={(event) => setRemotePassword(event.target.value)} />
+        <Button variant="contained" disabled={remoteBusy || !remoteEmail || !remotePassword} onClick={signInRemote}>로그인</Button>
+      </div>}
+    </section>
+
+    <details className="tech-details">
+      <summary>기술 상세 (개발 · 점검용)</summary>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>
+        <Chip color="success" icon={<ShieldRounded />} label="LOCAL POLICY READY" />
+        <Chip color="success" icon={<LockPersonRounded />} label="REMOTE AUTH BACKEND CONNECTED" />
+        <Chip color={remoteSession?.role === 'owner' ? 'warning' : 'default'} label={remoteSession?.role === 'owner' ? 'OWNER SESSION · ACCEPTANCE PENDING' : 'REAL OPERATOR OWNER REQUIRED'} />
+      </div>
     <Alert severity="info" sx={{ mb: 1.5 }}>로컬 정책 프로필은 `{ACCESS_STORAGE_KEY}`에 별도 유지됩니다. REMOTE AUTH는 production Supabase에 연결됐으며 로그인 후 서버 profile과 RLS가 적용됩니다. 비밀번호는 저장하지 않으며 Auth token은 같은 탭의 sessionStorage에만 보관합니다.</Alert>
     <Alert severity="warning" sx={{ mb: 1.5 }}><strong>PRODUCTION SECURITY · MANUAL CHECK REQUIRED</strong> · Supabase Auth의 Leaked Password Protection 활성화 여부는 운영 승인 전에 Dashboard에서 직접 확인해야 합니다. 브라우저 UI는 이 설정을 자동으로 READY 처리하지 않습니다.</Alert>
 
@@ -223,24 +269,6 @@ export default function AccessManagementPage() {
       </div>)}
     </section>
 
-    <section className="ds-card" style={{ marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div>
-          <strong>REMOTE AUTH SESSION</strong>
-          <p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>Production Supabase 로그인 · sessionStorage token store · refresh 유지</p>
-        </div>
-        <Chip size="small" color={remoteSession ? 'success' : 'default'} label={remoteSession ? `SIGNED IN · ${remoteSession.role.toUpperCase()}` : 'SIGNED OUT'} />
-      </div>
-      {remoteSession ? <div style={{ marginTop: 12, display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <span><strong>{remoteSession.displayName || remoteSession.email || remoteSession.userId}</strong></span>
-        <span style={{ color: '#667085', fontSize: 12 }}>{remoteSession.email}</span>
-        <Button variant="outlined" disabled={remoteBusy} onClick={signOutRemote}>로그아웃</Button>
-      </div> : <div style={{ marginTop: 12, display: 'grid', gridTemplateColumns: 'minmax(220px,1fr) minmax(220px,1fr) auto', gap: 10 }}>
-        <TextField size="small" label="이메일" type="email" autoComplete="username" value={remoteEmail} onChange={(event) => setRemoteEmail(event.target.value)} />
-        <TextField size="small" label="비밀번호" type="password" autoComplete="current-password" value={remotePassword} onChange={(event) => setRemotePassword(event.target.value)} />
-        <Button variant="contained" disabled={remoteBusy || !remoteEmail || !remotePassword} onClick={signInRemote}>REMOTE 로그인</Button>
-      </div>}
-    </section>
 
     <section className="ds-card" style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -269,27 +297,6 @@ export default function AccessManagementPage() {
       </div>
     </section>}
 
-    {remoteSession?.role === 'owner' && <section style={{ background: '#fff', border: '1px solid #b7d8c2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
-        <div><strong>REMOTE USER ADMIN · OWNER ONLY</strong><p style={{ margin: '4px 0 0', color: '#667085', fontSize: 12 }}>Production Supabase profile과 server-side owner-only administration을 직접 사용합니다.</p></div>
-        <Button size="small" variant="outlined" disabled={remoteBusy} onClick={() => void loadRemoteProfiles()}>서버 프로필 새로고침</Button>
-      </div>
-      <Alert severity="info" sx={{ my: 1.25 }}>마지막 active OWNER 강등·비활성화, self-promotion, 비인가 role 변경은 UI가 아니라 Edge Function/RLS가 최종 차단합니다.</Alert>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 160px auto', gap: 8, marginBottom: 12 }}>
-        <TextField size="small" label="초대 이메일" type="email" value={remoteInviteEmail} onChange={(event) => setRemoteInviteEmail(event.target.value)} />
-        <TextField size="small" label="표시명(선택)" value={remoteInviteName} onChange={(event) => setRemoteInviteName(event.target.value)} />
-        <TextField select size="small" label="초대 역할" value={remoteInviteRole} onChange={(event) => setRemoteInviteRole(event.target.value as AccessRole)}>{ROLES.map((role) => <MenuItem key={role} value={role}>{ROLE_LABELS[role]}</MenuItem>)}</TextField>
-        <Button variant="contained" startIcon={<PersonAddAltRounded />} disabled={remoteBusy || !remoteInviteEmail} onClick={() => void inviteRemoteUser()}>REMOTE 초대</Button>
-      </div>
-      <div style={{ display: 'grid', gap: 8 }}>
-        {remoteProfiles.map((profile) => <div key={profile.userId} style={{ display: 'grid', gridTemplateColumns: 'minmax(260px,1fr) 160px 110px', gap: 8, alignItems: 'center', border: '1px solid #e7ebf0', borderRadius: 10, padding: 10 }}>
-          <div><strong style={{ display: 'block', fontSize: 13 }}>{profile.displayName || profile.email || profile.userId}</strong><small style={{ color: '#667085' }}>{profile.email || 'email 미확인'} · {profile.active ? 'ACTIVE' : 'INACTIVE'}</small></div>
-          <TextField select size="small" value={profile.role} disabled={remoteBusy} onChange={(event) => void updateRemoteRole(profile, event.target.value as AccessRole)}>{ROLES.map((role) => <MenuItem key={role} value={role}>{ROLE_LABELS[role]}</MenuItem>)}</TextField>
-          <Button size="small" color={profile.active ? 'warning' : 'success'} disabled={remoteBusy} onClick={() => void toggleRemoteActive(profile)}>{profile.active ? '비활성화' : '활성화'}</Button>
-        </div>)}
-        {!remoteProfiles.length && <p style={{ color: '#7b8794', margin: 0 }}>서버 profile 목록을 아직 불러오지 않았습니다.</p>}
-      </div>
-    </section>}
 
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(160px,1fr))', gap: 10, marginBottom: 16 }}>
       {[
@@ -335,5 +342,6 @@ export default function AccessManagementPage() {
     </section>
 
     <Alert severity="warning" sx={{ mt: 1.5 }}>LOCAL POLICY 프로필은 UI 정책 테스트용이며 실제 원격 보안 권한이 아닙니다. REMOTE 데이터 접근은 production Auth 세션과 서버 RLS가 강제합니다.</Alert>
+    </details>
   </main>;
 }

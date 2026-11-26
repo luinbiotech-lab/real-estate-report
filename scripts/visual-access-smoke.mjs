@@ -14,6 +14,10 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1300 } });
 
 try {
   await page.goto(`${BASE_URL}/access`, { waitUntil: 'domcontentloaded' });
+  // 2026-11-26: operator view first (로그인 상태 · 사용자 초대); the technical boundary sits in a collapsed details.
+  await waitForText(page, '로그인 상태');
+  await waitForText(page, '로그아웃 상태');
+  await page.locator('.tech-details > summary').click();
   for (const text of [
     '사용자 · 권한 관리',
     'LOCAL POLICY READY',
@@ -26,8 +30,6 @@ try {
     'RLS 강제',
     'OWNER 전용 관리',
     '멀티디바이스 동기화',
-    'REMOTE AUTH SESSION',
-    'SIGNED OUT',
     'ROLE MATRIX',
     'OWNER',
     'ADMIN',
@@ -49,6 +51,8 @@ try {
   await page.screenshot({ path: `${ARTIFACT_DIR}/access-management.png`, fullPage: true });
 
   await page.goto(`${BASE_URL}/external-shares`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '외부 공유 센터');
+  await page.locator('.tech-details > summary').click();
   for (const text of [
     '외부 공유 센터',
     'LOCAL / OFFLINE',

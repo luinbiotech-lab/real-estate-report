@@ -88,7 +88,7 @@ export default function LocationPanel({ property, onOpenBriefing, onEdit, onSave
 
   return <section className="location-panel" aria-label="입지 · 주변">
     <header className="market-position-head">
-      <div><p className="eyebrow">LOCATION</p><h2>입지 · 주변</h2></div>
+      <div><p className="eyebrow">위치</p><h2>입지 · 주변</h2></div>
       <span className="market-position-tags">
         <span className="tag">{summary.coordinates ? '좌표 저장됨' : '좌표 미저장'}</span>
         {summary.kakaoCount > 0 && <span className="tag">카카오 POI 후보 {summary.kakaoCount}</span>}

@@ -126,7 +126,7 @@ export default function DataBackupCenterPage() {
 
     <section className="ds-card" style={{ marginBottom: 16 }} data-testid="remote-migration-dry-run">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div><p className="eyebrow">REMOTE MIGRATION · DRY RUN ONLY</p><h2 style={{ margin: '4px 0' }}>원격 전환 사전점검</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>IndexedDB의 Property/Data Room/Agent/3D/Report 데이터를 원격 schema와 private Storage 구조로 옮길 수 있는지 검사합니다. 실제 원격 쓰기는 실행하지 않습니다.</p></div>
+        <div><p className="eyebrow">원격 이관 사전점검(읽기 전용)</p><h2 style={{ margin: '4px 0' }}>원격 전환 사전점검</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>IndexedDB의 Property/Data Room/Agent/3D/Report 데이터를 원격 schema와 private Storage 구조로 옮길 수 있는지 검사합니다. 실제 원격 쓰기는 실행하지 않습니다.</p></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button variant="outlined" startIcon={<FactCheckRounded />} disabled={busy} onClick={() => void runMigrationDryRun()}>Dry Run 실행</Button>
           <Button variant="contained" startIcon={<DownloadRounded />} disabled={!dryRun || busy} onClick={() => dryRun && remoteMigrationDryRunService.download(dryRun.plan)}>Manifest 다운로드</Button>
@@ -163,7 +163,7 @@ export default function DataBackupCenterPage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(340px,.75fr)', gap: 16, alignItems: 'start' }}>
       <div style={{ display: 'grid', gap: 14 }}>
         <section className="ds-card">
-          <p className="eyebrow">BACKUP SCOPE</p><h2 style={{ margin: '4px 0 12px' }}>백업 범위</h2>
+          <p className="eyebrow">백업 범위</p><h2 style={{ margin: '4px 0 12px' }}>백업 범위</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
             {['물건 / 회사설정', 'Data Room 문서·미디어', '검증 / Provenance', '보고서 Snapshot', '3D / Digital Twin', 'Agent / Review / Risk', '외부 공유 이력', 'Room / Renovation', 'daon: 로컬 운영상태'].map((item) => <div key={item} style={{ padding: 11, background: '#f7f9fb', borderRadius: 9, fontSize: 12 }}>{item}</div>)}
           </div>
@@ -171,7 +171,7 @@ export default function DataBackupCenterPage() {
         </section>
 
         <section className="ds-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><div><p className="eyebrow">RESTORE PREVIEW</p><h2 style={{ margin: '4px 0' }}>백업 파일 검사</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>복원 전에 스키마와 레코드 수를 먼저 확인합니다.</p></div><Button component="label" startIcon={<UploadFileRounded />}>백업 파일 선택<input hidden type="file" accept="application/json,.json" onChange={(event) => void selectBackup(event)} /></Button></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><div><p className="eyebrow">복원 미리보기</p><h2 style={{ margin: '4px 0' }}>백업 파일 검사</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>복원 전에 스키마와 레코드 수를 먼저 확인합니다.</p></div><Button component="label" startIcon={<UploadFileRounded />}>백업 파일 선택<input hidden type="file" accept="application/json,.json" onChange={(event) => void selectBackup(event)} /></Button></div>
           {busy && <div style={{ padding: 24, textAlign: 'center' }}><CircularProgress size={24} /></div>}
           {!busy && !preview && <div style={{ padding: 26, marginTop: 14, border: '1px dashed #ccd5df', borderRadius: 10, textAlign: 'center', color: '#667085' }}>선택된 백업 파일이 없습니다.</div>}
           {bangbaePhase1Package && <Alert severity="info" sx={{ mt: 1.5 }}><strong>방배동 815-11 Phase 1 패키지 감지</strong> · 공적자료 4종을 기존 데이터에 병합하고 방배동만 대상으로 Dry Run을 즉시 실행할 수 있습니다.</Alert>}
@@ -184,7 +184,7 @@ export default function DataBackupCenterPage() {
       </div>
 
       <aside className="ds-card" style={{ position: 'sticky', top: 24 }}>
-        <p className="eyebrow">RESTORE MODE</p><h2 style={{ margin: '4px 0 12px' }}>복원 실행</h2>
+        <p className="eyebrow">복원 방식</p><h2 style={{ margin: '4px 0 12px' }}>복원 실행</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           <div style={{ padding: 12, border: '1px solid #dfe5ec', borderRadius: 10 }}><strong>MERGE</strong><p style={{ margin: '5px 0 10px', color: '#667085', fontSize: 12 }}>현재 데이터를 유지하면서 같은 key는 백업 값으로 갱신하고 없는 레코드는 추가합니다.</p><Button fullWidth variant="outlined" startIcon={<RestoreRounded />} disabled={!backup || busy} onClick={() => void restore('merge')}>병합 복원</Button></div>
           <div style={{ padding: 12, border: '1px solid #f1c7c7', borderRadius: 10, background: '#fffafa' }}><strong>REPLACE</strong><p style={{ margin: '5px 0 10px', color: '#667085', fontSize: 12 }}>현재 로컬 store와 daon: 운영상태를 비우고 백업 파일 기준으로 교체합니다. 실행 전 확인창이 표시됩니다.</p><Button fullWidth color="error" variant="outlined" startIcon={<RestoreRounded />} disabled={!backup || busy} onClick={() => void restore('replace')}>전체 교체 복원</Button></div>

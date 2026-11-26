@@ -20,7 +20,9 @@ async function verifyDigitalTwinIntake(page) {
 
 async function verifyExternalShareCenter(page) {
   await page.goto(`${BASE_URL}/external-shares`, { waitUntil: 'domcontentloaded' });
-  for (const text of ['외부 공유 센터', '전체 공유', 'ACTIVE', 'EXPIRED', 'REVOKED', '미해결 검토', '감사대장 CSV', '감사대장 JSON', '이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다']) await waitForText(page, text);
+  await waitForText(page, '외부 공유 센터');
+  await page.locator('.tech-details > summary').click();
+  for (const text of ['외부 공유 센터', '전체 공유', '사용 중', '만료', '회수', '미해결 검토', '감사대장 CSV', '감사대장 JSON', '이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다']) await waitForText(page, text);
   await page.getByPlaceholder('물건명 · 주소 · 공유대상 · Snapshot 검색').waitFor({ state: 'visible', timeout: 30_000 });
   await page.screenshot({ path: `${ARTIFACT_DIR}/external-share-center.png`, fullPage: true });
   console.log('[PASS] /external-shares: audit KPIs + CSV/JSON export + revoke boundary + status filter + search input');
@@ -76,7 +78,7 @@ async function verifyBangbaeDataRoom(page) {
   await page.locator('details.data-room-fold').nth(4).waitFor({ state: 'attached', timeout: 30_000 });
   await page.locator('details.data-room-fold').evaluateAll((folds) => folds.forEach((fold) => { fold.open = true; }));
   for (const text of ['방배동 815-11 코너빌딩', '층별 구성 · Data Room', '4개 층 · 5개 공간', '합계 349.08㎡', '3F', '2F', '1F', 'B1', '제2종근린생활시설(부동산중개업소)', '점포', '다가구용단독주택(1가구)', '출처와 검증', '방배동 815-11 건축물대장.pdf', '비교거래 요약', '6건', '5,862만/평 ~ 8,788만/평', '2026-06-02', '방배동 실거래사례1년간.pdf', 'row provenance 6/6', '비교거래 전체 보기']) await waitForText(page, text);
-  const comparableSection = page.locator('section').filter({ hasText: 'MARKET COMPARABLES' }).last();
+  const comparableSection = page.locator('section').filter({ hasText: '주변 거래 비교' }).last();
   const comparableText = (await comparableSection.textContent()) || '';
   if (!comparableText.includes('사용자 확인')) throw new Error('Bangbae comparable source must render as supplied-source confirmed.');
   if (comparableText.includes('공식 확인')) throw new Error('Bangbae comparable source must not be rendered as independently official verified.');
@@ -125,7 +127,7 @@ try {
   await verifyDigitalTwinIntake(page);
   await verifyPage(page, '/digital-twin', ['Digital Twin Workspace', 'Geometry', '축척', '높이', '공간 경계', '문·창 연결', '개구부 치수', 'Twin 후보 갱신', 'Multi-floor Building Model', 'Building Production Gate / 다층 Candidate Release', 'Building Release & Collaboration Layer', 'Geometry Readiness · Remote Inspection', 'Remote Inspection HTML'], 'digital-twin-workspace');
   await verifyPage(page, '/income?propertyId=daon-bangbae-815-11', ['임대 · 수익 분석', '방배동 815-11 코너빌딩', '시나리오 입력', '수익성 결과', 'NOI', 'Cap Rate', 'Cash-on-Cash', '저장된 시나리오'], 'rental-income-workspace');
-  await verifyPage(page, '/review-history?propertyId=daon-bangbae-815-11', ['검토 이력 통합', '방배동 815-11 코너빌딩', '자료 검증', 'Agent Review', '보고서', '외부 검토', 'AUDIT TIMELINE', '시간순 검토 기록'], 'review-history-workspace');
+  await verifyPage(page, '/review-history?propertyId=daon-bangbae-815-11', ['검토 이력 통합', '방배동 815-11 코너빌딩', '자료 검증', 'Agent Review', '보고서', '외부 검토', '기록 타임라인', '시간순 검토 기록'], 'review-history-workspace');
   await verifyExternalShareCenter(page);
   await verifyPropertyHub(page);
   await verifyDataRoomDeepLinks(page);

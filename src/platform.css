@@ -318,3 +318,8 @@
 .app-shell .guide-page .guide-hero h1{color:#fff}
 .report-steps a{display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;width:100%}
 .report-steps a:hover{color:#073a69}
+
+/* 기술 상세 접기 (사용자·권한, 2026-11-26) */
+.tech-details{margin-top:18px;border:1px dashed #cfd5dc;border-radius:12px;padding:10px 14px;background:#fbfcfd}
+.tech-details>summary{cursor:pointer;color:#475467;font-weight:600;font-size:14px;padding:4px 0}
+.tech-details[open]>summary{margin-bottom:8px}

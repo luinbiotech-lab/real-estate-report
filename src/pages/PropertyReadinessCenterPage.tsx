@@ -104,7 +104,7 @@ export default function PropertyReadinessCenterPage() {
     </section>
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, overflow: 'hidden', marginBottom: 14 }}>
-      <div style={{ padding: '13px 16px', background: '#f7f9fb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}><div><small className="eyebrow">RECENT PROGRESS</small><strong style={{ display: 'block', marginTop: 3 }}>실제 데이터 변화로 확인된 진행</strong></div><TaskAltRounded color="success" /></div>
+      <div style={{ padding: '13px 16px', background: '#f7f9fb', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}><div><small className="eyebrow">최근 진행</small><strong style={{ display: 'block', marginTop: 3 }}>실제 데이터 변화로 확인된 진행</strong></div><TaskAltRounded color="success" /></div>
       {!recentProgress.length && <div style={{ padding: 16, color: '#667085', fontSize: 13 }}>아직 실제 준비도 변화로 완료·개선된 작업이 없습니다. 보완 후 `재검사 / 새로고침`하면 자동 판정됩니다.</div>}
       {recentProgress.map((entry) => <div key={`${entry.id}:${entry.progressedAt}`} style={{ display: 'grid', gridTemplateColumns: '110px 1fr 150px 1fr', gap: 10, padding: '10px 14px', borderTop: '1px solid #edf0f4', alignItems: 'center' }}>
         <Chip size="small" color={entry.status === 'completed' ? 'success' : 'warning'} variant="outlined" label={entry.status === 'completed' ? 'COMPLETED' : 'IMPROVED'} />
