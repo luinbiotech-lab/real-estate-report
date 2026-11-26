@@ -21,7 +21,7 @@ if (!text.service.includes("mode: 'merge' | 'replace'")) throw new Error('복원
 if (!text.service.includes("if (mode === 'replace') await tx.store.clear()")) throw new Error('REPLACE 복원은 store를 먼저 비워야 합니다.');
 if (!text.service.includes('validateBackup(backup)')) throw new Error('복원 전에 백업 스키마를 검증해야 합니다.');
 
-for (const label of ['Data Backup Center', '전체 백업 다운로드', '백업 범위', '복원 미리보기', '복원 방식', '병합 복원', '전체 교체 복원', '복원 전 현재 백업', '방배동 Phase 1 복원 + Dry Run']) {
+for (const label of ['백업 · 복원', '전체 백업 다운로드', '백업 범위', '복원 미리보기', '복원 방식', '병합 복원', '전체 교체 복원', '복원 전 현재 백업', '방배동 Phase 1 복원 + Dry Run']) {
   if (!text.page.includes(label)) throw new Error(`Backup UI 필수 항목 누락: ${label}`);
 }
 if (!text.page.includes("window.confirm('현재 로컬 데이터를 백업 파일 기준으로 교체합니다.")) throw new Error('REPLACE 복원은 사용자 확인을 받아야 합니다.');

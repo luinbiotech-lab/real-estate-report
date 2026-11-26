@@ -115,24 +115,24 @@ export default function DataBackupCenterPage() {
 
   return <main style={{ padding: 28, maxWidth: 1320, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
-      <div><p className="eyebrow">Data Backup Center</p><h1 style={{ margin: '5px 0' }}>데이터 백업 · 복원</h1><p style={{ margin: 0, color: '#667085' }}>부동산 플랫폼의 브라우저 로컬 데이터를 보존·복원하고, 원격 운영 전환 전 데이터 이관 상태를 사전점검합니다.</p></div>
+      <div><p className="eyebrow">백업 · 복원</p><h1 style={{ margin: '5px 0' }}>데이터 백업 · 복원</h1><p style={{ margin: 0, color: '#667085' }}>이 기기에 저장된 물건·자료·보고서를 백업 파일로 내려받고, 필요할 때 복원합니다.</p></div>
       <Button variant="contained" startIcon={<BackupRounded />} disabled={busy} onClick={() => void createBackup()}>전체 백업 다운로드</Button>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
-    <Alert severity="warning" icon={<WarningAmberRounded />} sx={{ mb: 2 }}><strong>현재 단계는 local-first입니다.</strong> 브라우저 저장소를 지우거나 PC를 교체하기 전에 백업 파일을 별도 보관하세요. 원격 전환 사전점검은 읽기 전용 dry-run이며 Supabase·Storage·외부 서버에 데이터를 쓰지 않습니다.</Alert>
+    <Alert severity="warning" icon={<WarningAmberRounded />} sx={{ mb: 2 }}><strong>데이터는 이 기기 브라우저에 저장됩니다.</strong> 브라우저 기록을 지우거나 PC를 바꾸기 전에 백업 파일을 따로 보관하세요. 아래 사전점검은 읽기만 하며 서버에 아무것도 쓰지 않습니다.</Alert>
 
     <section className="ds-card" style={{ marginBottom: 16 }} data-testid="remote-migration-dry-run">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div><p className="eyebrow">원격 이관 사전점검(읽기 전용)</p><h2 style={{ margin: '4px 0' }}>원격 전환 사전점검</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>IndexedDB의 Property/Data Room/Agent/3D/Report 데이터를 원격 schema와 private Storage 구조로 옮길 수 있는지 검사합니다. 실제 원격 쓰기는 실행하지 않습니다.</p></div>
+        <div><p className="eyebrow">원격 이관 사전점검(읽기 전용)</p><h2 style={{ margin: '4px 0' }}>원격 전환 사전점검</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>이 기기의 물건·자료실·3D·보고서 데이터를 운영 서버로 옮길 수 있는지 미리 검사합니다. 실제로 옮기지는 않습니다.</p></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button variant="outlined" startIcon={<FactCheckRounded />} disabled={busy} onClick={() => void runMigrationDryRun()}>Dry Run 실행</Button>
-          <Button variant="contained" startIcon={<DownloadRounded />} disabled={!dryRun || busy} onClick={() => dryRun && remoteMigrationDryRunService.download(dryRun.plan)}>Manifest 다운로드</Button>
+          <Button variant="outlined" startIcon={<FactCheckRounded />} disabled={busy} onClick={() => void runMigrationDryRun()}>사전점검 실행</Button>
+          <Button variant="contained" startIcon={<DownloadRounded />} disabled={!dryRun || busy} onClick={() => dryRun && remoteMigrationDryRunService.download(dryRun.plan)}>점검 결과 다운로드</Button>
         </div>
       </div>
-      <Alert severity="info" icon={<CloudSyncRounded />} sx={{ mt: 1.5 }}>회사 설정은 전체 <code>settings</code> store를 자동 이관하지 않습니다. signing identity 등 내부 설정 혼입을 막기 위해 production 연결 시 명시적으로 선택된 회사 설정만 별도 이관합니다.</Alert>
+      <Alert severity="info" icon={<CloudSyncRounded />} sx={{ mt: 1.5 }}>회사 설정은 자동으로 옮기지 않습니다. 운영 서버 연결 때 필요한 항목만 골라 따로 옮깁니다.</Alert>
       {!dryRun && !busy && <div style={{ padding: 22, marginTop: 14, border: '1px dashed #ccd5df', borderRadius: 10, textAlign: 'center', color: '#667085' }}>아직 사전점검을 실행하지 않았습니다. 이 작업은 로컬 데이터를 읽기만 하며 네트워크 write는 0건입니다.</div>}
       {busy && !dryRun && <div style={{ padding: 24, textAlign: 'center' }}><CircularProgress size={24} /></div>}
       {dryRun && <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>

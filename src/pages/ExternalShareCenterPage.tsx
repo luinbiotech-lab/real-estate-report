@@ -187,12 +187,12 @@ export default function ExternalShareCenterPage() {
 
 
     <section style={{ background: '#10243f', color: '#fff', borderRadius: 12, padding: 16, marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10 }}>
-      <TextField size="small" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="물건명 · 주소 · 공유대상 · Snapshot 검색" sx={{ background: '#fff', borderRadius: 1 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded /></InputAdornment> }} />
+      <TextField size="small" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="물건명 · 주소 · 공유대상 · 보고서 버전 검색" sx={{ background: '#fff', borderRadius: 1 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded /></InputAdornment> }} />
       <TextField select size="small" value={status} onChange={(event) => setStatus(event.target.value as typeof status)} sx={{ background: '#fff', borderRadius: 1 }}><MenuItem value="all">전체 상태</MenuItem><MenuItem value="active">ACTIVE</MenuItem><MenuItem value="expired">EXPIRED</MenuItem><MenuItem value="revoked">REVOKED</MenuItem></TextField>
     </section>
 
     <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.1fr 110px 160px 110px 120px 310px', gap: 10, padding: '11px 14px', background: '#f7f9fb', color: '#667085', fontSize: 12, fontWeight: 700 }}><span>물건 / Snapshot</span><span>공유대상</span><span>상태</span><span>만료</span><span>다운로드</span><span>검토</span><span>LOCAL 작업</span></div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.1fr 110px 160px 110px 120px 310px', gap: 10, padding: '11px 14px', background: '#f7f9fb', color: '#667085', fontSize: 12, fontWeight: 700 }}><span>물건 / 보고서 버전</span><span>공유대상</span><span>상태</span><span>만료</span><span>다운로드</span><span>검토</span><span>작업</span></div>
       {!filtered.length && <div style={{ padding: 34, textAlign: 'center', color: '#667085' }}>조건에 맞는 외부 공유가 없습니다.</div>}
       {filtered.map((share) => {
         const property = propertyMap.get(share.propertyId);
