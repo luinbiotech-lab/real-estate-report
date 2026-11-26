@@ -66,6 +66,29 @@ export interface Settings {
   email: string;
   footerText: string;
   reportContactMode: 'mobile_email_only';
+  /** 중개사무소 표시사항 (2026-11-26): shown on every public listing; publishing is blocked until all are filled. */
+  brokerOffice?: BrokerOffice;
+}
+
+/** The brokerage that advertises public listings (공인중개사법 제18조의2 광고 표시사항 — ASSUMPTION, 원문 대조 필요). */
+export interface BrokerOffice {
+  name: string;
+  address: string;
+  phone: string;
+  registrationNumber: string;
+  representative: string;
+}
+
+export const BROKER_OFFICE_FIELDS: Array<{ key: keyof BrokerOffice; label: string }> = [
+  { key: 'name', label: '중개사무소 명칭' },
+  { key: 'address', label: '소재지' },
+  { key: 'phone', label: '연락처' },
+  { key: 'registrationNumber', label: '등록번호' },
+  { key: 'representative', label: '대표 공인중개사 성명' },
+];
+
+export function missingBrokerOfficeFields(office: Partial<BrokerOffice> | null | undefined): string[] {
+  return BROKER_OFFICE_FIELDS.filter((field) => !String(office?.[field.key] ?? '').trim()).map((field) => field.label);
 }
 
 export const emptyProperty: Property = {

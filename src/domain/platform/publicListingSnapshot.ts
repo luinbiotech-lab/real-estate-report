@@ -10,7 +10,7 @@
  * "방배동 815-11 등기부등본.pdf"), and photos that are policy-blocked or carry a signed / expiring URL.
  * Pure functions: the privacy validator and the pages share them.
  */
-import type { Property, PropertyRecordClass } from '../../types';
+import { missingBrokerOfficeFields, type BrokerOffice, type Property, type PropertyRecordClass } from '../../types';
 import { formatWon } from '../../utils/format';
 import { internalPhotoAllowed } from '../professionalReport/reportAccessPolicy';
 import { classifyPropertyRecord } from '../sampleProperty';
@@ -93,6 +93,8 @@ export interface PublicListingSnapshot {
   checklist?: DueDiligenceRow[];
   market?: Pick<MarketPosition, 'count' | 'min' | 'max' | 'latestTradeDate' | 'headline' | 'basis'>;
   readyReport?: { version: number; generatedAt: string };
+  /** The advertising brokerage, disclosed on purpose (from Settings.brokerOffice at publish time). */
+  office?: BrokerOffice;
 }
 
 /** What the listing page needs beyond the Property row (the Data Room derived parts). */
@@ -174,7 +176,11 @@ export function publishBlockers(property: Property, snapshot: PublicListingSnaps
   if (snapshot.recordClass !== 'operational' && !options.allowNonOperational) reasons.push('샘플·테스트 물건은 인터넷에 게시하지 않습니다.');
   if (!snapshot.salePrice) reasons.push('가격이 입력되지 않았습니다.');
   if (!snapshot.place || snapshot.place === '위치 확인 중') reasons.push('주소가 입력되지 않았습니다.');
-  const text = publicSnapshotStrings(snapshot).join('\n');
+  const missingOffice = missingBrokerOfficeFields(snapshot.office);
+  if (missingOffice.length) reasons.push(`설정 > 중개사무소 정보에 ${missingOffice.join('·')}을(를) 입력해야 게시할 수 있습니다.`);
+  // The office block is an intentional disclosure; the leak check covers everything else.
+  const { office: _office, ...rest } = snapshot;
+  const text = publicSnapshotStrings(rest as PublicListingSnapshot).join('\n');
   const privateValues: Array<[string, unknown]> = [
     ['내부 물건 번호', property.id],
     ['상세 주소', property.detailAddress],

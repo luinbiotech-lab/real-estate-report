@@ -2,8 +2,10 @@ import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
 import { Alert, Button, Chip, TextField } from '@mui/material';
 import { BusinessRounded, ContactPhoneRounded, PolicyRounded, SaveRounded, StorageRounded } from '@mui/icons-material';
 import { settingsRepository } from '../repositories/propertyRepository';
-import type { Settings } from '../types';
+import { BROKER_OFFICE_FIELDS, missingBrokerOfficeFields, type BrokerOffice, type Settings } from '../types';
 import { refreshProxyStatus, type ProxyStatus } from '../services/maps/proxyClient';
+
+const EMPTY_OFFICE: BrokerOffice = { name: '', address: '', phone: '', registrationNumber: '', representative: '' };
 
 function normalizePhone(value: string) {
   return value.replace(/[^0-9]/g, '');
@@ -34,7 +36,8 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
     if (!draft.defaultManager.trim()) { setError('기본 담당자 표시명을 입력하세요.'); return; }
     if (normalizePhone(draft.phone).length < 9) { setError('휴대폰 번호를 확인하세요.'); return; }
     if (!draft.email.includes('@')) { setError('이메일 형식을 확인하세요.'); return; }
-    const normalized: Settings = { ...draft, reportContactMode: 'mobile_email_only' };
+    const office = draft.brokerOffice ? Object.fromEntries(Object.entries(draft.brokerOffice).map(([key, value]) => [key, String(value).trim()])) as unknown as BrokerOffice : undefined;
+    const normalized: Settings = { ...draft, brokerOffice: office, reportContactMode: 'mobile_email_only' };
     await settingsRepository.save(normalized);
     onSave(normalized);
     setNotice('회사·브랜드 기본 설정을 저장했습니다. 새 물건부터 기본값으로 적용됩니다.');
@@ -77,6 +80,18 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
             <TextField label="휴대폰" value={draft.phone} onChange={(event) => setDraft((previous) => ({ ...previous, phone: event.target.value }))} />
             <TextField label="이메일" type="email" value={draft.email} onChange={(event) => setDraft((previous) => ({ ...previous, email: event.target.value }))} />
           </div>
+        </section>
+
+        <section className="form-section" style={{ margin: 0 }} aria-label="중개사무소 정보">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <div><p className="eyebrow">공개 매물 광고 표시</p><h2 style={{ margin: 0 }}>중개사무소 정보</h2></div><BusinessRounded color="primary" />
+          </div>
+          <p style={{ margin: '0 0 12px', color: '#475467', fontSize: 14 }}>공개 매물 화면마다 이 정보가 표시됩니다. 다섯 칸을 모두 채워야 매물을 인터넷에 게시할 수 있습니다. 표시 항목은 공인중개사법의 광고 표시 기준을 따르려는 것이며, 법 원문 대조는 아직 하지 않았습니다.</p>
+          <div className="field-grid">
+            {BROKER_OFFICE_FIELDS.map((field) => <TextField key={field.key} label={field.label} value={draft.brokerOffice?.[field.key] ?? ''}
+              onChange={(event) => setDraft((previous) => ({ ...previous, brokerOffice: { ...EMPTY_OFFICE, ...previous.brokerOffice, [field.key]: event.target.value } }))} />)}
+          </div>
+          {missingBrokerOfficeFields(draft.brokerOffice).length > 0 && <Alert severity="info" sx={{ mt: 1.5 }}>아직 비어 있는 칸: {missingBrokerOfficeFields(draft.brokerOffice).join(', ')}</Alert>}
         </section>
 
         <section className="form-section" style={{ margin: 0 }}>
