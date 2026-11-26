@@ -63,6 +63,9 @@ jobs:
       - name: Validate public listing privacy (allowlist snapshot, no private canary)
         run: node scripts/validate-public-listing-privacy.mjs
 
+      - name: Validate advisor calculators
+        run: node scripts/validate-advisor-calculators.mjs
+
       - name: Validate property detail pages
         run: node scripts/validate-property-detail-pages.mjs
 

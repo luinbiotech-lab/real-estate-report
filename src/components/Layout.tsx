@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { activeBrand } from '../brand/activeBrand';
-import { AddRounded, ArrowBackRounded, AnalyticsRounded, FormatListBulletedRounded, HomeRounded, MenuRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, InboxRounded, MenuBookRounded, KeyboardArrowDownRounded, CloseRounded, MapOutlined, TravelExploreRounded, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
+import { AddRounded, ArrowBackRounded, AnalyticsRounded, FormatListBulletedRounded, HomeRounded, MenuRounded, AdminPanelSettingsRounded, ApartmentRounded, AutoAwesomeRounded, BackupRounded, CloudSyncRounded, DescriptionOutlined, FactCheckRounded, GavelRounded, HistoryRounded, HomeWorkRounded, HubRounded, InboxRounded, MenuBookRounded, RecordVoiceOverRounded, KeyboardArrowDownRounded, CloseRounded, MapOutlined, TravelExploreRounded, PaidRounded, PictureAsPdfOutlined, PlaylistAddCheckRounded, RateReviewRounded, SearchRounded, SettingsRounded, ShareRounded, ThreeDRotationRounded, UploadFileRounded, ViewInArRounded } from '@mui/icons-material';
 import { Button } from '@mui/material';
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import InfoTip from './InfoTip';
@@ -31,6 +31,7 @@ to="/migration-readiness" Remote Migration 준비
 to="/settings" 회사 설정
 to="/inquiries" 매수 문의함
 to="/guide" 사용설명서
+to="/ask" 세무 · 법률 질문
 AGENT MODULAR ARCHITECTURE
 */
 // Navigation validation contracts: to="/report-history" to="/digital-twin-intake" to="/income" to="/review-history" to="/external-shares"
@@ -39,7 +40,7 @@ const navIcons: Record<NavIconKey, ReactNode> = {
   home: <HomeRounded />, list: <FormatListBulletedRounded />, analysis: <AnalyticsRounded />, menu: <MenuRounded />, search: <SearchRounded />, add: <AddRounded />, upload: <UploadFileRounded />, intake: <FactCheckRounded />,
   readiness: <PlaylistAddCheckRounded />, review: <RateReviewRounded />, risk: <GavelRounded />, report: <HistoryRounded />, share: <ShareRounded />,
   income: <PaidRounded />, interior: <HomeWorkRounded />, spatial: <ViewInArRounded />, twinIntake: <UploadFileRounded />, twin: <ThreeDRotationRounded />,
-  roomOps: <HubRounded />, inbox: <InboxRounded />, guide: <MenuBookRounded />, access: <AdminPanelSettingsRounded />, control: <HubRounded />, agents: <AutoAwesomeRounded />, backup: <BackupRounded />,
+  roomOps: <HubRounded />, inbox: <InboxRounded />, ask: <RecordVoiceOverRounded />, guide: <MenuBookRounded />, access: <AdminPanelSettingsRounded />, control: <HubRounded />, agents: <AutoAwesomeRounded />, backup: <BackupRounded />,
   migration: <CloudSyncRounded />, settings: <SettingsRounded />, explore: <TravelExploreRounded />,
   groupProperty: <ApartmentRounded />, groupVerify: <FactCheckRounded />, groupReport: <DescriptionOutlined />, groupAnalysis: <ViewInArRounded />, groupOps: <SettingsRounded />,
 };

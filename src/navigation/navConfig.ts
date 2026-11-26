@@ -17,7 +17,7 @@
 export type NavIconKey =
   | 'home' | 'list' | 'search' | 'add' | 'upload' | 'intake' | 'readiness' | 'review' | 'risk'
   | 'report' | 'share' | 'income' | 'interior' | 'spatial' | 'twinIntake' | 'twin' | 'roomOps'
-  | 'inbox' | 'guide' | 'access' | 'control' | 'agents' | 'backup' | 'migration' | 'settings' | 'analysis' | 'menu'
+  | 'inbox' | 'ask' | 'guide' | 'access' | 'control' | 'agents' | 'backup' | 'migration' | 'settings' | 'analysis' | 'menu'
   | 'explore' | 'groupProperty' | 'groupVerify' | 'groupReport' | 'groupAnalysis' | 'groupOps';
 
 export interface NavItem {
@@ -73,9 +73,10 @@ export const navGroups: NavGroup[] = [
     { to: '/import', title: '엑셀 대량 등록', icon: 'upload' },
     { to: '/bulk-intake', title: '대량 자료 등록 · 검증', module: 'Intake · Verification', icon: 'intake' },
   ]},
-  { id: 'analysis', label: '분석', summary: '리스크 · 수익 · 검토', icon: 'groupVerify', items: [
+  { id: 'analysis', label: '분석', summary: '리스크 · 수익 · 세무 질문', icon: 'groupVerify', items: [
     { to: '/risk', title: '리스크 · 규제 검토', module: 'Risk / Compliance', icon: 'risk' },
     { to: '/income', title: '임대 · 수익 분석', icon: 'income' },
+    { to: '/ask', title: '세무 · 법률 질문', icon: 'ask' },
     { to: '/review-history', title: '검토 이력 통합', icon: 'review' },
   ]},
   { id: 'advanced', label: '전문 분석', summary: '도면 · 3D · 공간 · 실내', icon: 'groupAnalysis', items: [
