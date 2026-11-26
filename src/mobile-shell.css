@@ -581,3 +581,9 @@ div.portfolio-load-state{background:#fff;border:1px solid #d5dfe9;border-radius:
   .home-sample-note{margin-top:12px;font-size:12px;padding:8px 12px}
   .home-today{padding:16px 14px 14px;border-radius:14px}
 }
+
+/* 회사 설정: 휴대폰에서 오른쪽 안내 칸이 입력칸 위에 겹치던 문제 (2026-11-26) */
+@media (max-width: 900px){
+  .app-shell .settings-layout{grid-template-columns:minmax(0,1fr)!important}
+  .app-shell .settings-aside{position:static!important}
+}

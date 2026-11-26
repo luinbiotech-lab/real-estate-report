@@ -52,7 +52,7 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(320px,.8fr)', gap: 16, alignItems: 'start' }}>
+    <section className="settings-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(320px,.8fr)', gap: 16, alignItems: 'start' }}>
       <div style={{ display: 'grid', gap: 14 }}>
         <section className="form-section settings-card" style={{ margin: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
@@ -133,7 +133,7 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
         </section>
       </div>
 
-      <aside style={{ display: 'grid', gap: 14, position: 'sticky', top: 24 }}>
+      <aside className="settings-aside" style={{ display: 'grid', gap: 14, position: 'sticky', top: 24 }}>
         <section style={{ background: '#10243f', color: '#fff', borderRadius: 14, padding: 18 }}>
           <p style={{ margin: 0, color: '#d7c8a7', letterSpacing: '.12em', fontSize: 11 }}>REPORT CONTACT PREVIEW</p>
           <h2 style={{ margin: '6px 0 16px' }}>보고서 연락처 미리보기</h2>
