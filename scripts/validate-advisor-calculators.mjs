@@ -19,7 +19,8 @@ eq(calc.housingBaseRate(750_000_000), 0.02, '주택 7.5억 2%');
 eq(calc.housingBaseRate(900_000_000), 0.03, '주택 9억 경계 3%');
 eq(calc.housingBaseRate(1_000_000_000), 0.03, '주택 10억 3%');
 const multi = calc.acquisitionTax({ price: 800_000_000, use: 'housing', homesAfter: 2, over85: false });
-expect(multi.total === 0 && multi.notCovered.length > 0, '2주택 이상은 계산하지 않고 notCovered로 안내해야 합니다.');
+// 루인 #86 RB-71e0384: 계산 불가는 0(세금 없음)이 아니라 null + 이유.
+expect(multi.total === null && Boolean(multi.notComputableReason), '2주택 이상은 total=null(계산 불가)과 이유를 돌려줘야 합니다.');
 
 // 양도세 기본세율 구간 경계 (누진공제 연속성)
 const brackets = [[14_000_000, 840_000], [50_000_000, 6_240_000], [88_000_000, 15_360_000], [150_000_000, 37_060_000], [300_000_000, 94_060_000], [500_000_000, 174_060_000], [1_000_000_000, 384_060_000]];
@@ -42,9 +43,38 @@ expect(JSON.stringify(ask.parseAllAmounts('20억 10년')) === '[2000000000]', '"
 eq(ask.parseKoreanAmount('41억 5천'), 4_150_000_000, '41억 5천');
 eq(ask.classifyQuestion('오늘 날씨 어때'), 'unsupported', '관련 없는 질문');
 
+// 음수·NaN·무한대·범위 밖 입력 → 계산 불가 (0으로 대체 금지)
+const bad = [
+  ['중개보수 음수', calc.brokerageFeeCap(-1)],
+  ['중개보수 NaN', calc.brokerageFeeCap(Number.NaN)],
+  ['취득세 무한대', calc.acquisitionTax({ price: Infinity, use: 'non-housing', homesAfter: 1, over85: false })],
+  ['취득세 주택 수 음수', calc.acquisitionTax({ price: 5e8, use: 'housing', homesAfter: -1, over85: false })],
+  ['양도세 취득가 음수', calc.capitalGainsTax({ buyPrice: -1, sellPrice: 1e9, expenses: 0, holdingYears: 3 })],
+  ['양도세 보유기간 NaN', calc.capitalGainsTax({ buyPrice: 1e9, sellPrice: 2e9, expenses: 0, holdingYears: Number.NaN })],
+  ['양도세 필요경비 음수', calc.capitalGainsTax({ buyPrice: 1e9, sellPrice: 2e9, expenses: -5, holdingYears: 3 })],
+  ['수익률 공실 13개월', calc.rentalYield({ price: 3e9, deposit: 0, monthlyRent: 1e7, monthlyCost: 0, vacancyMonths: 13, loan: 0, loanRatePercent: 4 })],
+  ['수익률 실투자금 0', calc.rentalYield({ price: 3e9, deposit: 1e9, monthlyRent: 1e7, monthlyCost: 0, vacancyMonths: 0, loan: 2e9, loanRatePercent: 4 })],
+  ['수익률 금리 NaN', calc.rentalYield({ price: 3e9, deposit: 0, monthlyRent: 1e7, monthlyCost: 0, vacancyMonths: 0, loan: 0, loanRatePercent: Number.NaN })],
+];
+for (const [label, r] of bad) expect(r.total === null && typeof r.notComputableReason === 'string' && r.notComputableReason.length > 0, `${label}: 계산 불가(null)와 이유가 필요합니다.`);
+// 경계: 0원 거래·0년 보유는 정상 계산
+eq(calc.brokerageFeeCap(0).total, 0, '중개보수 0원');
+eq(calc.capitalGainsTax({ buyPrice: 1e9, sellPrice: 1e9, expenses: 0, holdingYears: 0 }).total, 0, '양도차익 0');
+eq(calc.capitalGainsTax({ buyPrice: 1e9, sellPrice: 2e9, expenses: 0, holdingYears: 2 }).lines[1].value, 0, '보유 2년 장특 0%');
+eq(calc.capitalGainsTax({ buyPrice: 1e9, sellPrice: 2e9, expenses: 0, holdingYears: 3 }).lines[1].value, 60_000_000, '보유 3년 장특 6%');
+
+// 세율 상태: 원문 대조 전 세율은 unverified, 수익률만 formula
+for (const r of [calc.brokerageFeeCap(1e9), calc.acquisitionTax({ price: 1e9, use: 'non-housing', homesAfter: 1, over85: false }), cgt]) eq(r.rateStatus, 'unverified', `${r.title} rateStatus`);
+eq(calc.rentalYield({ price: 3e9, deposit: 0, monthlyRent: 1e7, monthlyCost: 0, vacancyMonths: 0, loan: 0, loanRatePercent: 0 }).rateStatus, 'formula', '수익률 rateStatus');
+for (const [key, source] of Object.entries(calc.RATE_SOURCES)) expect(source.status !== 'verified' || /\d{4}/.test(source.effective), `${key}: verified로 바꾸려면 시행일을 적어야 합니다.`);
+
 // 모든 결과는 미검증 표시
 for (const r of [cgt, multi]) expect(r.verified === false && r.basis.every((b) => b.includes('원문 대조 전')), '결과는 원문 대조 전으로 표시해야 합니다.');
 const page = readFileSync('src/pages/AskPage.tsx', 'utf8');
-for (const marker of ['원문 대조 전', '참고용 계산입니다', '개인정보는 말하지 마세요']) expect(page.includes(marker), `AskPage 표시 누락: ${marker}`);
+for (const marker of ['원문 대조 전', '참고용 계산입니다', '개인정보는 말하지 마세요', '검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요', '시험 계산값 보기', '금액을 안내하지 않습니다', '계산 불가']) expect(page.includes(marker), `AskPage 표시 누락: ${marker}`);
+// Unverified amounts must not be spoken: the spoken text for 'unverified' must not interpolate won(...).
+const spoken = page.slice(page.indexOf('const spokenSummary'), page.indexOf('};', page.indexOf('const spokenSummary')));
+const unverifiedLine = spoken.split('\n').find((line) => line.includes("rateStatus === 'unverified'"));
+expect(Boolean(unverifiedLine) && !unverifiedLine.includes('won('), '원문 대조 전 금액을 음성으로 읽으면 안 됩니다.');
 
 console.log(`Advisor calculators validation: PASS (${checks} checks)`);

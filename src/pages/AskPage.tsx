@@ -4,6 +4,8 @@ import { EXAMPLE_QUESTIONS, prefillFromQuestion, TOPIC_LABEL, won, type AdvisorT
 import { acquisitionTax, brokerageFeeCap, capitalGainsTax, rentalYield, type CalcResult } from '../domain/advisor/calculators';
 import '../platform.css';
 
+const RATE_NOTE = '세율과 적용 대상·예외·시행일을 법령 원문과 아직 대조하지 못했습니다(원문 수집 차단). 값은 계산식 점검용입니다.';
+
 /*
  * 세무·법률 질문 (2026-11-26, 루치오 시안 승인). Voice in = the browser's own speech recognition (free; Chrome/Safari
  * send the audio to their vendor's server — said on screen). Voice out = speechSynthesis. No paid API.
@@ -32,8 +34,10 @@ function speak(text: string) {
 interface Form { price: string; buy: string; sell: string; expenses: string; years: string; use: 'non-housing' | 'housing'; homesAfter: string; over85: boolean; deposit: string; rent: string; cost: string; vacancy: string; loan: string; loanRate: string }
 const EMPTY: Form = { price: '', buy: '', sell: '', expenses: '0', years: '', use: 'non-housing', homesAfter: '1', over85: false, deposit: '0', rent: '', cost: '0', vacancy: '0', loan: '0', loanRate: '4.5' };
 const man = (v: number) => String(Math.round(v / 10_000));
-const krw = (v: string) => Math.round((Number(v.replace(/,/g, '')) || 0) * 10_000);
-const num = (v: string) => Number(v.replace(/,/g, '')) || 0;
+/** Empty = 0; anything that is not a number stays NaN so the calculator reports 계산 불가 instead of silently using 0. */
+const num = (v: string) => (v.trim() === '' ? 0 : Number(v.replace(/,/g, '')));
+const krw = (v: string) => Math.round(num(v) * 10_000);
+const blank = (v: string) => v.trim() === '';
 
 function applyQuestion(text: string, form: Form): { topic: Topic | null; form: Form } {
   const pre = prefillFromQuestion(text);
@@ -49,19 +53,22 @@ function applyQuestion(text: string, form: Form): { topic: Topic | null; form: F
 
 function compute(topic: Topic, f: Form): { result: CalcResult | null; missing: string[] } {
   const missing: string[] = [];
-  if (topic === 'brokerage-fee' || topic === 'acquisition-tax') { if (!num(f.price)) missing.push('거래 금액'); }
-  if (topic === 'capital-gains-tax') { if (!num(f.buy)) missing.push('취득가'); if (!num(f.sell)) missing.push('양도가'); if (f.years === '') missing.push('보유 기간'); }
-  if (topic === 'rental-yield') { if (!num(f.price)) missing.push('매입가'); if (!num(f.rent)) missing.push('월 임대료'); }
+  if (topic === 'brokerage-fee' || topic === 'acquisition-tax') { if (blank(f.price)) missing.push('거래 금액'); }
+  if (topic === 'capital-gains-tax') { if (blank(f.buy)) missing.push('취득가'); if (blank(f.sell)) missing.push('양도가'); if (blank(f.years)) missing.push('보유 기간'); }
+  if (topic === 'rental-yield') { if (blank(f.price)) missing.push('매입가'); if (blank(f.rent)) missing.push('월 임대료'); }
   if (missing.length) return { result: null, missing };
   if (topic === 'brokerage-fee') return { result: brokerageFeeCap(krw(f.price)), missing };
-  if (topic === 'acquisition-tax') return { result: acquisitionTax({ price: krw(f.price), use: f.use, homesAfter: num(f.homesAfter) || 1, over85: f.over85 }), missing };
+  if (topic === 'acquisition-tax') return { result: acquisitionTax({ price: krw(f.price), use: f.use, homesAfter: blank(f.homesAfter) ? 1 : num(f.homesAfter), over85: f.over85 }), missing };
   if (topic === 'capital-gains-tax') return { result: capitalGainsTax({ buyPrice: krw(f.buy), sellPrice: krw(f.sell), expenses: krw(f.expenses), holdingYears: num(f.years) }), missing };
   return { result: rentalYield({ price: krw(f.price), deposit: krw(f.deposit), monthlyRent: krw(f.rent), monthlyCost: krw(f.cost), vacancyMonths: num(f.vacancy), loan: krw(f.loan), loanRatePercent: num(f.loanRate) }), missing };
 }
 
-const spokenSummary = (r: CalcResult) => r.unit === 'PERCENT'
-  ? `${r.title}은 실투자금 기준 연 ${r.total}퍼센트입니다. 참고용 계산입니다.`
-  : r.total ? `${r.title}는 ${won(r.total)}입니다. 참고용 계산이며 신고 전에는 세무사 확인이 필요합니다.` : `${r.title}는 이 계산기로 계산하지 않는 경우입니다. 세무사 확인이 필요합니다.`;
+/** Spoken answer. Unverified tax amounts are never read out (루인 #86 RB-71e0384): only plain-formula results are. */
+const spokenSummary = (r: CalcResult) => {
+  if (r.total === null) return `${r.title}는 계산할 수 없습니다. ${r.notComputableReason ?? ''}`;
+  if (r.rateStatus === 'unverified') return `${r.title} 세율은 아직 법령 원문과 대조하지 않아 금액을 안내하지 않습니다. 세무사 확인이 필요합니다.`;
+  return r.unit === 'PERCENT' ? `${r.title}은 실투자금 기준 연 ${r.total}퍼센트입니다. 참고용 계산입니다.` : `${r.title}는 ${won(r.total)}입니다. 참고용 계산입니다.`;
+};
 
 export default function AskPage() {
   const demo = new URLSearchParams(window.location.search).get('demo');
@@ -71,12 +78,14 @@ export default function AskPage() {
   const [topic, setTopic] = useState<Topic | null>(initial.topic);
   const [form, setForm] = useState<Form>(initial.form);
   const [notice, setNotice] = useState('');
+  const [showTrial, setShowTrial] = useState(false);
   const [voiceError, setVoiceError] = useState('');
   const recognition = useRef<Recognition | null>(null);
   const supported = demo ? true : Boolean(createRecognition());
   const { result, missing } = useMemo(() => topic ? compute(topic, form) : { result: null, missing: [] as string[] }, [topic, form]);
 
   useEffect(() => () => { recognition.current?.stop(); window.speechSynthesis?.cancel(); }, []);
+  useEffect(() => { setShowTrial(false); }, [topic, form]);
 
   const ask = (text: string, spoken = false) => {
     const trimmed = text.trim();
@@ -119,7 +128,7 @@ export default function AskPage() {
     <header className="ask-hero">
       <p className="eyebrow">세무 · 법률 질문</p>
       <h1>말로 물어보세요</h1>
-      <p>중개보수·취득세·양도세·임대 수익률을 계산해 근거와 함께 답합니다. 참고용이며, 신고·계약 전에는 전문가 확인이 필요합니다.</p>
+      <p>중개보수·취득세·양도세·임대 수익률을 물어보세요. 세율은 아직 법령 원문과 대조하지 않아 세금 금액은 시험 계산으로만 보여 줍니다. 신고·계약 판단에는 쓰지 말고 세무사·변호사에게 확인하세요.</p>
     </header>
 
     <section className="ask-voice" aria-label="음성 질문">
@@ -143,7 +152,7 @@ export default function AskPage() {
     </nav>
 
     {topic && <section className="ask-answer" aria-label="계산">
-      <div className="ask-answer-head"><GavelRounded /><h2>{result?.title ?? TOPIC_LABEL[topic]}</h2><span className="ask-unverified">원문 대조 전</span>
+      <div className="ask-answer-head"><GavelRounded /><h2>{result?.title ?? TOPIC_LABEL[topic]}</h2>{result?.rateStatus !== 'formula' && <span className="ask-unverified">원문 대조 전</span>}
         {result && <button type="button" className="ask-speak" onClick={() => speak(spokenSummary(result))}><VolumeUpRounded /> 읽어 주기</button>}</div>
 
       <div className="ask-form">
@@ -158,13 +167,19 @@ export default function AskPage() {
       </div>
 
       {missing.length > 0 && <p className="ask-needs">입력이 필요합니다: {missing.join(', ')}</p>}
-      {result && <>
-        <p className="ask-total">{result.unit === 'PERCENT' ? `실투자금 기준 연 ${result.total}%` : result.total ? won(result.total) : '이 계산기로 계산하지 않는 경우'}</p>
+      {result && result.total === null && <p className="ask-blocked" role="alert"><strong>계산 불가</strong> · {result.notComputableReason}</p>}
+      {result && result.total !== null && result.rateStatus === 'unverified' && <div className="ask-trial" role="note">
+        <strong>검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요</strong>
+        <p>{RATE_NOTE}</p>
+        {!showTrial && <button type="button" onClick={() => setShowTrial(true)}>시험 계산값 보기</button>}
+      </div>}
+      {result && result.total !== null && (result.rateStatus !== 'unverified' || showTrial) && <>
+        <p className={`ask-total${result.rateStatus === 'unverified' ? ' trial' : ''}`}>{result.rateStatus === 'unverified' ? '시험 계산값 ' : ''}{result.unit === 'PERCENT' ? `실투자금 기준 연 ${result.total}%` : won(result.total)}</p>
         <dl className="ask-inputs">{result.lines.map((line) => <div key={line.label}><dt>{line.label}{line.note && <small> · {line.note}</small>}</dt><dd>{line.label.endsWith('(%)') ? `${line.value}%` : won(line.value)}</dd></div>)}</dl>
         {result.notCovered.length > 0 && <p className="ask-needs">계산에 넣지 않은 것: {result.notCovered.join(' · ')}</p>}
-        <p className="ask-basis">근거: {result.basis.join(' · ')}</p>
-        <p className="ask-basis">참고용 계산입니다. 신고·계약 전에는 세무사·변호사 확인이 필요합니다.</p>
       </>}
+      {result && result.basis.length > 0 && <p className="ask-basis">근거: {result.basis.join(' · ')}</p>}
+      {result && <p className="ask-basis">참고용 계산입니다. 신고·계약 전에는 세무사·변호사 확인이 필요합니다.</p>}
     </section>}
 
     <p className="ask-privacy">음성은 휴대폰 브라우저의 무료 음성 인식을 씁니다. 말한 내용은 인식을 위해 브라우저 회사(구글·애플) 서버로 전송될 수 있으니, 이름·주민번호 같은 개인정보는 말하지 마세요.</p>

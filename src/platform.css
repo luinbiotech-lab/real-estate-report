@@ -366,5 +366,11 @@
 .ask-field select{border:1px solid #d0d5dd;border-radius:10px;padding:10px;font-size:16px;background:#fff}
 .ask-check{display:flex;align-items:center;gap:6px;font-size:14px;color:#344054;align-self:end;padding-bottom:10px}
 .ask-total{margin:0;font-size:28px;font-weight:800;color:#0b2545}
+.ask-total.trial{font-size:20px;color:#93370d}
+.ask-trial{border:1px solid #f5c26b;background:#fffaeb;border-radius:12px;padding:12px 14px;display:grid;gap:6px}
+.ask-trial strong{color:#93370d;font-size:15px}
+.ask-trial p{margin:0;font-size:13px;color:#475467;line-height:1.55}
+.ask-trial button{justify-self:start;border:1px solid #93370d;background:#fff;color:#93370d;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.ask-blocked{margin:0;border:1px solid #fda29b;background:#fef3f2;color:#912018;border-radius:12px;padding:12px 14px;font-size:14px}
 .ask-privacy{margin:0;font-size:12px;color:#667085;line-height:1.6}
 @media (max-width:760px){.ask-page{padding:12px}.ask-hero{padding:20px}.app-shell .ask-page .ask-hero h1{font-size:24px}.ask-speak{margin-left:0}}
