@@ -158,5 +158,19 @@ expect(snap.publishBlockers(opProperty, leaked, 'dong').some((r) => r.includes('
 const lotLeak = { ...opSnap, title: `${opSnap.title} ${property.address.match(/\d+-\d+/)?.[0] ?? ''}` };
 expect(snap.publishBlockers(opProperty, lotLeak, 'dong').some((r) => r.includes('지번')), '스냅샷에 섞인 지번 차단');
 expect(snap.publishBlockers({ ...property, recordClass: 'sample' }, { ...opSnap, recordClass: 'sample' }, 'dong').some((r) => r.includes('샘플')), '샘플 물건 게시 차단(운영)');
+// 중개사무소 표시사항 (2026-11-26): required to publish; the office block itself is not a leak.
+expect(snap.publishBlockers(opProperty, opSnap, 'dong').some((r) => r.includes('중개사무소 정보')), '중개사무소 정보 없으면 게시 차단');
+const office = { name: `${property.companyName || '테스트'} 공인중개사사무소`, address: '서울 테스트구 테스트로 1', phone: property.managerPhone || '02-000-0000', registrationNumber: '11650-2026-00000', representative: property.managerName || '홍길동', registrationCheckSource: '국가공간정보포털 부동산중개업 조회', registrationCheckedAt: '2026-11-27' };
+// 2026-11-27 루인 #86 RB-5a07a4d: office values need an official registration check (source + date) before publishing.
+expect(snap.publishBlockers(opProperty, { ...opSnap, office: { ...office, registrationCheckSource: '' } }, 'dong').some((r) => r.includes('등록정보 확인')), '등록정보 확인 방법 없으면 게시 차단');
+expect(snap.publishBlockers(opProperty, { ...opSnap, office: { ...office, registrationCheckSource: '지인 확인' } }, 'dong').some((r) => r.includes('등록정보 확인')), '공식 확인 방법이 아니면 게시 차단');
+expect(snap.publishBlockers(opProperty, { ...opSnap, office: { ...office, registrationCheckedAt: '어제' } }, 'dong').some((r) => r.includes('등록정보 확인')), '확인일 형식이 아니면 게시 차단');
+const viewSource = readFileSync('src/components/platform/PublicListingView.tsx', 'utf8');
+expect(!viewSource.includes('registrationCheck'), '등록정보 확인 방법·확인일은 공개 화면에 표시하지 않습니다.');
+const withOffice = { ...opSnap, office };
+expect(!snap.publishBlockers(opProperty, withOffice, 'dong').some((r) => r.includes('중개사무소 정보') || r.includes('들어 있습니다')), `중개사무소 정보는 의도된 표시라 차단하지 않음 (${snap.publishBlockers(opProperty, withOffice, 'dong').join(' / ')})`);
+expect(snap.publishBlockers(opProperty, { ...opSnap, office: { ...office, registrationNumber: ' ' } }, 'dong').some((r) => r.includes('등록번호')), '등록번호 빈칸이면 게시 차단');
+const officeLeak = { ...withOffice, facts: [...opSnap.facts, { key: 'y', label: 'y', value: `연락 ${property.managerPhone}`, badge: 'input' }] };
+expect(snap.publishBlockers(opProperty, officeLeak, 'dong').some((r) => r.includes('담당자 전화')), '사무소 정보가 있어도 본문에 섞인 담당자 전화는 차단');
 
 console.log(`Public listing privacy validation passed (${checks} checks).`);

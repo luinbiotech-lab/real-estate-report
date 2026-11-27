@@ -66,6 +66,41 @@ export interface Settings {
   email: string;
   footerText: string;
   reportContactMode: 'mobile_email_only';
+  /** 중개사무소 표시사항 (2026-11-26): shown on every public listing; publishing is blocked until all are filled. */
+  brokerOffice?: BrokerOffice;
+}
+
+/** The brokerage that advertises public listings (공인중개사법 제18조의2 광고 표시사항 — ASSUMPTION, 원문 대조 필요). */
+export interface BrokerOffice {
+  name: string;
+  address: string;
+  phone: string;
+  registrationNumber: string;
+  representative: string;
+  /** 2026-11-27 루인 #86 RB-5a07a4d: where the operator confirmed the registration (not shown publicly). */
+  registrationCheckSource?: string;
+  /** YYYY-MM-DD the registration was confirmed against an official source. */
+  registrationCheckedAt?: string;
+}
+
+/** Official places to confirm a brokerage registration. Typing values alone is not proof; one of these must be checked. */
+export const REGISTRATION_CHECK_SOURCES = ['국가공간정보포털 부동산중개업 조회', '시·군·구청 중개사무소 등록증 대조'] as const;
+export const REGISTRATION_CHECK_LABEL = '등록정보 확인(확인 방법·확인일)';
+
+export const BROKER_OFFICE_FIELDS: Array<{ key: keyof BrokerOffice; label: string }> = [
+  { key: 'name', label: '중개사무소 명칭' },
+  { key: 'address', label: '소재지' },
+  { key: 'phone', label: '연락처' },
+  { key: 'registrationNumber', label: '등록번호' },
+  { key: 'representative', label: '대표 공인중개사 성명' },
+];
+
+export function missingBrokerOfficeFields(office: Partial<BrokerOffice> | null | undefined): string[] {
+  const missing = BROKER_OFFICE_FIELDS.filter((field) => !String(office?.[field.key] ?? '').trim()).map((field) => field.label);
+  const sourceOk = (REGISTRATION_CHECK_SOURCES as readonly string[]).includes(String(office?.registrationCheckSource ?? ''));
+  const dateOk = /^\d{4}-\d{2}-\d{2}$/.test(String(office?.registrationCheckedAt ?? ''));
+  if (!sourceOk || !dateOk) missing.push(REGISTRATION_CHECK_LABEL);
+  return missing;
 }
 
 export const emptyProperty: Property = {

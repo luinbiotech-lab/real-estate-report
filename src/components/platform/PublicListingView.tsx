@@ -101,6 +101,13 @@ export default function PublicListingView({ view, trustState = 'ready', actions,
           <p className="pl-card-price">{view.priceText}<small>{view.tradeType}</small></p>
           <p className="pl-card-place">{view.title}</p>
           <div className="pl-card-actions listing-actions">{contact}</div>
+          {view.office && <dl className="pl-office" aria-label="중개사무소 정보">
+            <div><dt>중개사무소</dt><dd>{view.office.name}</dd></div>
+            <div><dt>대표</dt><dd>{view.office.representative}</dd></div>
+            <div><dt>등록번호</dt><dd>{view.office.registrationNumber}</dd></div>
+            <div><dt>소재지</dt><dd>{view.office.address}</dd></div>
+            <div><dt>전화</dt><dd><a href={`tel:${view.office.phone.replace(/[^0-9+]/g, '')}`}>{view.office.phone}</a></dd></div>
+          </dl>}
           {footnote && <div className="pl-card-note">{footnote}</div>}
           <div className="pl-card-report">
             <DescriptionOutlined />

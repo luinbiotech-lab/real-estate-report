@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState, type ChangeEvent } from 'react';
-import { Alert, Button, Chip, TextField } from '@mui/material';
+import { Alert, Button, Chip, MenuItem, TextField } from '@mui/material';
 import { BusinessRounded, ContactPhoneRounded, PolicyRounded, SaveRounded, StorageRounded } from '@mui/icons-material';
 import { settingsRepository } from '../repositories/propertyRepository';
-import type { Settings } from '../types';
+import { BROKER_OFFICE_FIELDS, REGISTRATION_CHECK_SOURCES, missingBrokerOfficeFields, type BrokerOffice, type Settings } from '../types';
 import { refreshProxyStatus, type ProxyStatus } from '../services/maps/proxyClient';
+
+const EMPTY_OFFICE: BrokerOffice = { name: '', address: '', phone: '', registrationNumber: '', representative: '', registrationCheckSource: '', registrationCheckedAt: '' };
 
 function normalizePhone(value: string) {
   return value.replace(/[^0-9]/g, '');
@@ -34,7 +36,8 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
     if (!draft.defaultManager.trim()) { setError('기본 담당자 표시명을 입력하세요.'); return; }
     if (normalizePhone(draft.phone).length < 9) { setError('휴대폰 번호를 확인하세요.'); return; }
     if (!draft.email.includes('@')) { setError('이메일 형식을 확인하세요.'); return; }
-    const normalized: Settings = { ...draft, reportContactMode: 'mobile_email_only' };
+    const office = draft.brokerOffice ? Object.fromEntries(Object.entries(draft.brokerOffice).map(([key, value]) => [key, String(value).trim()])) as unknown as BrokerOffice : undefined;
+    const normalized: Settings = { ...draft, brokerOffice: office, reportContactMode: 'mobile_email_only' };
     await settingsRepository.save(normalized);
     onSave(normalized);
     setNotice('회사·브랜드 기본 설정을 저장했습니다. 새 물건부터 기본값으로 적용됩니다.');
@@ -49,7 +52,7 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
-    <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(320px,.8fr)', gap: 16, alignItems: 'start' }}>
+    <section className="settings-layout" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1.5fr) minmax(320px,.8fr)', gap: 16, alignItems: 'start' }}>
       <div style={{ display: 'grid', gap: 14 }}>
         <section className="form-section settings-card" style={{ margin: 0 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
@@ -77,6 +80,25 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
             <TextField label="휴대폰" value={draft.phone} onChange={(event) => setDraft((previous) => ({ ...previous, phone: event.target.value }))} />
             <TextField label="이메일" type="email" value={draft.email} onChange={(event) => setDraft((previous) => ({ ...previous, email: event.target.value }))} />
           </div>
+        </section>
+
+        <section className="form-section" style={{ margin: 0 }} aria-label="중개사무소 정보">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+            <div><p className="eyebrow">공개 매물 광고 표시</p><h2 style={{ margin: 0 }}>중개사무소 정보</h2></div><BusinessRounded color="primary" />
+          </div>
+          <p style={{ margin: '0 0 12px', color: '#475467', fontSize: 14 }}>공개 매물 화면마다 이 정보가 표시됩니다. 다섯 칸을 채우고, 공식 자료로 등록정보를 확인한 방법과 날짜를 적어야 매물을 인터넷에 게시할 수 있습니다. 확인 방법·확인일은 공개 화면에 표시하지 않습니다. 표시 항목은 공인중개사법의 광고 표시 기준을 따르려는 것이며, 법 원문 대조는 아직 하지 않았습니다.</p>
+          <div className="field-grid">
+            {BROKER_OFFICE_FIELDS.map((field) => <TextField key={field.key} label={field.label} value={draft.brokerOffice?.[field.key] ?? ''}
+              onChange={(event) => setDraft((previous) => ({ ...previous, brokerOffice: { ...EMPTY_OFFICE, ...previous.brokerOffice, [field.key]: event.target.value } }))} />)}
+            <TextField select label="등록정보 확인 방법" value={draft.brokerOffice?.registrationCheckSource ?? ''}
+              onChange={(event) => setDraft((previous) => ({ ...previous, brokerOffice: { ...EMPTY_OFFICE, ...previous.brokerOffice, registrationCheckSource: event.target.value } }))}>
+              <MenuItem value=""><em>선택 안 함</em></MenuItem>
+              {REGISTRATION_CHECK_SOURCES.map((source) => <MenuItem key={source} value={source}>{source}</MenuItem>)}
+            </TextField>
+            <TextField type="date" label="등록정보 확인일" InputLabelProps={{ shrink: true }} value={draft.brokerOffice?.registrationCheckedAt ?? ''}
+              onChange={(event) => setDraft((previous) => ({ ...previous, brokerOffice: { ...EMPTY_OFFICE, ...previous.brokerOffice, registrationCheckedAt: event.target.value } }))} />
+          </div>
+          {missingBrokerOfficeFields(draft.brokerOffice).length > 0 && <Alert severity="info" sx={{ mt: 1.5 }}>아직 비어 있는 칸: {missingBrokerOfficeFields(draft.brokerOffice).join(', ')}</Alert>}
         </section>
 
         <section className="form-section" style={{ margin: 0 }}>
@@ -118,7 +140,7 @@ export default function SettingsPage({ settings, onSave }: { settings: Settings;
         </section>
       </div>
 
-      <aside style={{ display: 'grid', gap: 14, position: 'sticky', top: 24 }}>
+      <aside className="settings-aside" style={{ display: 'grid', gap: 14, position: 'sticky', top: 24 }}>
         <section style={{ background: '#10243f', color: '#fff', borderRadius: 14, padding: 18 }}>
           <p style={{ margin: 0, color: '#d7c8a7', letterSpacing: '.12em', fontSize: 11 }}>REPORT CONTACT PREVIEW</p>
           <h2 style={{ margin: '6px 0 16px' }}>보고서 연락처 미리보기</h2>

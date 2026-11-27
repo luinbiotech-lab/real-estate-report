@@ -34,6 +34,23 @@ async function openPreview(page, id = SEED_ID) {
   await page.locator('.publish-status').filter({ hasNotText: '확인 중' }).first().waitFor({ timeout: 15_000 });
 }
 
+// QA-only office values (never a real brokerage); the publish gate requires all five.
+const OFFICE = { '중개사무소 명칭': 'QA 시험 공인중개사사무소', '소재지': '서울특별시 시험구 시험로 1', '연락처': '02-0000-0000', '등록번호': 'QA-0000-00000', '대표 공인중개사 성명': 'QA 대표' };
+
+async function fillOffice(page, tag) {
+  await page.goto(`${BASE_URL}/settings`, { waitUntil: 'domcontentloaded' });
+  const section = page.locator('section[aria-label="중개사무소 정보"]');
+  await section.waitFor({ timeout: 30_000 });
+  for (const [label, value] of Object.entries(OFFICE)) await section.getByLabel(label).fill(value);
+  // 2026-11-27 루인 #86: typed values are not proof; the gate also needs how and when the registration was confirmed.
+  await section.getByLabel('등록정보 확인 방법').click();
+  await page.getByRole('option', { name: '국가공간정보포털 부동산중개업 조회' }).click();
+  await section.getByLabel('등록정보 확인일').fill('2026-11-27');
+  await page.getByRole('button', { name: '설정 저장' }).click();
+  await page.waitForTimeout(800);
+  check(await section.locator('.MuiAlert-root').count() === 0, `${tag} 설정: 중개사무소 다섯 칸 입력·저장`);
+}
+
 async function run(viewport, tag) {
   const context = await browser.newContext({ viewport });
   const page = await context.newPage();
@@ -42,6 +59,10 @@ async function run(viewport, tag) {
   await waitForSeed(page);
   await page.evaluate(() => { localStorage.removeItem('daon-public-listings-v1'); localStorage.removeItem('daon-public-inquiries-v1'); });
   try {
+    await openPreview(page);
+    check(await page.getByRole('button', { name: '게시', exact: true }).isDisabled(), `${tag} 중개사무소 정보 없으면 게시 버튼 꺼짐`);
+    check((await page.locator('.publish-blockers').innerText()).includes('중개사무소 정보'), `${tag} 중개사무소 정보 입력 안내 표시`);
+    await fillOffice(page, tag);
     await openPreview(page);
     await page.getByRole('button', { name: '전체 주소' }).click();
     check(await page.getByRole('button', { name: '게시', exact: true }).isDisabled(), `${tag} 전체 주소 범위에서는 게시 버튼 꺼짐`);
@@ -67,6 +88,8 @@ async function run(viewport, tag) {
       check(leaks.length === 0, `${tag} 공개 화면 ${where}: 비공개 값 없음${leaks.length ? ` (노출: ${leaks.join(', ')})` : ''}`);
     }
     check(title.includes('DA:ON'), `${tag} 공개 화면 제목 (${title})`);
+    const officeText = await page.locator('.pl-office').first().innerText().catch(() => '');
+    check(Object.values(OFFICE).every((value) => officeText.includes(value)), `${tag} 공개 화면: 중개사무소 명칭·대표·등록번호·소재지·전화 표시`);
     check(await page.locator('.checklist-rows li').count() >= 7 && await page.locator('.fact-badge').count() >= 5, `${tag} 공개 화면: 값별 근거·매수 전 확인표`);
     check(await page.locator('.building-placeholder').count() === 1 && await page.locator('.pl-gallery img').count() === 0, `${tag} 사진 금지 물건: 실제 사진 없이 일러스트(실제 사진 아님 표시)`);
     const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);

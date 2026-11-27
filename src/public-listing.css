@@ -112,3 +112,10 @@
 .app-shell .pl-section h2{margin:0;font-size:19px;font-weight:800;color:#0b2545}
 @media (max-width:600px){.app-shell .pl-head h1{font-size:23px}.app-shell .pl-section h2{font-size:17px}}
 .building-placeholder.compact .building-placeholder-caption span{white-space:nowrap}
+
+/* 중개사무소 표시사항 (2026-11-26) */
+.pl-office{margin:12px 0 0;padding:10px 0 0;border-top:1px solid rgba(15,23,42,.1);display:grid;gap:4px;font-size:13px}
+.pl-office>div{display:grid;grid-template-columns:72px 1fr;gap:8px}
+.pl-office dt{color:#64748b;margin:0}
+.pl-office dd{margin:0;color:#0f172a;word-break:keep-all}
+.pl-office a{color:inherit}

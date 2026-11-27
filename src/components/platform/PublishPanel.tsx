@@ -6,7 +6,8 @@ import { PUBLISHABLE_ADDRESS_LEVELS, publishBlockers, type PublicListingSnapshot
 import { publicListingStore, type PublicListingRecord } from '../../services/publicListingStore';
 import { remoteAuthGateway } from '../../services/authProviderService';
 import { REMOTE_OPERATIONAL_MODE } from '../../services/operationalDataMode';
-import type { Property } from '../../types';
+import type { BrokerOffice, Property } from '../../types';
+import { settingsRepository } from '../../repositories/propertyRepository';
 
 /*
  * Staff-only publish / re-publish / withdraw panel on the workspace preview (phase 2, 2026-11-18). Not part of the
@@ -18,16 +19,20 @@ export default function PublishPanel({ property, view, level, ready }: { propert
   const [canPublish, setCanPublish] = useState(!REMOTE_OPERATIONAL_MODE);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<{ severity: 'success' | 'error'; text: string } | null>(null);
+  const [office, setOffice] = useState<BrokerOffice | undefined>();
 
   useEffect(() => {
     let active = true;
+    settingsRepository.get().then((settings) => { if (active) setOffice(settings?.brokerOffice); }).catch(() => undefined);
     publicListingStore.getForProperty(property.id).then((value) => { if (active) setRecord(value); }).catch(() => { if (active) setRecord(null); });
     if (REMOTE_OPERATIONAL_MODE) void remoteAuthGateway.getSession().then((session) => { if (active) setCanPublish(session?.role === 'owner' || session?.role === 'admin'); }).catch(() => undefined);
     return () => { active = false; };
   }, [property.id]);
 
   // Remote: samples never go public. Local (QA / demo): allowed, the sample label stays on the page.
-  const blockers = publishBlockers(property, view, level, { allowNonOperational: publicListingStore.mode === 'local' });
+  // 중개사무소 표시사항 travel inside the frozen snapshot, so the public page always shows who advertises it.
+  const snapshot: PublicListingSnapshot = office ? { ...view, office } : view;
+  const blockers = publishBlockers(property, snapshot, level, { allowNonOperational: publicListingStore.mode === 'local' });
   const published = record?.status === 'published';
   const url = record ? `${window.location.origin}/p/${record.publicId}` : '';
   const statusLabel = !record ? '미게시' : published ? `게시 중 · v${record.snapshotVersion}` : record.status === 'withdrawn' ? '게시 철회됨' : '준비 중';
@@ -36,7 +41,7 @@ export default function PublishPanel({ property, view, level, ready }: { propert
     setBusy(true); setMessage(null);
     try {
       if (action === 'publish') {
-        const next = await publicListingStore.publish(property.id, view, level);
+        const next = await publicListingStore.publish(property.id, snapshot, level);
         setRecord(next);
         setMessage({ severity: 'success', text: published ? '공개 화면을 지금 자료로 다시 만들었습니다.' : '게시했습니다. 아래 주소를 구매자에게 보내면 로그인 없이 열립니다.' });
       } else {
