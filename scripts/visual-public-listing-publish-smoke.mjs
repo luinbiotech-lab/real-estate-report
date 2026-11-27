@@ -42,6 +42,10 @@ async function fillOffice(page, tag) {
   const section = page.locator('section[aria-label="중개사무소 정보"]');
   await section.waitFor({ timeout: 30_000 });
   for (const [label, value] of Object.entries(OFFICE)) await section.getByLabel(label).fill(value);
+  // 2026-11-27 루인 #86: typed values are not proof; the gate also needs how and when the registration was confirmed.
+  await section.getByLabel('등록정보 확인 방법').click();
+  await page.getByRole('option', { name: '국가공간정보포털 부동산중개업 조회' }).click();
+  await section.getByLabel('등록정보 확인일').fill('2026-11-27');
   await page.getByRole('button', { name: '설정 저장' }).click();
   await page.waitForTimeout(800);
   check(await section.locator('.MuiAlert-root').count() === 0, `${tag} 설정: 중개사무소 다섯 칸 입력·저장`);
