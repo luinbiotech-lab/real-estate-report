@@ -70,7 +70,7 @@ for (const marker of ['문서 준비도', 'requiredSourcePresent', 'requiredBina
 
 for (const marker of [
   'REMOTE OWNER BOOTSTRAP · ONE TIME',
-  'REMOTE USER ADMIN · OWNER ONLY',
+  '사용자 초대 · 권한',
   'remoteAuthGateway.bootstrapOwner(ownerBootstrapKey)',
   'remoteAuthGateway.listProfiles()',
   'remoteAuthGateway.inviteUser(remoteInviteEmail, remoteInviteRole, remoteInviteName)',
@@ -139,7 +139,7 @@ if (!text.rentalIncomeService.includes("STORAGE_KEY = 'daon:rental-income-scenar
 if (!text.app.includes('path="review-history"') || !text.layout.includes('to="/review-history"')) throw new Error('검토 이력 통합 route/navigation 연결이 필요합니다.');
 if (!text.reviewHistoryPage.includes('useSearchParams') || !text.reviewHistoryPage.includes("searchParams.get('propertyId')")) throw new Error('검토 이력 Workspace는 허브에서 전달한 propertyId context를 유지해야 합니다.');
 if (!text.reviewHistoryPage.includes('검토 이력 통합') || !text.reviewHistoryPage.includes('자료 검증') || !text.reviewHistoryPage.includes('Agent Review') || !text.reviewHistoryPage.includes('외부 검토')) throw new Error('검토 이력 화면은 자료/Agent/보고서/외부검토를 한 화면에 제공해야 합니다.');
-if (!text.reviewHistoryPage.includes('AUDIT TIMELINE') || !text.reviewHistoryPage.includes('시간순 검토 기록')) throw new Error('검토 이력 화면은 시간순 감사 타임라인을 제공해야 합니다.');
+if (!text.reviewHistoryPage.includes('기록 타임라인') || !text.reviewHistoryPage.includes('시간순 검토 기록')) throw new Error('검토 이력 화면은 시간순 감사 타임라인을 제공해야 합니다.');
 if (!text.reviewHistoryService.includes("kind: 'verification'") || !text.reviewHistoryService.includes("kind: 'agent_review'") || !text.reviewHistoryService.includes("kind: 'report_snapshot'") || !text.reviewHistoryService.includes("kind: 'external_review'")) throw new Error('검토 이력 서비스는 4개 원천을 모두 통합해야 합니다.');
 if (!text.reviewHistoryService.includes(".sort((a, b) => b.occurredAt.localeCompare(a.occurredAt))")) throw new Error('통합 검토 이력은 최신순으로 정렬되어야 합니다.');
 
@@ -160,8 +160,14 @@ if ((text.externalShareProvider.match(/availability: 'ready'/g) ?? []).length < 
 for (const capability of ['publicUrl', 'remoteRevoke', 'serverExpiry', 'authenticatedAccess', 'syncedReview']) if (!text.externalShareProvider.includes(capability)) throw new Error(`외부공유 Provider capability 누락: ${capability}`);
 if (!text.externalShareProvider.includes('실제 OWNER issue/list/revoke browser acceptance는 아직 필요합니다.')) throw new Error('Remote Provider는 backend 연결과 operator acceptance를 분리해야 합니다.');
 
+// 2026-11-27 루인 #86 (RB-26ebb1e): mandatory risk notices sit outside (before) the collapsed technical details.
+for (const [label, source, marker] of [['외부 공유', text.externalShareCenter, '이미 전달한 HTML 파일은 회수할 수 없습니다.'], ['권한 관리', readFileSync('src/pages/AccessManagementPage.tsx', 'utf8'), '실제 권한은 운영 서버가 최종 확인합니다.']]) {
+  const at = source.indexOf(marker);
+  const details = source.indexOf('<details className="tech-details">');
+  if (at < 0 || details < 0 || at > details) throw new Error(`${label} 필수 고지는 접힌 기술 상세 밖(앞)에 있어야 합니다.`);
+}
 if (!text.app.includes('path="external-shares"') || !text.layout.includes('to="/external-shares"')) throw new Error('외부 공유 센터 route/navigation 연결이 필요합니다.');
-if (!text.externalShareCenter.includes('외부 공유 센터') || !text.externalShareCenter.includes('ACTIVE') || !text.externalShareCenter.includes('EXPIRED') || !text.externalShareCenter.includes('REVOKED')) throw new Error('외부 공유 센터는 전체/활성/만료/회수 상태를 요약해야 합니다.');
+if (!text.externalShareCenter.includes('외부 공유 센터') || !text.externalShareCenter.includes('사용 중') || !text.externalShareCenter.includes('만료') || !text.externalShareCenter.includes('회수')) throw new Error('외부 공유 센터는 전체/활성/만료/회수 상태를 요약해야 합니다.');
 if (!text.externalShareCenter.includes('LOCAL / OFFLINE') || !text.externalShareCenter.includes('REMOTE / PUBLIC') || !text.externalShareCenter.includes('REMOTE / PUBLIC backend는 CONNECTED입니다.')) throw new Error('외부 공유 센터는 Local/Remote Provider 상태와 backend/operator acceptance를 구분해 표시해야 합니다.');
 if (!text.externalShareCenter.includes('REMOTE / PUBLIC으로 발급한 URL은 서버에서 실제 revoke할 수 있습니다.')) throw new Error('LOCAL standalone과 REMOTE revoke 경계를 구분해야 합니다.');
 for (const marker of ["backendState: 'ready'", "operatorAcceptance: 'required'", 'BACKEND CONNECTED', 'remoteOperatorAcceptance']) {

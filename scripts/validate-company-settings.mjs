@@ -9,7 +9,7 @@ const files = {
 for (const file of Object.values(files)) if (!existsSync(file)) throw new Error(`회사 설정 필수 파일 누락: ${file}`);
 const text = Object.fromEntries(Object.entries(files).map(([key, file]) => [key, readFileSync(file, 'utf8')]));
 
-for (const token of ['BRAND IDENTITY', 'DEFAULT CONTACT', 'REPORT POLICY', 'REPORT CONTACT PREVIEW', 'APPLY SCOPE']) {
+for (const token of ['브랜드', '기본 담당자', '보고서 연락처 정책', '보고서 연락처 미리보기', '적용 범위']) {
   if (!text.settingsPage.includes(token)) throw new Error(`회사 설정 UI 필수 섹션 누락: ${token}`);
 }
 if (!text.settingsPage.includes("reportContactMode: 'mobile_email_only'") || !text.settingsPage.includes('휴대폰과 이메일만 사용합니다')) {

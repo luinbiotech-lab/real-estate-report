@@ -151,14 +151,14 @@ export default function HomePage() {
     </section>
 
     <section className="home-flow" aria-label="업무 흐름">
-      <header className="home-section-head"><div><p className="eyebrow">START</p><h2>처음 쓰는 순서<InfoTip label="처음 쓰는 순서" text="물건을 등록하고, 자료를 확인하고, 보고서를 만들어 공유하는 네 단계입니다. 단계마다 한 번 누르면 해당 화면으로 갑니다." /></h2></div><Link to="/guide">사용설명서 전체 보기</Link></header>
+      <header className="home-section-head"><div><p className="eyebrow">시작</p><h2>처음 쓰는 순서<InfoTip label="처음 쓰는 순서" text="물건을 등록하고, 자료를 확인하고, 보고서를 만들어 공유하는 네 단계입니다. 단계마다 한 번 누르면 해당 화면으로 갑니다." /></h2></div><Link to="/guide">사용설명서 전체 보기</Link></header>
       <ol>{START_STEPS.map((item) => <li key={item.step}>
         <Link to={item.to} className="home-flow-main"><span className="home-flow-step">{item.step}</span><span className="home-flow-icon">{STEP_ICONS[item.step]}</span><strong>{item.title}</strong><small>{item.body}</small><span className="home-flow-action">{item.action} <ArrowForwardRounded className="home-flow-arrow" /></span></Link>
       </li>)}</ol>
     </section>
 
     <section className="home-graded" aria-label="등급 매물">
-      <header className="home-section-head"><div><p className="eyebrow">TRUST GRADE</p><h2>신뢰 등급 매물{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={EXPLORE_PATH}>탐색에서 전체 보기</Link></header>
+      <header className="home-section-head"><div><p className="eyebrow">신뢰 등급</p><h2>신뢰 등급 매물{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={EXPLORE_PATH}>탐색에서 전체 보기</Link></header>
       {loadState === 'ready' && !trust && <p className="home-empty">등급을 계산하는 중입니다.</p>}
       {trust && !graded.length && <p className="home-empty">등급을 계산할 매물이 아직 없습니다.</p>}
       {graded.length > 0 && <ul className="home-graded-list">{graded.map((property) => {
@@ -177,7 +177,7 @@ export default function HomePage() {
 
     <div className="home-recent">
       <section aria-label="최근 물건">
-        <header className="home-section-head"><div><p className="eyebrow">RECENT</p><h2>최근 물건{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={PROPERTY_LIST_PATH}>물건 전체</Link></header>
+        <header className="home-section-head"><div><p className="eyebrow">최근</p><h2>최근 물건{sampleOnly && <small className="home-head-tag">샘플 데이터 표시 중</small>}</h2></div><Link to={PROPERTY_LIST_PATH}>물건 전체</Link></header>
         {loadState === 'loading' && <p className="home-empty">불러오는 중입니다.</p>}
         {loadState === 'error' && <p className="home-empty">물건 목록을 불러오지 못했습니다. <Link to={PROPERTY_LIST_PATH}>물건 목록에서 다시 시도</Link></p>}
         {loadState === 'ready' && !recent.length && <p className="home-empty">등록된 물건이 없습니다. 위 1단계에서 첫 물건을 등록하세요.</p>}
@@ -190,7 +190,7 @@ export default function HomePage() {
         })}</ul>}
       </section>
       <section aria-label="최근 보고서">
-        <header className="home-section-head"><div><p className="eyebrow">REPORTS</p><h2>최근 보고서</h2></div><Link to="/report-history">보고서 전체</Link></header>
+        <header className="home-section-head"><div><p className="eyebrow">보고서</p><h2>최근 보고서</h2></div><Link to="/report-history">보고서 전체</Link></header>
         {reportState === 'loading' && <p className="home-empty">불러오는 중입니다.</p>}
         {reportState === 'error' && <p className="home-empty">보고서 이력을 불러오지 못했습니다.</p>}
         {reportState === 'ready' && !reports.length && <p className="home-empty">아직 만든 보고서가 없습니다. <Link to="/report-history">보고서 메뉴에서 물건을 골라 만들 수 있습니다.</Link></p>}
@@ -219,7 +219,7 @@ export default function HomePage() {
     </section>
 
     <section className="home-trust" aria-label="데이터 출처와 원칙">
-      <header className="home-section-head"><div><p className="eyebrow">TRUST</p><h2>데이터 출처 · 원칙</h2></div><Link to="/settings">연결 상태는 설정에서 확인</Link></header>
+      <header className="home-section-head"><div><p className="eyebrow">신뢰</p><h2>데이터 출처 · 원칙</h2></div><Link to="/settings">연결 상태는 설정에서 확인</Link></header>
       <div className="home-trust-grid">
         <ul className="home-sources">{SOURCES.map((row) => <li key={row.name}><span><strong>{row.name}</strong><small>{row.use}</small></span></li>)}</ul>
         <ul className="home-principles">

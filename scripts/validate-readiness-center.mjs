@@ -37,7 +37,7 @@ if (!text.worklog.includes('stateRank[stage.state] > stateRank[entry.initialStat
 if (!text.worklog.includes("stage.state === 'ready' ? 'completed' : improved ? 'improved' : 'open'")) throw new Error('COMPLETED는 실제 READY 상태에서만 판정해야 합니다.');
 if (!text.worklog.includes('recordOpened(action: PropertyNextAction)') || !text.worklog.includes('reconcile(rows:')) throw new Error('작업 오픈 기록과 실제 데이터 재검사 경로가 필요합니다.');
 
-for (const label of ['Property Readiness Center', '보완 필요', '평균 준비도', 'NEXT ACTION QUEUE', '준비도 기반 다음 작업', 'RECENT PROGRESS', '실제 데이터 변화로 확인된 진행', '재검사 / 새로고침']) if (!text.page.includes(label)) throw new Error(`Readiness UI 필수 표시 누락: ${label}`);
+for (const label of ['Property Readiness Center', '보완 필요', '평균 준비도', 'NEXT ACTION QUEUE', '준비도 기반 다음 작업', '최근 진행', '실제 데이터 변화로 확인된 진행', '재검사 / 새로고침']) if (!text.page.includes(label)) throw new Error(`Readiness UI 필수 표시 누락: ${label}`);
 if (!text.page.includes('derivePropertyNextActions(rows)')) throw new Error('Readiness Center는 Next Action Queue를 readiness 데이터에서 파생해야 합니다.');
 if (!text.page.includes('propertyReadinessWorklogService.recordOpened(action)')) throw new Error('보완 화면 진입 시 작업 이력을 기록해야 합니다.');
 if (!text.page.includes('propertyReadinessWorklogService.reconcile(sorted)')) throw new Error('Readiness 재검사 시 작업 이력을 실제 상태와 대조해야 합니다.');

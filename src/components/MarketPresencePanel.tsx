@@ -22,7 +22,7 @@ export default function MarketPresencePanel({
   return <section className="form-section">
     <div className="section-heading-row">
       <div>
-        <p className="eyebrow">MARKET PRESENCE</p>
+        <p className="eyebrow">시장 노출</p>
         <h2>현재 매물 상태</h2>
         <p>거래유형과 별개로 실제 매물 노출/계약 상태를 관리합니다. 외부 공급원이 연결되기 전에는 자동으로 매물이라고 판단하지 않습니다.</p>
       </div>

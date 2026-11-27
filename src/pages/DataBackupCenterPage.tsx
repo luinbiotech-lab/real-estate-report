@@ -115,24 +115,24 @@ export default function DataBackupCenterPage() {
 
   return <main style={{ padding: 28, maxWidth: 1320, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 20 }}>
-      <div><p className="eyebrow">Data Backup Center</p><h1 style={{ margin: '5px 0' }}>데이터 백업 · 복원</h1><p style={{ margin: 0, color: '#667085' }}>부동산 플랫폼의 브라우저 로컬 데이터를 보존·복원하고, 원격 운영 전환 전 데이터 이관 상태를 사전점검합니다.</p></div>
+      <div><p className="eyebrow">백업 · 복원</p><h1 style={{ margin: '5px 0' }}>데이터 백업 · 복원</h1><p style={{ margin: 0, color: '#667085' }}>이 기기에 저장된 물건·자료·보고서를 백업 파일로 내려받고, 필요할 때 복원합니다.</p></div>
       <Button variant="contained" startIcon={<BackupRounded />} disabled={busy} onClick={() => void createBackup()}>전체 백업 다운로드</Button>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 1.5 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 1.5 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
-    <Alert severity="warning" icon={<WarningAmberRounded />} sx={{ mb: 2 }}><strong>현재 단계는 local-first입니다.</strong> 브라우저 저장소를 지우거나 PC를 교체하기 전에 백업 파일을 별도 보관하세요. 원격 전환 사전점검은 읽기 전용 dry-run이며 Supabase·Storage·외부 서버에 데이터를 쓰지 않습니다.</Alert>
+    <Alert severity="warning" icon={<WarningAmberRounded />} sx={{ mb: 2 }}><strong>데이터는 이 기기 브라우저에 저장됩니다.</strong> 브라우저 기록을 지우거나 PC를 바꾸기 전에 백업 파일을 따로 보관하세요. 아래 사전점검은 읽기만 하며 서버에 아무것도 쓰지 않습니다.</Alert>
 
     <section className="ds-card" style={{ marginBottom: 16 }} data-testid="remote-migration-dry-run">
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 14, alignItems: 'flex-start', flexWrap: 'wrap' }}>
-        <div><p className="eyebrow">REMOTE MIGRATION · DRY RUN ONLY</p><h2 style={{ margin: '4px 0' }}>원격 전환 사전점검</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>IndexedDB의 Property/Data Room/Agent/3D/Report 데이터를 원격 schema와 private Storage 구조로 옮길 수 있는지 검사합니다. 실제 원격 쓰기는 실행하지 않습니다.</p></div>
+        <div><p className="eyebrow">원격 이관 사전점검(읽기 전용)</p><h2 style={{ margin: '4px 0' }}>원격 전환 사전점검</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>이 기기의 물건·자료실·3D·보고서 데이터를 운영 서버로 옮길 수 있는지 미리 검사합니다. 실제로 옮기지는 않습니다.</p></div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button variant="outlined" startIcon={<FactCheckRounded />} disabled={busy} onClick={() => void runMigrationDryRun()}>Dry Run 실행</Button>
-          <Button variant="contained" startIcon={<DownloadRounded />} disabled={!dryRun || busy} onClick={() => dryRun && remoteMigrationDryRunService.download(dryRun.plan)}>Manifest 다운로드</Button>
+          <Button variant="outlined" startIcon={<FactCheckRounded />} disabled={busy} onClick={() => void runMigrationDryRun()}>사전점검 실행</Button>
+          <Button variant="contained" startIcon={<DownloadRounded />} disabled={!dryRun || busy} onClick={() => dryRun && remoteMigrationDryRunService.download(dryRun.plan)}>점검 결과 다운로드</Button>
         </div>
       </div>
-      <Alert severity="info" icon={<CloudSyncRounded />} sx={{ mt: 1.5 }}>회사 설정은 전체 <code>settings</code> store를 자동 이관하지 않습니다. signing identity 등 내부 설정 혼입을 막기 위해 production 연결 시 명시적으로 선택된 회사 설정만 별도 이관합니다.</Alert>
+      <Alert severity="info" icon={<CloudSyncRounded />} sx={{ mt: 1.5 }}>회사 설정은 자동으로 옮기지 않습니다. 운영 서버 연결 때 필요한 항목만 골라 따로 옮깁니다.</Alert>
       {!dryRun && !busy && <div style={{ padding: 22, marginTop: 14, border: '1px dashed #ccd5df', borderRadius: 10, textAlign: 'center', color: '#667085' }}>아직 사전점검을 실행하지 않았습니다. 이 작업은 로컬 데이터를 읽기만 하며 네트워크 write는 0건입니다.</div>}
       {busy && !dryRun && <div style={{ padding: 24, textAlign: 'center' }}><CircularProgress size={24} /></div>}
       {dryRun && <div style={{ marginTop: 14, display: 'grid', gap: 12 }}>
@@ -163,7 +163,7 @@ export default function DataBackupCenterPage() {
     <section style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(340px,.75fr)', gap: 16, alignItems: 'start' }}>
       <div style={{ display: 'grid', gap: 14 }}>
         <section className="ds-card">
-          <p className="eyebrow">BACKUP SCOPE</p><h2 style={{ margin: '4px 0 12px' }}>백업 범위</h2>
+          <p className="eyebrow">백업 범위</p><h2 style={{ margin: '4px 0 12px' }}>백업 범위</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 8 }}>
             {['물건 / 회사설정', 'Data Room 문서·미디어', '검증 / Provenance', '보고서 Snapshot', '3D / Digital Twin', 'Agent / Review / Risk', '외부 공유 이력', 'Room / Renovation', 'daon: 로컬 운영상태'].map((item) => <div key={item} style={{ padding: 11, background: '#f7f9fb', borderRadius: 9, fontSize: 12 }}>{item}</div>)}
           </div>
@@ -171,7 +171,7 @@ export default function DataBackupCenterPage() {
         </section>
 
         <section className="ds-card">
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><div><p className="eyebrow">RESTORE PREVIEW</p><h2 style={{ margin: '4px 0' }}>백업 파일 검사</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>복원 전에 스키마와 레코드 수를 먼저 확인합니다.</p></div><Button component="label" startIcon={<UploadFileRounded />}>백업 파일 선택<input hidden type="file" accept="application/json,.json" onChange={(event) => void selectBackup(event)} /></Button></div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}><div><p className="eyebrow">복원 미리보기</p><h2 style={{ margin: '4px 0' }}>백업 파일 검사</h2><p style={{ margin: 0, color: '#667085', fontSize: 13 }}>복원 전에 스키마와 레코드 수를 먼저 확인합니다.</p></div><Button component="label" startIcon={<UploadFileRounded />}>백업 파일 선택<input hidden type="file" accept="application/json,.json" onChange={(event) => void selectBackup(event)} /></Button></div>
           {busy && <div style={{ padding: 24, textAlign: 'center' }}><CircularProgress size={24} /></div>}
           {!busy && !preview && <div style={{ padding: 26, marginTop: 14, border: '1px dashed #ccd5df', borderRadius: 10, textAlign: 'center', color: '#667085' }}>선택된 백업 파일이 없습니다.</div>}
           {bangbaePhase1Package && <Alert severity="info" sx={{ mt: 1.5 }}><strong>방배동 815-11 Phase 1 패키지 감지</strong> · 공적자료 4종을 기존 데이터에 병합하고 방배동만 대상으로 Dry Run을 즉시 실행할 수 있습니다.</Alert>}
@@ -184,7 +184,7 @@ export default function DataBackupCenterPage() {
       </div>
 
       <aside className="ds-card" style={{ position: 'sticky', top: 24 }}>
-        <p className="eyebrow">RESTORE MODE</p><h2 style={{ margin: '4px 0 12px' }}>복원 실행</h2>
+        <p className="eyebrow">복원 방식</p><h2 style={{ margin: '4px 0 12px' }}>복원 실행</h2>
         <div style={{ display: 'grid', gap: 10 }}>
           <div style={{ padding: 12, border: '1px solid #dfe5ec', borderRadius: 10 }}><strong>MERGE</strong><p style={{ margin: '5px 0 10px', color: '#667085', fontSize: 12 }}>현재 데이터를 유지하면서 같은 key는 백업 값으로 갱신하고 없는 레코드는 추가합니다.</p><Button fullWidth variant="outlined" startIcon={<RestoreRounded />} disabled={!backup || busy} onClick={() => void restore('merge')}>병합 복원</Button></div>
           <div style={{ padding: 12, border: '1px solid #f1c7c7', borderRadius: 10, background: '#fffafa' }}><strong>REPLACE</strong><p style={{ margin: '5px 0 10px', color: '#667085', fontSize: 12 }}>현재 로컬 store와 daon: 운영상태를 비우고 백업 파일 기준으로 교체합니다. 실행 전 확인창이 표시됩니다.</p><Button fullWidth color="error" variant="outlined" startIcon={<RestoreRounded />} disabled={!backup || busy} onClick={() => void restore('replace')}>전체 교체 복원</Button></div>

@@ -14,6 +14,12 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1300 } });
 
 try {
   await page.goto(`${BASE_URL}/access`, { waitUntil: 'domcontentloaded' });
+  // 2026-11-26: operator view first (로그인 상태 · 사용자 초대); the technical boundary sits in a collapsed details.
+  await waitForText(page, '로그인 상태');
+  await waitForText(page, '로그아웃 상태');
+  // 2026-11-27 루인 #86: required security/role notice must be readable while the technical details stay closed.
+  for (const text of ['보안 · 권한 필수 안내', '실제 권한은 운영 서버가 최종 확인합니다.', 'Leaked Password Protection', '대표 관리자', '사용자·권한 관리']) await waitForText(page, text);
+  await page.locator('.tech-details > summary').click();
   for (const text of [
     '사용자 · 권한 관리',
     'LOCAL POLICY READY',
@@ -26,8 +32,6 @@ try {
     'RLS 강제',
     'OWNER 전용 관리',
     '멀티디바이스 동기화',
-    'REMOTE AUTH SESSION',
-    'SIGNED OUT',
     'ROLE MATRIX',
     'OWNER',
     'ADMIN',
@@ -49,6 +53,9 @@ try {
   await page.screenshot({ path: `${ARTIFACT_DIR}/access-management.png`, fullPage: true });
 
   await page.goto(`${BASE_URL}/external-shares`, { waitUntil: 'domcontentloaded' });
+  await waitForText(page, '외부 공유 센터');
+  for (const text of ['외부 공유 필수 안내', '이미 전달한 HTML 파일은 회수할 수 없습니다.', '공개 URL(원격 공유)만 서버에서 실제로 막을 수 있습니다.']) await waitForText(page, text);
+  await page.locator('.tech-details > summary').click();
   for (const text of [
     '외부 공유 센터',
     'LOCAL / OFFLINE',

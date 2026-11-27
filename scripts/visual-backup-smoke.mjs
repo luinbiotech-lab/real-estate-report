@@ -62,21 +62,21 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 1600 } });
 try {
   await page.goto(`${BASE_URL}/backup`, { waitUntil: 'domcontentloaded' });
   for (const text of [
-    'Data Backup Center',
+    '백업 · 복원',
     '전체 백업 다운로드',
-    'REMOTE MIGRATION · DRY RUN ONLY',
+    '원격 이관 사전점검(읽기 전용)',
     '원격 전환 사전점검',
-    'Dry Run 실행',
-    'Manifest 다운로드',
+    '사전점검 실행',
+    '점검 결과 다운로드',
     '네트워크 write는 0건입니다.',
-    'BACKUP SCOPE',
-    'RESTORE PREVIEW',
-    'RESTORE MODE',
+    '백업 범위',
+    '복원 미리보기',
+    '복원 방식',
     '병합 복원',
     '전체 교체 복원',
     '복원 전 현재 백업',
     'Blob/ArrayBuffer 원본도 Base64로 포함합니다.',
-    '현재 단계는 local-first입니다.',
+    '데이터는 이 기기 브라우저에 저장됩니다.',
   ]) await waitForText(page, text);
 
   await page.evaluate(async ({ mediaId }) => {
@@ -103,7 +103,7 @@ try {
     });
   }, { mediaId: QA_MEDIA_ID });
 
-  await page.getByRole('button', { name: 'Dry Run 실행' }).click();
+  await page.getByRole('button', { name: '사전점검 실행' }).click();
   await waitForText(page, 'NETWORK WRITES');
   await waitForText(page, 'daon-remote-migration-plan-v1');
   const migrationPanelText = await page.getByTestId('remote-migration-dry-run').innerText();
@@ -112,7 +112,7 @@ try {
   }
 
   const manifestDownloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Manifest 다운로드' }).click();
+  await page.getByRole('button', { name: '점검 결과 다운로드' }).click();
   const manifestDownload = await manifestDownloadPromise;
   await manifestDownload.saveAs(MIGRATION_PLAN_PATH);
   const migrationPlan = JSON.parse(await readFile(MIGRATION_PLAN_PATH, 'utf8'));
@@ -173,7 +173,7 @@ try {
   await waitForText(page, 'NETWORK WRITES');
 
   const phase1DownloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'Manifest 다운로드' }).click();
+  await page.getByRole('button', { name: '점검 결과 다운로드' }).click();
   const phase1Download = await phase1DownloadPromise;
   await phase1Download.saveAs(BANGBAE_PHASE1_PLAN_PATH);
   const phase1Plan = JSON.parse(await readFile(BANGBAE_PHASE1_PLAN_PATH, 'utf8'));

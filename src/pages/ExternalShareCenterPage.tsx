@@ -171,13 +171,56 @@ export default function ExternalShareCenterPage() {
 
   return <div className="external-share-center" style={{ maxWidth: 1380, margin: '0 auto' }}>
     <header style={{ display: 'flex', justifyContent: 'space-between', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap', marginBottom: 22 }}>
-      <div><p className="eyebrow">EXTERNAL SHARE · ACCESS POLICY · REVIEW AUDIT</p><h1 style={{ margin: '5px 0' }}>외부 공유 센터</h1><p style={{ margin: 0, color: '#667085' }}>로컬 standalone 패키지와 production 서버 기반 Public URL 공유를 Provider 단위로 분리해 관리합니다.</p></div>
+      <div><p className="eyebrow">외부 공유 · 열람 기록</p><h1 style={{ margin: '5px 0' }}>외부 공유 센터</h1><p style={{ margin: 0, color: '#667085' }}>보고서를 외부에 공유한 기록을 확인하고, 필요하면 공유를 회수합니다.</p></div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}><Button startIcon={<DownloadRounded />} onClick={exportAuditCsv}>감사대장 CSV</Button><Button startIcon={<DownloadRounded />} onClick={exportAuditJson}>감사대장 JSON</Button><Button startIcon={<RefreshRounded />} onClick={() => void load()}>새로고침</Button></div>
     </header>
 
     {error && <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError('')}>{error}</Alert>}
     {notice && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setNotice('')}>{notice}</Alert>}
 
+
+    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(130px,1fr))', gap: 10, marginBottom: 18 }}>
+      {[
+        ['전체 공유', counts.total], ['사용 중', counts.active], ['만료', counts.expired], ['회수', counts.revoked], ['미해결 검토', counts.openReview],
+      ].map(([label, value]) => <div key={String(label)} className="ds-card" style={{ padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
+    </section>
+
+
+    <section style={{ background: '#10243f', color: '#fff', borderRadius: 12, padding: 16, marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10 }}>
+      <TextField size="small" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="물건명 · 주소 · 공유대상 · 보고서 버전 검색" sx={{ background: '#fff', borderRadius: 1 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded /></InputAdornment> }} />
+      <TextField select size="small" value={status} onChange={(event) => setStatus(event.target.value as typeof status)} sx={{ background: '#fff', borderRadius: 1 }}><MenuItem value="all">전체 상태</MenuItem><MenuItem value="active">ACTIVE</MenuItem><MenuItem value="expired">EXPIRED</MenuItem><MenuItem value="revoked">REVOKED</MenuItem></TextField>
+    </section>
+
+    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, overflow: 'hidden' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.1fr 110px 160px 110px 120px 310px', gap: 10, padding: '11px 14px', background: '#f7f9fb', color: '#667085', fontSize: 12, fontWeight: 700 }}><span>물건 / 보고서 버전</span><span>공유대상</span><span>상태</span><span>만료</span><span>다운로드</span><span>검토</span><span>작업</span></div>
+      {!filtered.length && <div style={{ padding: 34, textAlign: 'center', color: '#667085' }}>조건에 맞는 외부 공유가 없습니다.</div>}
+      {filtered.map((share) => {
+        const property = propertyMap.get(share.propertyId);
+        const openReview = openReviewBySnapshot.get(share.snapshotId) ?? 0;
+        return <div key={share.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.1fr 110px 160px 110px 120px 310px', gap: 10, padding: '13px 14px', borderTop: '1px solid #edf0f4', alignItems: 'center' }}>
+          <div><strong style={{ display: 'block', fontSize: 13 }}>{property?.name || share.propertyId}</strong><small style={{ color: '#667085' }}>{property?.address || '주소 미등록'}</small><small style={{ display: 'block', color: '#98a2b3', marginTop: 3 }}>{share.snapshotId}</small></div>
+          <div><strong style={{ fontSize: 13 }}>{share.note || '외부 검토 공유'}</strong><small style={{ display: 'block', color: '#667085', marginTop: 3 }}>LOCAL / OFFLINE · {new Date(share.createdAt).toLocaleString('ko-KR')}</small></div>
+          <Chip size="small" color={share.status === 'active' ? 'success' : share.status === 'expired' ? 'warning' : 'default'} label={share.status === 'active' ? '사용 중' : share.status === 'expired' ? '만료' : '회수'} />
+          <small>{share.expiresAt ? new Date(share.expiresAt).toLocaleString('ko-KR') : '만료 없음'}</small>
+          <Chip size="small" variant="outlined" label={share.allowDownload ? '허용' : '차단'} />
+          <Chip size="small" color={openReview ? 'warning' : 'success'} variant="outlined" label={openReview ? `검토 ${openReview}건` : '검토 없음'} />
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}><Button size="small" startIcon={<OpenInBrowserRounded />} disabled={busyId === share.id || !canReissueShare(share, new Date().toISOString())} onClick={() => void exportHtml(share)}>공유 HTML</Button><Button size="small" startIcon={<DownloadRounded />} disabled={busyId === share.id || !canReissueShare(share, new Date().toISOString())} onClick={() => void exportManifest(share)}>Manifest</Button>{share.status === 'active' && <Button size="small" color="warning" startIcon={<BlockRounded />} disabled={busyId === share.id || share.status !== 'active'} onClick={() => void revoke(share)}>로컬 회수</Button>}</div>
+        </div>;
+      })}
+    </section>
+
+    {/* 2026-11-27 루인 #86 (RB-26ebb1e): 외부 공유 위험은 기술 상세를 접어도 항상 보여야 합니다. */}
+    <section className="required-notice" role="note" aria-label="외부 공유 필수 안내">
+      <h2>외부 공유 필수 안내</h2>
+      <ul>
+        <li><strong>이미 전달한 HTML 파일은 회수할 수 없습니다.</strong> 이 화면의 회수는 기록만 바꾸며, 받은 사람의 복사본은 지워지지 않습니다.</li>
+        <li><strong>공개 URL(원격 공유)만 서버에서 실제로 막을 수 있습니다.</strong> 실제 발급·회수 운영 확인은 아직 필요합니다.</li>
+        <li>공유한 보고서에는 물건 정보가 들어 있습니다. 받는 사람과 만료일을 확인한 뒤 공유하세요.</li>
+      </ul>
+    </section>
+
+    <details className="tech-details">
+      <summary>기술 상세 (공유 방식 · 회수 범위)</summary>
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12, marginBottom: 18 }}>
       {providers.map((provider) => <article key={provider.id} style={{ background: '#fff', border: provider.availability === 'ready' ? '1px solid #b7d8c2' : '1px solid #e4d7b8', borderRadius: 12, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -188,38 +231,8 @@ export default function ExternalShareCenterPage() {
         <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap', marginTop: 10 }}>{capabilityLabels.map(([key, label]) => <Chip key={key} size="small" variant="outlined" color={provider.capabilities[key] ? 'primary' : 'default'} label={`${label} ${provider.capabilities[key] ? '✓' : '—'}`} />)}</div>
       </article>)}
     </section>
-
-    <section style={{ display: 'grid', gridTemplateColumns: 'repeat(5,minmax(130px,1fr))', gap: 10, marginBottom: 18 }}>
-      {[
-        ['전체 공유', counts.total], ['ACTIVE', counts.active], ['EXPIRED', counts.expired], ['REVOKED', counts.revoked], ['미해결 검토', counts.openReview],
-      ].map(([label, value]) => <div key={String(label)} className="ds-card" style={{ padding: 14 }}><small style={{ color: '#667085' }}>{label}</small><strong style={{ display: 'block', fontSize: 28, marginTop: 4 }}>{value}</strong></div>)}
-    </section>
-
     <Alert severity="warning" sx={{ mb: 1.5 }}><strong>LOCAL / OFFLINE 회수와 REMOTE 회수는 다릅니다.</strong> 이 화면의 기존 LOCAL `REVOKED`는 감사상태 변경이며 이미 외부에 전달된 standalone HTML 파일은 삭제하거나 원격 차단할 수 없습니다. REMOTE / PUBLIC으로 발급한 URL은 서버에서 실제 revoke할 수 있습니다.</Alert>
-
-    <section style={{ background: '#10243f', color: '#fff', borderRadius: 12, padding: 16, marginBottom: 14, display: 'grid', gridTemplateColumns: '1fr 180px', gap: 10 }}>
-      <TextField size="small" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="물건명 · 주소 · 공유대상 · Snapshot 검색" sx={{ background: '#fff', borderRadius: 1 }} InputProps={{ startAdornment: <InputAdornment position="start"><SearchRounded /></InputAdornment> }} />
-      <TextField select size="small" value={status} onChange={(event) => setStatus(event.target.value as typeof status)} sx={{ background: '#fff', borderRadius: 1 }}><MenuItem value="all">전체 상태</MenuItem><MenuItem value="active">ACTIVE</MenuItem><MenuItem value="expired">EXPIRED</MenuItem><MenuItem value="revoked">REVOKED</MenuItem></TextField>
-    </section>
-
-    <section style={{ background: '#fff', border: '1px solid #d9e0e8', borderRadius: 12, overflow: 'hidden' }}>
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.1fr 110px 160px 110px 120px 310px', gap: 10, padding: '11px 14px', background: '#f7f9fb', color: '#667085', fontSize: 12, fontWeight: 700 }}><span>물건 / Snapshot</span><span>공유대상</span><span>상태</span><span>만료</span><span>다운로드</span><span>검토</span><span>LOCAL 작업</span></div>
-      {!filtered.length && <div style={{ padding: 34, textAlign: 'center', color: '#667085' }}>조건에 맞는 외부 공유가 없습니다.</div>}
-      {filtered.map((share) => {
-        const property = propertyMap.get(share.propertyId);
-        const openReview = openReviewBySnapshot.get(share.snapshotId) ?? 0;
-        return <div key={share.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1.1fr 110px 160px 110px 120px 310px', gap: 10, padding: '13px 14px', borderTop: '1px solid #edf0f4', alignItems: 'center' }}>
-          <div><strong style={{ display: 'block', fontSize: 13 }}>{property?.name || share.propertyId}</strong><small style={{ color: '#667085' }}>{property?.address || '주소 미등록'}</small><small style={{ display: 'block', color: '#98a2b3', marginTop: 3 }}>{share.snapshotId}</small></div>
-          <div><strong style={{ fontSize: 13 }}>{share.note || '외부 검토 공유'}</strong><small style={{ display: 'block', color: '#667085', marginTop: 3 }}>LOCAL / OFFLINE · {new Date(share.createdAt).toLocaleString('ko-KR')}</small></div>
-          <Chip size="small" color={share.status === 'active' ? 'success' : share.status === 'expired' ? 'warning' : 'default'} label={share.status.toUpperCase()} />
-          <small>{share.expiresAt ? new Date(share.expiresAt).toLocaleString('ko-KR') : '만료 없음'}</small>
-          <Chip size="small" variant="outlined" label={share.allowDownload ? '허용' : '차단'} />
-          <Chip size="small" color={openReview ? 'warning' : 'success'} variant="outlined" label={openReview ? `${openReview} OPEN` : 'CLEAR'} />
-          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}><Button size="small" startIcon={<OpenInBrowserRounded />} disabled={busyId === share.id || !canReissueShare(share, new Date().toISOString())} onClick={() => void exportHtml(share)}>공유 HTML</Button><Button size="small" startIcon={<DownloadRounded />} disabled={busyId === share.id || !canReissueShare(share, new Date().toISOString())} onClick={() => void exportManifest(share)}>Manifest</Button>{share.status === 'active' && <Button size="small" color="warning" startIcon={<BlockRounded />} disabled={busyId === share.id || share.status !== 'active'} onClick={() => void revoke(share)}>로컬 회수</Button>}</div>
-        </div>;
-      })}
-    </section>
-
     <Alert severity="warning" icon={<ShareRounded />} sx={{ mt: 1.5 }}><strong>REMOTE / PUBLIC backend는 CONNECTED입니다.</strong> Public URL 발급·서버 만료·remote revoke 기능은 연결되어 있지만, 실제 운영 OWNER의 issue/list/revoke browser acceptance 전에는 Production 운영 완료로 보지 않습니다. 이 감사대장은 기존 LOCAL 공유 이력을 계속 분리해 보존합니다.</Alert>
+    </details>
   </div>;
 }

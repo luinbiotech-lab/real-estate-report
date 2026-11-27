@@ -340,7 +340,7 @@ export default function PropertyDataRoomPage() {
           mode="viewer"
           legacyBundle={bundle}
         />
-        {bundle.digitalTwinAssets.length > 0 && <section className="data-room-overview"><section><p className="eyebrow">LEGACY / SOURCE ASSETS</p><h2>기존 Digital Twin 원본</h2><div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div></section></section>}
+        {bundle.digitalTwinAssets.length > 0 && <section className="data-room-overview"><section><p className="eyebrow">이전 · 원본 자료</p><h2>기존 Digital Twin 원본</h2><div className="asset-list">{bundle.digitalTwinAssets.map((asset) => <article key={asset.id}><b>{asset.assetType}</b><span>{asset.fileFormat} · v{asset.version}</span><Chip size="small" label={asset.processingStatus} /></article>)}</div></section></section>}
         <nav aria-label="3D 탭 Workspace 연결" style={{ display: 'flex', justifyContent: 'center', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
           {/* Single Digital Twin Intake entrypoint for the 3D tab (SpatialDataRoomPanel's own intake button is intentionally not enabled to avoid duplicates). */}
           <Button variant="contained" startIcon={<CloudUploadOutlined />} onClick={() => navigate(`/digital-twin-intake?propertyId=${encodeURIComponent(id)}`)}>도면 · 3D 자료 등록/추가</Button>

@@ -43,7 +43,7 @@ export default function MarketPositionPanel({ property, sources, compact = false
 
   return <section className={`market-position ${compact ? 'is-compact' : ''}`} aria-label="시세 위치">
     <header className="market-position-head">
-      <div><p className="eyebrow">MARKET POSITION</p><h2>시세 위치</h2></div>
+      <div><p className="eyebrow">시세 위치</p><h2>시세 위치</h2></div>
       <span className="market-position-tags">
         <span className="tag">비교거래 {position.count}건</span>
         {status && <span className="tag">{VERIFICATION_LABELS[status] ?? status}</span>}
