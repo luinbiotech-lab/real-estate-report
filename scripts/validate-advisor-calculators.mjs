@@ -19,8 +19,8 @@ eq(calc.housingBaseRate(750_000_000), 0.02, '주택 7.5억 2%');
 eq(calc.housingBaseRate(900_000_000), 0.03, '주택 9억 경계 3%');
 eq(calc.housingBaseRate(1_000_000_000), 0.03, '주택 10억 3%');
 const multi = calc.acquisitionTax({ price: 800_000_000, use: 'housing', homesAfter: 2, over85: false });
-// 루인 #86 RB-71e0384: 계산 불가는 0(세금 없음)이 아니라 null + 이유.
-expect(multi.total === null && Boolean(multi.notComputableReason), '2주택 이상은 total=null(계산 불가)과 이유를 돌려줘야 합니다.');
+// 루인 #86 RB-71e0384: 결과 없음은 0(세금 없음)이 아니라 null + 이유. 루치오 11/27: 지원 안 하는 경우는 '세무사 상담 필요'.
+expect(multi.total === null && Boolean(multi.notComputableReason) && multi.notComputableKind === 'unsupported', '2주택 이상은 total=null·unsupported(세무사 상담 필요)와 이유를 돌려줘야 합니다.');
 
 // 양도세 기본세율 구간 경계 (누진공제 연속성)
 const brackets = [[14_000_000, 840_000], [50_000_000, 6_240_000], [88_000_000, 15_360_000], [150_000_000, 37_060_000], [300_000_000, 94_060_000], [500_000_000, 174_060_000], [1_000_000_000, 384_060_000]];
@@ -43,7 +43,7 @@ expect(JSON.stringify(ask.parseAllAmounts('20억 10년')) === '[2000000000]', '"
 eq(ask.parseKoreanAmount('41억 5천'), 4_150_000_000, '41억 5천');
 eq(ask.classifyQuestion('오늘 날씨 어때'), 'unsupported', '관련 없는 질문');
 
-// 음수·NaN·무한대·범위 밖 입력 → 계산 불가 (0으로 대체 금지)
+// 음수·NaN·무한대·범위 밖 입력 → 입력 확인 (0으로 대체 금지)
 const bad = [
   ['중개보수 음수', calc.brokerageFeeCap(-1)],
   ['중개보수 NaN', calc.brokerageFeeCap(Number.NaN)],
@@ -56,7 +56,9 @@ const bad = [
   ['수익률 실투자금 0', calc.rentalYield({ price: 3e9, deposit: 1e9, monthlyRent: 1e7, monthlyCost: 0, vacancyMonths: 0, loan: 2e9, loanRatePercent: 4 })],
   ['수익률 금리 NaN', calc.rentalYield({ price: 3e9, deposit: 0, monthlyRent: 1e7, monthlyCost: 0, vacancyMonths: 0, loan: 0, loanRatePercent: Number.NaN })],
 ];
-for (const [label, r] of bad) expect(r.total === null && typeof r.notComputableReason === 'string' && r.notComputableReason.length > 0, `${label}: 계산 불가(null)와 이유가 필요합니다.`);
+for (const [label, r] of bad) expect(r.total === null && r.notComputableKind === 'input' && typeof r.notComputableReason === 'string' && r.notComputableReason.length > 0, `${label}: 입력 확인(null·input)과 이유가 필요합니다.`);
+eq(calc.capitalGainsTax({ buyPrice: -1, sellPrice: 1e9, expenses: 0, holdingYears: 3 }).notComputableReason, '취득가는 0 이상으로 입력해 주세요.', '조사 은/는(받침 없음)');
+eq(calc.brokerageFeeCap(-1).notComputableReason, '거래 금액은 0 이상으로 입력해 주세요.', '조사 은/는(받침 있음)');
 // 경계: 0원 거래·0년 보유는 정상 계산
 eq(calc.brokerageFeeCap(0).total, 0, '중개보수 0원');
 eq(calc.capitalGainsTax({ buyPrice: 1e9, sellPrice: 1e9, expenses: 0, holdingYears: 0 }).total, 0, '양도차익 0');
@@ -71,8 +73,10 @@ for (const [key, source] of Object.entries(calc.RATE_SOURCES)) expect(source.sta
 // 모든 결과는 미검증 표시
 for (const r of [cgt, multi]) expect(r.verified === false && r.basis.every((b) => b.includes('원문 대조 전')), '결과는 원문 대조 전으로 표시해야 합니다.');
 const page = readFileSync('src/pages/AskPage.tsx', 'utf8');
-for (const marker of ['원문 대조 전', '참고용 계산입니다', '개인정보는 말하지 마세요', '검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요', '시험 계산값 보기', '금액을 안내하지 않습니다', '계산 불가']) expect(page.includes(marker), `AskPage 표시 누락: ${marker}`);
+for (const marker of ['원문 대조 전', '참고용 계산입니다', '개인정보는 말하지 마세요', '검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요', '시험 계산값 보기', '금액을 안내하지 않습니다', '미입력', '입력 확인', '세무사 상담 필요']) expect(page.includes(marker), `AskPage 표시 누락: ${marker}`);
 // Unverified amounts must not be spoken: the spoken text for 'unverified' must not interpolate won(...).
+// 루치오 11/27: 화면·음성에 '계산 불가'처럼 부정적 표현을 쓰지 않음.
+for (const word of ['계산 불가', '계산할 수 없습니다']) expect(!page.includes(word) && !JSON.stringify(bad.map(([, r]) => r.notComputableReason)).includes(word) && !multi.notComputableReason.includes(word), `부정 표현 금지: ${word}`);
 const spoken = page.slice(page.indexOf('const spokenSummary'), page.indexOf('};', page.indexOf('const spokenSummary')));
 const unverifiedLine = spoken.split('\n').find((line) => line.includes("rateStatus === 'unverified'"));
 expect(Boolean(unverifiedLine) && !unverifiedLine.includes('won('), '원문 대조 전 금액을 음성으로 읽으면 안 됩니다.');

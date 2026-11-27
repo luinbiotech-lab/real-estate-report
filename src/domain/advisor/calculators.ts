@@ -6,24 +6,27 @@
  * instead of being guessed.
  *
  * 2026-11-27 루인 #86 RB-real-estate-report-71e0384 DISAGREE 반영:
- * - `total: null` = 계산 불가 (never 0, which reads as "세금 없음").
+ * - `total: null` = 결과 없음 (never 0, which reads as "세금 없음"). `notComputableKind` says why: 'input' (입력 확인) or
+ *   'unsupported' (세무사 상담 필요). 2026-11-27 루치오: 화면에 '계산 불가' 같은 부정적 표현을 쓰지 않음; 빈 칸은 '미입력'.
  * - `rateStatus: 'unverified'` results must not be shown as a tax answer; the page hides the amount behind an explicit
  *   "시험 계산값 보기" and never speaks it. Flip RATE_SOURCES[*].status to 'verified' only after the archived statute
  *   text (with 시행일) is checked and linked.
- * - Negative, NaN and infinite inputs return 계산 불가 with the reason.
+ * - Negative, NaN and infinite inputs return total null with kind 'input' and a plain request to fix the value.
  */
 
 export interface CalcLine { label: string; value: number; note?: string }
 export type RateStatus = 'unverified' | 'verified' | 'formula';
 export interface CalcResult {
   title: string;
-  /** Total the user asked for (tax or yield, see unit). null = 계산 불가. */
+  /** Total the user asked for (tax or yield, see unit). null = no result (see notComputableKind). */
   total: number | null;
   unit: 'KRW' | 'PERCENT';
   /** 'unverified' = rates not yet checked against the archived statute: not a tax answer. 'formula' = plain arithmetic. */
   rateStatus: RateStatus;
-  /** Why total is null (input error or a case these formulas do not cover). */
+  /** Why total is null, written as a request or next step (shown to the user). */
   notComputableReason?: string;
+  /** 'input' = a value needs fixing (입력 확인); 'unsupported' = valid case these formulas do not cover (세무사 상담 필요). */
+  notComputableKind?: 'input' | 'unsupported';
   lines: CalcLine[];
   notCovered: string[];
   basis: string[];
@@ -39,17 +42,23 @@ export const RATE_SOURCES = {
   capitalGains: { status: 'unverified' as RateStatus, statute: '소득세법 제55조·제95조·제103조·제104조', effective: '시행일 확인 전' },
 } as const;
 
+/** 은/는 by the last syllable's final consonant (받침). */
+const topicParticle = (word: string) => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return code >= 0 && code <= 11171 && code % 28 !== 0 ? '은' : '는';
+};
+
 /** Inputs must be finite and not negative; returns the first problem in plain Korean, or null. */
 export function inputProblem(values: Record<string, number>): string | null {
   for (const [label, value] of Object.entries(values)) {
-    if (!Number.isFinite(value)) return `${label} 값이 숫자가 아닙니다.`;
-    if (value < 0) return `${label} 값은 0보다 작을 수 없습니다.`;
+    if (!Number.isFinite(value)) return `${label}에 숫자를 입력해 주세요.`;
+    if (value < 0) return `${label}${topicParticle(label)} 0 이상으로 입력해 주세요.`;
   }
   return null;
 }
 
-function notComputable(title: string, unit: CalcResult['unit'], rateStatus: RateStatus, reason: string, basis: string[]): CalcResult {
-  return { title, total: null, unit, rateStatus, notComputableReason: reason, lines: [], notCovered: [], basis, verified: false };
+function notComputable(title: string, unit: CalcResult['unit'], rateStatus: RateStatus, reason: string, basis: string[], kind: 'input' | 'unsupported' = 'input'): CalcResult {
+  return { title, total: null, unit, rateStatus, notComputableReason: reason, notComputableKind: kind, lines: [], notCovered: [], basis, verified: false };
 }
 
 /* ---------- 중개보수 ---------- */
@@ -104,7 +113,7 @@ export function acquisitionTax(input: AcquisitionInput): CalcResult {
   }
   const notCovered = ['조정대상지역·다주택 중과 세율', '생애최초 등 감면'];
   if (input.homesAfter > 1) {
-    return { ...notComputable('취득세 (주택)', 'KRW', RATE_SOURCES.acquisition.status, '취득 후 2주택 이상은 지역·주택 수에 따라 중과 세율이 달라 계산하지 않습니다. 세무사 확인이 필요합니다.', ['지방세법 제13조의2 — 원문 대조 전']), lines: [{ label: '취득가', value: price }] };
+    return { ...notComputable('취득세 (주택)', 'KRW', RATE_SOURCES.acquisition.status, '취득 후 2주택 이상은 지역·주택 수에 따라 세율이 달라 세무사 상담으로 안내합니다.', ['지방세법 제13조의2 — 원문 대조 전'], 'unsupported'), lines: [{ label: '취득가', value: price }] };
   }
   const rate = housingBaseRate(price);
   const base = Math.floor(price * rate);
@@ -188,7 +197,7 @@ export interface YieldInput { price: number; deposit: number; monthlyRent: numbe
 export function rentalYield(input: YieldInput): CalcResult {
   const problem = inputProblem({ 매입가: input.price, 보증금: input.deposit, '월 임대료': input.monthlyRent, '월 운영비': input.monthlyCost, '연 공실': input.vacancyMonths, 대출: input.loan, '대출 금리': input.loanRatePercent });
   if (problem) return notComputable('임대 수익률', 'PERCENT', 'formula', problem, []);
-  if (input.vacancyMonths > 12) return notComputable('임대 수익률', 'PERCENT', 'formula', '연 공실은 12개월을 넘을 수 없습니다.', []);
+  if (input.vacancyMonths > 12) return notComputable('임대 수익률', 'PERCENT', 'formula', '연 공실은 0~12개월로 입력해 주세요.', []);
   const occupied = Math.min(12, Math.max(0, 12 - input.vacancyMonths));
   const rentIncome = input.monthlyRent * occupied;
   const cost = input.monthlyCost * 12;
@@ -197,7 +206,7 @@ export function rentalYield(input: YieldInput): CalcResult {
   const equity = input.price - input.deposit - input.loan;
   const grossBase = input.price - input.deposit;
   const gross = grossBase > 0 ? (input.monthlyRent * 12) / grossBase : 0;
-  if (equity <= 0) return notComputable('임대 수익률', 'PERCENT', 'formula', '실투자금(매입가 − 보증금 − 대출)이 0 이하라 수익률을 계산할 수 없습니다.', []);
+  if (equity <= 0) return notComputable('임대 수익률', 'PERCENT', 'formula', '실투자금(매입가 − 보증금 − 대출)이 0보다 커야 수익률을 계산할 수 있습니다. 보증금·대출을 확인해 주세요.', []);
   const onEquity = net / equity;
   return {
     title: '임대 수익률',

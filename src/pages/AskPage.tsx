@@ -34,7 +34,7 @@ function speak(text: string) {
 interface Form { price: string; buy: string; sell: string; expenses: string; years: string; use: 'non-housing' | 'housing'; homesAfter: string; over85: boolean; deposit: string; rent: string; cost: string; vacancy: string; loan: string; loanRate: string }
 const EMPTY: Form = { price: '', buy: '', sell: '', expenses: '0', years: '', use: 'non-housing', homesAfter: '1', over85: false, deposit: '0', rent: '', cost: '0', vacancy: '0', loan: '0', loanRate: '4.5' };
 const man = (v: number) => String(Math.round(v / 10_000));
-/** Empty = 0; anything that is not a number stays NaN so the calculator reports 계산 불가 instead of silently using 0. */
+/** Empty = 0; anything that is not a number stays NaN so the calculator asks to fix it (입력 확인) instead of silently using 0. */
 const num = (v: string) => (v.trim() === '' ? 0 : Number(v.replace(/,/g, '')));
 const krw = (v: string) => Math.round(num(v) * 10_000);
 const blank = (v: string) => v.trim() === '';
@@ -53,7 +53,8 @@ function applyQuestion(text: string, form: Form): { topic: Topic | null; form: F
 
 function compute(topic: Topic, f: Form): { result: CalcResult | null; missing: string[] } {
   const missing: string[] = [];
-  if (topic === 'brokerage-fee' || topic === 'acquisition-tax') { if (blank(f.price)) missing.push('거래 금액'); }
+  if (topic === 'brokerage-fee' && blank(f.price)) missing.push('거래 금액');
+  if (topic === 'acquisition-tax' && blank(f.price)) missing.push('취득가');
   if (topic === 'capital-gains-tax') { if (blank(f.buy)) missing.push('취득가'); if (blank(f.sell)) missing.push('양도가'); if (blank(f.years)) missing.push('보유 기간'); }
   if (topic === 'rental-yield') { if (blank(f.price)) missing.push('매입가'); if (blank(f.rent)) missing.push('월 임대료'); }
   if (missing.length) return { result: null, missing };
@@ -65,7 +66,7 @@ function compute(topic: Topic, f: Form): { result: CalcResult | null; missing: s
 
 /** Spoken answer. Unverified tax amounts are never read out (루인 #86 RB-71e0384): only plain-formula results are. */
 const spokenSummary = (r: CalcResult) => {
-  if (r.total === null) return `${r.title}는 계산할 수 없습니다. ${r.notComputableReason ?? ''}`;
+  if (r.total === null) return r.notComputableKind === 'unsupported' ? `${r.title}는 세무사 상담이 필요한 경우입니다. ${r.notComputableReason ?? ''}` : `입력을 확인해 주세요. ${r.notComputableReason ?? ''}`;
   if (r.rateStatus === 'unverified') return `${r.title} 세율은 아직 법령 원문과 대조하지 않아 금액을 안내하지 않습니다. 세무사 확인이 필요합니다.`;
   return r.unit === 'PERCENT' ? `${r.title}은 실투자금 기준 연 ${r.total}퍼센트입니다. 참고용 계산입니다.` : `${r.title}는 ${won(r.total)}입니다. 참고용 계산입니다.`;
 };
@@ -99,7 +100,7 @@ export default function AskPage() {
     setNotice(''); setTopic(next.topic); setForm(next.form);
     if (spoken) {
       const computed = compute(next.topic, next.form);
-      speak(computed.result ? spokenSummary(computed.result) : `${TOPIC_LABEL[next.topic]}를 계산하려면 ${computed.missing.join(', ')}이 필요합니다. 아래 칸에 입력해 주세요.`);
+      speak(computed.result ? spokenSummary(computed.result) : `${TOPIC_LABEL[next.topic]}를 계산하려면 ${computed.missing.join(', ')}을 아래 칸에 입력해 주세요.`);
     }
   };
 
@@ -166,8 +167,8 @@ export default function AskPage() {
         {topic === 'rental-yield' && <>{field('price', '매입가')}{field('deposit', '보증금')}{field('rent', '월 임대료')}{field('cost', '월 운영비')}{field('vacancy', '연 공실', '개월')}{field('loan', '대출')}{field('loanRate', '대출 금리', '%')}</>}
       </div>
 
-      {missing.length > 0 && <p className="ask-needs">입력이 필요합니다: {missing.join(', ')}</p>}
-      {result && result.total === null && <p className="ask-blocked" role="alert"><strong>계산 불가</strong> · {result.notComputableReason}</p>}
+      {missing.length > 0 && <p className="ask-needs"><strong>미입력</strong> · {missing.join(', ')}</p>}
+      {result && result.total === null && <p className={`ask-pending ${result.notComputableKind ?? 'input'}`} role="status"><strong>{result.notComputableKind === 'unsupported' ? '세무사 상담 필요' : '입력 확인'}</strong> · {result.notComputableReason}</p>}
       {result && result.total !== null && result.rateStatus === 'unverified' && <div className="ask-trial" role="note">
         <strong>검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요</strong>
         <p>{RATE_NOTE}</p>
@@ -176,7 +177,7 @@ export default function AskPage() {
       {result && result.total !== null && (result.rateStatus !== 'unverified' || showTrial) && <>
         <p className={`ask-total${result.rateStatus === 'unverified' ? ' trial' : ''}`}>{result.rateStatus === 'unverified' ? '시험 계산값 ' : ''}{result.unit === 'PERCENT' ? `실투자금 기준 연 ${result.total}%` : won(result.total)}</p>
         <dl className="ask-inputs">{result.lines.map((line) => <div key={line.label}><dt>{line.label}{line.note && <small> · {line.note}</small>}</dt><dd>{line.label.endsWith('(%)') ? `${line.value}%` : won(line.value)}</dd></div>)}</dl>
-        {result.notCovered.length > 0 && <p className="ask-needs">계산에 넣지 않은 것: {result.notCovered.join(' · ')}</p>}
+        {result.notCovered.length > 0 && <p className="ask-needs">이 계산에 포함하지 않은 항목: {result.notCovered.join(' · ')}</p>}
       </>}
       {result && result.basis.length > 0 && <p className="ask-basis">근거: {result.basis.join(' · ')}</p>}
       {result && <p className="ask-basis">참고용 계산입니다. 신고·계약 전에는 세무사·변호사 확인이 필요합니다.</p>}
