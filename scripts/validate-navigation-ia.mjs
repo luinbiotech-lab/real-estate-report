@@ -57,8 +57,9 @@ if (!app.includes('<Route index element={<HomePage />} />') || !app.includes('<R
 if (nav.primaryNav.map((item) => `${item.title}:${item.to}`).join('|') !== '홈:/|탐색:/explore|물건:/properties|조회:/discover|분석:/readiness|보고서:/report-history|설정:/settings|사용설명서:/guide') throw new Error(`PC 주 메뉴는 홈/탐색/물건/조회/분석/보고서/설정 업무 흐름 순서(끝에 사용설명서)여야 합니다: ${nav.primaryNav.map((item) => item.title).join('/')}`);
 const groupPaths = (id) => nav.navGroups.find((group) => group.id === id)?.items.map((item) => item.to) ?? [];
 const expectGroups = {
+// 2026-11-26: /ask (세무 · 법률 질문) joins 분석, 루치오 시안 승인.
   property: ['/property/new', '/inquiries', '/import', '/bulk-intake'],
-  analysis: ['/risk', '/income', '/review-history'],
+  analysis: ['/risk', '/income', '/ask', '/review-history'],
   advanced: ['/digital-twin-intake', '/digital-twin', '/spatial', '/interior', '/room-ops'],
   report: ['/external-shares'],
   settings: ['/access', '/backup'],

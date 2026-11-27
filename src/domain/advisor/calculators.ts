@@ -1,0 +1,228 @@
+/*
+ * 세무·임대 계산기 (2026-11-26, 루치오 시안 승인 "시안대로 진행").
+ * Every rate below is written from the statute as commonly published and is marked 원문 대조 전 (not yet checked
+ * against the archived original text). The UI shows that label and a disclaimer on every result. Cases these
+ * formulas do not cover (multi-home surcharge, regulated areas, 1세대1주택 exemption, etc.) are returned as `notCovered`
+ * instead of being guessed.
+ *
+ * 2026-11-27 루인 #86 RB-real-estate-report-71e0384 DISAGREE 반영:
+ * - `total: null` = 결과 없음 (never 0, which reads as "세금 없음"). `notComputableKind` says why: 'input' (입력 확인) or
+ *   'unsupported' (상담 안내, 루치오 11/27 카드). 2026-11-27 루치오: 화면에 '계산 불가' 같은 부정적 표현을 쓰지 않음; 빈 칸은 '미입력'.
+ * - `rateStatus: 'unverified'` results must not be shown as a tax answer; the page hides the amount behind an explicit
+ *   "시험 계산값 보기" and never speaks it. Flip RATE_SOURCES[*].status to 'verified' only after the archived statute
+ *   text (with 시행일) is checked and linked.
+ * - Negative, NaN and infinite inputs return total null with kind 'input' and a plain request to fix the value.
+ */
+
+export interface CalcLine { label: string; value: number; note?: string }
+export type RateStatus = 'unverified' | 'verified' | 'formula';
+export interface CalcResult {
+  title: string;
+  /** Total the user asked for (tax or yield, see unit). null = no result (see notComputableKind). */
+  total: number | null;
+  unit: 'KRW' | 'PERCENT';
+  /** 'unverified' = rates not yet checked against the archived statute: not a tax answer. 'formula' = plain arithmetic. */
+  rateStatus: RateStatus;
+  /** Why total is null, written as a request or next step (shown to the user). */
+  notComputableReason?: string;
+  /** 'input' = a value needs fixing (입력 확인); 'unsupported' = valid case these formulas do not cover (상담 안내). */
+  notComputableKind?: 'input' | 'unsupported';
+  lines: CalcLine[];
+  notCovered: string[];
+  basis: string[];
+  verified: false;
+}
+
+const pct = (value: number) => Math.round(value * 10_000) / 100;
+
+/** Rate provenance. All statute rates stay 'unverified' until the original text and 시행일 are archived (원문 수집 BLOCKED 11/26). */
+export const RATE_SOURCES = {
+  brokerage: { status: 'unverified' as RateStatus, statute: '공인중개사법 시행규칙 제20조 제4항', effective: '시행일 확인 전' },
+  acquisition: { status: 'unverified' as RateStatus, statute: '지방세법 제11조·제13조의2·제151조, 농어촌특별세법 제5조', effective: '시행일 확인 전' },
+  capitalGains: { status: 'unverified' as RateStatus, statute: '소득세법 제55조·제95조·제103조·제104조', effective: '시행일 확인 전' },
+} as const;
+
+/** 은/는 by the last syllable's final consonant (받침). */
+const topicParticle = (word: string) => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return code >= 0 && code <= 11171 && code % 28 !== 0 ? '은' : '는';
+};
+
+/** Inputs must be finite and not negative; returns the first problem in plain Korean, or null. */
+export function inputProblem(values: Record<string, number>): string | null {
+  for (const [label, value] of Object.entries(values)) {
+    if (!Number.isFinite(value)) return `${label}에 숫자를 입력해 주세요.`;
+    if (value < 0) return `${label}${topicParticle(label)} 0 이상으로 입력해 주세요.`;
+  }
+  return null;
+}
+
+function notComputable(title: string, unit: CalcResult['unit'], rateStatus: RateStatus, reason: string, basis: string[], kind: 'input' | 'unsupported' = 'input'): CalcResult {
+  return { title, total: null, unit, rateStatus, notComputableReason: reason, notComputableKind: kind, lines: [], notCovered: [], basis, verified: false };
+}
+
+/* ---------- 중개보수 ---------- */
+/** 주택 외 매매·교환 상한 0.9% (공인중개사법 시행규칙 제20조 제4항, 원문 대조 전). */
+export const NON_HOUSING_BROKERAGE_CAP = 0.009;
+
+export function brokerageFeeCap(price: number): CalcResult {
+  const problem = inputProblem({ '거래 금액': price });
+  if (problem) return notComputable('중개보수 상한 (주택 외 매매)', 'KRW', RATE_SOURCES.brokerage.status, problem, []);
+  const cap = Math.floor(price * NON_HOUSING_BROKERAGE_CAP);
+  return {
+    title: '중개보수 상한 (주택 외 매매)',
+    total: cap,
+    unit: 'KRW',
+    rateStatus: RATE_SOURCES.brokerage.status,
+    lines: [{ label: '거래 금액', value: price }, { label: `상한 ${pct(NON_HOUSING_BROKERAGE_CAP)}%`, value: cap, note: '이 범위 안에서 협의' }],
+    notCovered: ['주택 매매·임대차 요율', '부가가치세(별도)'],
+    basis: ['공인중개사법 시행규칙 제20조 제4항 — 원문 대조 전'],
+    verified: false,
+  };
+}
+
+/* ---------- 취득세 ---------- */
+export interface AcquisitionInput { price: number; use: 'non-housing' | 'housing'; homesAfter: number; over85: boolean }
+
+/** 1주택 유상취득 본세율: 6억 이하 1%, 6억~9억 (가액×2/3억 − 3)%, 9억 초과 3%. */
+export function housingBaseRate(price: number): number {
+  const eok = price / 100_000_000;
+  if (eok <= 6) return 0.01;
+  if (eok <= 9) return Math.round(((eok * 2) / 3 - 3) * 100) / 10_000;
+  return 0.03;
+}
+
+export function acquisitionTax(input: AcquisitionInput): CalcResult {
+  const { price } = input;
+  const problem = inputProblem({ 취득가: price, '취득 후 주택 수': input.homesAfter });
+  if (problem) return notComputable('취득세', 'KRW', RATE_SOURCES.acquisition.status, problem, []);
+  if (input.use === 'non-housing') {
+    const base = Math.floor(price * 0.04);
+    const edu = Math.floor(price * 0.004);
+    const rural = Math.floor(price * 0.002);
+    return {
+      title: '취득세 (주택 외 건물·토지 매매)',
+      total: base + edu + rural,
+      unit: 'KRW',
+      rateStatus: RATE_SOURCES.acquisition.status,
+      lines: [{ label: '취득가', value: price }, { label: '취득세 4%', value: base }, { label: '지방교육세 0.4%', value: edu }, { label: '농어촌특별세 0.2%', value: rural }],
+      notCovered: ['과밀억제권역 안 본점·공장 중과', '농지', '감면 대상'],
+      basis: ['지방세법 제11조 제1항 제7호 나목 — 원문 대조 전', '지방세법 제151조(지방교육세), 농어촌특별세법 제5조 — 원문 대조 전'],
+      verified: false,
+    };
+  }
+  const notCovered = ['조정대상지역·다주택 중과 세율', '생애최초 등 감면'];
+  if (input.homesAfter > 1) {
+    return { ...notComputable('취득세 (주택)', 'KRW', RATE_SOURCES.acquisition.status, '취득 후 2주택 이상은 지역·주택 수에 따라 세율이 달라 세무사 상담으로 안내합니다.', ['지방세법 제13조의2 — 원문 대조 전'], 'unsupported'), lines: [{ label: '취득가', value: price }] };
+  }
+  const rate = housingBaseRate(price);
+  const base = Math.floor(price * rate);
+  const edu = Math.floor(base * 0.1);
+  const rural = input.over85 ? Math.floor(price * 0.002) : 0;
+  return {
+    title: '취득세 (1주택 매매)',
+    total: base + edu + rural,
+    unit: 'KRW',
+    rateStatus: RATE_SOURCES.acquisition.status,
+    lines: [
+      { label: '취득가', value: price },
+      { label: `취득세 ${pct(rate)}%`, value: base },
+      { label: '지방교육세 (취득세의 10%)', value: edu },
+      { label: '농어촌특별세 0.2%', value: rural, note: input.over85 ? '전용 85㎡ 초과' : '전용 85㎡ 이하 비과세' },
+    ],
+    notCovered,
+    basis: ['지방세법 제11조 제1항 제8호 — 원문 대조 전'],
+    verified: false,
+  };
+}
+
+/* ---------- 양도소득세 (토지·건물, 주택 외) ---------- */
+export interface CapitalGainsInput { buyPrice: number; sellPrice: number; expenses: number; holdingYears: number }
+
+/** 소득세법 제55조 기본세율 (2023년 이후 양도분), [상한, 세율, 누진공제]. */
+const BRACKETS: Array<[number, number, number]> = [
+  [14_000_000, 0.06, 0],
+  [50_000_000, 0.15, 1_260_000],
+  [88_000_000, 0.24, 5_760_000],
+  [150_000_000, 0.35, 15_440_000],
+  [300_000_000, 0.38, 19_940_000],
+  [500_000_000, 0.4, 25_940_000],
+  [1_000_000_000, 0.42, 35_940_000],
+  [Infinity, 0.45, 65_940_000],
+];
+
+export function progressiveTax(base: number): { tax: number; rate: number } {
+  if (base <= 0) return { tax: 0, rate: 0 };
+  const [, rate, deduction] = BRACKETS.find(([limit]) => base <= limit)!;
+  return { tax: Math.max(0, Math.floor(base * rate - deduction)), rate };
+}
+
+export function capitalGainsTax(input: CapitalGainsInput): CalcResult {
+  const problem = inputProblem({ 취득가: input.buyPrice, 양도가: input.sellPrice, 필요경비: input.expenses, '보유 기간': input.holdingYears });
+  if (problem) return notComputable('양도소득세 (주택 외 건물·토지)', 'KRW', RATE_SOURCES.capitalGains.status, problem, []);
+  const gain = Math.max(0, input.sellPrice - input.buyPrice - input.expenses);
+  const years = Math.max(0, Math.floor(input.holdingYears));
+  const longTermRate = years >= 3 ? Math.min(years, 15) * 0.02 : 0;
+  const longTerm = Math.floor(gain * longTermRate);
+  const basicDeduction = gain > 0 ? Math.min(2_500_000, gain - longTerm) : 0;
+  const taxBase = Math.max(0, gain - longTerm - basicDeduction);
+  let tax: number;
+  let rateNote: string;
+  if (years < 1) { tax = Math.floor(taxBase * 0.5); rateNote = '1년 미만 보유 50%'; }
+  else if (years < 2) { tax = Math.floor(taxBase * 0.4); rateNote = '2년 미만 보유 40%'; }
+  else { const result = progressiveTax(taxBase); tax = result.tax; rateNote = `기본세율 (과세표준 구간 ${pct(result.rate)}%)`; }
+  const local = Math.floor(tax * 0.1);
+  return {
+    title: '양도소득세 (주택 외 건물·토지)',
+    total: tax + local,
+    unit: 'KRW',
+    rateStatus: RATE_SOURCES.capitalGains.status,
+    lines: [
+      { label: '양도차익', value: gain, note: '양도가 − 취득가 − 필요경비' },
+      { label: `장기보유특별공제 ${pct(longTermRate)}%`, value: longTerm, note: '3년 이상 보유, 해마다 2% (최대 30%)' },
+      { label: '기본공제', value: basicDeduction, note: '연 250만원' },
+      { label: '과세표준', value: taxBase },
+      { label: '양도소득세', value: tax, note: rateNote },
+      { label: '지방소득세 (10%)', value: local },
+    ],
+    notCovered: ['주택 (1세대1주택 비과세·다주택 중과)', '비사업용 토지 중과', '미등기 양도', '같은 해 다른 양도와의 합산'],
+    basis: ['소득세법 제95조(장기보유특별공제)·제103조(기본공제)·제104조(세율)·제55조 — 원문 대조 전'],
+    verified: false,
+  };
+}
+
+/* ---------- 임대 수익률 ---------- */
+export interface YieldInput { price: number; deposit: number; monthlyRent: number; monthlyCost: number; vacancyMonths: number; loan: number; loanRatePercent: number }
+
+export function rentalYield(input: YieldInput): CalcResult {
+  const problem = inputProblem({ 매입가: input.price, 보증금: input.deposit, '월 임대료': input.monthlyRent, '월 운영비': input.monthlyCost, '연 공실': input.vacancyMonths, 대출: input.loan, '대출 금리': input.loanRatePercent });
+  if (problem) return notComputable('임대 수익률', 'PERCENT', 'formula', problem, []);
+  if (input.vacancyMonths > 12) return notComputable('임대 수익률', 'PERCENT', 'formula', '연 공실은 0~12개월로 입력해 주세요.', []);
+  const occupied = Math.min(12, Math.max(0, 12 - input.vacancyMonths));
+  const rentIncome = input.monthlyRent * occupied;
+  const cost = input.monthlyCost * 12;
+  const interest = Math.floor(input.loan * (input.loanRatePercent / 100));
+  const net = rentIncome - cost - interest;
+  const equity = input.price - input.deposit - input.loan;
+  const grossBase = input.price - input.deposit;
+  const gross = grossBase > 0 ? (input.monthlyRent * 12) / grossBase : 0;
+  if (equity <= 0) return notComputable('임대 수익률', 'PERCENT', 'formula', '실투자금(매입가 − 보증금 − 대출)이 0보다 커야 수익률을 계산할 수 있습니다. 보증금·대출을 확인해 주세요.', []);
+  const onEquity = net / equity;
+  return {
+    title: '임대 수익률',
+    total: pct(onEquity),
+    unit: 'PERCENT',
+    rateStatus: 'formula',
+    lines: [
+      { label: '연 임대료 (공실 반영)', value: rentIncome, note: `${occupied}개월` },
+      { label: '연 운영비', value: cost },
+      { label: '연 대출이자', value: interest },
+      { label: '연 순수익', value: net },
+      { label: '실투자금', value: equity, note: '매입가 − 보증금 − 대출' },
+      { label: '표면 수익률 (%)', value: pct(gross), note: '연 임대료 ÷ (매입가 − 보증금), 대출 미반영' },
+    ],
+    notCovered: ['취득세·중개보수 등 매입 부대비용', '세금', '임대료 상승·하락'],
+    basis: ['단순 계산식 — 법령 근거 없음'],
+    verified: false,
+  };
+}

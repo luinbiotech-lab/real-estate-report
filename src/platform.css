@@ -318,3 +318,62 @@
 .app-shell .guide-page .guide-hero h1{color:#fff}
 .report-steps a{display:flex;align-items:center;gap:8px;color:inherit;text-decoration:none;width:100%}
 .report-steps a:hover{color:#073a69}
+
+/* 세무·법률 음성 질문 시안 (2026-11-26) */
+.ask-page{display:grid;gap:18px;padding:24px;max-width:860px}
+.ask-hero{background:linear-gradient(135deg,#0b2545,#173a63);color:#fff;border-radius:18px;padding:24px 26px}
+.ask-hero .eyebrow{color:#d7b46a;margin:0 0 6px}
+.app-shell .ask-page .ask-hero h1{margin:0 0 8px;font-size:28px;color:#fff}
+.ask-hero p{margin:0;color:#d5deea;line-height:1.65}
+.ask-draft{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:999px;background:#d7b46a;color:#0b2545;font-size:11px;letter-spacing:0}
+.ask-voice{display:grid;justify-items:center;gap:10px;background:#fff;border:1px solid #e1e5ea;border-radius:18px;padding:26px 20px}
+.ask-mic{width:96px;height:96px;border-radius:50%;border:0;background:#173a63;color:#fff;display:grid;place-items:center;cursor:pointer;box-shadow:0 10px 24px rgba(23,58,99,.28)}
+.ask-mic svg{font-size:44px}
+.ask-mic.on{background:#c0392b;animation:ask-pulse 1.2s ease-in-out infinite}
+.ask-mic:disabled{background:#98a2b3;box-shadow:none;cursor:not-allowed}
+@keyframes ask-pulse{0%,100%{box-shadow:0 0 0 0 rgba(192,57,43,.45)}50%{box-shadow:0 0 0 18px rgba(192,57,43,0)}}
+.ask-mic-label{margin:0;color:#344054;font-weight:600;text-align:center}
+.ask-error{margin:0;color:#b42318;font-size:14px;text-align:center}
+.ask-input{display:flex;gap:8px;width:100%;max-width:620px}
+.ask-input input{flex:1;min-width:0;border:1px solid #d0d5dd;border-radius:12px;padding:13px 14px;font-size:16px}
+.ask-input button{border:0;border-radius:12px;background:#173a63;color:#fff;width:52px;display:grid;place-items:center;cursor:pointer}
+.ask-examples{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+.ask-examples button{border:1px solid #d0d5dd;background:#f8fafc;border-radius:999px;padding:8px 12px;font-size:13px;color:#344054;cursor:pointer}
+.ask-answer{background:#fff;border:1px solid #e1e5ea;border-radius:18px;padding:20px 22px;display:grid;gap:12px}
+.ask-answer-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.ask-answer-head>svg{color:#173a63}
+.app-shell .ask-answer-head h2{margin:0;font-size:19px;color:#0f172a}
+.ask-unverified{font-size:12px;padding:2px 8px;border-radius:999px;background:#fef0c7;color:#93370d}
+.ask-speak{margin-left:auto;display:inline-flex;align-items:center;gap:4px;border:1px solid #173a63;color:#173a63;background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.ask-summary{margin:0;font-size:16px;line-height:1.7;color:#101828}
+.ask-inputs{margin:0;display:grid;gap:6px;background:#f8fafc;border-radius:12px;padding:12px 14px}
+.ask-inputs>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;font-size:14px}
+.ask-inputs dt small{color:#98a2b3;font-size:12px}
+.ask-inputs dd{text-align:right;white-space:nowrap}
+.ask-inputs dt{color:#667085;margin:0}
+.ask-inputs dd{margin:0;color:#101828;font-weight:600}
+.ask-needs,.ask-basis{margin:0;font-size:13px;color:#475467}
+.ask-heard{margin:0;color:#173a63;font-size:15px;text-align:center}
+.ask-topics{display:flex;gap:8px;flex-wrap:wrap}
+.ask-topics button{flex:1 1 0;min-width:110px;border:1px solid #d0d5dd;background:#fff;border-radius:12px;padding:11px 10px;font-size:15px;font-weight:600;color:#344054;cursor:pointer}
+.ask-topics button.on{background:#173a63;border-color:#173a63;color:#fff}
+.ask-form{display:grid;align-items:start;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px}
+.ask-field{display:grid;gap:4px;font-size:13px;color:#475467;min-width:0}
+.ask-field small{color:#667085;font-size:12px}
+.ask-field-box{display:flex;align-items:center;border:1px solid #d0d5dd;border-radius:10px;background:#fff;padding:0 10px}
+.ask-field-box input{flex:1;min-width:0;width:100%;border:0;outline:0;padding:10px 0;font-size:16px;background:transparent}
+.ask-field-box em{font-style:normal;color:#98a2b3;font-size:13px}
+.ask-field select{border:1px solid #d0d5dd;border-radius:10px;padding:10px;font-size:16px;background:#fff}
+.ask-check{display:flex;align-items:center;gap:6px;font-size:14px;color:#344054;align-self:end;padding-bottom:10px}
+.ask-total{margin:0;font-size:28px;font-weight:800;color:#0b2545}
+.ask-total.trial{font-size:20px;color:#93370d}
+.ask-trial{border:1px solid #f5c26b;background:#fffaeb;border-radius:12px;padding:12px 14px;display:grid;gap:6px}
+.ask-trial strong{color:#93370d;font-size:15px}
+.ask-trial p{margin:0;font-size:13px;color:#475467;line-height:1.55}
+.ask-trial button{justify-self:start;border:1px solid #93370d;background:#fff;color:#93370d;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer}
+.ask-pending{margin:0;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.55}
+.ask-pending.input{border:1px solid #b2ccff;background:#eff4ff;color:#1d2939}
+.ask-pending.unsupported{border:1px solid #c7d7fe;background:#f5f8ff;color:#1d2939}
+.ask-pending strong{color:#173a63}
+.ask-privacy{margin:0;font-size:12px;color:#667085;line-height:1.6}
+@media (max-width:760px){.ask-page{padding:12px}.ask-hero{padding:20px}.app-shell .ask-page .ask-hero h1{font-size:24px}.ask-speak{margin-left:0}}
