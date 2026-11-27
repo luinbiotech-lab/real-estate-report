@@ -19,8 +19,8 @@ eq(calc.housingBaseRate(750_000_000), 0.02, '주택 7.5억 2%');
 eq(calc.housingBaseRate(900_000_000), 0.03, '주택 9억 경계 3%');
 eq(calc.housingBaseRate(1_000_000_000), 0.03, '주택 10억 3%');
 const multi = calc.acquisitionTax({ price: 800_000_000, use: 'housing', homesAfter: 2, over85: false });
-// 루인 #86 RB-71e0384: 결과 없음은 0(세금 없음)이 아니라 null + 이유. 루치오 11/27: 지원 안 하는 경우는 '세무사 상담 필요'.
-expect(multi.total === null && Boolean(multi.notComputableReason) && multi.notComputableKind === 'unsupported', '2주택 이상은 total=null·unsupported(세무사 상담 필요)와 이유를 돌려줘야 합니다.');
+// 루인 #86 RB-71e0384: 결과 없음은 0(세금 없음)이 아니라 null + 이유. 루치오 11/27: 지원 안 하는 경우는 '상담 안내'(카드).
+expect(multi.total === null && Boolean(multi.notComputableReason) && multi.notComputableKind === 'unsupported', '2주택 이상은 total=null·unsupported(상담 안내)와 이유를 돌려줘야 합니다.');
 
 // 양도세 기본세율 구간 경계 (누진공제 연속성)
 const brackets = [[14_000_000, 840_000], [50_000_000, 6_240_000], [88_000_000, 15_360_000], [150_000_000, 37_060_000], [300_000_000, 94_060_000], [500_000_000, 174_060_000], [1_000_000_000, 384_060_000]];
@@ -73,7 +73,7 @@ for (const [key, source] of Object.entries(calc.RATE_SOURCES)) expect(source.sta
 // 모든 결과는 미검증 표시
 for (const r of [cgt, multi]) expect(r.verified === false && r.basis.every((b) => b.includes('원문 대조 전')), '결과는 원문 대조 전으로 표시해야 합니다.');
 const page = readFileSync('src/pages/AskPage.tsx', 'utf8');
-for (const marker of ['원문 대조 전', '참고용 계산입니다', '개인정보는 말하지 마세요', '검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요', '시험 계산값 보기', '금액을 안내하지 않습니다', '미입력', '입력 확인', '세무사 상담 필요']) expect(page.includes(marker), `AskPage 표시 누락: ${marker}`);
+for (const marker of ['원문 대조 전', '참고용 계산입니다', '개인정보는 말하지 마세요', '검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요', '시험 계산값 보기', '금액을 안내하지 않습니다', '미입력', '입력 확인', '상담 안내']) expect(page.includes(marker), `AskPage 표시 누락: ${marker}`);
 // Unverified amounts must not be spoken: the spoken text for 'unverified' must not interpolate won(...).
 // 루치오 11/27: 화면·음성에 '계산 불가'처럼 부정적 표현을 쓰지 않음.
 for (const word of ['계산 불가', '계산할 수 없습니다']) expect(!page.includes(word) && !JSON.stringify(bad.map(([, r]) => r.notComputableReason)).includes(word) && !multi.notComputableReason.includes(word), `부정 표현 금지: ${word}`);

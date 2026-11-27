@@ -66,7 +66,7 @@ function compute(topic: Topic, f: Form): { result: CalcResult | null; missing: s
 
 /** Spoken answer. Unverified tax amounts are never read out (루인 #86 RB-71e0384): only plain-formula results are. */
 const spokenSummary = (r: CalcResult) => {
-  if (r.total === null) return r.notComputableKind === 'unsupported' ? `${r.title}는 세무사 상담이 필요한 경우입니다. ${r.notComputableReason ?? ''}` : `입력을 확인해 주세요. ${r.notComputableReason ?? ''}`;
+  if (r.total === null) return r.notComputableKind === 'unsupported' ? `${r.title}는 상담 안내 대상입니다. ${r.notComputableReason ?? ''}` : `입력을 확인해 주세요. ${r.notComputableReason ?? ''}`;
   if (r.rateStatus === 'unverified') return `${r.title} 세율은 아직 법령 원문과 대조하지 않아 금액을 안내하지 않습니다. 세무사 확인이 필요합니다.`;
   return r.unit === 'PERCENT' ? `${r.title}은 실투자금 기준 연 ${r.total}퍼센트입니다. 참고용 계산입니다.` : `${r.title}는 ${won(r.total)}입니다. 참고용 계산입니다.`;
 };
@@ -168,7 +168,7 @@ export default function AskPage() {
       </div>
 
       {missing.length > 0 && <p className="ask-needs"><strong>미입력</strong> · {missing.join(', ')}</p>}
-      {result && result.total === null && <p className={`ask-pending ${result.notComputableKind ?? 'input'}`} role="status"><strong>{result.notComputableKind === 'unsupported' ? '세무사 상담 필요' : '입력 확인'}</strong> · {result.notComputableReason}</p>}
+      {result && result.total === null && <p className={`ask-pending ${result.notComputableKind ?? 'input'}`} role="status"><strong>{result.notComputableKind === 'unsupported' ? '상담 안내' : '입력 확인'}</strong> · {result.notComputableReason}</p>}
       {result && result.total !== null && result.rateStatus === 'unverified' && <div className="ask-trial" role="note">
         <strong>검증 전 시험 계산 · 세무 판단과 고객 안내에 쓰지 마세요</strong>
         <p>{RATE_NOTE}</p>

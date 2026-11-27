@@ -7,7 +7,7 @@
  *
  * 2026-11-27 루인 #86 RB-real-estate-report-71e0384 DISAGREE 반영:
  * - `total: null` = 결과 없음 (never 0, which reads as "세금 없음"). `notComputableKind` says why: 'input' (입력 확인) or
- *   'unsupported' (세무사 상담 필요). 2026-11-27 루치오: 화면에 '계산 불가' 같은 부정적 표현을 쓰지 않음; 빈 칸은 '미입력'.
+ *   'unsupported' (상담 안내, 루치오 11/27 카드). 2026-11-27 루치오: 화면에 '계산 불가' 같은 부정적 표현을 쓰지 않음; 빈 칸은 '미입력'.
  * - `rateStatus: 'unverified'` results must not be shown as a tax answer; the page hides the amount behind an explicit
  *   "시험 계산값 보기" and never speaks it. Flip RATE_SOURCES[*].status to 'verified' only after the archived statute
  *   text (with 시행일) is checked and linked.
@@ -25,7 +25,7 @@ export interface CalcResult {
   rateStatus: RateStatus;
   /** Why total is null, written as a request or next step (shown to the user). */
   notComputableReason?: string;
-  /** 'input' = a value needs fixing (입력 확인); 'unsupported' = valid case these formulas do not cover (세무사 상담 필요). */
+  /** 'input' = a value needs fixing (입력 확인); 'unsupported' = valid case these formulas do not cover (상담 안내). */
   notComputableKind?: 'input' | 'unsupported';
   lines: CalcLine[];
   notCovered: string[];
