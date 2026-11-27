@@ -160,6 +160,12 @@ if ((text.externalShareProvider.match(/availability: 'ready'/g) ?? []).length < 
 for (const capability of ['publicUrl', 'remoteRevoke', 'serverExpiry', 'authenticatedAccess', 'syncedReview']) if (!text.externalShareProvider.includes(capability)) throw new Error(`외부공유 Provider capability 누락: ${capability}`);
 if (!text.externalShareProvider.includes('실제 OWNER issue/list/revoke browser acceptance는 아직 필요합니다.')) throw new Error('Remote Provider는 backend 연결과 operator acceptance를 분리해야 합니다.');
 
+// 2026-11-27 루인 #86 (RB-26ebb1e): mandatory risk notices sit outside (before) the collapsed technical details.
+for (const [label, source, marker] of [['외부 공유', text.externalShareCenter, '이미 전달한 HTML 파일은 회수할 수 없습니다.'], ['권한 관리', readFileSync('src/pages/AccessManagementPage.tsx', 'utf8'), '실제 권한은 운영 서버가 최종 확인합니다.']]) {
+  const at = source.indexOf(marker);
+  const details = source.indexOf('<details className="tech-details">');
+  if (at < 0 || details < 0 || at > details) throw new Error(`${label} 필수 고지는 접힌 기술 상세 밖(앞)에 있어야 합니다.`);
+}
 if (!text.app.includes('path="external-shares"') || !text.layout.includes('to="/external-shares"')) throw new Error('외부 공유 센터 route/navigation 연결이 필요합니다.');
 if (!text.externalShareCenter.includes('외부 공유 센터') || !text.externalShareCenter.includes('사용 중') || !text.externalShareCenter.includes('만료') || !text.externalShareCenter.includes('회수')) throw new Error('외부 공유 센터는 전체/활성/만료/회수 상태를 요약해야 합니다.');
 if (!text.externalShareCenter.includes('LOCAL / OFFLINE') || !text.externalShareCenter.includes('REMOTE / PUBLIC') || !text.externalShareCenter.includes('REMOTE / PUBLIC backend는 CONNECTED입니다.')) throw new Error('외부 공유 센터는 Local/Remote Provider 상태와 backend/operator acceptance를 구분해 표시해야 합니다.');

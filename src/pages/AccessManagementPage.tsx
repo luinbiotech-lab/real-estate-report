@@ -246,6 +246,18 @@ export default function AccessManagementPage() {
       </div>}
     </section>
 
+    {/* 2026-11-27 루인 #86 (RB-26ebb1e): 보안 경고와 권한 범위는 기술 상세를 접어도 항상 보여야 합니다. */}
+    <section className="required-notice" role="note" aria-label="보안 · 권한 필수 안내">
+      <h2>보안 · 권한 필수 안내</h2>
+      <ul>
+        <li><strong>실제 권한은 운영 서버가 최종 확인합니다.</strong> 화면의 역할 표시는 안내용이며, 데이터 접근은 로그인 세션과 서버 접근 규칙(RLS)이 막습니다.</li>
+        <li><strong>운영 보안 수동 점검 필요:</strong> Supabase 유출 비밀번호 차단(Leaked Password Protection) 설정은 아직 확인 전입니다.</li>
+      </ul>
+      <dl className="required-roles">
+        {ROLES.map((role) => <div key={role}><dt>{ROLE_KO[role]}</dt><dd>{ROLE_CAPABILITIES[role].map((capability) => CAPABILITY_LABELS[capability]).join(' · ')}</dd></div>)}
+      </dl>
+    </section>
+
     <details className="tech-details">
       <summary>기술 상세 (개발 · 점검용)</summary>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', margin: '12px 0' }}>

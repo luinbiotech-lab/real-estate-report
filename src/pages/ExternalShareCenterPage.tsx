@@ -209,6 +209,16 @@ export default function ExternalShareCenterPage() {
       })}
     </section>
 
+    {/* 2026-11-27 루인 #86 (RB-26ebb1e): 외부 공유 위험은 기술 상세를 접어도 항상 보여야 합니다. */}
+    <section className="required-notice" role="note" aria-label="외부 공유 필수 안내">
+      <h2>외부 공유 필수 안내</h2>
+      <ul>
+        <li><strong>이미 전달한 HTML 파일은 회수할 수 없습니다.</strong> 이 화면의 회수는 기록만 바꾸며, 받은 사람의 복사본은 지워지지 않습니다.</li>
+        <li><strong>공개 URL(원격 공유)만 서버에서 실제로 막을 수 있습니다.</strong> 실제 발급·회수 운영 확인은 아직 필요합니다.</li>
+        <li>공유한 보고서에는 물건 정보가 들어 있습니다. 받는 사람과 만료일을 확인한 뒤 공유하세요.</li>
+      </ul>
+    </section>
+
     <details className="tech-details">
       <summary>기술 상세 (공유 방식 · 회수 범위)</summary>
     <section style={{ display: 'grid', gridTemplateColumns: 'repeat(2,minmax(0,1fr))', gap: 12, marginBottom: 18 }}>
